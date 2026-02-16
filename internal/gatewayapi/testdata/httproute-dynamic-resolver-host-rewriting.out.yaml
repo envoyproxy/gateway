@@ -220,8 +220,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -387,6 +386,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: dns-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -428,6 +431,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: dns-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

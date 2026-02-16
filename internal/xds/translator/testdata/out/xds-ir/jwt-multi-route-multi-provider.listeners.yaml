@@ -29,6 +29,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -62,6 +63,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example2
               second-route-www.test.com/example:
                 audiences:
@@ -74,6 +76,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -91,6 +94,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example2
                 remoteJwks:
                   asyncFetch: {}

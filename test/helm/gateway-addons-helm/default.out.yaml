@@ -6,10 +6,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: gateway-addons-helm/charts/grafana/templates/serviceaccount.yaml
@@ -18,7 +18,7 @@ kind: ServiceAccount
 automountServiceAccountToken: false
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -32,7 +32,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -46,8 +46,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -75,10 +75,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 data:
   custom_parsers.conf: |
@@ -143,7 +143,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -152,8 +152,6 @@ data:
   grafana.ini: |
     [analytics]
     check_for_updates = true
-    [grafana_net]
-    url = https://grafana.net
     [log]
     mode = console
     [paths]
@@ -163,6 +161,8 @@ data:
     provisioning = /etc/grafana/provisioning
     [server]
     domain = ''
+    [unified_storage]
+    index_path = /var/lib/grafana-search/bleve
   datasources.yaml: |
     apiVersion: 1
     datasources:
@@ -197,7 +197,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -297,7 +297,7 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -313,8 +313,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -351,13 +351,6 @@ data:
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -365,16 +358,13 @@ data:
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
+      metrics_path: /metrics/cadvisor
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
+      - source_labels:
+        - __metrics_path__
+        target_label: metrics_path
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -9957,10 +9947,10 @@ kind: ClusterRole
 metadata:
   name: fluent-bit
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -9978,7 +9968,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -9990,7 +9980,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -10008,8 +9998,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10017,7 +10007,6 @@ rules:
       - ""
     resources:
       - nodes
-      - nodes/proxy
       - nodes/metrics
       - services
       - endpoints
@@ -10056,10 +10045,10 @@ kind: ClusterRoleBinding
 metadata:
   name: fluent-bit
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -10076,7 +10065,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: grafana-clusterrolebinding
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10095,7 +10084,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -10116,8 +10105,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10136,7 +10125,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10149,7 +10138,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10169,10 +10158,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -10192,7 +10181,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10214,7 +10203,7 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -10239,7 +10228,7 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -10264,7 +10253,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"
@@ -10293,8 +10282,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10380,10 +10369,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.54.1
+    helm.sh/chart: fluent-bit-0.55.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.1.1"
+    app.kubernetes.io/version: "4.2.2"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
@@ -10396,7 +10385,7 @@ spec:
         app.kubernetes.io/name: fluent-bit
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 70c593c0c35d4dfe3ca501d13e6a7aa8c79f291ec4814f4519f02655c6f5701a
+        checksum/config: f2f68b12d2de32fdecf942ac6c44bb30a41a24d532e5c6647cd23482d7224493
         fluentbit.io/exclude: "true"
         prometheus.io/path: /api/v1/metrics/prometheus
         prometheus.io/port: "2020"
@@ -10408,7 +10397,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: fluent-bit
-          image: "fluent/fluent-bit:4.1.1"
+          image: "fluent/fluent-bit:4.2.2"
           imagePullPolicy: IfNotPresent
           command:
             - /fluent-bit/bin/fluent-bit
@@ -10460,7 +10449,7 @@ metadata:
   name: grafana
   namespace: monitoring
   labels:
-    helm.sh/chart: grafana-10.5.3
+    helm.sh/chart: grafana-10.5.15
     app.kubernetes.io/name: grafana
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "12.3.1"
@@ -10476,12 +10465,12 @@ spec:
   template:
     metadata:
       labels:
-        helm.sh/chart: grafana-10.5.3
+        helm.sh/chart: grafana-10.5.15
         app.kubernetes.io/name: grafana
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: "12.3.1"
       annotations:
-        checksum/config: d622e7e4744a86485b5271ba5a611ad70d68878e6cbf7838513973bdf7bd5f45
+        checksum/config: 4185f6c838c67fdb3938b9eb196bed264dd80326d8b95df1405c6dad1dce2d49
         checksum/sc-dashboard-provider-config: e70bf6a851099d385178a76de9757bb0bef8299da6d8443602590e44f05fdf24
         kubectl.kubernetes.io/default-container: grafana
     spec:
@@ -10504,6 +10493,7 @@ spec:
             capabilities:
               drop:
               - ALL
+            privileged: false
             seccompProfile:
               type: RuntimeDefault
           volumeMounts:
@@ -10512,6 +10502,8 @@ spec:
               subPath: grafana.ini
             - name: storage
               mountPath: "/var/lib/grafana"
+            - name: search
+              mountPath: "/var/lib/grafana-search"
             - name: dashboards-envoy-gateway
               mountPath: "/var/lib/grafana/dashboards/envoy-gateway"
             - name: config
@@ -10546,6 +10538,8 @@ spec:
               value: /var/lib/grafana/plugins
             - name: GF_PATHS_PROVISIONING
               value: /etc/grafana/provisioning
+            - name: GF_UNIFIED_STORAGE_INDEX_PATH
+              value: /var/lib/grafana-search/bleve
             - name: "GF_AUTH_ANONYMOUS_ENABLED"
               value: "true"
             - name: "GF_AUTH_ANONYMOUS_ORG_ROLE"
@@ -10576,6 +10570,8 @@ spec:
             name: grafana-dashboards
         - name: storage
           emptyDir: {}
+        - name: search
+          emptyDir: {}
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/deploy.yaml
 apiVersion: apps/v1
@@ -10585,8 +10581,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.0
-    helm.sh/chart: prometheus-28.2.0
+    app.kubernetes.io/version: v3.9.1
+    helm.sh/chart: prometheus-28.8.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10607,15 +10603,15 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v3.9.0
-        helm.sh/chart: prometheus-28.2.0
+        app.kubernetes.io/version: v3.9.1
+        helm.sh/chart: prometheus-28.8.0
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.87.1"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.88.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -10643,7 +10639,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.9.0"
+          image: "prom/prometheus:v3.9.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
@@ -10702,7 +10698,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.49.0
+    helm.sh/chart: loki-6.51.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.3"

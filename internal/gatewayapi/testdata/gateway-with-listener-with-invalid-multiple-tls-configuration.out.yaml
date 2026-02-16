@@ -10,7 +10,7 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: tls
+      name: tls-contains-not-exist-ref
       port: 443
       protocol: HTTPS
       tls:
@@ -20,18 +20,90 @@ gateways:
           name: tls-secret-ecdsa-1
         - group: null
           kind: null
+          name: not-exist-secret
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tls-contains-not-exist-key-cert
+      port: 8443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
           name: tls-secret-ecdsa-2
         - group: null
           kind: null
           name: tls-secret-1
+        mode: Terminate
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tls-all-invalid-cert
+      port: 8444
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: not-exist-secret
         mode: Terminate
   status:
     listeners:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-          be unique, certificate domain foo.bar.com has a conflicting algorithm [ECDSA].
+        message: 'Some secrets are invalid: certificate refs 1: Secret envoy-gateway/not-exist-secret
+          does not exist.'
+        reason: PartiallyInvalidCertificateRef
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      name: tls-contains-not-exist-ref
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: 'Some secrets are invalid: certificate refs 1: Secret envoy-gateway/tls-secret-1
+          must contain tls.crt and tls.key.'
+        reason: PartiallyInvalidCertificateRef
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      name: tls-contains-not-exist-key-cert
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: 'No valid secrets exist: certificate refs 0: Secret envoy-gateway/not-exist-secret
+          does not exist.'
         reason: InvalidCertificateRef
         status: "False"
         type: ResolvedRefs
@@ -40,7 +112,7 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
-      name: tls
+      name: tls-all-invalid-cert
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -67,9 +139,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -83,6 +155,19 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/tls-contains-not-exist-ref
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
+      - name: envoy-gateway/gateway-1/tls-contains-not-exist-key-cert
+        ports:
+        - containerPort: 8443
+          name: https-8443
+          protocol: HTTPS
+          servicePort: 8443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -118,6 +203,111 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-contains-not-exist-ref
+      name: envoy-gateway/gateway-1/tls-contains-not-exist-ref
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJnVENDQVNlZ0F3SUJBZ0lVRm1sOExCRzBvL1FLNFErWjdrODI0c0MyaUZ3d0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCWk1CTUdCeXFHU000OUFnRUdDQ3FHClNNNDlBd0VIQTBJQUJMYVl2cUt1VlZveERvNTJlV3p2WUI1anc3RU1GODZybXlvaTVadWF5emRNdnBnNHpCcjgKUktCak5zK1QxakI4T0t1Y1MvN1JVRHgwcHorOTc2ek0zaU9qVXpCUk1CMEdBMVVkRGdRV0JCVE82K2NnMFIwZAp3dHJ6SlFQRzZnNzZoQkJVelRBZkJnTlZIU01FR0RBV2dCVE82K2NnMFIwZHd0cnpKUVBHNmc3NmhCQlV6VEFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFDMlhwUFFnUXpXYWUzYjVwWnQKR2N1TWZESjBjME9QS2NuZWdrWFoyQzRCM2dJZ1Uvc1Jrd0lwTFFOUlYrRWFZdzRQNVQ1Z1BFNlkrVnBtQzk4aApvVmpaL3pRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/tls-secret-ecdsa-1
+          privateKey: '[redacted]'
+    - address: 0.0.0.0
+      externalPort: 8443
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-contains-not-exist-key-cert
+      name: envoy-gateway/gateway-1/tls-contains-not-exist-key-cert
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8443
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+        alpnProtocols: null
+        certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ2VENDQVVTZ0F3SUJBZ0lVU2l2SkdURHdva1M3aGVZLzJjc1JzejR2SkIwd0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCMk1CQUdCeXFHU000OUFnRUdCU3VCCkJBQWlBMklBQkZ2cnZSZWJhYVd1UzZNQUVJZDZ3WmZPS3Z1Q1R5VU1PbFpKcUZDRjlUa3pNWWw4Q2lvZnluT3QKQ3JzMHZ2YTlrZC9QMkpNR0JKcWdZZXZid290clJpMTJxTG5IMDQvam9HSWpqVE9LbzNJb2ZyK0ZrOHdMdkFlMwpPMVpLdFI5c3pxTlRNRkV3SFFZRFZSME9CQllFRklLczFRRm5vRHQ5K3Fva1I0T0RXYk16MWYrUE1COEdBMVVkCkl3UVlNQmFBRklLczFRRm5vRHQ5K3Fva1I0T0RXYk16MWYrUE1BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0NnWUkKS29aSXpqMEVBd0lEWndBd1pBSXdIMzF0SHlmVVAwNFhIcGJXR2UxWjFJYUJaQndJdGg1NURVNGhqZlB1OG0rSgpXdjdiVzh6VFNnd0xpcW9yZmN1bkFqQTBnaE5KQkExWDJYdElLRG1sM3M3L1Z4OEZKY1MwNHZwQ2hoK2xBYkxTCnZlYWEyOFIzVExFWTNVK1FUWEkvd0lrPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+          name: envoy-gateway/tls-secret-ecdsa-2
+          privateKey: '[redacted]'
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

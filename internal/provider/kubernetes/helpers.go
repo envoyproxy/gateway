@@ -12,8 +12,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -24,6 +26,15 @@ import (
 const (
 	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
 )
+
+// cachedConfigMapKeys defines the keys to keep in ConfigMap data cache
+var cachedConfigMapKeys = map[string]bool{
+	gatewayapi.JWKSConfigMapKey:         true,
+	gatewayapi.LuaConfigMapKey:          true,
+	gatewayapi.ResponseBodyConfigMapKey: true,
+	gatewayapi.CACertKey:                true,
+	gatewayapi.CRLKey:                   true,
+}
 
 type ObjectKindNamespacedName struct {
 	kind      string
@@ -110,6 +121,17 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 	return false
 }
 
+func isListenerEntryTerminatesTLS(listenerEntry *gwapixv1a1.ListenerEntry) bool {
+	if listenerEntry.TLS != nil &&
+		(listenerEntry.Protocol == gwapiv1.HTTPSProtocolType ||
+			listenerEntry.Protocol == gwapiv1.TLSProtocolType) &&
+		listenerEntry.TLS.Mode != nil &&
+		*listenerEntry.TLS.Mode == gwapiv1.TLSModeTerminate {
+		return true
+	}
+	return false
+}
+
 // refsSecret returns true if ref refers to a Secret.
 func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
@@ -161,4 +183,48 @@ func classAccepted(gc *gwapiv1.GatewayClass) bool {
 	}
 
 	return false
+}
+
+// expectedAndFirstFallbackFilter filters a data map to only keep expected keys plus the first key for fallback.
+func expectedAndFirstFallbackFilter[T any](data map[string]T, expectedKeys map[string]bool) map[string]T {
+	filtered := make(map[string]T, min(len(expectedKeys)+1, len(data)))
+	firstFallbackKey := "" // to track lexicographically first key for fallback
+	for k := range data {
+		if expectedKeys[k] {
+			filtered[k] = data[k]
+		}
+		if firstFallbackKey == "" || k < firstFallbackKey {
+			firstFallbackKey = k
+		}
+	}
+	filtered[firstFallbackKey] = data[firstFallbackKey]
+	return filtered
+}
+
+// transformConfigMapData filters ConfigMap data to only keep needed keys to reduce memory usage.
+func transformConfigMapData(obj interface{}) (interface{}, error) {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok || len(cm.Data) <= 1 {
+		return obj, nil
+	}
+
+	cm.Data = expectedAndFirstFallbackFilter(cm.Data, cachedConfigMapKeys)
+	return cm, nil
+}
+
+// composeTransforms chains multiple transform functions together.
+func composeTransforms(transforms ...toolscache.TransformFunc) toolscache.TransformFunc {
+	return func(obj interface{}) (interface{}, error) {
+		var err error
+		for _, transform := range transforms {
+			if transform == nil {
+				continue
+			}
+			obj, err = transform(obj)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return obj, nil
+	}
 }

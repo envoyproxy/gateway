@@ -1,0 +1,24 @@
+- clusterName: tcproute/default/tcproute-1/rule/-1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: tcproute/default/tcproute-1/rule/-1/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: tcproute/default/tcproute-1/rule/-1/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-1
+            namespace: default
+            sectionName: "8080"

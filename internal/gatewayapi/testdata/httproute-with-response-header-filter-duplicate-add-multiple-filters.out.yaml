@@ -96,8 +96,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -156,15 +155,18 @@ xdsIR:
       port: 10080
       routes:
       - addResponseHeaders:
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: add-header-1
           value:
           - some-value
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: add-header-2
           value:
           - some-value
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: add-header-3
           value:
           - some-value

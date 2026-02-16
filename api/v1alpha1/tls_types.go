@@ -41,6 +41,8 @@ type TLSSettings struct {
 
 	// Ciphers specifies the set of cipher suites supported when
 	// negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+	// For the list of supported ciphers, please refer to the Envoy documentation:
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
 	// In non-FIPS Envoy Proxy builds the default cipher list is:
 	// - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
 	// - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -88,6 +90,20 @@ type TLSSettings struct {
 	//
 	// +optional
 	ALPNProtocols []ALPNProtocol `json:"alpnProtocols,omitempty"`
+
+	// Fingerprints specifies TLS client fingerprinting.
+	// When specified, a JAX fingerprint derived from the client’s TLS handshake
+	// is generated. The fingerprint can be logged in access logs or
+	// forwarded to upstream services using request headers.
+	//
+	// Fingerprinting is disabled if not specified.
+	//
+	// Supported values are:
+	// - JA3
+	// - JA4
+	//
+	// +optional
+	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty"`
 }
 
 // ALPNProtocol specifies the protocol to be negotiated using ALPN
@@ -120,6 +136,19 @@ const (
 	TLSv12 TLSVersion = "1.2"
 	// TLSv1.3 specifies TLS version 1.3
 	TLSv13 TLSVersion = "1.3"
+)
+
+// TLSFingerprintType specifies the TLS client fingerprinting mode.
+// +kubebuilder:validation:Enum=JA3;JA4
+type TLSFingerprintType string
+
+const (
+	// Enable JA3 TLS fingerprinting only.
+	// The fingerprint will be available as %TLS_JA3_FINGERPRINT%.
+	TLSFingerprintTypeJA3 TLSFingerprintType = "JA3"
+	// Enable JA4 TLS fingerprinting only.
+	// The fingerprint will be available as %TLS_JA4_FINGERPRINT%.
+	TLSFingerprintTypeJA4 TLSFingerprintType = "JA4"
 )
 
 // ClientValidationContext holds configuration that can be used to validate the client initiating the TLS connection

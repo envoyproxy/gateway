@@ -370,8 +370,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -389,8 +388,7 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http
+      - name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -408,8 +406,7 @@ infraIR:
   envoy-gateway/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-3/http
+      - name: envoy-gateway/gateway-3/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -496,6 +493,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: envoy-gateway
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           rateLimit:
@@ -595,6 +596,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -699,6 +704,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-grpc-route
+            namespace: default
         name: grpcroute/default/grpcroute-2/rule/0/match/-1/*
         traffic:
           rateLimit:

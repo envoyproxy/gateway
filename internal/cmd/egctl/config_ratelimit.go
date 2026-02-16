@@ -41,7 +41,7 @@ func ratelimitConfigCommand() *cobra.Command {
   # Retrieve rate limit configuration with short syntax
   egctl c rl
 `,
-		Run: func(c *cobra.Command, args []string) {
+		Run: func(c *cobra.Command, _ []string) {
 			cmdutil.CheckErr(runRateLimitConfig(c, namespace))
 		},
 	}
@@ -185,7 +185,10 @@ func checkEnableGlobalRateLimit(cli kubernetes.CLIClient) (bool, error) {
 func rateLimitConfigRequest(address string) ([]byte, error) {
 	url := fmt.Sprintf("http://%s/rlconfig", address)
 
-	req, err := http.NewRequest("GET", url, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), configRequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

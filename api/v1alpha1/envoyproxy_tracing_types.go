@@ -10,6 +10,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // ProxyTracing defines the tracing configuration for a proxy.
 // +kubebuilder:validation:XValidation:message="only one of SamplingRate or SamplingFraction can be specified",rule="!(has(self.samplingRate) && has(self.samplingFraction))"
 type ProxyTracing struct {
+	Tracing `json:",inline"`
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
 	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
@@ -21,28 +22,6 @@ type ProxyTracing struct {
 	// +kubebuilder:validation:Maximum=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
-	// SamplingFraction represents the fraction of requests that should be
-	// selected for tracing if no prior sampling decision has been made.
-	//
-	// Only one of SamplingRate or SamplingFraction may be specified.
-	// If neither field is specified, all requests will be sampled.
-	//
-	// +optional
-	SamplingFraction *gwapiv1.Fraction `json:"samplingFraction,omitempty"`
-	// CustomTags defines the custom tags to add to each span.
-	// If provider is kubernetes, pod name and namespace are added by default.
-	//
-	// +optional
-	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
-	// Tags defines the custom tags to add to each span.
-	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
-	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
-	// If provider is kubernetes, pod name and namespace are added by default.
-	//
-	// Same keys take precedence over CustomTags.
-	//
-	// +optional
-	Tags map[string]string `json:"tags,omitempty"`
 	// Provider defines the tracing provider.
 	Provider TracingProvider `json:"provider"`
 }
@@ -171,4 +150,8 @@ type OpenTelemetryTracingProvider struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=32
 	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
+	// ResourceAttributes is a set of labels that describe the source of traces.
+	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+	// +optional
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
 }

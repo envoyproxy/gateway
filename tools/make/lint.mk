@@ -8,7 +8,7 @@ GITHUB_ACTION ?=
 LINT_BUILD_TAGS ?= e2e,celvalidation,conformance,experimental,benchmark,resilience,integration
 
 .PHONY: lint
-lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
+lint: ## Run all linter of code sources, including golint, yamllint, lint and codespell.
 
 # lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
 # by the lint tooling.
@@ -53,19 +53,12 @@ lint.codespell: $(tools/codespell)
 # one shell, this is because we want the ::remove-matcher lines to get
 # printed whether or not it finds complaints.
 	@PS4=; set -e; { \
-	  if test -n "$$GITHUB_ACTION"; then \
+	  if test -n "$${GITHUB_ACTION-}"; then \
 	    printf '::add-matcher::$(CURDIR)/tools/linter/codespell/matcher.json\n'; \
 	    trap "printf '::remove-matcher owner=codespell-matcher-default::\n::remove-matcher owner=codespell-matcher-specified::\n'" EXIT; \
 	  fi; \
 	  (set -x; $(tools/codespell) $(CODESPELL_FLAGS) --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2); \
 	}
-
-.PHONY: lint.whitenoise
-lint: lint.whitenoise
-lint-deps: $(tools/whitenoise)
-lint.whitenoise: $(tools/whitenoise)
-	@$(LOG_TARGET)
-	$(tools/whitenoise)
 
 
 .PHONY: lint.shellcheck
@@ -84,7 +77,7 @@ lint.fix-golint:
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
 
 .PHONY: gen-check
-gen-check: format generate manifests protos go.testdata.complete
+gen-check: format generate manifests helm-template protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
 		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
@@ -103,10 +96,31 @@ latest-release-check: ## Check if latest release and tag are created properly.
 
 .PHONY: lint.markdown
 lint.markdown:
-	markdownlint -c .github/markdown_lint_config.json site/content/*
+	markdownlint -c .github/markdown_lint_config.json site/content/* \
+	    --ignore site/content/en/news/releases/notes/ \
+		--ignore site/content/en/*/api \
+		--ignore site/content/en/v0.3/ \
+		--ignore site/content/en/v0.4/ \
+		--ignore site/content/en/v0.5/ \
+		--ignore site/content/en/v0.6/ \
+		--ignore site/content/en/v1.0/ \
+		--ignore site/content/en/v1.1/ \
+		--ignore site/content/en/v1.2/ \
+		--ignore site/content/en/v1.3/ \
+		--ignore site/content/en/v1.4/ \
+		--ignore site/content/en/v1.5/ \
+		--ignore site/content/en/v1.6/
+		
+		
 
 .PHONY: lint.dependabot
 lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+
+.PHONY: lint.release-notes-filenames
+lint: lint.release-notes-filenames
+lint.release-notes-filenames: ## Check if release notes filenames follow naming conventions
+	@$(LOG_TARGET)
+	@tools/hack/check-release-notes-filenames.sh

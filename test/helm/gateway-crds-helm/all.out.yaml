@@ -2845,30 +2845,19 @@ spec:
                     properties:
                       clientCertificateRef:
                         description: |-
-                          ClientCertificateRef references an object that contains a client certificate
-                          and its associated private key. It can reference standard Kubernetes resources,
-                          i.e., Secret, or implementation-specific custom resources.
+                          ClientCertificateRef is a reference to an object that contains a Client
+                          Certificate and the associated private key.
 
-                          A ClientCertificateRef is considered invalid if:
+                          References to a resource in different namespace are invalid UNLESS there
+                          is a ReferenceGrant in the target namespace that allows the certificate
+                          to be attached. If a ReferenceGrant does not allow this reference, the
+                          "ResolvedRefs" condition MUST be set to False for this listener with the
+                          "RefNotPermitted" reason.
 
-                          * It refers to a resource that cannot be resolved (e.g., the referenced resource
-                            does not exist) or is misconfigured (e.g., a Secret does not contain the keys
-                            named `tls.crt` and `tls.key`). In this case, the `ResolvedRefs` condition
-                            on the Gateway MUST be set to False with the Reason `InvalidClientCertificateRef`
-                            and the Message of the Condition MUST indicate why the reference is invalid.
+                          ClientCertificateRef can reference to standard Kubernetes resources, i.e.
+                          Secret, or implementation-specific custom resources.
 
-                          * It refers to a resource in another namespace UNLESS there is a ReferenceGrant
-                            in the target namespace that allows the certificate to be attached.
-                            If a ReferenceGrant does not allow this reference, the `ResolvedRefs` condition
-                            on the Gateway MUST be set to False with the Reason `RefNotPermitted`.
-
-                          Implementations MAY choose to perform further validation of the certificate
-                          content (e.g., checking expiry or enforcing specific formats). In such cases,
-                          an implementation-specific Reason and Message MUST be set.
-
-                          Support: Core - Reference to a Kubernetes TLS Secret (with the type `kubernetes.io/tls`).
-                          Support: Implementation-specific - Other resource kinds or Secrets with a
-                          different type (e.g., `Opaque`).
+                          Support: Core
                         properties:
                           group:
                             default: ""
@@ -4433,30 +4422,19 @@ spec:
                     properties:
                       clientCertificateRef:
                         description: |-
-                          ClientCertificateRef references an object that contains a client certificate
-                          and its associated private key. It can reference standard Kubernetes resources,
-                          i.e., Secret, or implementation-specific custom resources.
+                          ClientCertificateRef is a reference to an object that contains a Client
+                          Certificate and the associated private key.
 
-                          A ClientCertificateRef is considered invalid if:
+                          References to a resource in different namespace are invalid UNLESS there
+                          is a ReferenceGrant in the target namespace that allows the certificate
+                          to be attached. If a ReferenceGrant does not allow this reference, the
+                          "ResolvedRefs" condition MUST be set to False for this listener with the
+                          "RefNotPermitted" reason.
 
-                          * It refers to a resource that cannot be resolved (e.g., the referenced resource
-                            does not exist) or is misconfigured (e.g., a Secret does not contain the keys
-                            named `tls.crt` and `tls.key`). In this case, the `ResolvedRefs` condition
-                            on the Gateway MUST be set to False with the Reason `InvalidClientCertificateRef`
-                            and the Message of the Condition MUST indicate why the reference is invalid.
+                          ClientCertificateRef can reference to standard Kubernetes resources, i.e.
+                          Secret, or implementation-specific custom resources.
 
-                          * It refers to a resource in another namespace UNLESS there is a ReferenceGrant
-                            in the target namespace that allows the certificate to be attached.
-                            If a ReferenceGrant does not allow this reference, the `ResolvedRefs` condition
-                            on the Gateway MUST be set to False with the Reason `RefNotPermitted`.
-
-                          Implementations MAY choose to perform further validation of the certificate
-                          content (e.g., checking expiry or enforcing specific formats). In such cases,
-                          an implementation-specific Reason and Message MUST be set.
-
-                          Support: Core - Reference to a Kubernetes TLS Secret (with the type `kubernetes.io/tls`).
-                          Support: Implementation-specific - Other resource kinds or Secrets with a
-                          different type (e.g., `Opaque`).
+                          Support: Core
                         properties:
                           group:
                             default: ""
@@ -5651,14 +5629,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -5730,14 +5704,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -5942,14 +5912,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -6021,14 +5987,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -6319,14 +6281,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6397,14 +6355,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6608,14 +6562,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -6686,14 +6636,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -8303,7 +8249,6 @@ spec:
                                             If the list has entries, only those entries must be sent.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                       type: object
@@ -8342,7 +8287,6 @@ spec:
                                             request must be set to the actual number of bytes forwarded.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         allowedResponseHeaders:
@@ -8354,7 +8298,6 @@ spec:
                                             except Authority or Host must be copied.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         path:
@@ -8459,14 +8402,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8538,14 +8477,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8856,9 +8791,6 @@ spec:
                                       enum:
                                       - 301
                                       - 302
-                                      - 303
-                                      - 307
-                                      - 308
                                       type: integer
                                   type: object
                                 responseHeaderModifier:
@@ -8906,14 +8838,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -8985,14 +8913,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -9805,7 +9729,6 @@ spec:
                                       If the list has entries, only those entries must be sent.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                 type: object
@@ -9844,7 +9767,6 @@ spec:
                                       request must be set to the actual number of bytes forwarded.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   allowedResponseHeaders:
@@ -9856,7 +9778,6 @@ spec:
                                       except Authority or Host must be copied.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   path:
@@ -9958,14 +9879,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10036,14 +9953,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10354,9 +10267,6 @@ spec:
                                 enum:
                                 - 301
                                 - 302
-                                - 303
-                                - 307
-                                - 308
                                 type: integer
                             type: object
                           responseHeaderModifier:
@@ -10403,14 +10313,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10481,14 +10387,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -10822,14 +10724,10 @@ spec:
                                   - RegularExpression
                                   type: string
                                 value:
-                                  description: |-
-                                    Value is the value of HTTP Header to be matched.
-
-                                    Must consist of printable US-ASCII characters, optionally separated
-                                    by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                  description: Value is the value of HTTP Header to
+                                    be matched.
                                   maxLength: 4096
                                   minLength: 1
-                                  pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                   type: string
                               required:
                               - name
@@ -12509,7 +12407,6 @@ spec:
                                             If the list has entries, only those entries must be sent.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                       type: object
@@ -12548,7 +12445,6 @@ spec:
                                             request must be set to the actual number of bytes forwarded.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         allowedResponseHeaders:
@@ -12560,7 +12456,6 @@ spec:
                                             except Authority or Host must be copied.
                                           items:
                                             type: string
-                                          maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
                                         path:
@@ -12665,14 +12560,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -12744,14 +12635,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -13062,9 +12949,6 @@ spec:
                                       enum:
                                       - 301
                                       - 302
-                                      - 303
-                                      - 307
-                                      - 308
                                       type: integer
                                   type: object
                                 responseHeaderModifier:
@@ -13112,14 +12996,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -13191,14 +13071,10 @@ spec:
                                             pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                             type: string
                                           value:
-                                            description: |-
-                                              Value is the value of HTTP Header to be matched.
-
-                                              Must consist of printable US-ASCII characters, optionally separated
-                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                            description: Value is the value of HTTP
+                                              Header to be matched.
                                             maxLength: 4096
                                             minLength: 1
-                                            pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                             type: string
                                         required:
                                         - name
@@ -14011,7 +13887,6 @@ spec:
                                       If the list has entries, only those entries must be sent.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                 type: object
@@ -14050,7 +13925,6 @@ spec:
                                       request must be set to the actual number of bytes forwarded.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   allowedResponseHeaders:
@@ -14062,7 +13936,6 @@ spec:
                                       except Authority or Host must be copied.
                                     items:
                                       type: string
-                                    maxItems: 64
                                     type: array
                                     x-kubernetes-list-type: set
                                   path:
@@ -14164,14 +14037,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14242,14 +14111,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14560,9 +14425,6 @@ spec:
                                 enum:
                                 - 301
                                 - 302
-                                - 303
-                                - 307
-                                - 308
                                 type: integer
                             type: object
                           responseHeaderModifier:
@@ -14609,14 +14471,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -14687,14 +14545,10 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: |-
-                                        Value is the value of HTTP Header to be matched.
-
-                                        Must consist of printable US-ASCII characters, optionally separated
-                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      description: Value is the value of HTTP Header
+                                        to be matched.
                                       maxLength: 4096
                                       minLength: 1
-                                      pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                       type: string
                                   required:
                                   - name
@@ -15028,14 +14882,10 @@ spec:
                                   - RegularExpression
                                   type: string
                                 value:
-                                  description: |-
-                                    Value is the value of HTTP Header to be matched.
-
-                                    Must consist of printable US-ASCII characters, optionally separated
-                                    by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                  description: Value is the value of HTTP Header to
+                                    be matched.
                                   maxLength: 4096
                                   minLength: 1
-                                  pattern: ^[!-~]+([\t ]?[!-~]+)*$
                                   type: string
                               required:
                               - name
@@ -21062,6 +20912,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -21129,6 +20981,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   insecureSkipVerify:
@@ -21426,6 +21295,20 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MinContentLength defines the minimum response size in bytes to apply compression.
+                        Responses smaller than this threshold will not be compressed.
+                        Must be at least 30 bytes as enforced by Envoy Proxy.
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -21457,6 +21340,20 @@ spec:
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                    minContentLength:
+                      allOf:
+                      - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      description: |-
+                        MinContentLength defines the minimum response size in bytes to apply compression.
+                        Responses smaller than this threshold will not be compressed.
+                        Must be at least 30 bytes as enforced by Envoy Proxy.
+                        Note that when the suffix is not provided, the value is interpreted as bytes.
+                        Default: 30 bytes
+                      x-kubernetes-int-or-string: true
                     type:
                       description: CompressorType defines the compressor type to use
                         for compression.
@@ -21727,6 +21624,23 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      overrides:
+                        description: |-
+                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                          in the backend cluster. This allows customization of port and other settings that may differ
+                          from the main service configuration.
+                        properties:
+                          port:
+                            description: |-
+                              Port overrides the health check port.
+                              If not set, the endpoint's serving port is used for health checks.
+                              This is useful when health checks are served on a different port than
+                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
                       tcp:
                         description: |-
                           TCP defines the configuration of tcp health checker.
@@ -22267,7 +22181,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -22370,6 +22284,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -22393,10 +22349,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -22588,7 +22544,7 @@ spec:
                                   RateLimitSelectCondition specifies the attributes within the traffic flow that can
                                   be used to select a subset of clients to be ratelimited.
                                   All the individual conditions must hold True for the overall condition to hold True.
-                                  And, at least one of headers or methods or path or sourceCIDR condition must be specified.
+                                  And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
                                 properties:
                                   headers:
                                     description: |-
@@ -22691,6 +22647,48 @@ spec:
                                     required:
                                     - value
                                     type: object
+                                  queryParams:
+                                    description: |-
+                                      QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+                                      meaning, a request MUST match all the specified query parameters.
+                                    items:
+                                      description: QueryParamMatch defines the match
+                                        attributes within the query parameters of
+                                        the request.
+                                      properties:
+                                        invert:
+                                          default: false
+                                          description: |-
+                                            Invert specifies whether the value match result will be inverted.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          type: boolean
+                                        name:
+                                          description: Name of the query parameter.
+                                          maxLength: 256
+                                          minLength: 1
+                                          type: string
+                                        type:
+                                          default: Exact
+                                          description: Type specifies how to match
+                                            against the value of the query parameter.
+                                          enum:
+                                          - Exact
+                                          - RegularExpression
+                                          - Distinct
+                                          type: string
+                                        value:
+                                          description: |-
+                                            Value of the query parameter.
+                                            Do not set this field when Type="Distinct", implying matching on any/all unique
+                                            values within the query parameter.
+                                          maxLength: 1024
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    maxItems: 16
+                                    type: array
                                   sourceCIDR:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
@@ -22714,10 +22712,10 @@ spec:
                                     type: object
                                 type: object
                                 x-kubernetes-validations:
-                                - message: at least one of headers, methods, path
-                                    or sourceCIDR must be specified
+                                - message: at least one of headers, methods, path,
+                                    sourceCIDR or queryParams must be specified
                                   rule: has(self.headers) || has(self.methods) ||
-                                    has(self.path) || has(self.sourceCIDR)
+                                    has(self.path) || has(self.sourceCIDR) || has(self.queryParams)
                               maxItems: 8
                               type: array
                             cost:
@@ -22875,9 +22873,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-
@@ -23406,6 +23402,13 @@ spec:
                         type: array
                     type: object
                 type: object
+              routingType:
+                description: |-
+                  RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
+                  or it can be set to "Endpoint" to use Endpoint routing.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  If not specified, the EnvoyProxy-level setting is used.
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -23621,8 +23624,10 @@ spec:
                         type: string
                     type: object
                   tracing:
-                    description: Tracing configures the tracing settings for the backend
-                      or HTTPRoute.
+                    description: |-
+                      Tracing configures the tracing settings for the backend or HTTPRoute.
+
+                      This takes precedence over EnvoyProxy tracing when set.
                     properties:
                       customTags:
                         additionalProperties:
@@ -23685,13 +23690,13 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       samplingFraction:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          This will take precedence over sampling fraction on EnvoyProxy if set.
                         properties:
                           denominator:
                             default: 100
@@ -23708,6 +23713,39 @@ spec:
                         x-kubernetes-validations:
                         - message: numerator must be less than or equal to denominator
                           rule: self.numerator <= self.denominator
+                      spanName:
+                        description: |-
+                          SpanName defines the name of the span which will be used for tracing.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+
+                          If not set, the span name is provider specific.
+                          e.g. Datadog use `ingress` as the default client span name,
+                          and `router <UPSTREAM_CLUSTER> egress` as the server span name.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        required:
+                        - client
+                        - server
+                        type: object
+                      tags:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Tags defines the custom tags to add to each span.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+                          If provider is kubernetes, pod name and namespace are added by default.
+
+                          Same keys take precedence over CustomTags.
+                        type: object
                     type: object
                 type: object
               timeout:
@@ -24401,6 +24439,58 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -24536,6 +24626,58 @@ spec:
                           Output:
                             GET /foo HTTP/1.1
                             my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
                         items:
                           description: HTTPHeader represents an HTTP Header name and
                             value as defined by RFC 7230.
@@ -24899,6 +25041,21 @@ spec:
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
+              scheme:
+                description: |-
+                  Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+
+                  - Preserve (default): Preserves the :scheme from the original client request.
+                    Use this when backends need to know the original client scheme for URL generation or redirects.
+
+                  - MatchBackend: Sets the :scheme to match the backend transport protocol.
+                    If the backend uses TLS, the scheme is "https", otherwise "http".
+                    Use this when backends require the scheme to match the actual transport protocol,
+                    such as strictly HTTPS services that validate the :scheme header.
+                enum:
+                - Preserve
+                - MatchBackend
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -25159,6 +25316,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -25496,6 +25655,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -26423,6 +26599,23 @@ spec:
                                     health checks.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                overrides:
+                                  description: |-
+                                    Overrides defines the configuration of the overriding health check settings for all endpoints
+                                    in the backend cluster. This allows customization of port and other settings that may differ
+                                    from the main service configuration.
+                                  properties:
+                                    port:
+                                      description: |-
+                                        Port overrides the health check port.
+                                        If not set, the endpoint's serving port is used for health checks.
+                                        This is useful when health checks are served on a different port than
+                                        the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                  type: object
                                 tcp:
                                   description: |-
                                     TCP defines the configuration of tcp health checker.
@@ -28666,6 +28859,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -28733,6 +28928,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -28876,11 +29088,15 @@ spec:
                   If unspecified, the default filter order is applied.
                   Default filter order is:
 
+                  - envoy.filters.http.custom_response
+
                   - envoy.filters.http.health_check
 
                   - envoy.filters.http.fault
 
                   - envoy.filters.http.cors
+
+                  - envoy.filters.http.header_mutation
 
                   - envoy.filters.http.ext_authz
 
@@ -28912,8 +29128,6 @@ spec:
 
                   - envoy.filters.http.grpc_stats
 
-                  - envoy.filters.http.custom_response
-
                   - envoy.filters.http.credential_injector
 
                   - envoy.filters.http.compressor
@@ -28932,9 +29146,11 @@ spec:
                         After defines the filter that should come after the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -28950,7 +29166,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -28960,9 +29175,11 @@ spec:
                         Before defines the filter that should come before the filter.
                         Only one of Before or After must be set.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -28978,7 +29195,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -28986,9 +29202,11 @@ spec:
                     name:
                       description: Name of the filter.
                       enum:
+                      - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
                       - envoy.filters.http.cors
+                      - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
                       - envoy.filters.http.api_key_auth
                       - envoy.filters.http.basic_auth
@@ -29004,7 +29222,6 @@ spec:
                       - envoy.filters.http.ratelimit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
-                      - envoy.filters.http.custom_response
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
@@ -29063,6 +29280,7 @@ spec:
                   Default: Strict
                 enum:
                 - Strict
+                - InsecureSyntax
                 - Disabled
                 type: string
               mergeGateways:
@@ -40142,6 +40360,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -41394,6 +41629,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -42144,12 +42396,21 @@ spec:
                                         format: int32
                                         minimum: 0
                                         type: integer
+                                      resourceAttributes:
+                                        additionalProperties:
+                                          type: string
+                                        description: |-
+                                          ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.
+                                          It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                                        type: object
                                       resources:
                                         additionalProperties:
                                           type: string
                                         description: |-
                                           Resources is a set of labels that describe the source of a log entry, including envoy node info.
                                           It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+
+                                          Deprecated: Use ResourceAttributes instead.
                                         type: object
                                     type: object
                                     x-kubernetes-validations:
@@ -42169,6 +42430,9 @@ spec:
                                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f,
                                         f.group == "" || f.group == ''gateway.envoyproxy.io''))
                                         : true'
+                                    - message: either resources or resourceAttributes
+                                        can be set, not both
+                                      rule: '!has(self.resources) || !has(self.resourceAttributes)'
                                   type:
                                     description: Type defines the type of accesslog
                                       sink.
@@ -42293,6 +42557,20 @@ spec:
                               gzip:
                                 description: The configuration for GZIP compressor.
                                 type: object
+                              minContentLength:
+                                allOf:
+                                - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                description: |-
+                                  MinContentLength defines the minimum response size in bytes to apply compression.
+                                  Responses smaller than this threshold will not be compressed.
+                                  Must be at least 30 bytes as enforced by Envoy Proxy.
+                                  Note that when the suffix is not provided, the value is interpreted as bytes.
+                                  Default: 30 bytes
+                                x-kubernetes-int-or-string: true
                               type:
                                 description: CompressorType defines the compressor
                                   type to use for compression.
@@ -42788,6 +43066,23 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            overrides:
+                                              description: |-
+                                                Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                in the backend cluster. This allows customization of port and other settings that may differ
+                                                from the main service configuration.
+                                              properties:
+                                                port:
+                                                  description: |-
+                                                    Port overrides the health check port.
+                                                    If not set, the endpoint's serving port is used for health checks.
+                                                    This is useful when health checks are served on a different port than
+                                                    the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                  format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
+                                                  type: integer
+                                              type: object
                                             tcp:
                                               description: |-
                                                 TCP defines the configuration of tcp health checker.
@@ -43519,6 +43814,13 @@ spec:
                                     histograms as delta temporality instead of cumulative.
                                     Required for backends like Elastic that drop cumulative histograms.
                                   type: boolean
+                                resourceAttributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    ResourceAttributes is a set of labels that describe the source of metrics.
+                                    It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                  type: object
                               type: object
                               x-kubernetes-validations:
                               - message: host or backendRefs needs to be set
@@ -43555,6 +43857,25 @@ spec:
                               : !has(self.openTelemetry)'
                         maxItems: 16
                         type: array
+                    type: object
+                  requestID:
+                    description: RequestID configures Envoy request ID behavior.
+                    properties:
+                      tracing:
+                        description: |-
+                          Tracing configures Envoy's behavior for the UUID request ID extension,
+                          including whether the trace sampling decision is packed into the UUID and
+                          whether `X-Request-ID` is used for trace sampling decisions.
+
+                          When omitted, the default behavior is `PackAndSample`, which alters the UUID
+                          to contain the trace sampling decision and uses `X-Request-ID` for stable
+                          trace sampling.
+                        enum:
+                        - PackAndSample
+                        - Sample
+                        - Pack
+                        - Disable
+                        type: string
                     type: object
                   tracing:
                     description: |-
@@ -43622,6 +43943,8 @@ spec:
                         description: |-
                           CustomTags defines the custom tags to add to each span.
                           If provider is kubernetes, pod name and namespace are added by default.
+
+                          Deprecated: Use Tags instead.
                         type: object
                       provider:
                         description: Provider defines the tracing provider.
@@ -44087,6 +44410,23 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      overrides:
+                                        description: |-
+                                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                                          in the backend cluster. This allows customization of port and other settings that may differ
+                                          from the main service configuration.
+                                        properties:
+                                          port:
+                                            description: |-
+                                              Port overrides the health check port.
+                                              If not set, the endpoint's serving port is used for health checks.
+                                              This is useful when health checks are served on a different port than
+                                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                            format: int32
+                                            maximum: 65535
+                                            minimum: 1
+                                            type: integer
+                                        type: object
                                       tcp:
                                         description: |-
                                           TCP defines the configuration of tcp health checker.
@@ -44793,6 +45133,13 @@ spec:
                                 maxItems: 32
                                 minItems: 1
                                 type: array
+                              resourceAttributes:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  ResourceAttributes is a set of labels that describe the source of traces.
+                                  It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+                                type: object
                             type: object
                           port:
                             default: 4317
@@ -44861,9 +45208,6 @@ spec:
                         description: |-
                           SamplingFraction represents the fraction of requests that should be
                           selected for tracing if no prior sampling decision has been made.
-
-                          Only one of SamplingRate or SamplingFraction may be specified.
-                          If neither field is specified, all requests will be sampled.
                         properties:
                           denominator:
                             default: 100
@@ -44892,6 +45236,28 @@ spec:
                         maximum: 100
                         minimum: 0
                         type: integer
+                      spanName:
+                        description: |-
+                          SpanName defines the name of the span which will be used for tracing.
+                          Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.
+                          The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+
+                          If not set, the span name is provider specific.
+                          e.g. Datadog use `ingress` as the default client span name,
+                          and `router <UPSTREAM_CLUSTER> egress` as the server span name.
+                        properties:
+                          client:
+                            description: Client defines operation name of the span
+                              which will be used for tracing.
+                            type: string
+                          server:
+                            description: Server defines the operation name of the
+                              upstream span which will be used for tracing.
+                            type: string
+                        required:
+                        - client
+                        - server
+                        type: object
                       tags:
                         additionalProperties:
                           type: string
@@ -45262,7 +45628,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the direct response.
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -45468,6 +45836,54 @@ spec:
                       If unset, defaults to 200.
                     type: integer
                 type: object
+              matches:
+                description: |-
+                  Matches defines additional matching criteria for the HTTPRoute rule.
+                  As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+                  When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+                  effective matching is the logical AND of the two sets.
+                items:
+                  description: |-
+                    HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+                    At least one matcher must be specified.
+                  minProperties: 1
+                  properties:
+                    cookies:
+                      description: |-
+                        Cookies is a list of cookie matchers evaluated against the HTTP request.
+                        All specified matchers must match.
+                      items:
+                        description: HTTPCookieMatch defines how to match a single
+                          cookie.
+                        properties:
+                          name:
+                            description: Name is the cookie name to evaluate.
+                            maxLength: 256
+                            minLength: 1
+                            type: string
+                          type:
+                            default: Exact
+                            description: Type specifies how to match against the value
+                              of the cookie.
+                            enum:
+                            - Exact
+                            - RegularExpression
+                            type: string
+                          value:
+                            description: Value is the cookie value to be matched.
+                            maxLength: 4096
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      minItems: 1
+                      type: array
+                  type: object
+                maxItems: 8
+                type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
@@ -45931,8 +46347,8 @@ spec:
                                   description: |-
                                     Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 
-                                    The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-                                    as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+                                    The value of the scopes field should be a space delimited string that is expected in the
+                                    scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 
                                     If multiple scopes are specified, all scopes must match for the rule to match.
                                   items:
@@ -45949,6 +46365,29 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
+                            sourceCIDRs:
+                              description: |-
+                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
+                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+
+                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
+                                the source IP for the rule to match.
+
+                                The source IP is the IP address of the peer that connected to Envoy.
+                                This IP is obtained from the TCP connection's peer address and is not
+                                affected by X-Forwarded-For or other IP detection headers.
+                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
+                                the original client IP will only be available if the intermediary
+                                preserves the source address (for example by enabling the PROXY protocol
+                                or avoiding SNAT).
+                              items:
+                                description: |-
+                                  CIDR defines a CIDR Address range.
+                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
+                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
+                                type: string
+                              minItems: 1
+                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, or headers
@@ -46663,6 +47102,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -47803,6 +48259,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -49145,6 +49618,23 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        overrides:
+                                          description: |-
+                                            Overrides defines the configuration of the overriding health check settings for all endpoints
+                                            in the backend cluster. This allows customization of port and other settings that may differ
+                                            from the main service configuration.
+                                          properties:
+                                            port:
+                                              description: |-
+                                                Port overrides the health check port.
+                                                If not set, the endpoint's serving port is used for health checks.
+                                                This is useful when health checks are served on a different port than
+                                                the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                          type: object
                                         tcp:
                                           description: |-
                                             TCP defines the configuration of tcp health checker.
@@ -50563,6 +51053,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.

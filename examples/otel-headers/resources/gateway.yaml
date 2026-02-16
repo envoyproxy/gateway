@@ -1,17 +1,34 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: otel-collector
+spec:
+  endpoints:
+    - fqdn:
+        hostname: localhost
+        port: 4317
+# Use below for cloud OTLP endpoints
+#   endpoints:
+#     - fqdn:
+#         hostname: otel.example.com
+#         port: 443
+#   tls:
+#     wellKnownCACertificates: System
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: otel-example
 spec:
   telemetry:
     metrics:
-      # TODO: Metrics will have the wrong service name until EG exposes
-      # resource_detectors present in Envoy.
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            host: localhost
-            port: 4317
+            backendRefs:
+              - group: gateway.envoyproxy.io
+                kind: Backend
+                name: otel-collector
             # Delta temporality required for backends like otel-tui and Elastic
             reportCountersAsDeltas: true
             reportHistogramsAsDeltas: true
@@ -19,17 +36,27 @@ spec:
             headers:
               - name: Authorization
                 value: Bearer fake
+            resourceAttributes:
+              service.name: envoy-gateway-example
+              service.version: v1.0.0
+              deployment.environment: production
     tracing:
       samplingRate: 100
       provider:
         type: OpenTelemetry
-        host: localhost
-        port: 4317
+        backendRefs:
+          - group: gateway.envoyproxy.io
+            kind: Backend
+            name: otel-collector
         # Authorization header sent as gRPC initial metadata
         openTelemetry:
           headers:
             - name: Authorization
               value: Bearer fake
+          resourceAttributes:
+            service.name: envoy-gateway-example
+            service.version: v1.0.0
+            deployment.environment: production
     accessLog:
       settings:
         - format:
@@ -46,10 +73,14 @@ spec:
           sinks:
             - type: OpenTelemetry
               openTelemetry:
-                host: localhost
-                port: 4317
-                resources:
+                backendRefs:
+                  - group: gateway.envoyproxy.io
+                    kind: Backend
+                    name: otel-collector
+                resourceAttributes:
                   service.name: envoy-gateway-example
+                  service.version: v1.0.0
+                  deployment.environment: production
                 # Authorization header sent as gRPC initial metadata
                 headers:
                   - name: Authorization
@@ -105,5 +136,6 @@ spec:
         hostname: httpbingo.org
         port: 443
   tls:
-    sni: httpbingo.org
     wellKnownCACertificates: System
+    # TODO: raise a PR to auto-infer SNI from the FQDN when not explicitly set
+    sni: httpbingo.org

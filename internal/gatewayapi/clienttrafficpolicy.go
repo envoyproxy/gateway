@@ -355,7 +355,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 				// is turned on, validate that all the listeners affected by this policy originated
 				// from the same Gateway resource. The name of the Gateway from which this listener
 				// originated is part of the listener's name by construction.
-				gatewayName := irListenerName[0:strings.LastIndex(irListenerName, "/")]
+				gatewayName := extractGatewayNameFromListener(irListenerName)
 				conflictingListeners := []string{}
 				for _, currName := range sameListeners {
 					if strings.Index(currName, gatewayName) != 0 {
@@ -495,6 +495,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
+
+		// Translate Scheme Header Transformation
+		translateSchemeHeaderTransform(policy.Spec.Scheme, httpIR)
 
 		// Translate TLS parameters
 		tlsConfig, err = t.buildListenerTLSParameters(policy, httpIR.TLS, resources)
@@ -779,6 +782,18 @@ func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSetting
 	httpIR.HealthCheck = (*ir.HealthCheckSettings)(healthCheckSettings)
 }
 
+func translateSchemeHeaderTransform(scheme *egv1a1.SchemeHeaderTransform, httpIR *ir.HTTPListener) {
+	// Return early if not set or if set to Preserve (default behavior)
+	if scheme == nil || *scheme == egv1a1.SchemeHeaderTransformPreserve {
+		return
+	}
+
+	// Set MatchBackendScheme to true when scheme is set to MatchBackend
+	if *scheme == egv1a1.SchemeHeaderTransformMatchBackend {
+		httpIR.MatchBackendScheme = true
+	}
+}
+
 func (t *Translator) buildListenerTLSParameters(
 	policy *egv1a1.ClientTrafficPolicy,
 	irTLSConfig *ir.TLSConfig, resources *resource.Resources,
@@ -816,6 +831,9 @@ func (t *Translator) buildListenerTLSParameters(
 		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
+		if err := validateCipherSuites(tlsParams.Ciphers); err != nil {
+			return nil, err
+		}
 		irTLSConfig.Ciphers = tlsParams.Ciphers
 	}
 	if len(tlsParams.ECDHCurves) > 0 {
@@ -823,6 +841,13 @@ func (t *Translator) buildListenerTLSParameters(
 	}
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		irTLSConfig.SignatureAlgorithms = tlsParams.SignatureAlgorithms
+	}
+
+	if tlsParams.Fingerprints != nil {
+		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
+		for i := range tlsParams.Fingerprints {
+			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+		}
 	}
 
 	if tlsParams.ClientValidation != nil {
@@ -837,14 +862,23 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, caCertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
-			if err := validateCertificates(caCertBytes); err != nil {
-				return irTLSConfig, fmt.Errorf("invalid certificate in %s: %w", caCertRef.Name, err)
+			validCaCertBytes, listenerErr := filterValidCertificates(caCertBytes)
+			if listenerErr != nil {
+				if listenerErr.Reason() == gwapiv1.ListenerReasonInvalidCertificateRef {
+					return irTLSConfig, fmt.Errorf("no valid certificates exist in %s: %w", caCertRef.Name, listenerErr)
+				} else if listenerErr.Reason() == status.ListenerReasonPartiallyInvalidCertificateRef {
+					t.Logger.Sugar().Warn("some certificates are invalid but proceeding with valid ones",
+						"policy", utils.NamespacedName(policy),
+						"certificate", caCertRef.Name,
+						"error", listenerErr.Error(),
+					)
+				}
 			}
-			irCACert.Certificate = append(irCACert.Certificate, caCertBytes...)
+			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
@@ -858,7 +892,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, crlKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -1106,6 +1140,47 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 				Name:   string(setHeader.Name),
 				Append: false,
 				Value:  []string{setHeader.Value},
+			}
+
+			addRequestHeaders = append(addRequestHeaders, newHeader)
+		}
+	}
+
+	// AddIfAbsent headers
+	if headersToAddIfAbsent := headerModifier.AddIfAbsent; headersToAddIfAbsent != nil {
+		for _, addHeader := range headersToAddIfAbsent {
+			if addHeader.Name == "" {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an empty name", modType))
+				continue
+			}
+			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
+			if strings.ContainsAny(string(addHeader.Name), "/:") {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with a '/' or ':' character in them. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Gateway API specification allows only valid value as defined by RFC 7230
+			if !HeaderValueRegexp.MatchString(addHeader.Value) {
+				errs = errors.Join(errs, fmt.Errorf("%s cannot addIfAbsent a header with an invalid value. Header: '%q'", modType, string(addHeader.Name)))
+				continue
+			}
+			// Check if the header is a duplicate
+			headerKey := string(addHeader.Name)
+			canAddHeader := true
+			for _, h := range addRequestHeaders {
+				if strings.EqualFold(h.Name, headerKey) {
+					canAddHeader = false
+					break
+				}
+			}
+
+			if !canAddHeader {
+				continue
+			}
+
+			newHeader := ir.AddHeader{
+				Name:        headerKey,
+				AddIfAbsent: true,
+				Value:       []string{addHeader.Value},
 			}
 
 			addRequestHeaders = append(addRequestHeaders, newHeader)

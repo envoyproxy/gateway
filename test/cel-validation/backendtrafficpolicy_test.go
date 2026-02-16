@@ -2073,7 +2073,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"at least one of headers, methods, path or sourceCIDR must be specified"},
+			wantErrors: []string{"at least one of headers, methods, path, sourceCIDR or queryParams must be specified"},
 		},
 		{
 			desc: "panicThreshold is set",

@@ -159,7 +159,7 @@ func expectedGatewayName(gwNN types.NamespacedName) string {
 
 func updateGateway(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, paramRef *gwapiv1.GatewayInfrastructure) {
 	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true,
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			gw := &gwapiv1.Gateway{}
 			err := suite.Client.Get(context.Background(), gwNN, gw)
 			if err != nil {
@@ -190,7 +190,7 @@ func ExpectEventuallyConsistentResponse(t *testing.T, suite *suite.ConformanceTe
 		t.Fatalf("expected response cannot be nil")
 	}
 
-	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+	err := wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(_ context.Context) (bool, error) {
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		req := http.MakeRequest(t, expected, gwAddr, "HTTP", "http")
 
@@ -260,7 +260,7 @@ func checkDeployment(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types
 }
 
 func checkObject(t *testing.T, suite *suite.ConformanceTestSuite, gvk schema.GroupVersionKind, gwNN types.NamespacedName, exceptCount int, exceptNs, exceptName string) error {
-	return wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.CreateTimeout, true, func(_ context.Context) (bool, error) {
 		objList := &unstructured.UnstructuredList{}
 		objList.SetGroupVersionKind(gvk)
 

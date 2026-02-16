@@ -31,7 +31,11 @@ import (
 )
 
 // oci URL prefix
-const ociURLPrefix = "oci://"
+const (
+	ociURLPrefix = "oci://"
+	// LuaConfigMapKey is the key used in ConfigMaps to store Lua scripts
+	LuaConfigMapKey = "lua"
+)
 
 // deprecatedFieldsUsedInEnvoyExtensionPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPolicy) map[string]string {
@@ -534,26 +538,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						if r.EnvoyExtensions != nil {
 							continue
 						}
-						if wasmError != nil || luaError != nil || extProcError != nil {
-							switch {
-							case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
-								// skip the extProc application where the extProc is failing open and no other errors
-							case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
-								// skip the wasm application where the wasm is failing open and no other errors
-							case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
-								// skip the wasm and extProc application where both are failing open and no lua errors
-							default:
-								r.DirectResponse = &ir.CustomResponse{
-									StatusCode: ptr.To(uint32(500)),
-								}
-								routesWithDirectResponse.Insert(r.Name)
-							}
-							continue
+
+						failRoute := false
+						// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
+						// TODO: we may also add fail open option for Lua extension to align with other extensions
+						if luaError != nil {
+							failRoute = true
 						}
-						r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-							ExtProcs: extProcs,
-							Wasms:    wasms,
-							Luas:     luas,
+						if wasmError != nil {
+							failRoute = failRoute || !wasmFailOpen
+						}
+						if extProcError != nil {
+							failRoute = failRoute || !extProcFailOpen
+						}
+						if failRoute {
+							r.DirectResponse = &ir.CustomResponse{
+								StatusCode: ptr.To(uint32(500)),
+							}
+							routesWithDirectResponse.Insert(r.Name)
+						} else {
+							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+								ExtProcs: extProcs,
+								Wasms:    wasms,
+								Luas:     luas,
+							}
 						}
 					}
 				}
@@ -608,7 +616,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 	routesWithDirectResponse := sets.New[string]()
 	for _, http := range x.HTTP {
-		gatewayName := http.Name[0:strings.LastIndex(http.Name, "/")]
+		gatewayName := extractGatewayNameFromListener(http.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
 			continue
 		}
@@ -625,27 +633,29 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				continue
 			}
 
-			if errs != nil {
-				switch {
-				case (extProcError != nil && extProcFailOpen) && (luaError == nil && wasmError == nil):
-					// skip the extProc application where the extProc is failing open and no other errors
-				case (wasmError != nil && wasmFailOpen) && (luaError == nil && extProcError == nil):
-					// skip the wasm application where the wasm is failing open and no other errors
-				case (extProcError != nil && extProcFailOpen) && (wasmError != nil && wasmFailOpen) && luaError == nil:
-					// skip the wasm and extProc application where both are failing open and no lua errors
-				default:
-					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
-					}
-					routesWithDirectResponse.Insert(r.Name)
-				}
-				continue
+			failRoute := false
+			// Lua extension doesn't have a fail open option, so fail the route if there is a lua error
+			// TODO: we may also add fail open option for Lua extension to align with other extensions
+			if luaError != nil {
+				failRoute = true
 			}
-
-			r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-				ExtProcs: extProcs,
-				Wasms:    wasms,
-				Luas:     luas,
+			if wasmError != nil {
+				failRoute = failRoute || !wasmFailOpen
+			}
+			if extProcError != nil {
+				failRoute = failRoute || !extProcFailOpen
+			}
+			if failRoute {
+				r.DirectResponse = &ir.CustomResponse{
+					StatusCode: ptr.To(uint32(500)),
+				}
+				routesWithDirectResponse.Insert(r.Name)
+			} else {
+				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
+					ExtProcs: extProcs,
+					Wasms:    wasms,
+					Luas:     luas,
+				}
 			}
 		}
 	}
@@ -666,6 +676,11 @@ func (t *Translator) buildLuas(
 ) ([]ir.Lua, error) {
 	if policy == nil {
 		return nil, nil
+	}
+
+	// If Lua EnvoyExtensionPolicies are disabled, skip building Lua filters.
+	if len(policy.Spec.Lua) > 0 && t.LuaEnvoyExtensionPolicyDisabled {
+		return nil, fmt.Errorf("Skipping Lua EnvoyExtensionPolicy as feature is disabled in the Gateway")
 	}
 
 	luaIRList := make([]ir.Lua, 0, len(policy.Spec.Lua))
@@ -714,7 +729,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 ) (*string, error) {
 	cm := t.GetConfigMap(policyNs, string(valueRef.Name))
 	if cm != nil {
-		b, dataOk := cm.Data["lua"]
+		b, dataOk := cm.Data[LuaConfigMapKey]
 		switch {
 		case dataOk:
 			return &b, nil
@@ -725,7 +740,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 			}
 			return &b, nil
 		default:
-			return nil, fmt.Errorf("can't find the key lua in the referenced configmap %s", valueRef.Name)
+			return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", LuaConfigMapKey, valueRef.Name)
 		}
 
 	} else {

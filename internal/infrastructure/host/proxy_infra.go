@@ -37,7 +37,7 @@ func (i *Infra) Close() error {
 	var wg sync.WaitGroup
 
 	// Stop any Envoy subprocesses in parallel
-	i.proxyContextMap.Range(func(key, value any) bool {
+	i.proxyContextMap.Range(func(key, _ any) bool {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
@@ -79,8 +79,12 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 		proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
 		proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
 	}
+
+	resolvedMetricSinks := common.ConvertResolvedMetricSinks(proxyInfra.ResolvedMetricSinks)
+
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics: proxyMetrics,
+		ProxyMetrics:        proxyMetrics,
+		ResolvedMetricSinks: resolvedMetricSinks,
 		SdsConfig: bootstrap.SdsConfigPath{
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),

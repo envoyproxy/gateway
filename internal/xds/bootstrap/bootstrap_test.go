@@ -193,6 +193,58 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "otel-metrics-tls",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				ResolvedMetricSinks: []MetricSink{
+					{
+						Address:   "otel-collector.example.com",
+						Port:      443,
+						Authority: "otel-collector.example.com",
+						Headers: []gwapiv1.HTTPHeader{
+							{Name: "Authorization", Value: "Bearer fake"},
+						},
+						ResourceAttributes: map[string]string{
+							"service.name":           "test-service",
+							"service.version":        "v1.0.0",
+							"deployment.environment": "test",
+						},
+						TLS: &MetricSinkTLS{
+							SNI:                 "otel-collector.example.com",
+							UseSystemTrustStore: true,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
+			name: "otel-metrics-custom-ca",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Prometheus: &egv1a1.ProxyPrometheusProvider{
+						Disable: true,
+					},
+				},
+				ResolvedMetricSinks: []MetricSink{
+					{
+						Address:   "otel-collector.example.com",
+						Port:      443,
+						Authority: "otel-collector.example.com",
+						TLS: &MetricSinkTLS{
+							SNI:           "otel-collector.example.com",
+							CACertificate: test.TestCACertificate,
+						},
+					},
+				},
+				SdsConfig: sds,
+			},
+		},
+		{
 			name: "custom-stats-matcher",
 			opts: &RenderBootstrapConfigOptions{
 				ProxyMetrics: &egv1a1.ProxyMetrics{
@@ -278,7 +330,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 
 			if test.OverrideTestData() {
 				// nolint:gosec
-				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(got), 0o644)
+				err = os.WriteFile(path.Join("testdata", "render", fmt.Sprintf("%s.yaml", tc.name)), []byte(test.NormalizeCertPath(got)), 0o644)
 				require.NoError(t, err)
 				return
 			}
@@ -290,6 +342,48 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 	}
 }
 
+func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
+	cases := []struct {
+		name          string
+		opts          *RenderBootstrapConfigOptions
+		expectedError string
+	}{
+		{
+			name: "backendRef without port",
+			opts: &RenderBootstrapConfigOptions{
+				ProxyMetrics: &egv1a1.ProxyMetrics{
+					Sinks: []egv1a1.ProxyMetricSink{
+						{
+							Type: egv1a1.MetricSinkTypeOpenTelemetry,
+							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name:      "otel-collector",
+												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												// Port is nil
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedError: "metrics sink backendRef otel-collector has no port",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := GetRenderedBootstrapConfig(tc.opts)
+			require.EqualError(t, err, tc.expectedError)
+		})
+	}
+}
+
 func readTestData(caseName string) (string, error) {
 	filename := path.Join("testdata", "render", fmt.Sprintf("%s.yaml", caseName))
 
@@ -297,5 +391,5 @@ func readTestData(caseName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(b), nil
+	return test.DenormalizeCertPath(string(b)), nil
 }

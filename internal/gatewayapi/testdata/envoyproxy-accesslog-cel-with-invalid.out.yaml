@@ -121,13 +121,12 @@ infraIR:
                 - openTelemetry:
                     host: otel-collector.monitoring.svc.cluster.local
                     port: 4317
-                    resources:
+                    resourceAttributes:
                       k8s.cluster.name: cluster-1
                   type: OpenTelemetry
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80

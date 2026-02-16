@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -232,6 +233,105 @@ func TestGetIREndpointsFromEndpointSlices(t *testing.T) {
 	}
 }
 
+func TestBuildRouteMatchCombinations(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		ruleMatches   []gwapiv1.HTTPRouteMatch
+		filterMatches []egv1a1.HTTPRouteMatchFilter
+		expected      []routeMatchCombination
+	}{
+		{
+			name:     "no rule or filter matches",
+			expected: nil,
+		},
+		{
+			name: "filter matches only",
+			filterMatches: []egv1a1.HTTPRouteMatchFilter{
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}}},
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}}},
+			},
+			expected: []routeMatchCombination{
+				{
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}},
+				},
+			},
+		},
+		{
+			name: "rule matches only",
+			ruleMatches: []gwapiv1.HTTPRouteMatch{
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}},
+			},
+			expected: []routeMatchCombination{
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}}},
+				{HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")}}},
+			},
+		},
+		{
+			name: "rule and filter matches",
+			ruleMatches: []gwapiv1.HTTPRouteMatch{
+				{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+				{
+					Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+					Headers: []gwapiv1.HTTPHeaderMatch{
+						{Name: "a", Value: "1"},
+						{Name: "b", Value: "2"},
+						{Name: "c", Value: "3"},
+					},
+				},
+			},
+			filterMatches: []egv1a1.HTTPRouteMatchFilter{
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}}},
+				{Cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}}},
+			},
+			expected: []routeMatchCombination{
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/foo")}},
+					cookies:        []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
+						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Headers: []gwapiv1.HTTPHeaderMatch{
+							{Name: "a", Value: "1"},
+							{Name: "b", Value: "2"},
+							{Name: "c", Value: "3"},
+						},
+					},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "a", Value: "1"}},
+				},
+				{
+					HTTPRouteMatch: gwapiv1.HTTPRouteMatch{
+						Path: &gwapiv1.HTTPPathMatch{Value: ptr.To("/bar")},
+						Headers: []gwapiv1.HTTPHeaderMatch{
+							{Name: "a", Value: "1"},
+							{Name: "b", Value: "2"},
+							{Name: "c", Value: "3"},
+						},
+					},
+					cookies: []egv1a1.HTTPCookieMatch{{Name: "b", Value: "2"}, {Name: "c", Value: "3"}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			combos := buildRouteMatchCombinations(tt.ruleMatches, tt.filterMatches)
+			require.Equal(t, tt.expected, combos)
+		})
+	}
+}
+
 func TestValidateDestinationSettings(t *testing.T) {
 	svcKind := gwapiv1.Kind(resource.KindService)
 	hostname := "www.gateway-test.com"
@@ -244,17 +344,6 @@ func TestValidateDestinationSettings(t *testing.T) {
 		wantErr                 bool
 		wantReason              gwapiv1.RouteConditionReason
 	}{
-		{
-			name: "headless service rejected when endpointRoutingDisabled=true",
-			ds: &ir.DestinationSetting{
-				Name:      "headless",
-				Endpoints: []*ir.DestinationEndpoint{{Host: "None"}},
-			},
-			endpointRoutingDisabled: true,
-			kind:                    &svcKind,
-			wantErr:                 true,
-			wantReason:              status.RouteReasonUnsupportedSetting,
-		},
 		{
 			name: "normal service allowed with ClusterIP routing",
 			ds: &ir.DestinationSetting{
@@ -302,37 +391,60 @@ func TestValidateDestinationSettings(t *testing.T) {
 	}
 }
 
-func TestIsHeadlessService(t *testing.T) {
+func TestIsServiceHeadless(t *testing.T) {
 	tests := []struct {
-		name      string
-		endpoints []*ir.DestinationEndpoint
-		want      bool
+		name    string
+		service *corev1.Service
+		want    bool
 	}{
 		{
-			name: "headless Service",
-			endpoints: []*ir.DestinationEndpoint{
-				{Host: "None"},
+			name: "headless service with ClusterIP None",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "None",
+				},
 			},
 			want: true,
 		},
 		{
-			name: "non headless Service with valid ClusterIP",
-			endpoints: []*ir.DestinationEndpoint{
-				{Host: "10.0.0.1"},
+			name: "normal service with ClusterIP",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "10.0.0.1",
+				},
 			},
 			want: false,
 		},
 		{
-			name:      "empty slice",
-			endpoints: nil,
-			want:      false,
+			name: "dual-stack headless service",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP:  "None",
+					ClusterIPs: []string{"None", "None"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "dual-stack service with valid IPs",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP:  "10.0.0.1",
+					ClusterIPs: []string{"10.0.0.1", "2001:db8::1"},
+				},
+			},
+			want: false,
+		},
+		{
+			name:    "nil service",
+			service: nil,
+			want:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ds := &ir.DestinationSetting{Endpoints: tt.endpoints}
-			got := isHeadlessService(ds)
+			got := isServiceHeadless(tt.service)
 			require.Equal(t, tt.want, got)
 		})
 	}

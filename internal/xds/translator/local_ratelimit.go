@@ -17,6 +17,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -220,10 +221,13 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			// - MethodMatch
 			// - PathMatch
 			// - CIDRMatch
+			// - QueryParamMatch
 			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
 			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
 			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
 			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.CIDRMatch)
+			// Pass header match count as offset to continue match index sequence
+			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
 			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
@@ -236,6 +240,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 					},
 					FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
 				},
+				ShadowMode: ptr.Deref(rule.ShadowMode, false),
 			})
 		}
 	}
@@ -430,4 +435,67 @@ func buildMethodMatchLocalRateLimitAction(
 
 	*rlActions = append(*rlActions, action)
 	*descriptorEntries = append(*descriptorEntries, entry)
+}
+
+func buildQueryParamMatchLocalRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	matchIdxOffset int,
+	queryParamMatches []*ir.QueryParamMatch,
+) {
+	for mIdx, queryParam := range queryParamMatches {
+		var action *routev3.RateLimit_Action
+		var entry *rlv3.RateLimitDescriptor_Entry
+
+		if queryParam.Distinct {
+			// For distinct matches, use QueryParameters action to match any value.
+			// Each unique value will get its own rate limit bucket.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+			queryParamAction.DescriptorKey = descriptorKey
+			queryParamAction.QueryParameterName = queryParam.Name
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+					QueryParameters: queryParamAction,
+				},
+			}
+			// For distinct matches, the descriptor entry value is not set, which means
+			// each distinct value of the matched query parameter will be counted separately.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key: descriptorKey,
+			}
+		} else {
+			// For non-distinct matches (exact, regex, invert), use QueryParameterValueMatch
+			// action to support advanced matching features like regex and invert.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamMatcher := &routev3.QueryParameterMatcher{
+				Name: queryParam.Name,
+				QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(&queryParam.StringMatch),
+				},
+			}
+			expectMatch := queryParam.Invert == nil || !*queryParam.Invert
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameterValueMatch_{
+					QueryParameterValueMatch: &routev3.RateLimit_Action_QueryParameterValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						QueryParameters: []*routev3.QueryParameterMatcher{queryParamMatcher},
+					},
+				},
+			}
+			// For non-distinct matches, the descriptor entry value is set to the generated descriptor value.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key:   descriptorKey,
+				Value: descriptorVal,
+			}
+		}
+		*rlActions = append(*rlActions, action)
+		*descriptorEntries = append(*descriptorEntries, entry)
+	}
 }

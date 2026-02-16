@@ -16,6 +16,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
+	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -28,10 +29,10 @@ import (
 func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context, extensionManagerEnabled bool) {
 	// GatewayClass object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayClassStatusMessageName},
 			r.subscriptions.gatewayClassStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayClassStatus], _ chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -63,7 +64,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// Gateway object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GatewayStatusMessageName},
 			r.subscriptions.gatewayStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
@@ -88,7 +89,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// HTTPRoute object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.HTTPRouteStatusMessageName},
 			r.subscriptions.httpRouteStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
@@ -130,7 +131,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// GRPCRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GRPCRouteStatusMessageName}, r.subscriptions.grpcRouteStatuses,
+		message.HandleSubscription(r.log,
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.GRPCRouteStatusMessageName},
+			r.subscriptions.grpcRouteStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -170,7 +173,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// TLSRoute object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TLSRouteStatusMessageName},
 			r.subscriptions.tlsRouteStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
@@ -212,7 +215,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// TCPRoute object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TCPRouteStatusMessageName},
 			r.subscriptions.tcpRouteStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
@@ -254,7 +257,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// UDPRoute object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.UDPRouteStatusMessageName},
 			r.subscriptions.udpRouteStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
@@ -294,9 +297,46 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		r.log.Info("udpRoute status subscriber shutting down")
 	}()
 
+	// XListenerSet object status updater
+	go func() {
+		message.HandleSubscription(r.log,
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.XListenerSetStatusMessageName},
+			r.subscriptions.xListenerSetStatuses,
+			func(update message.Update[types.NamespacedName, *gwapixv1a1.ListenerSetStatus], errChan chan error) {
+				if update.Delete {
+					return
+				}
+				r.statusUpdater.Send(Update{
+					NamespacedName: update.Key,
+					Resource:       new(gwapixv1a1.XListenerSet),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						xls, ok := obj.(*gwapixv1a1.XListenerSet)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						statusCopy := update.Value.DeepCopy()
+						setLastTransitionTimeInConditions(statusCopy.Conditions, metav1.Now())
+						for i := range statusCopy.Listeners {
+							setLastTransitionTimeInConditions(statusCopy.Listeners[i].Conditions, metav1.Now())
+						}
+						return &gwapixv1a1.XListenerSet{
+							TypeMeta:   xls.TypeMeta,
+							ObjectMeta: xls.ObjectMeta,
+							Spec:       xls.Spec,
+							Status:     *statusCopy,
+						}
+					}),
+				})
+			},
+		)
+		r.log.Info("xListenerSet status subscriber shutting down")
+	}()
+
 	// EnvoyPatchPolicy object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyPatchPolicyStatusMessageName},
 			r.subscriptions.envoyPatchPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
@@ -334,7 +374,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// ClientTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ClientTrafficPolicyStatusMessageName},
 			r.subscriptions.clientTrafficPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
@@ -372,7 +412,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// BackendTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTrafficPolicyStatusMessageName},
 			r.subscriptions.backendTrafficPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
@@ -410,7 +450,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// SecurityPolicy object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.SecurityPolicyStatusMessageName},
 			r.subscriptions.securityPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
@@ -448,7 +488,12 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// BackendTLSPolicy object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendTLSPolicyStatusMessageName}, r.subscriptions.backendTLSPolicyStatuses,
+		message.HandleSubscription(r.log,
+			message.Metadata{
+				Runner:  string(egv1a1.LogComponentProviderRunner),
+				Message: message.BackendTLSPolicyStatusMessageName,
+			},
+			r.subscriptions.backendTLSPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -484,7 +529,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// EnvoyExtensionPolicy object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyExtensionPolicyStatusMessageName},
 			r.subscriptions.envoyExtensionPolicyStatuses,
 			func(update message.Update[types.NamespacedName, *gwapiv1.PolicyStatus], errChan chan error) {
@@ -522,7 +567,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 
 	// Backend object status updater
 	go func() {
-		message.HandleSubscription(
+		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.BackendStatusMessageName},
 			r.subscriptions.backendStatuses,
 			func(update message.Update[types.NamespacedName, *egv1a1.BackendStatus], errChan chan error) {
@@ -561,7 +606,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 	if extensionManagerEnabled {
 		// ExtensionServerPolicy object status updater
 		go func() {
-			message.HandleSubscription(
+			message.HandleSubscription(r.log,
 				message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ExtensionServerPoliciesStatusMessageName},
 				r.subscriptions.extensionPolicyStatuses,
 				func(update message.Update[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus], errChan chan error) {

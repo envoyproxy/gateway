@@ -97,8 +97,7 @@ infraIR:
           logging: {}
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -159,7 +158,8 @@ xdsIR:
       - destination:
           metadata:
             annotations:
-              foo: bar
+            - key: foo
+              value: bar
             kind: HTTPRoute
             name: httproute-1
             namespace: default
@@ -191,7 +191,8 @@ xdsIR:
         isHTTP2: false
         metadata:
           annotations:
-            foo: bar
+          - key: foo
+            value: bar
           kind: HTTPRoute
           name: httproute-1
           namespace: default
@@ -200,7 +201,8 @@ xdsIR:
       - destination:
           metadata:
             annotations:
-              foo: bar
+            - key: foo
+              value: bar
             kind: HTTPRoute
             name: httproute-1
             namespace: default
@@ -228,7 +230,8 @@ xdsIR:
         isHTTP2: false
         metadata:
           annotations:
-            foo: bar
+          - key: foo
+            value: bar
           kind: HTTPRoute
           name: httproute-1
           namespace: default

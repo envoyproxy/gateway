@@ -19,7 +19,7 @@ http:
     hostname: "*"
     pathMatch:
       exact: "foo/bar"
-    requestAuthentication:
+    security:
       jwt:
         providers:
         - name: example

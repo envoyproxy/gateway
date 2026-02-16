@@ -111,8 +111,7 @@ infraIR:
                 type: OpenTelemetry
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -127,6 +126,26 @@ infraIR:
           name: envoy-gateway-class
       name: envoy-gateway/gateway-1
       namespace: envoy-gateway-system
+      resolvedMetricSinks:
+      - authority: otel-collector.monitoring.svc
+        destination:
+          metadata:
+            kind: EnvoyProxy
+            name: test
+            namespace: envoy-gateway-system
+          name: metrics_otel_0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.7.6.5
+              port: 4317
+            metadata:
+              kind: Service
+              name: otel-collector
+              namespace: monitoring
+              sectionName: "4317"
+            name: metrics_otel_0/backend/-1
+            protocol: GRPC
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

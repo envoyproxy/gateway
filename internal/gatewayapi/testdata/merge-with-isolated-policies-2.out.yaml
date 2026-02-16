@@ -399,15 +399,13 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: null
-        name: default/gateway-1/http
+      - name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: default/gateway-2/http
+      - name: default/gateway-2/http
         ports:
         - containerPort: 10081
           name: http-81
@@ -570,6 +568,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
         pathMatch:
           distinct: false
@@ -640,6 +642,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/foo_example_com
         pathMatch:
           distinct: false

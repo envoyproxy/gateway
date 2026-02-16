@@ -104,8 +104,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/listener-1
+      - name: default/gateway-1/listener-1
         ports:
         - containerPort: 8081
           name: http-8081
@@ -171,6 +170,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: btp-1
+            namespace: default
           sectionName: not-backend-ref
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:

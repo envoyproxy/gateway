@@ -145,15 +145,13 @@ infraIR:
   default/tcp-gateway:
     proxy:
       listeners:
-      - address: null
-        name: default/tcp-gateway/foo
+      - name: default/tcp-gateway/foo
         ports:
         - containerPort: 8162
           name: udp-8162
           protocol: UDP
           servicePort: 8162
-      - address: null
-        name: default/tcp-gateway/bar
+      - name: default/tcp-gateway/bar
         ports:
         - containerPort: 8089
           name: tcp-8089
@@ -329,6 +327,10 @@ xdsIR:
           kind: TCPRoute
           name: tls-app-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-gateway
+            namespace: default
         name: tcproute/default/tls-app-1
         proxyProtocol:
           version: V2

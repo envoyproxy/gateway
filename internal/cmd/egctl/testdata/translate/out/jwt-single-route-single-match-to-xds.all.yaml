@@ -25,9 +25,11 @@ xds:
             transportApiVersion: V3
           cdsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           ldsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
         layeredRuntime:
           layers:
@@ -401,6 +403,7 @@ xds:
                           normalizePayloadInMetadata:
                             spaceDelimitedClaims:
                             - scope
+                            - scp
                           payloadInMetadata: example
                           remoteJwks:
                             asyncFetch: {}

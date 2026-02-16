@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -70,6 +71,10 @@ type resourceMappings struct {
 	// allAssociatedClusterTrustBundles is a set of all ClusterTrustBundles' name
 	// key is the name of ClusterTrustBundle, because ClusterTrustBundle is cluster-scoped resource
 	allAssociatedClusterTrustBundles sets.Set[string]
+	// Set for storing XListenerSets' NamespacedNames attaching to Gateways.
+	allAssociatedXListenerSets sets.Set[string]
+	// Map storing XListenerSets per Gateway (keyed by gateway namespace/name string).
+	gatewayToXListenerSets map[string][]types.NamespacedName
 }
 
 func newResourceMapping() *resourceMappings {
@@ -100,5 +105,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedHTTPRouteExtensionFilters:  sets.New[utils.NamespacedNameWithGroupKind](),
 		allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
 		allAssociatedClusterTrustBundles:        sets.New[string](),
+		allAssociatedXListenerSets:              sets.New[string](),
+		gatewayToXListenerSets:                  make(map[string][]types.NamespacedName),
 	}
 }

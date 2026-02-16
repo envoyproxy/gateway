@@ -210,8 +210,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -283,15 +282,18 @@ xdsIR:
           name: ""
           prefix: /value-ref-not-found
       - addResponseHeaders:
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: Content-Type
           value:
           - application/json
-        - append: true
+        - addIfAbsent: false
+          append: true
           name: X-Add-Header
           value:
           - added-502
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: X-Set-Header
           value:
           - set-502
@@ -310,7 +312,8 @@ xdsIR:
           name: ""
           prefix: /value-ref
       - addResponseHeaders:
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: Content-Type
           value:
           - text/plain
@@ -329,7 +332,8 @@ xdsIR:
           name: ""
           prefix: /too-long
       - addResponseHeaders:
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: Content-Type
           value:
           - text/plain
@@ -348,7 +352,8 @@ xdsIR:
           name: ""
           prefix: /inline
       - addResponseHeaders:
-        - append: false
+        - addIfAbsent: false
+          append: false
           name: Content-Type
           value:
           - image/png

@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"runtime"
 	"strings"
 	"time"
 
@@ -34,6 +33,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils"
+	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -155,7 +155,9 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 
 	// All XDS resources is ready, let's do the patch.
 	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
-		errs = errors.Join(errs, err)
+		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
+		// valid xDS resources can be sent to the proxy.
+		t.Logger.Error(err, "Failed to process JSON patches")
 	}
 
 	// Check if an extension want to inject any clusters/secrets
@@ -601,9 +603,12 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 
 			var err error
-			// If there are no filters in the destination
-			// settings and ZoneAware routing isn't
-			// enabled we create a regular xds Cluster
+			// In these cases we create a cluster per setting
+			//
+			// * ZoneAware routing is enabled
+			// * There are filters in the destination settings
+			// * There are multiple Address	Type of destination settings(IP, FQDN, UDC, etc.)
+			// * There are invalid/empty settings in the destination settings
 			if !httpRoute.NeedsClusterPerSetting() {
 				err = processXdsCluster(
 					tCtx,
@@ -617,8 +622,6 @@ func (t *Translator) addRouteToRouteConfig(
 					errs = errors.Join(errs, err)
 				}
 			} else {
-				// If a filter does exist, we create a weighted cluster that's
-				// attached to the route, and create a xds Cluster per setting
 				for _, setting := range httpRoute.Destination.Settings {
 					tSettings := []*ir.DestinationSetting{setting}
 					err = processXdsCluster(
@@ -643,7 +646,7 @@ func (t *Translator) addRouteToRouteConfig(
 						name:         mrr.Destination.Name,
 						settings:     mrr.Destination.Settings,
 						tSocket:      nil,
-						endpointType: EndpointTypeStatic,
+						endpointType: buildEndpointType(mrr.Destination.Settings),
 						metrics:      metrics,
 						metadata:     mrr.Destination.Metadata,
 					}); err != nil {
@@ -818,6 +821,19 @@ func (t *Translator) processTCPListenerXdsTranslation(
 						errs = errors.Join(errs, err)
 					}
 				}
+			} else if route.Destination != nil {
+				// TCPRoute with BackendTLSPolicy
+				// add tcp route client certs
+				for _, st := range route.Destination.Settings {
+					if st.TLS != nil {
+						for _, clientCert := range st.TLS.ClientCertificates {
+							secret := buildXdsTLSCertSecret(&clientCert)
+							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+								errs = errors.Join(errs, err)
+							}
+						}
+					}
+				}
 			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
@@ -826,6 +842,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -853,6 +870,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1088,7 +1106,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	xdsCluster := result.cluster
 	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, preferLocal)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, preferLocal)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
@@ -1142,40 +1160,14 @@ const (
 	EDS
 )
 
-// defaultCertificateName is the default location of the system trust store, initialized at runtime once.
-//
-// This assumes the Envoy running in a very specific environment. For example, the default location of the system
-// trust store on Debian derivatives like the envoy-proxy image being used by the infrastructure controller.
-//
-// TODO: this might be configurable by an env var or EnvoyGateway configuration.
-var defaultCertificateName = func() string {
-	switch runtime.GOOS {
-	case "darwin":
-		// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
-		// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
-		//
-		// See:
-		// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
-		// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
-		return "/opt/homebrew/etc/ca-certificates/cert.pem"
-	default:
-		// This is the default location for the system trust store
-		// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-		// controller.
-		// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-		return "/etc/ssl/certs/ca-certificates.crt"
-	}
-}()
-
 func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret {
-	// Build the tls secret
 	if tlsConfig.UseSystemTrustStore {
 		return &tlsv3.Secret{
 			Name: tlsConfig.CACertificate.Name,
 			Type: &tlsv3.Secret_ValidationContext{
 				ValidationContext: &tlsv3.CertificateValidationContext{
 					TrustedCa: &corev3.DataSource{
-						Specifier: &corev3.DataSource_Filename{Filename: defaultCertificateName},
+						Specifier: &corev3.DataSource_Filename{Filename: cert.SystemCertPath},
 					},
 				},
 			},

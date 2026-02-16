@@ -2122,8 +2122,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2141,8 +2140,7 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http
+      - name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2160,8 +2158,7 @@ infraIR:
   envoy-gateway/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-3/http
+      - name: envoy-gateway/gateway-3/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2179,8 +2176,7 @@ infraIR:
   envoy-gateway/gateway-4:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-4/http
+      - name: envoy-gateway/gateway-4/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2198,8 +2194,7 @@ infraIR:
   envoy-gateway/gateway-5:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-5/http
+      - name: envoy-gateway/gateway-5/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2217,8 +2212,7 @@ infraIR:
   envoy-gateway/gateway-6:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-6/http
+      - name: envoy-gateway/gateway-6/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2236,8 +2230,7 @@ infraIR:
   envoy-gateway/gateway-7:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-7/http
+      - name: envoy-gateway/gateway-7/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2255,8 +2248,7 @@ infraIR:
   envoy-gateway/gateway-8:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-8/http
+      - name: envoy-gateway/gateway-8/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2274,8 +2266,7 @@ infraIR:
   envoy-gateway/gateway-9:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-9/http
+      - name: envoy-gateway/gateway-9/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2293,8 +2284,7 @@ infraIR:
   envoy-gateway/gateway-10:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-10/http
+      - name: envoy-gateway/gateway-10/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2312,8 +2302,7 @@ infraIR:
   envoy-gateway/gateway-11:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-11/http
+      - name: envoy-gateway/gateway-11/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2331,8 +2320,7 @@ infraIR:
   envoy-gateway/gateway-12:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-12/http
+      - name: envoy-gateway/gateway-12/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2350,8 +2338,7 @@ infraIR:
   envoy-gateway/gateway-13:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-13/http
+      - name: envoy-gateway/gateway-13/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2369,8 +2356,7 @@ infraIR:
   envoy-gateway/gateway-14:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-14/http
+      - name: envoy-gateway/gateway-14/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2388,8 +2374,7 @@ infraIR:
   envoy-gateway/gateway-15:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-15/http
+      - name: envoy-gateway/gateway-15/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2407,8 +2392,7 @@ infraIR:
   envoy-gateway/gateway-16:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-16/http
+      - name: envoy-gateway/gateway-16/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2426,8 +2410,7 @@ infraIR:
   envoy-gateway/gateway-17:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-17/http
+      - name: envoy-gateway/gateway-17/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2445,8 +2428,7 @@ infraIR:
   envoy-gateway/gateway-18:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-18/http
+      - name: envoy-gateway/gateway-18/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -2512,6 +2494,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2526,6 +2512,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2587,6 +2577,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2601,6 +2595,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2662,6 +2660,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2676,6 +2678,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2737,6 +2743,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2751,6 +2761,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2812,6 +2826,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2826,6 +2844,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2887,6 +2909,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2901,6 +2927,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2962,6 +2992,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -2976,6 +3010,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3037,6 +3075,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3051,6 +3093,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3112,6 +3158,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3126,6 +3176,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3187,6 +3241,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3201,6 +3259,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3262,6 +3324,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3276,6 +3342,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3337,6 +3407,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3351,6 +3425,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3412,6 +3490,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3426,6 +3508,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3487,6 +3573,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3501,6 +3591,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3562,6 +3656,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3576,6 +3674,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3637,6 +3739,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3651,6 +3757,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3712,6 +3822,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3726,6 +3840,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3787,6 +3905,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-gateway-with-route-level-override-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -3801,6 +3923,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: envoy-gateway
+          policies:
+          - kind: BackendTrafficPolicy
+            name: target-httproute-with-accepted-truncated-ancestors
+            namespace: envoy-gateway
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false

@@ -450,15 +450,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/listener-1
+      - name: envoy-gateway/gateway-1/listener-1
         ports:
         - containerPort: 8081
           name: http-8081
           protocol: HTTP
           servicePort: 8081
-      - address: null
-        name: envoy-gateway/gateway-1/listener-2
+      - name: envoy-gateway/gateway-1/listener-2
         ports:
         - containerPort: 8082
           name: http-8082
@@ -542,6 +540,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-1
+            namespace: default
           sectionName: rule-1
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
@@ -585,6 +587,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-httproute-1-rule-2
+            namespace: default
           sectionName: rule-2
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
@@ -619,6 +625,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -674,6 +684,10 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-2
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-httproute-2
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/*
         pathMatch:
           distinct: false
@@ -713,6 +727,10 @@ xdsIR:
           kind: GRPCRoute
           name: grpcroute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: merged-policy-for-grpcroute-1
+            namespace: default
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           backendConnection:

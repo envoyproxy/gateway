@@ -277,6 +277,58 @@ spec:
                         x-kubernetes-list-map-keys:
                         - name
                         x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
                       remove:
                         description: |-
                           Remove the given header(s) from the HTTP request before the action. The
@@ -412,6 +464,58 @@ spec:
                           Output:
                             GET /foo HTTP/1.1
                             my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: Value is the value of HTTP Header to be
+                                matched.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
                         items:
                           description: HTTPHeader represents an HTTP Header name and
                             value as defined by RFC 7230.
@@ -775,6 +879,21 @@ spec:
                       For more information on security implications, see haproxy.org/download/2.1/doc/proxy-protocol.txt
                     type: boolean
                 type: object
+              scheme:
+                description: |-
+                  Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.
+
+                  - Preserve (default): Preserves the :scheme from the original client request.
+                    Use this when backends need to know the original client scheme for URL generation or redirects.
+
+                  - MatchBackend: Sets the :scheme to match the backend transport protocol.
+                    If the backend uses TLS, the scheme is "https", otherwise "http".
+                    Use this when backends require the scheme to match the actual transport protocol,
+                    such as strictly HTTPS services that validate the :scheme header.
+                enum:
+                - Preserve
+                - MatchBackend
+                type: string
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
@@ -1035,6 +1154,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -1372,6 +1493,26 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   maxVersion:

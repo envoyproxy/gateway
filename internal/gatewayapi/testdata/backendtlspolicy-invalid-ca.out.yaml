@@ -59,12 +59,14 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: No CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
+        message: Unsupported reference kind, supported kinds are ConfigMap, Secret,
+          and ClusterTrustBundle.
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
       - lastTransitionTime: null
-        message: No CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
+        message: Unsupported reference kind, supported kinds are ConfigMap, Secret,
+          and ClusterTrustBundle.
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
@@ -143,7 +145,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: |-
           Failed to process route rule 0 backendRef 0: configmap no-ca-cmap not found in namespace backends.
-          Failed to process route rule 0 backendRef 1: no CA bundle found in referenced ConfigMap, Secret, or ClusterTrustBundle.
+          Failed to process route rule 0 backendRef 1: Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle.
         reason: InvalidBackendTLS
         status: "False"
         type: ResolvedRefs
@@ -156,8 +158,7 @@ infraIR:
   envoy-gateway/gateway-btls:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-btls/http
+      - name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
           name: http-80

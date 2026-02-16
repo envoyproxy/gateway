@@ -36,8 +36,10 @@ E2E_TIMEOUT ?= 20m
 # E2E_REDIRECT allow you specified a redirect when run e2e test locally, e.g. `>> test_output.out 2>&1`
 E2E_REDIRECT ?=
 E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
+# If E2E_DEBUG is not explicitly defined, set it based on the ACTIONS_STEP_DEBUG environment variable.
+E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
-E2E_TEST_SUITE_ARGS ?= --debug=true
+E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
@@ -168,24 +170,37 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-deploy
-kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
+	# Install CRDs using helm template to avoid 1MB secret size limit
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		| kubectl apply --server-side -f -
+	# Install Envoy Gateway without CRDs
 	$(GO_TOOL) helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
 		--wait --wait-for-jobs \
+		--skip-crds \
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
+	# Install CRDs using helm template to avoid 1MB secret size limit
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		| kubectl apply --server-side -f -
 	# Install Envoy Gateway
 	$(GO_TOOL) helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
 		--set config.envoyGateway.admin.enablePprof=true \
-		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs \
+		--skip-crds
 	# Install Prometheus-server only
 	$(GO_TOOL) helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
 		--set tempo.enabled=false \
@@ -196,9 +211,14 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
  		-n monitoring --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
-kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-undeploy: manifests helm-generate ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system
+	# Uninstall CRDs
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		| kubectl delete -f - --ignore-not-found=$(ignore-not-found)
 
 .PHONY: kube-demo-prepare
 kube-demo-prepare:

@@ -96,7 +96,7 @@ func buildHCMRequestBufferFilter(spec *ir.RequestBuffer) (*hcmv3.HttpFilter, err
 	}, nil
 }
 
-func (r *requestBuffer) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (r *requestBuffer) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
 	return nil
 }
 

@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -66,6 +67,26 @@ var (
 	webhookTLSPort = 9443
 )
 
+// cacheReadyCheck returns a healthz.Checker that verifies the manager's cache has synced.
+// This ensures the control plane has populated its cache with all resources from the API server
+// before reporting ready. This prevents serving inconsistent xDS configuration to Envoy proxies
+// when running multiple control plane replicas during periods of resource churn.
+func cacheReadyCheck(mgr manager.Manager) healthz.Checker {
+	return func(req *http.Request) error {
+		// Use a short timeout to avoid blocking the health check indefinitely.
+		// The readiness probe will retry periodically until the cache syncs.
+		ctx, cancel := context.WithTimeout(req.Context(), 1*time.Second)
+		defer cancel()
+
+		// WaitForCacheSync returns true if the cache has synced, false if the context is cancelled.
+		if !mgr.GetCache().WaitForCacheSync(ctx) {
+			return fmt.Errorf("cache not synced yet")
+		}
+
+		return nil
+	}
+}
+
 func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
 ) (*Provider, error) {
@@ -84,6 +105,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				Unstructured: true,
+			},
+		},
 	}
 
 	if metricsOpts != nil {
@@ -140,6 +166,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			},
 			&corev1.ConfigMap{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
+				Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
 			},
 			&corev1.Service{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
@@ -181,6 +208,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			Port:     webhookTLSPort,
 		})
 	}
+
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
@@ -211,8 +239,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
 
-	// Add ready check health probes.
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// Add ready check to wait for a successful sync of the cache.
+	if err := mgr.AddReadyzCheck("cache-sync", cacheReadyCheck(mgr)); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 

@@ -20,9 +20,11 @@ dynamic_resources:
     transport_api_version: V3
   cds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
   lds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
 layered_runtime:
   layers:

@@ -64,7 +64,7 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		sdsConfigPath: proxyDir,
 		Stdout:        io.Discard,
 		Stderr:        io.Discard,
-		envoyRunner: func(ctx context.Context, args []string, options ...func_e_api.RunOption) error {
+		envoyRunner: func(ctx context.Context, _ []string, _ ...func_e_api.RunOption) error {
 			// Block until context is cancelled (mimics real Envoy blocking)
 			<-ctx.Done()
 			return ctx.Err()
@@ -402,7 +402,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies are running
 		count := 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})
@@ -414,7 +414,7 @@ func TestInfra_Close(t *testing.T) {
 
 		// Verify all proxies were stopped
 		count = 0
-		infra.proxyContextMap.Range(func(key, value any) bool {
+		infra.proxyContextMap.Range(func(_, _ any) bool {
 			count++
 			return true
 		})

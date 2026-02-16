@@ -7,7 +7,6 @@ package translator
 
 import (
 	"errors"
-	"sort"
 	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -19,7 +18,6 @@ import (
 	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
-	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -157,20 +155,21 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		// NR is only added to listener logs originating from a global log configuration
 		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && json.LogType == nil
 
-		jsonLogFields := EnvoyJSONLogFields
+		var jsonLogFields []ir.MapEntry
 		if json.JSON != nil {
 			jsonLogFields = json.JSON
+		} else {
+			jsonLogFields = ir.MapToSlice(EnvoyJSONLogFields)
 		}
 
-		keys := maps.Keys(jsonLogFields)
 		jsonFormat := &structpb.Struct{
-			Fields: make(map[string]*structpb.Value, len(keys)),
+			Fields: make(map[string]*structpb.Value, len(jsonLogFields)),
 		}
 
-		for _, key := range keys {
-			jsonFormat.Fields[key] = &structpb.Value{
+		for _, entry := range jsonLogFields {
+			jsonFormat.Fields[entry.Key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: jsonLogFields[key],
+					StringValue: entry.Value,
 				},
 			}
 		}
@@ -302,7 +301,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
-			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
+			ResourceAttributes: convertToKeyValueList(otel.ResourceAttributes, false),
 		}
 
 		var format string
@@ -318,12 +317,12 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			}
 		}
 
-		var attrs map[string]string
+		var attrs []ir.MapEntry
 		if len(otel.Attributes) != 0 {
 			attrs = otel.Attributes
 		} else if len(otel.Attributes) == 0 && format == "" {
 			// if there are no attributes and text format is unset, use the default EnvoyJSONLogFields
-			attrs = EnvoyJSONLogFields
+			attrs = ir.MapToSlice(EnvoyJSONLogFields)
 		}
 
 		al.Attributes = convertToKeyValueList(attrs, true)
@@ -417,15 +416,15 @@ func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
 	return formatters
 }
 
-func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionConfig {
+func accessLogJSONFormatters(json []ir.MapEntry) []*cfgcore.TypedExtensionConfig {
 	reqWithoutQuery := false
 
-	for _, value := range json {
+	for _, entry := range json {
 		if reqWithoutQuery {
 			break
 		}
 
-		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+		if strings.Contains(entry.Value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
 		}
 	}
@@ -439,15 +438,15 @@ func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionCo
 	return formatters
 }
 
-func accessLogOpenTelemetryFormatters(body string, attributes map[string]string) []*cfgcore.TypedExtensionConfig {
+func accessLogOpenTelemetryFormatters(body string, attributes []ir.MapEntry) []*cfgcore.TypedExtensionConfig {
 	var reqWithoutQuery bool
 
 	if strings.Contains(body, reqWithoutQueryCommandOperator) {
 		reqWithoutQuery = true
 	}
 
-	for _, value := range attributes {
-		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+	for _, entry := range attributes {
+		if strings.Contains(entry.Value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
 			break
 		}
@@ -467,7 +466,7 @@ const (
 	k8sPodNameKey       = "k8s.pod.name"
 )
 
-func convertToKeyValueList(attributes map[string]string, additionalLabels bool) *otlpcommonv1.KeyValueList {
+func convertToKeyValueList(attributes []ir.MapEntry, additionalLabels bool) *otlpcommonv1.KeyValueList {
 	maxLen := len(attributes)
 	if additionalLabels {
 		maxLen += 2
@@ -497,14 +496,11 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 		return keyValueList
 	}
 
-	// sort keys to ensure consistent ordering
-	keys := maps.Keys(attributes)
-	sort.Strings(keys)
-
-	for _, key := range keys {
+	// Attributes are already sorted by key in the IR
+	for _, entry := range attributes {
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   key,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: attributes[key]}},
+			Key:   entry.Key,
+			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: entry.Value}},
 		})
 	}
 
