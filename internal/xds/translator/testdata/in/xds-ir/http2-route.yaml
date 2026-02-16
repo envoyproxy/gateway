@@ -34,6 +34,11 @@ http:
         initialStreamWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: true
+        connectionKeepalive:
+          interval: 60
+          timeout: 10
+          intervalJitter: 20
+          connectionIdleInterval: 30
   - name: "second-route"
     hostname: "*"
     pathMatch:

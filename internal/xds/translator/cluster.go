@@ -1351,6 +1351,23 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		}
 	}
 
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Interval) * time.Second)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(time.Duration(*opts.ConnectionKeepalive.Timeout) * time.Second)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &xdstype.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.ConnectionIdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(time.Duration(*opts.ConnectionKeepalive.ConnectionIdleInterval) * time.Second)
+		}
+		out.ConnectionKeepalive = keepalive
+	}
+
 	return out
 }
 

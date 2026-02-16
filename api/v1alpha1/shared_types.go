@@ -725,6 +725,7 @@ type HTTP2Settings struct {
 }
 
 // HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.interval) || duration(self.timeout) < duration(self.interval)",message="timeout must be less than interval"
 type HTTP2ConnectionKeepalive struct {
 	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
 	// +optional
