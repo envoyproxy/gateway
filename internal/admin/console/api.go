@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"runtime"
+	"sort"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -94,6 +96,33 @@ const redactedSecretValue = "[redacted]"
 
 var redactedSecretValueBytes = []byte(redactedSecretValue)
 
+var supportedConfigDumpResources = map[string]struct{}{
+	"all":                  {},
+	"gatewayclass":         {},
+	"gateway":              {},
+	"httproute":            {},
+	"grpcroute":            {},
+	"tlsroute":             {},
+	"tcproute":             {},
+	"udproute":             {},
+	"clienttrafficpolicy":  {},
+	"backendtrafficpolicy": {},
+	"backendtlspolicy":     {},
+	"securitypolicy":       {},
+	"envoypatchpolicy":     {},
+	"envoyextensionpolicy": {},
+	"service":              {},
+	"secret":               {},
+	"configmap":            {},
+	"namespace":            {},
+	"endpointslice":        {},
+	"referencegrant":       {},
+	"httproutefilter":      {},
+	"envoyproxy":           {},
+	"backend":              {},
+	"serviceimport":        {},
+}
+
 // handleAPIInfo returns basic system information
 func (h *Handler) handleAPIInfo(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -177,30 +206,38 @@ func (h *Handler) handleAPIConfigDump(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if resource=all parameter is provided
 	resourceParam := r.URL.Query().Get("resource")
-	if resourceParam == "all" {
-		// Return complete provider resources dump
-		h.handleCompleteConfigDump(w, r)
-		return
-	}
-
-	// Load provider resources from watchable (summary view)
-	configDump := h.loadConfigDump()
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(configDump); err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
+	switch resourceParam {
+	case "":
+		// Load provider resources from watchable (summary view)
+		configDump := h.loadConfigDump()
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(configDump); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
+	default:
+		if _, ok := supportedConfigDumpResources[resourceParam]; !ok {
+			http.Error(w, "Invalid resource filter. Supported values: "+supportedResourceValues(), http.StatusBadRequest)
+			return
+		}
+		h.handleProviderResourcesDump(w, resourceParam)
 	}
 }
 
-// handleCompleteConfigDump handles requests for complete provider resources dump
-func (h *Handler) handleCompleteConfigDump(w http.ResponseWriter, _ *http.Request) {
+func supportedResourceValues() string {
+	values := make([]string, 0, len(supportedConfigDumpResources))
+	for value := range supportedConfigDumpResources {
+		values = append(values, value)
+	}
+	sort.Strings(values)
+
+	return strings.Join(values, ", ")
+}
+
+func (h *Handler) handleProviderResourcesDump(w http.ResponseWriter, resourceParam string) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	if h.providerResources == nil {
-		// Return empty structure if no provider resources
 		emptyResponse := map[string]interface{}{
 			"message":   "No provider resources available",
 			"timestamp": time.Now(),
@@ -211,19 +248,31 @@ func (h *Handler) handleCompleteConfigDump(w http.ResponseWriter, _ *http.Reques
 		return
 	}
 
-	// Get the actual resources using GetResources() method
-	resources := redactSecretData(h.providerResources.GetResources())
-
-	// Create a structured response with the actual resource data
-	response := map[string]interface{}{
-		"resources":  resources,
-		"timestamp":  time.Now(),
-		"totalCount": len(resources),
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
-		return
+	resources := h.providerResources.GetResources()
+	switch resourceParam {
+	case "all":
+		resources = redactSecretData(resources)
+		response := map[string]interface{}{
+			"resources":  resources,
+			"timestamp":  time.Now(),
+			"totalCount": len(resources),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
+		}
+	default:
+		if resourceParam == "secret" {
+			resources = redactSecretData(resources)
+		}
+		filteredResources := filterResourcesByType(resources, resourceParam)
+		response := map[string]interface{}{
+			"resources":  filteredResources,
+			"timestamp":  time.Now(),
+			"totalCount": len(filteredResources),
+		}
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, "Failed to encode provider resources", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -270,6 +319,115 @@ func redactSecrets(secrets []*corev1.Secret) []*corev1.Secret {
 	}
 
 	return redacted
+}
+
+func filterResourcesByType(resources []*resource.Resources, resourceType string) []interface{} {
+	filtered := make([]interface{}, 0)
+
+	for _, item := range resources {
+		if item == nil {
+			continue
+		}
+		switch resourceType {
+		case "gatewayclass":
+			if item.GatewayClass != nil {
+				filtered = append(filtered, item.GatewayClass)
+			}
+		case "gateway":
+			for _, value := range item.Gateways {
+				filtered = append(filtered, value)
+			}
+		case "httproute":
+			for _, value := range item.HTTPRoutes {
+				filtered = append(filtered, value)
+			}
+		case "grpcroute":
+			for _, value := range item.GRPCRoutes {
+				filtered = append(filtered, value)
+			}
+		case "tlsroute":
+			for _, value := range item.TLSRoutes {
+				filtered = append(filtered, value)
+			}
+		case "tcproute":
+			for _, value := range item.TCPRoutes {
+				filtered = append(filtered, value)
+			}
+		case "udproute":
+			for _, value := range item.UDPRoutes {
+				filtered = append(filtered, value)
+			}
+		case "clienttrafficpolicy":
+			for _, value := range item.ClientTrafficPolicies {
+				filtered = append(filtered, value)
+			}
+		case "backendtrafficpolicy":
+			for _, value := range item.BackendTrafficPolicies {
+				filtered = append(filtered, value)
+			}
+		case "backendtlspolicy":
+			for _, value := range item.BackendTLSPolicies {
+				filtered = append(filtered, value)
+			}
+		case "securitypolicy":
+			for _, value := range item.SecurityPolicies {
+				filtered = append(filtered, value)
+			}
+		case "envoypatchpolicy":
+			for _, value := range item.EnvoyPatchPolicies {
+				filtered = append(filtered, value)
+			}
+		case "envoyextensionpolicy":
+			for _, value := range item.EnvoyExtensionPolicies {
+				filtered = append(filtered, value)
+			}
+		case "service":
+			for _, value := range item.Services {
+				filtered = append(filtered, value)
+			}
+		case "secret":
+			for _, value := range item.Secrets {
+				filtered = append(filtered, value)
+			}
+		case "configmap":
+			for _, value := range item.ConfigMaps {
+				filtered = append(filtered, value)
+			}
+		case "namespace":
+			for _, value := range item.Namespaces {
+				filtered = append(filtered, value)
+			}
+		case "endpointslice":
+			for _, value := range item.EndpointSlices {
+				filtered = append(filtered, value)
+			}
+		case "referencegrant":
+			for _, value := range item.ReferenceGrants {
+				filtered = append(filtered, value)
+			}
+		case "httproutefilter":
+			for _, value := range item.HTTPRouteFilters {
+				filtered = append(filtered, value)
+			}
+		case "envoyproxy":
+			if item.EnvoyProxyForGatewayClass != nil {
+				filtered = append(filtered, item.EnvoyProxyForGatewayClass)
+			}
+			for _, value := range item.EnvoyProxiesForGateways {
+				filtered = append(filtered, value)
+			}
+		case "backend":
+			for _, value := range item.Backends {
+				filtered = append(filtered, value)
+			}
+		case "serviceimport":
+			for _, value := range item.ServiceImports {
+				filtered = append(filtered, value)
+			}
+		}
+	}
+
+	return filtered
 }
 
 // loadConfigDump loads configuration data from provider resources

@@ -463,6 +463,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  |  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
 
 
 #### BackendTLSSettings
@@ -740,6 +741,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  |  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
 | `session` | _[Session](#session)_ |  false  |  | Session defines settings related to TLS session management. |
 
 
@@ -5427,6 +5429,23 @@ _Appears in:_
 | `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
 
 
+#### TLSFingerprintType
+
+_Underlying type:_ _string_
+
+TLSFingerprintType specifies the TLS client fingerprinting mode.
+
+_Appears in:_
+- [BackendTLSConfig](#backendtlsconfig)
+- [ClientTLSSettings](#clienttlssettings)
+- [TLSSettings](#tlssettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `JA3` | Enable JA3 TLS fingerprinting only.<br />The fingerprint will be available as %TLS_JA3_FINGERPRINT%.<br /> | 
+| `JA4` | Enable JA4 TLS fingerprinting only.<br />The fingerprint will be available as %TLS_JA4_FINGERPRINT%.<br /> | 
+
+
 #### TLSSettings
 
 
@@ -5445,6 +5464,7 @@ _Appears in:_
 | `ecdhCurves` | _string array_ |  false  |  | ECDHCurves specifies the set of supported ECDH curves.<br />In non-FIPS Envoy Proxy builds the default curves are:<br />- X25519<br />- P-256<br />In builds using BoringSSL FIPS the default curve is:<br />- P-256 |
 | `signatureAlgorithms` | _string array_ |  false  |  | SignatureAlgorithms specifies which signature algorithms the listener should<br />support. |
 | `alpnProtocols` | _[ALPNProtocol](#alpnprotocol) array_ |  false  |  | ALPNProtocols supplies the list of ALPN protocols that should be<br />exposed by the listener or used by the proxy to connect to the backend.<br />Defaults:<br />1. HTTPS Routes: h2 and http/1.1 are enabled in listener context.<br />2. Other Routes: ALPN is disabled.<br />3. Backends: proxy uses the appropriate ALPN options for the backend protocol.<br />When an empty list is provided, the ALPN TLS extension is disabled.<br />Defaults to [h2, http/1.1] if not specified.<br />Typical Supported values are:<br />- http/1.0<br />- http/1.1<br />- h2 |
+| `fingerprints` | _[TLSFingerprintType](#tlsfingerprinttype) array_ |  false  |  | Fingerprints specifies TLS client fingerprinting.<br />When specified, a JAX fingerprint derived from the client’s TLS handshake<br />is generated. The fingerprint can be logged in access logs or<br />forwarded to upstream services using request headers.<br />Fingerprinting is disabled if not specified.<br />Supported values are:<br />- JA3<br />- JA4 |
 
 
 #### TLSVersion
