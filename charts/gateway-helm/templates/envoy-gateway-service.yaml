@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" . }}'
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
