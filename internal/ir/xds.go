@@ -409,6 +409,15 @@ func (t TLSVersion) Int() uint16 {
 	}
 }
 
+type TLSFingerprintType egv1a1.TLSFingerprintType
+
+const (
+	// Enable JA3 TLS fingerprinting only.
+	TLSFingerprintTypeJA3 = TLSFingerprintType(egv1a1.TLSFingerprintTypeJA3)
+	// Enable JA4 TLS fingerprinting only.
+	TLSFingerprintTypeJA4 = TLSFingerprintType(egv1a1.TLSFingerprintTypeJA4)
+)
+
 // TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSConfig struct {
@@ -444,6 +453,8 @@ type TLSConfig struct {
 	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
 	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled
 	StatefulSessionResumption bool `json:"statefulSessionResumption,omitempty" yaml:"statefulSessionResumption,omitempty"`
+	// EnableFingerprint enables TLS client fingerprinting.
+	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty" yaml:"fingerprints,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -674,6 +685,7 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
+	// Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
 	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
