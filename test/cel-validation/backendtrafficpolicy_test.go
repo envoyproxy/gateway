@@ -349,7 +349,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "consistentHash lb with zoneAware",
+			desc: "consistentHash lb with empty zoneAware",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -372,10 +372,69 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "consistentHash lb with zoneAware preferLocal",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ConsistentHashLoadBalancerType,
+							ConsistentHash: &egv1a1.ConsistentHash{
+								Type: "SourceIP",
+							},
+							ZoneAware: &egv1a1.ZoneAware{
+								PreferLocal: &egv1a1.PreferLocalZone{},
+							},
+						},
+					},
+				}
+			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers",
+				": PreferLocal zone-aware routing is not supported for ConsistentHash load balancers. Use weightedZones instead.",
 			},
+		},
+		{
+			desc: "consistentHash lb with zoneAware weightedZones",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.ConsistentHashLoadBalancerType,
+							ConsistentHash: &egv1a1.ConsistentHash{
+								Type: "SourceIP",
+							},
+							ZoneAware: &egv1a1.ZoneAware{
+								WeightedZones: []egv1a1.WeightedZoneConfig{{
+									Zone:   "us-east-1a",
+									Weight: uint32(70),
+								}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "leastRequest with ConsistentHash nil",
@@ -421,6 +480,68 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "leastRequest with ZoneAware PreferLocal and WeightedZones set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.LeastRequestLoadBalancerType,
+							ZoneAware: &egv1a1.ZoneAware{
+								PreferLocal: &egv1a1.PreferLocalZone{},
+								WeightedZones: []egv1a1.WeightedZoneConfig{{
+									Zone:   "zone1",
+									Weight: uint32(10),
+								}},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value:",
+				": ZoneAware PreferLocal and WeightedZones cannot be specified together",
+			},
+		},
+		{
+			desc: "weightedZones with duplicate zone names",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.RoundRobinLoadBalancerType,
+							ZoneAware: &egv1a1.ZoneAware{
+								WeightedZones: []egv1a1.WeightedZoneConfig{
+									{Zone: "us-east-1a", Weight: 70},
+									{Zone: "us-east-1a", Weight: 30},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer.zoneAware.weightedZones[1]: Duplicate value:",
+			},
 		},
 		{
 			desc: "leastRequest with SlowStar is set",

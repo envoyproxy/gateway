@@ -1,0 +1,46 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: route-with-weighted-zones-roundrobin-dest/backend/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.round_robin
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.round_robin.v3.RoundRobin
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: route-with-weighted-zones-roundrobin-dest/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: route-with-weighted-zones-maglev-dest/backend/0
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: MAGLEV
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
+          localityWeightedLbConfig: {}
+  name: route-with-weighted-zones-maglev-dest/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
