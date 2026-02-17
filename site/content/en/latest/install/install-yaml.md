@@ -43,7 +43,7 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
   | kubectl apply --force-conflicts --server-side -f -
 ```
 
-2. Upgrade Envoy Gateway:
+2. Install Envoy Gateway {{< yaml-version >}}:
 
 ```shell
 helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system
