@@ -46,7 +46,7 @@ helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
 2. Upgrade Envoy Gateway:
 
 ```shell
-helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system --skip-crds
+helm upgrade eg oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} -n envoy-gateway-system
 ```
 
 {{< boilerplate open-ports >}}
