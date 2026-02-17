@@ -57,7 +57,7 @@ prometheus:
   prometheus-pushgateway:
     enabled: false
   kube-state-metrics:
-    enabled: true
+    enabled: false
     customResourceState:
       enabled: true
       # Add (Cluster)Role permissions to list/watch the customResources defined in the config to rbac.extraRules
