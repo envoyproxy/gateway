@@ -6,7 +6,6 @@ tcp:
   tls:
     mode: Passthrough
   routes: []
-
 - name: tls-passthrough-2
   address: 0.0.0.0
   port: 10443
@@ -14,7 +13,6 @@ tcp:
   tls:
     mode: Passthrough
   routes: []
-
 - name: tls-passthrough-3
   address: 0.0.0.0
   port: 10443
