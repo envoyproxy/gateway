@@ -663,3 +663,8 @@ Logical AND/OR operators are used to represent the relationship between parent a
 ### AT6
 
 ![AT6](/img/AT6.png)
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)

@@ -89,3 +89,8 @@ spec:
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)

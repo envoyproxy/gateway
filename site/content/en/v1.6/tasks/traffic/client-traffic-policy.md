@@ -657,5 +657,10 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [ClientTrafficPolicy API reference](../../../api/extension_types#clienttrafficpolicy)
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

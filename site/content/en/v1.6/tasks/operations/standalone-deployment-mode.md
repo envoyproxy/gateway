@@ -275,4 +275,9 @@ curl --verbose --header "Host: www.example.com" http://0.0.0.0:8888/
 * Connection #0 to host 0.0.0.0 left intact
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
+
 [Backend]: ../../../api/extension_types#backend

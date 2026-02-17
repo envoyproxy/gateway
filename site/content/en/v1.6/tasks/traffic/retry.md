@@ -149,6 +149,11 @@ You will expect to see the stats.
 envoy_cluster_upstream_rq_retry{envoy_cluster_name="httproute/default/backend/rule/0"} 5
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [HTTPRoute Retries(GEP-1731)]: https://gateway-api.sigs.k8s.io/geps/gep-1731/
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
