@@ -12,7 +12,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -245,4 +247,62 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 		err := cli.List(context.Background(), &gwapiv1b1.ReferenceGrantList{}, client.MatchingFields{targetRefGrantRouteIndex: "any"})
 		require.NoError(t, err)
 	})
+}
+
+// TestOfflineControllerSeedsSecrets verifies that the offline controller seeds
+// the fake Kubernetes client with the secrets normally created by the CertGen
+// job. Without these, the reconciler logs spurious errors on every startup.
+// See https://github.com/envoyproxy/gateway/issues/6596
+func TestOfflineControllerSeedsSecrets(t *testing.T) {
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+
+	cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
+		Type: egv1a1.ProviderTypeCustom,
+	}
+	pResources := new(message.ProviderResources)
+	reconciler, err := NewOfflineGatewayAPIController(context.Background(), cfg, nil, pResources)
+	require.NoError(t, err)
+
+	cases := []struct {
+		name       string
+		secretType corev1.SecretType
+		keys       []string
+	}{
+		{
+			name:       "envoy-gateway",
+			secretType: corev1.SecretTypeTLS,
+			keys:       []string{corev1.TLSCertKey, corev1.TLSPrivateKeyKey, "ca.crt"},
+		},
+		{
+			name:       "envoy",
+			secretType: corev1.SecretTypeTLS,
+			keys:       []string{corev1.TLSCertKey, corev1.TLSPrivateKeyKey, "ca.crt"},
+		},
+		{
+			name:       "envoy-rate-limit",
+			secretType: corev1.SecretTypeTLS,
+			keys:       []string{corev1.TLSCertKey, corev1.TLSPrivateKeyKey, "ca.crt"},
+		},
+		{
+			name:       "envoy-oidc-hmac",
+			secretType: corev1.SecretTypeOpaque,
+			keys:       []string{"hmac-secret"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var secret corev1.Secret
+			err := reconciler.Client.Get(context.Background(), types.NamespacedName{
+				Namespace: cfg.ControllerNamespace,
+				Name:      tc.name,
+			}, &secret)
+			require.NoError(t, err)
+			assert.Equal(t, tc.secretType, secret.Type)
+			for _, key := range tc.keys {
+				assert.NotEmpty(t, secret.Data[key], "expected key %s to have data", key)
+			}
+		})
+	}
 }

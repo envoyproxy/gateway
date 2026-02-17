@@ -131,7 +131,8 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
@@ -154,7 +155,8 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("remove the watched file", func(t *testing.T) {
@@ -177,7 +179,8 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("rename the file then rename it back in watched dir", func(t *testing.T) {
@@ -201,7 +204,8 @@ func TestFileProvider(t *testing.T) {
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("update file content in watched dir", func(t *testing.T) {
@@ -229,13 +233,15 @@ func TestFileProvider(t *testing.T) {
 		want1 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want1)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want1, resources1, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want1, resources1, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 
 		resources2 := pResources.GetResourcesByGatewayClass("eg-2")
 		want2 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.2.yaml", want2)
 		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
-		testutil.CmpResources(t, want2, resources2, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"))
+		testutil.CmpResources(t, want2, resources2, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("remove all files in watched dir", func(t *testing.T) {

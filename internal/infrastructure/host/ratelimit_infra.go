@@ -17,7 +17,8 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(_ context.Context) error {
 	return fmt.Errorf("create/update ratelimit infrastructure is not supported yet for host infrastructure")
 }
 
-// DeleteRateLimitInfra removes the managed host rate limit process, if it doesn't exist.
+// DeleteRateLimitInfra is a no-op for host infrastructure since rate limiting
+// is not yet supported, so there is nothing to clean up.
 func (i *Infra) DeleteRateLimitInfra(_ context.Context) error {
-	return fmt.Errorf("delete ratelimit infrastructure is not supported yet for host infrastructure")
+	return nil
 }
