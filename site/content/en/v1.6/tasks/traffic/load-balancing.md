@@ -1043,6 +1043,11 @@ done
 
 You should see requests distributed across different pods using the round robin fallback policy.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Envoy load balancing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/overview
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/

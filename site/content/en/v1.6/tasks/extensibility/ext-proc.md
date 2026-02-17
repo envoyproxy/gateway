@@ -236,6 +236,18 @@ You should see that the external processor added headers:
 
 ```
 curl -v -H "Host: www.example.com"  http://localhost:10080/myapp
+
+## Next Steps
+
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+
+- See the full list of supported configuration fields in the
+  [EnvoyExtensionPolicy API reference](../../../api/extension_types#envoyextensionpolicy)
+
+[EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
+[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [...]
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -270,12 +282,3 @@ kubectl delete httproute/myapp
 kubectl delete envoyextensionpolicy/ext-proc-example
 kubectl delete backendtlspolicy/grpc-ext-proc-btls
 ```
-
-## Next Steps
-
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
-
-[EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
-[BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

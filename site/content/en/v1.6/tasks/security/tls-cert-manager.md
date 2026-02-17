@@ -440,5 +440,10 @@ eg-https   kubernetes.io/tls   3      42m
 * [Secure Gateways](secure-gateways.md)
 * [Securing gateway.networking.k8s.io Gateway Resources](https://cert-manager.io/docs/usage/gateway/)
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)
+
 [TLS listeners]: https://gateway-api.sigs.k8s.io/guides/tls/#listeners-and-tls
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

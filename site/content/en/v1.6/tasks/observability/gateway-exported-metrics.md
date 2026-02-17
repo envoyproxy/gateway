@@ -105,4 +105,9 @@ Envoy Gateway monitors the status of the TopologyInjector webhook which injects 
 
 This metrics provides information on whether a webhook request was successful, failed, or a no-op.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
+
 [prom-format]: https://prometheus.io/docs/instrumenting/exposition_formats/#text-based-format

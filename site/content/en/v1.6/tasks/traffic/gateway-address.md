@@ -62,6 +62,10 @@ __Note:__ If the `Gateway.Spec.Addresses` is explicitly set, it will be the only
 Using the addresses in `Gateway.Spec.Addresses` as the [Cluster IP][] of Envoy Proxy Service,
 this will __require__ the address to be of type `IPAddress` and the [ServiceType][] to be of `ClusterIP`.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
 
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Addresses]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#gatewayaddress

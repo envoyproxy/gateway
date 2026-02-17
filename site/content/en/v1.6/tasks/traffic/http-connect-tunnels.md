@@ -172,3 +172,8 @@ kubectl delete deployment socat
 kubectl delete service socat
 kubectl delete serviceaccount socat
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)

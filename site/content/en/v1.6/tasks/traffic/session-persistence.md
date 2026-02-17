@@ -222,4 +222,9 @@ done
 
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

@@ -272,6 +272,11 @@ kubectl delete httproute/zone-aware-routing
 kubectl delete backendtrafficpolicy/zone-aware-routing
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Traffic Distribution]: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution
 [Topology Aware Routing]: https://kubernetes.io/docs/concepts/services-networking/topology-aware-routing/
 [Kubernetes well-known metadata]: https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesiozone

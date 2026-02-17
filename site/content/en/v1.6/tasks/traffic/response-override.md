@@ -164,5 +164,3 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/status/500
 
 - See the full list of supported configuration fields in the
   [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
-
-

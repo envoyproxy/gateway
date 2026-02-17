@@ -121,3 +121,6 @@ kubectl delete secret/server-certs
 ## Next Steps
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)

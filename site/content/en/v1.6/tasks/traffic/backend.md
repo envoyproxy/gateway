@@ -294,6 +294,11 @@ You can also send a request to any other domain, and Envoy Gateway will resolve 
 curl -HHost:httpbin.org http://${GATEWAY_HOST}/get
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Backend]: ../../../api/extension_types#backend
 [routing to cluster-external backends]: ./../../tasks/traffic/routing-outside-kubernetes.md
 [BackendObjectReference]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#backendobjectreference

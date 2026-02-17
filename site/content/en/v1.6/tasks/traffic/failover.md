@@ -565,6 +565,11 @@ parse error: Invalid numeric literal at line 1, column 9
 
 The first error can be avoided by configuring [retries](./../../tasks/traffic/retry.md).
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Backend]: ../../../api/extension_types#backend
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

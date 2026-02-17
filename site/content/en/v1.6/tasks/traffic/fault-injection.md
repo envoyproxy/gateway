@@ -374,6 +374,11 @@ Delete the BackendTrafficPolicy:
 kubectl delete BackendTrafficPolicy/fault-injection-abort
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Envoy fault injection]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/fault_filter.html
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/

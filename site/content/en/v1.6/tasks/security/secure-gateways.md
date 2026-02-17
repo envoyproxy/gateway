@@ -712,6 +712,16 @@ curl -v -HHost:www.sample.com --resolve "www.sample.com:443:${GATEWAY_HOST}" \
 
 You should receive the following error:
 ```
+
+## Next Steps
+
+Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)
+
+[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
+[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
 [...]
 
 * ALPN: curl offers h2,http/1.1
@@ -772,10 +782,3 @@ The command above should succeed and output the following:
 
 {{% /tab %}}
 {{< /tabpane >}}
-
-## Next Steps
-
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
-
-[ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
-[ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy
