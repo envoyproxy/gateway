@@ -57,7 +57,7 @@ prometheus:
   prometheus-pushgateway:
     enabled: false
   kube-state-metrics:
-    enabled: false
+    enabled: true
     customResourceState:
       enabled: true
       # Add (Cluster)Role permissions to list/watch the customResources defined in the config to rbac.extraRules
@@ -85,7 +85,7 @@ prometheus:
                     info:
                       labelsFromPath:
                         gatewayclass_name: [ spec, gatewayClassName ]
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -105,6 +105,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "listener_info"
                   help: "Gateway listener information"
                   each:
@@ -162,7 +163,7 @@ prometheus:
                     info:
                       labelsFromPath:
                         controller_name: [ spec, controllerName ]
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -182,6 +183,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "status"
                   help: "status condition"
                   each:
@@ -212,7 +214,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -232,6 +234,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "hostname_info"
                   help: "Hostname information"
                   each:
@@ -280,7 +283,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -300,6 +303,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "hostname_info"
                   help: "Hostname information"
                   each:
@@ -338,7 +342,7 @@ prometheus:
             - groupVersionKind:
                 group: gateway.networking.k8s.io
                 kind: "TCPRoute"
-                version: "v1alpha2"
+                version: "v1"
               metricNamePrefix: gatewayapi_tcproute
               labelsFromPath:
                 name:
@@ -348,7 +352,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -368,6 +372,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "parent_info"
                   help: "Parent references that the tcproute wants to be attached to"
                   each:
@@ -398,7 +403,7 @@ prometheus:
             - groupVersionKind:
                 group: gateway.networking.k8s.io
                 kind: "TLSRoute"
-                version: "v1alpha2"
+                version: "v1"
               metricNamePrefix: gatewayapi_tlsroute
               labelsFromPath:
                 name:
@@ -408,7 +413,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -428,6 +433,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "hostname_info"
                   help: "Hostname information"
                   each:
@@ -466,7 +472,7 @@ prometheus:
             - groupVersionKind:
                 group: gateway.networking.k8s.io
                 kind: "UDPRoute"
-                version: "v1alpha2"
+                version: "v1"
               metricNamePrefix: gatewayapi_udproute
               labelsFromPath:
                 name:
@@ -476,7 +482,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -496,6 +502,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "parent_info"
                   help: "Parent references that the udproute wants to be attached to"
                   each:
@@ -526,7 +533,7 @@ prometheus:
             - groupVersionKind:
                 group: gateway.networking.k8s.io
                 kind: "BackendTLSPolicy"
-                version: "v1alpha3"
+                version: "v1"
               metricNamePrefix: gatewayapi_backendtlspolicy
               labelsFromPath:
                 name:
@@ -536,7 +543,7 @@ prometheus:
                   - metadata
                   - namespace
               metrics:
-                - name: "labels"
+                - name: "labels_info"
                   help: "Kubernetes labels converted to Prometheus labels."
                   each:
                     type: Info
@@ -556,6 +563,7 @@ prometheus:
                     type: Gauge
                     gauge:
                       path: [ metadata, deletionTimestamp ]
+                      nilIsZero: true
                 - name: "target_info"
                   help: "Target references that the backendtlspolicy wants to be attached to"
                   each:
