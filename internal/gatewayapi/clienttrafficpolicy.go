@@ -843,6 +843,13 @@ func (t *Translator) buildListenerTLSParameters(
 		irTLSConfig.SignatureAlgorithms = tlsParams.SignatureAlgorithms
 	}
 
+	if tlsParams.Fingerprints != nil {
+		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
+		for i := range tlsParams.Fingerprints {
+			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+		}
+	}
+
 	if tlsParams.ClientValidation != nil {
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
