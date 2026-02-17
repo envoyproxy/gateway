@@ -148,6 +148,3 @@ certgen:
 topologyInjector:
   enabled: true
   annotations: {}
-
-crds:
-  enabled: true
