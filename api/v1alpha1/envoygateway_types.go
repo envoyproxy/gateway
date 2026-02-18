@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -374,6 +375,15 @@ type EnvoyGatewayKubernetesProvider struct {
 	// ShutdownManager defines the configuration for the shutdown manager.
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+
+	// Envoy defines the configuration for the envoy container.
+	// +optional
+	Envoy *Envoy `json:"envoy,omitempty"`
+
+	// ImagePullSecrets defines the pull secrets for the managed Envoy Proxy pods.
+	// +optional
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
 	// Client holds the configuration for the Kubernetes client.
 	Client *KubernetesClient `json:"client,omitempty"`
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
@@ -904,6 +914,13 @@ type EnvoyGatewayAdminAddress struct {
 // ShutdownManager defines the configuration for the shutdown manager.
 type ShutdownManager struct {
 	// Image specifies the ShutdownManager container image to be used, instead of the default image.
+	Image *string `json:"image,omitempty"`
+}
+
+// Envoy defines configuration for the envoy container.
+type Envoy struct {
+	// Image specifies the envoy container image to be used, instead of the default image.
+	// +optional
 	Image *string `json:"image,omitempty"`
 }
 

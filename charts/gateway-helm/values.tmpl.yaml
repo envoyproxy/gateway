@@ -25,6 +25,12 @@ global:
       pullPolicy: IfNotPresent
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
+    envoy:
+      # This is the full image name including the hub, repo, and tag.
+      image: ""
+      # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
+      pullSecrets: []
+
 
 # -- Labels to apply to all resources
 commonLabels: {}

@@ -67,6 +67,10 @@ type ResourceRender struct {
 
 	ShutdownManager *egv1a1.ShutdownManager
 
+	Envoy *egv1a1.Envoy
+
+	ImagePullSecrets []corev1.LocalObjectReference
+
 	TopologyInjectorDisabled bool
 
 	GatewayNamespaceMode bool
@@ -92,12 +96,16 @@ func NewResourceRender(ctx context.Context, kubeInfra KubernetesInfraProvider, i
 		return nil, err
 	}
 
+	kubeProvider := kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
+
 	return &ResourceRender{
 		envoyNamespace:           kubeInfra.GetResourceNamespace(infra),
 		controllerNamespace:      kubeInfra.GetControllerNamespace(),
 		DNSDomain:                kubeInfra.GetDNSDomain(),
 		infra:                    infra.GetProxyInfra(),
-		ShutdownManager:          kubeInfra.GetEnvoyGateway().GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().ShutdownManager,
+		ShutdownManager:          kubeProvider.ShutdownManager,
+		Envoy:                    kubeProvider.Envoy,
+		ImagePullSecrets:         kubeProvider.ImagePullSecrets,
 		TopologyInjectorDisabled: kubeInfra.GetEnvoyGateway().TopologyInjectorDisabled(),
 		GatewayNamespaceMode:     kubeInfra.GetEnvoyGateway().GatewayNamespaceMode(),
 		ownerReferenceUID:        ownerReference,
@@ -379,7 +387,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, deploymentConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Envoy, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +435,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
 					Volumes:                       r.expectedVolumes(deploymentConfig.Pod),
-					ImagePullSecrets:              deploymentConfig.Pod.ImagePullSecrets,
+					ImagePullSecrets:              r.expectedImagePullSecrets(deploymentConfig.Pod.ImagePullSecrets),
 					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
 					TopologySpreadConstraints:     deploymentConfig.Pod.TopologySpreadConstraints,
 					PriorityClassName:             ptr.Deref(deploymentConfig.Pod.PriorityClassName, ""),
@@ -470,7 +478,7 @@ func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
+	containers, err := expectedProxyContainers(r.infra, daemonSetConfig.Container, proxyConfig.Spec.Shutdown, r.ShutdownManager, r.Envoy, r.TopologyInjectorDisabled, r.ControllerNamespace(), r.DNSDomain, r.GatewayNamespaceMode)
 	if err != nil {
 		return nil, err
 	}
@@ -641,7 +649,7 @@ func (r *ResourceRender) getPodSpec(
 		Affinity:                      pod.Affinity,
 		Tolerations:                   pod.Tolerations,
 		Volumes:                       r.expectedVolumes(pod),
-		ImagePullSecrets:              pod.ImagePullSecrets,
+		ImagePullSecrets:              r.expectedImagePullSecrets(pod.ImagePullSecrets),
 		NodeSelector:                  pod.NodeSelector,
 		TopologySpreadConstraints:     pod.TopologySpreadConstraints,
 		PriorityClassName:             ptr.Deref(pod.PriorityClassName, ""),
@@ -680,6 +688,13 @@ func (r *ResourceRender) getPodLabels(pod *egv1a1.KubernetesPodSpec) map[string]
 	maps.Copy(podLabels, pod.Labels)
 
 	return r.envoyLabels(podLabels)
+}
+
+func (r *ResourceRender) expectedImagePullSecrets(podSecrets []corev1.LocalObjectReference) []corev1.LocalObjectReference {
+	if len(podSecrets) > 0 {
+		return podSecrets
+	}
+	return r.ImagePullSecrets
 }
 
 // OwningGatewayLabelsAbsent Check if labels are missing some OwningGatewayLabels
