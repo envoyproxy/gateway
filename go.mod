@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.25.7
 
 require (
-	fortio.org/fortio v1.73.2
+	fortio.org/fortio v1.74.0
 	fortio.org/log v1.18.3
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/andybalholm/brotli v1.2.0
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
 	github.com/quic-go/quic-go v0.59.0
-	github.com/replicatedhq/troubleshoot v0.123.17
+	github.com/replicatedhq/troubleshoot v0.123.18
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -214,7 +214,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/microsoft/go-mssqldb v1.9.5 // indirect
+	github.com/microsoft/go-mssqldb v1.9.6 // indirect
 	github.com/mistifyio/go-zfs/v4 v4.0.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
