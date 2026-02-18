@@ -29,7 +29,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | loki | 6.53.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.145.0 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 28.9.0 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 28.9.1 |
 
 ## Values
 

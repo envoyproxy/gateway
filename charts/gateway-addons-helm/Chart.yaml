@@ -26,7 +26,7 @@ sources:
 
 dependencies:
   - name: prometheus
-    version: 28.9.0
+    version: 28.9.1
     repository: https://prometheus-community.github.io/helm-charts
     condition: prometheus.enabled
   - name: grafana
