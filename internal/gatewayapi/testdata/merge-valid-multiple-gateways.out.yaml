@@ -169,7 +169,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -184,7 +183,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -199,7 +197,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2

@@ -303,9 +303,6 @@ type HTTPListener struct {
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
-	// grpc-web and grpc-stats are also enabled if this is set.
-	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
@@ -325,6 +322,9 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// GRPC provides gRPC configuration on the listener.
+	// +optional
+	GRPC *GRPCSettings `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
@@ -627,6 +627,13 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+}
+
+// GRPCSettings provides gRPC configuration on the listener.
+// +k8s:deepcopy-gen=true
+type GRPCSettings struct {
+	EnableGRPCWeb   *bool `json:"enableGRPCWeb,omitempty" yaml:"enableGRPCWeb,omitempty"`
+	EnableGRPCStats *bool `json:"enableGRPCStats,omitempty" yaml:"enableGRPCStats,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.

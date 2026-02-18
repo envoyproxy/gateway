@@ -1291,7 +1291,13 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 		if irListener != nil {
 			if route.GetRouteType() == resource.KindGRPCRoute {
-				irListener.IsHTTP2 = true
+				if irListener.GRPC == nil {
+					irListener.GRPC = &ir.GRPCSettings{}
+				}
+
+				// Backwards compatibility: enable gRPC-Web and gRPC stats filters when a GRPCRoute is attached to the listener
+				irListener.GRPC.EnableGRPCWeb = ptr.To(true)
+				irListener.GRPC.EnableGRPCStats = ptr.To(true)
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}

@@ -292,7 +292,6 @@ xdsIR:
       hostnames:
       - '*.example.com'
       http3: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -317,7 +316,6 @@ xdsIR:
       hostnames:
       - foo.example.com
       http3: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -373,7 +371,6 @@ xdsIR:
       hostnames:
       - bar.example.com
       http3: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

@@ -518,7 +518,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -545,7 +544,6 @@ xdsIR:
       externalPort: 8080
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -591,7 +589,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -648,7 +645,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3
