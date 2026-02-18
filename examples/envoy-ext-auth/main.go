@@ -174,10 +174,24 @@ func authCheckerHandler(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
+
+	var sb strings.Builder
+	for k, v := range req.Header {
+		if sb.Len() > 0 {
+			sb.WriteString(", ")
+		}
+		
+		sb.WriteString(k)
+		sb.WriteString(": ")
+		sb.WriteString(strings.Join(v, ";"))
+	}
+	headersAsString := sb.String()
+
 	extracted := strings.Split(authorization, " ")
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		if user, ok := testUsers[extracted[1]]; ok {
 			w.Header().Add("x-current-user", user) // this should be set before call WriteHeader
+			w.Header().Set("x-current-headers", headersAsString)
 			w.WriteHeader(http.StatusOK)
 			return
 		}

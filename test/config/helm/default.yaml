@@ -1,1 +1,6 @@
 # the default configuration for the gateway helm chart
+config:
+  envoyGateway:
+    provider:
+      kubernetes:
+        cacheSyncPeriod: 1m

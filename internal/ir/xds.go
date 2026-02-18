@@ -1411,6 +1411,11 @@ type ExtAuth struct {
 	// +optional
 	HeadersToExtAuth []string `json:"headersToExtAuth,omitempty"`
 
+	// HeadersToExtAuthOnMatch defines the patterns of the client request headers
+	// that will be included in the request to the external authorization service.
+	// +optional
+	HeadersToExtAuthOnMatch []*StringMatch `json:"headersToExtAuthOnMatch,omitempty"`
+
 	// BodyToExtAuth defines the Body to Ext Auth configuration.
 	// +optional
 	BodyToExtAuth *BodyToExtAuth `json:"bodyToExtAuth,omitempty"`

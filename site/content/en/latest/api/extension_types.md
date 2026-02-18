@@ -1925,6 +1925,7 @@ _Appears in:_
 | `grpc` | _[GRPCExtAuthService](#grpcextauthservice)_ |  true  |  | GRPC defines the gRPC External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  |  | HTTP defines the HTTP External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  |  | HeadersToExtAuth defines the client request headers that will be included<br />in the request to the external authorization service.<br />Note: If not specified, the default behavior for gRPC and HTTP external<br />authorization services is different due to backward compatibility reasons.<br />All headers will be included in the check request to a gRPC authorization server.<br />Only the following headers will be included in the check request to an HTTP<br />authorization server: Host, Method, Path, Content-Length, and Authorization.<br />And these headers will always be included to the check request to an HTTP<br />authorization server by default, no matter whether they are specified<br />in HeadersToExtAuth or not. |
+| `headersToExtAuthOnMatch` | _[StringMatch](#stringmatch) array_ |  false  |  | HeadersToExtAuthOnMatch defines the patterns of the client request headers<br />that will be included in the request to the external authorization service. |
 | `bodyToExtAuth` | _[BodyToExtAuth](#bodytoextauth)_ |  false  |  | BodyToExtAuth defines the Body to Ext Auth configuration. |
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
@@ -5318,6 +5319,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [ExtAuth](#extauth)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)

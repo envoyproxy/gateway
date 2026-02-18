@@ -1926,14 +1926,22 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 
+	// Convert HeadersToExtAuthOnMatch to IR StringMatch format
+	headersToExtAuthOnMatch := make([]*ir.StringMatch, 0, len(policy.Spec.ExtAuth.HeadersToExtAuthOnMatch))
+	for _, match := range policy.Spec.ExtAuth.HeadersToExtAuthOnMatch {
+		// For header name matching, we don't need a Name field - just the pattern
+		headersToExtAuthOnMatch = append(headersToExtAuthOnMatch, irStringMatch("", match))
+	}
+
 	extAuth := &ir.ExtAuth{
-		Name:              irConfigName(policy),
-		HeadersToExtAuth:  policy.Spec.ExtAuth.HeadersToExtAuth,
-		ContextExtensions: contextExtensions,
-		FailOpen:          policy.Spec.ExtAuth.FailOpen,
-		Traffic:           traffic,
-		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		Name:                    irConfigName(policy),
+		HeadersToExtAuth:        policy.Spec.ExtAuth.HeadersToExtAuth,
+		HeadersToExtAuthOnMatch: headersToExtAuthOnMatch,
+		ContextExtensions:       contextExtensions,
+		FailOpen:                policy.Spec.ExtAuth.FailOpen,
+		Traffic:                 traffic,
+		RecomputeRoute:          policy.Spec.ExtAuth.RecomputeRoute,
+		Timeout:                 parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
 	}
 
 	if http != nil {

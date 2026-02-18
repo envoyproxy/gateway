@@ -1320,6 +1320,17 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.HeadersToExtAuthOnMatch != nil {
+		in, out := &in.HeadersToExtAuthOnMatch, &out.HeadersToExtAuthOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.BodyToExtAuth != nil {
 		in, out := &in.BodyToExtAuth, &out.BodyToExtAuth
 		*out = new(BodyToExtAuth)
