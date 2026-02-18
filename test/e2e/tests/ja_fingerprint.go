@@ -8,7 +8,8 @@
 package tests
 
 import (
-	"fmt"
+	"net"
+	"strconv"
 	"testing"
 	"time"
 
@@ -60,7 +61,7 @@ func testJAFingerprint(t *testing.T, suite *suite.ConformanceTestSuite, routeNam
 		t.Fatalf("unexpected error finding TLS secret: %v", err)
 	}
 
-	req := http.MakeRequest(t, &expected, fmt.Sprintf("%s:%d", gwAddr, port), "HTTPS", "https")
+	req := http.MakeRequest(t, &expected, net.JoinHostPort(gwAddr, strconv.Itoa(port)), "HTTPS", "https")
 	req.Server = serverName
 	// Use the certificate and key for TLS setup, CA cert for validation (self-signed cert)
 	req.CertPem = certPem
