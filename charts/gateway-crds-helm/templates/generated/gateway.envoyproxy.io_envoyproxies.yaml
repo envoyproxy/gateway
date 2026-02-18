@@ -387,6 +387,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.adaptive_concurrency
                       type: string
                     before:
                       description: |-
@@ -416,6 +417,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.adaptive_concurrency
                       type: string
                     name:
                       description: Name of the filter.
@@ -443,6 +445,7 @@ spec:
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
                       - envoy.filters.http.dynamic_forward_proxy
+                      - envoy.filters.http.adaptive_concurrency
                       type: string
                   required:
                   - name
