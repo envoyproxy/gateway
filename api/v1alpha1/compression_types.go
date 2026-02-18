@@ -46,16 +46,19 @@ type Compression struct {
 	// The configuration for Brotli compressor.
 	//
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Brotli *BrotliCompressor `json:"brotli,omitempty"`
 
 	// The configuration for GZIP compressor.
 	//
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Gzip *GzipCompressor `json:"gzip,omitempty"`
 
 	// The configuration for Zstd compressor.
 	//
 	// +optional
+	// +kubebuilder:pruning:PreserveUnknownFields
 	Zstd *ZstdCompressor `json:"zstd,omitempty"`
 
 	// MinContentLength defines the minimum response size in bytes to apply compression.

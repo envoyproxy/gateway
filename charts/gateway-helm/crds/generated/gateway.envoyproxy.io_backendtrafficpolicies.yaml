@@ -125,9 +125,11 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     minContentLength:
                       allOf:
                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -153,6 +155,7 @@ spec:
                     zstd:
                       description: The configuration for Zstd compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - type
                   type: object
@@ -170,9 +173,11 @@ spec:
                     brotli:
                       description: The configuration for Brotli compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     gzip:
                       description: The configuration for GZIP compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     minContentLength:
                       allOf:
                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -198,6 +203,7 @@ spec:
                     zstd:
                       description: The configuration for Zstd compressor.
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - type
                   type: object
