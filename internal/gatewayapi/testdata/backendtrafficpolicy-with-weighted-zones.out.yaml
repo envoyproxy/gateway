@@ -1,4 +1,4 @@
-backendTrafficPolicies:
+git backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -167,7 +167,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
