@@ -3,13 +3,13 @@ module github.com/envoyproxy/gateway
 go 1.25.7
 
 require (
-	fortio.org/fortio v1.73.2
+	fortio.org/fortio v1.74.0
 	fortio.org/log v1.18.3
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/andybalholm/brotli v1.2.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e
+	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.2.1+incompatible
@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.67.5
 	github.com/quic-go/quic-go v0.59.0
-	github.com/replicatedhq/troubleshoot v0.123.17
+	github.com/replicatedhq/troubleshoot v0.123.18
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -68,7 +68,7 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409
-	google.golang.org/grpc v1.78.0
+	google.golang.org/grpc v1.79.1
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
@@ -91,7 +91,7 @@ require (
 )
 
 require (
-	cel.dev/expr v0.24.0 // indirect
+	cel.dev/expr v0.25.1 // indirect
 	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -214,7 +214,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
-	github.com/microsoft/go-mssqldb v1.9.5 // indirect
+	github.com/microsoft/go-mssqldb v1.9.6 // indirect
 	github.com/mistifyio/go-zfs/v4 v4.0.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect

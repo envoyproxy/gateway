@@ -7,7 +7,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/envoy v1.36.1-0.20260127060829-c81ce9094f67
 	github.com/urfave/cli/v2 v2.27.7
-	google.golang.org/grpc v1.78.0
+	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
 	k8s.io/apimachinery v0.35.1
 	sigs.k8s.io/controller-runtime v0.23.1
@@ -16,8 +16,8 @@ require (
 )
 
 require (
-	cel.dev/expr v0.24.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20251110193048-8bfbf64dc13e // indirect
+	cel.dev/expr v0.25.1 // indirect
+	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
 	github.com/fatih/color v1.18.0 // indirect
