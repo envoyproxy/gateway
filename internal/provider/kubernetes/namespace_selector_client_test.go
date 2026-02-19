@@ -7,13 +7,16 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -188,4 +191,107 @@ func TestNamespaceSelectorClientClusterScopedResources(t *testing.T) {
 	err := wrappedClient.List(ctx, gcList)
 	require.NoError(t, err)
 	require.Len(t, gcList.Items, 1, "GatewayClass should not be filtered")
+}
+
+func TestNamespaceSelectorClientNamespaceGetError(t *testing.T) {
+	// Create a Gateway in a namespace
+	gwInNs := &gwapiv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gw-test",
+			Namespace: "test-ns",
+		},
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: "test-gc",
+		},
+	}
+
+	scheme := envoygateway.GetScheme()
+
+	// Use interceptor to return error when getting a Namespace
+	getErr := errors.New("failed to get namespace: connection refused")
+	interceptorFuncs := interceptor.Funcs{
+		Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*corev1.Namespace); ok {
+				return getErr
+			}
+			return client.Get(ctx, key, obj, opts...)
+		},
+	}
+
+	// Create fake client with the gateway and interceptor
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithRuntimeObjects(gwInNs).
+		WithInterceptorFuncs(interceptorFuncs).
+		Build()
+
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"env": "production",
+		},
+	}
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+
+	ctx := context.Background()
+
+	// Listing should return an error because namespace lookup failed
+	gwList := &gwapiv1.GatewayList{}
+	err := wrappedClient.List(ctx, gwList)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to check namespace labels")
+}
+
+func TestNamespaceSelectorClientEmptyList(t *testing.T) {
+	scheme := envoygateway.GetScheme()
+
+	// Create fake client with no objects
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		Build()
+
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"env": "production",
+		},
+	}
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+
+	ctx := context.Background()
+
+	// Empty list should not cause errors
+	gwList := &gwapiv1.GatewayList{}
+	err := wrappedClient.List(ctx, gwList)
+	require.NoError(t, err)
+	require.Len(t, gwList.Items, 0)
+}
+
+func TestNamespaceSelectorClientUnderlyingListError(t *testing.T) {
+	scheme := envoygateway.GetScheme()
+
+	listErr := errors.New("underlying list error")
+	interceptorFuncs := interceptor.Funcs{
+		List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+			return listErr
+		},
+	}
+
+	fakeClient := fakeclient.NewClientBuilder().
+		WithScheme(scheme).
+		WithInterceptorFuncs(interceptorFuncs).
+		Build()
+
+	namespaceSelector := &metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			"env": "production",
+		},
+	}
+	wrappedClient := newNamespaceSelectorClient(fakeClient, namespaceSelector)
+
+	ctx := context.Background()
+
+	// Underlying List error should be propagated
+	gwList := &gwapiv1.GatewayList{}
+	err := wrappedClient.List(ctx, gwList)
+	require.Error(t, err)
+	require.Equal(t, listErr, err)
 }
