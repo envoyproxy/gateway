@@ -515,6 +515,62 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              geoIP:
+                description: GeoIP defines shared GeoIP provider configuration for
+                  this EnvoyProxy fleet.
+                properties:
+                  provider:
+                    description: Provider defines the GeoIP provider configuration
+                      used by GeoIP filter instances.
+                    properties:
+                      MaxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbPath:
+                            description: AnonymousIPDBPath is the path to the Anonymous
+                              IP database (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          asnDbPath:
+                            description: ASNDBPath is the path to the ASN database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          cityDbPath:
+                            description: CityDBPath is the path to the City database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          countryDbPath:
+                            description: CountryDBPath is the path to the Country
+                              database (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                          ispDbPath:
+                            description: ISPDBPath is the path to the ISP database
+                              (.mmdb).
+                            pattern: ^.*\\.mmdb$
+                            type: string
+                        type: object
+                        x-kubernetes-validations:
+                        - message: At least one MaxMind database path must be specified
+                          rule: has(self.cityDbPath) || has(self.countryDbPath) ||
+                            has(self.asnDbPath) || has(self.ispDbPath) || has(self.anonymousIpDbPath)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: MaxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.MaxMind) : true'
+                required:
+                - provider
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.

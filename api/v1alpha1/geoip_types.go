@@ -5,68 +5,6 @@
 
 package v1alpha1
 
-// GeoIP defines GeoIP enrichment and access control configuration.
-type GeoIP struct {
-	// Source configures how the client IP is extracted before being passed to the provider.
-	// If unset, Envoy falls back to using the immediate downstream connection address.
-	//
-	// +optional
-	Source *GeoIPSource `json:"source,omitempty"`
-
-	// Provider defines the GeoIP provider configuration.
-	Provider GeoIPProvider `json:"provider"`
-
-	// Access defines the GeoIP based access control configuration.
-	//
-	// +optional
-	Access *GeoIPAccessControl `json:"access,omitempty"`
-}
-
-// GeoIPSource configures how Envoy determines the client IP address that is passed to the provider.
-// +kubebuilder:validation:XValidation:rule="self.type == 'XFF' ? has(self.xff) && !has(self.header) : self.type == 'Header' ? has(self.header) && !has(self.xff) : true",message="When type is XFF, xff must be set (and header unset). When type is Header, header must be set (and xff unset)."
-type GeoIPSource struct {
-	// +kubebuilder:validation:Enum=XFF;Header
-	// +kubebuilder:validation:Required
-	Type GeoIPSourceType `json:"type"`
-
-	// XFF configures extraction based on the X-Forwarded-For header chain.
-	//
-	// +optional
-	XFF *GeoIPXFFSource `json:"xff,omitempty"`
-
-	// Header configures extraction from a custom header.
-	//
-	// +optional
-	Header *GeoIPHeaderSource `json:"header,omitempty"`
-}
-
-// GeoIPSourceType enumerates supported client IP sources.
-type GeoIPSourceType string
-
-const (
-	// GeoIPSourceTypeXFF instructs Envoy to honor the X-Forwarded-For header count.
-	GeoIPSourceTypeXFF GeoIPSourceType = "XFF"
-	// GeoIPSourceTypeHeader instructs Envoy to read a custom request header.
-	GeoIPSourceTypeHeader GeoIPSourceType = "Header"
-)
-
-// GeoIPXFFSource configures trusted hop count for XFF parsing.
-type GeoIPXFFSource struct {
-	// TrustedHops defines the number of trusted hops from the right side of XFF.
-	// Defaults to 0 when unset.
-	//
-	// +optional
-	TrustedHops *uint32 `json:"trustedHops,omitempty"`
-}
-
-// GeoIPHeaderSource configures extraction from a custom header.
-type GeoIPHeaderSource struct {
-	// HeaderName is the HTTP header that carries the client IP.
-	//
-	// +kubebuilder:validation:MinLength=1
-	HeaderName string `json:"headerName"`
-}
-
 // GeoIPProvider defines provider-specific settings.
 // +kubebuilder:validation:XValidation:rule="self.type == 'MaxMind' ? has(self.MaxMind) : true",message="MaxMind must be set when type is MaxMind"
 type GeoIPProvider struct {
@@ -107,7 +45,7 @@ type GeoIPMaxMind struct {
 	// ASNDBPath is the path to the ASN database (.mmdb).
 	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^.*\\.mmdb$`
+	// +kubebuilder:validation:P	attern=`^.*\\.mmdb$`
 	ASNDBPath *string `json:"asnDbPath,omitempty"`
 
 	// ISPDBPath is the path to the ISP database (.mmdb).
@@ -121,42 +59,6 @@ type GeoIPMaxMind struct {
 	// +optional
 	// +kubebuilder:validation:Pattern=`^.*\\.mmdb$`
 	AnonymousIPDBPath *string `json:"anonymousIpDbPath,omitempty"`
-}
-
-// GeoIPAccessControl defines GeoIP-based allow/deny lists.
-type GeoIPAccessControl struct {
-	// DefaultAction defines how to handle requests that do not match any rule or lack GeoIP data.
-	// Defaults to Allow when unset.
-	//
-	// +optional
-	DefaultAction *AuthorizationAction `json:"defaultAction,omitempty"`
-
-	// Rules evaluated in order. The first matching rule's action applies.
-	//
-	// +optional
-	Rules []GeoIPRule `json:"rules,omitempty"`
-}
-
-// GeoIPRule defines a single GeoIP allow/deny rule.
-// +kubebuilder:validation:XValidation:rule="has(self.countries) || has(self.regions) || has(self.cities)",message="At least one of countries, regions, or cities must be specified"
-type GeoIPRule struct {
-	// Action is reused from Authorization rules (Allow or Deny).
-	Action AuthorizationAction `json:"action"`
-
-	// Countries is a list of ISO 3166-1 alpha-2 country codes.
-	//
-	// +optional
-	Countries []string `json:"countries,omitempty"`
-
-	// Regions refines matching to ISO 3166-2 subdivisions.
-	//
-	// +optional
-	Regions []GeoIPRegion `json:"regions,omitempty"`
-
-	// Cities refines matching to specific city names.
-	//
-	// +optional
-	Cities []GeoIPCity `json:"cities,omitempty"`
 }
 
 // GeoIPRegion selects a region within a country.
@@ -192,4 +94,32 @@ type GeoIPCity struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	CityName string `json:"cityName"`
+}
+
+// GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+type GeoIPAnonymousMatch struct {
+	// IsAnonymous matches whether the client IP is considered anonymous.
+	//
+	// +optional
+	IsAnonymous *bool `json:"isAnonymous,omitempty"`
+
+	// IsVPN matches whether the client IP is detected as VPN.
+	//
+	// +optional
+	IsVPN *bool `json:"isVPN,omitempty"`
+
+	// IsHosting matches whether the client IP belongs to a hosting provider.
+	//
+	// +optional
+	IsHosting *bool `json:"isHosting,omitempty"`
+
+	// IsTor matches whether the client IP belongs to a Tor exit node.
+	//
+	// +optional
+	IsTor *bool `json:"isTor,omitempty"`
+
+	// IsProxy matches whether the client IP belongs to a public proxy.
+	//
+	// +optional
+	IsProxy *bool `json:"isProxy,omitempty"`
 }

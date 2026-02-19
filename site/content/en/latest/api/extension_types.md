@@ -231,8 +231,6 @@ AuthorizationAction defines the action to be taken if a rule matches.
 _Appears in:_
 - [Authorization](#authorization)
 - [AuthorizationRule](#authorizationrule)
-- [GeoIPAccessControl](#geoipaccesscontrol)
-- [GeoIPRule](#geoiprule)
 
 | Value | Description |
 | ----- | ----------- |
@@ -1827,6 +1825,20 @@ _Appears in:_
 
 
 
+#### EnvoyProxyGeoIP
+
+
+
+EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration used by GeoIP filter instances. |
+
+
 #### EnvoyProxyHostProvider
 
 
@@ -1921,6 +1933,7 @@ _Appears in:_
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 
 
 #### EnvoyProxyStatus
@@ -2353,35 +2366,22 @@ _Appears in:_
 | `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
 
 
-#### GeoIP
+#### GeoIPAnonymousMatch
 
 
 
-GeoIP defines GeoIP enrichment and access control configuration.
+GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
 
 _Appears in:_
-- [SecurityPolicySpec](#securitypolicyspec)
+- [GeoLocationPrincipal](#geolocationprincipal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `source` | _[GeoIPSource](#geoipsource)_ |  false  |  | Source configures how the client IP is extracted before being passed to the provider.<br />If unset, Envoy falls back to using the immediate downstream connection address. |
-| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration. |
-| `access` | _[GeoIPAccessControl](#geoipaccesscontrol)_ |  false  |  | Access defines the GeoIP based access control configuration. |
-
-
-#### GeoIPAccessControl
-
-
-
-GeoIPAccessControl defines GeoIP-based allow/deny lists.
-
-_Appears in:_
-- [GeoIP](#geoip)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `defaultAction` | _[AuthorizationAction](#authorizationaction)_ |  false  |  | DefaultAction defines how to handle requests that do not match any rule or lack GeoIP data.<br />Defaults to Allow when unset. |
-| `rules` | _[GeoIPRule](#geoiprule) array_ |  false  |  | Rules evaluated in order. The first matching rule's action applies. |
+| `isAnonymous` | _boolean_ |  false  |  | IsAnonymous matches whether the client IP is considered anonymous. |
+| `isVPN` | _boolean_ |  false  |  | IsVPN matches whether the client IP is detected as VPN. |
+| `isHosting` | _boolean_ |  false  |  | IsHosting matches whether the client IP belongs to a hosting provider. |
+| `isTor` | _boolean_ |  false  |  | IsTor matches whether the client IP belongs to a Tor exit node. |
+| `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
 
 
 #### GeoIPCity
@@ -2391,27 +2391,13 @@ _Appears in:_
 GeoIPCity selects a city, optionally scoped to a region.
 
 _Appears in:_
-- [GeoIPRule](#geoiprule)
+- [GeoLocationPrincipal](#geolocationprincipal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `countryCode` | _string_ |  true  |  | CountryCode is the ISO 3166-1 alpha-2 country code. |
 | `regionCode` | _string_ |  false  |  | RegionCode optionally scopes the city to a subdivision (ISO 3166-2 without country prefix). |
 | `cityName` | _string_ |  true  |  | CityName is the city name. |
-
-
-#### GeoIPHeaderSource
-
-
-
-GeoIPHeaderSource configures extraction from a custom header.
-
-_Appears in:_
-- [GeoIPSource](#geoipsource)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `headerName` | _string_ |  true  |  | HeaderName is the HTTP header that carries the client IP. |
 
 
 #### GeoIPMaxMind
@@ -2440,7 +2426,7 @@ _Appears in:_
 GeoIPProvider defines provider-specific settings.
 
 _Appears in:_
-- [GeoIP](#geoip)
+- [EnvoyProxyGeoIP](#envoyproxygeoip)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2469,7 +2455,7 @@ _Appears in:_
 GeoIPRegion selects a region within a country.
 
 _Appears in:_
-- [GeoIPRule](#geoiprule)
+- [GeoLocationPrincipal](#geolocationprincipal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2477,66 +2463,22 @@ _Appears in:_
 | `regionCode` | _string_ |  true  |  | RegionCode is the ISO 3166-2 subdivision code (without country prefix). |
 
 
-#### GeoIPRule
+#### GeoLocationPrincipal
 
 
 
-GeoIPRule defines a single GeoIP allow/deny rule.
+GeoLocationPrincipal specifies geolocation-based match criteria for authorization.
 
 _Appears in:_
-- [GeoIPAccessControl](#geoipaccesscontrol)
+- [Principal](#principal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `action` | _[AuthorizationAction](#authorizationaction)_ |  true  |  | Action is reused from Authorization rules (Allow or Deny). |
 | `countries` | _string array_ |  false  |  | Countries is a list of ISO 3166-1 alpha-2 country codes. |
 | `regions` | _[GeoIPRegion](#geoipregion) array_ |  false  |  | Regions refines matching to ISO 3166-2 subdivisions. |
 | `cities` | _[GeoIPCity](#geoipcity) array_ |  false  |  | Cities refines matching to specific city names. |
-
-
-#### GeoIPSource
-
-
-
-GeoIPSource configures how Envoy determines the client IP address that is passed to the provider.
-
-_Appears in:_
-- [GeoIP](#geoip)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `type` | _[GeoIPSourceType](#geoipsourcetype)_ |  true  |  |  |
-| `xff` | _[GeoIPXFFSource](#geoipxffsource)_ |  false  |  | XFF configures extraction based on the X-Forwarded-For header chain. |
-| `header` | _[GeoIPHeaderSource](#geoipheadersource)_ |  false  |  | Header configures extraction from a custom header. |
-
-
-#### GeoIPSourceType
-
-_Underlying type:_ _string_
-
-GeoIPSourceType enumerates supported client IP sources.
-
-_Appears in:_
-- [GeoIPSource](#geoipsource)
-
-| Value | Description |
-| ----- | ----------- |
-| `XFF` | GeoIPSourceTypeXFF instructs Envoy to honor the X-Forwarded-For header count.<br /> | 
-| `Header` | GeoIPSourceTypeHeader instructs Envoy to read a custom request header.<br /> | 
-
-
-#### GeoIPXFFSource
-
-
-
-GeoIPXFFSource configures trusted hop count for XFF parsing.
-
-_Appears in:_
-- [GeoIPSource](#geoipsource)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `trustedHops` | _integer_ |  false  |  | TrustedHops defines the number of trusted hops from the right side of XFF.<br />Defaults to 0 when unset. |
+| `asns` | _integer array_ |  false  |  | ASNs matches the autonomous system numbers associated with the client IP. |
+| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
 
 
 #### GlobalRateLimit
