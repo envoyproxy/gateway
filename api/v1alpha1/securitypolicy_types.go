@@ -82,12 +82,6 @@ type SecurityPolicySpec struct {
 	// +optional
 	ExtAuth *ExtAuth `json:"extAuth,omitempty"`
 
-	// GeoIP defines the configuration for GeoIP based request enrichment and access control.
-	//
-	// +optional
-	// +notImplementedHide
-	GeoIP *GeoIP `json:"geoip,omitempty"`
-
 	// Authorization defines the authorization configuration.
 	//
 	// +optional
