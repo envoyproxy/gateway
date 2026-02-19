@@ -97,6 +97,8 @@ type GeoIPCity struct {
 }
 
 // GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.isAnonymous) || has(self.isVPN) || has(self.isHosting) || has(self.isTor) || has(self.isProxy)",message="at least one of isAnonymous, isVPN, isHosting, isTor, or isProxy must be specified"
 type GeoIPAnonymousMatch struct {
 	// IsAnonymous matches whether the client IP is considered anonymous.
 	//
