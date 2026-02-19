@@ -77,14 +77,14 @@ jobs:
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
-    #   with:
-    #     fail_ci_if_error: true
-    #     files: ./coverage.xml
-    #     name: codecov-envoy-gateway
-    #     verbose: true
-    #     use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de  # v5.5.2
+      with:
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-envoy-gateway
+        verbose: true
+        use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
 
   go-benchmark-test:
     runs-on: ubuntu-latest
