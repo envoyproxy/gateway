@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+      kubernetes:
+        watch:
+          type: NamespaceSelector
+          namespaceSelector:
+            matchLabels:
+              gateway-conformance: infra
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
+      enableBackend: true
+    gatewayAPI:
+      enabled: [XListenerSet]
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis.redis-system.svc.cluster.local:6379
+    envoyProxy:
+      provider:
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: envoyproxy/envoy:invalid-tag
