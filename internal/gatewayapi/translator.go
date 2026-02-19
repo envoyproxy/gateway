@@ -541,7 +541,7 @@ func (t *Translator) IsServiceRouting(envoyProxy *egv1a1.EnvoyProxy, btpRoutingT
 	}
 
 	// Fall back to EnvoyProxy RoutingType
-	if envoyProxy != nil && envoyProxy.Spec.RoutingType != nil && *envoyProxy.Spec.RoutingType != egv1a1.EndpointRoutingType {
+	if envoyProxy != nil && envoyProxy.Spec.RoutingType != nil && *envoyProxy.Spec.RoutingType == egv1a1.ServiceRoutingType {
 		return true
 	}
 	return false
