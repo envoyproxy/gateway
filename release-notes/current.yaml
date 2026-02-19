@@ -31,3 +31,4 @@ deprecations: |
 
 # Other notable changes not covered by the above sections.
 Other changes: |
+  Moved Envoy Gateway CRDs into a sub-chart to avoid the Helm release secret exceeding the 1MB size limit when adding new API fields. Upgrade/Install behavior is unchanged for users.
