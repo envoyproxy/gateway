@@ -1,0 +1,71 @@
+name: Run gen-check on comment
+
+on:
+  issue_comment:
+    types: [created, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  run-gen-check:
+    if: |
+      github.event.issue.pull_request
+      && contains(github.event.comment.body, '/run-gen-check')
+    name: Run gen-check and commit
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout main for OWNERS
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Check if commenter is in OWNERS
+        run: |
+          COMMENTER="${{ github.event.comment.user.login }}"
+          allowed=$(grep -E '^\s*-\s*[a-zA-Z0-9_-]+' OWNERS | sed 's/^[[:space:]]*-[[:space:]]*//')
+          if ! echo "$allowed" | grep -q "^${COMMENTER}$"; then
+            echo "::error::User ${COMMENTER} is not in OWNERS. Only OWNERS can run /run-gen-check."
+            exit 1
+          fi
+
+      - name: Get PR head ref
+        id: pr
+        run: |
+          PR_NUM="${{ github.event.issue.number }}"
+          HEAD_REF=$(gh pr view "$PR_NUM" --json headRefName -q .headRefName)
+          HEAD_REPO=$(gh pr view "$PR_NUM" --json headRepository -q '.headRepository.owner.login + "/" + .headRepository.name')
+          echo "head_ref=$HEAD_REF" >> $GITHUB_OUTPUT
+          if [ "$HEAD_REPO" != "${{ github.repository }}" ]; then
+            echo "::error::Cannot run /run-gen-check on pull requests from forks. Push to a branch in this repository."
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout PR branch
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+        with:
+          ref: ${{ steps.pr.outputs.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: ./tools/github-actions/setup-deps
+
+      - name: Run gen-check (generates files; may fail on clean check)
+        run: make -k gen-check || true
+
+      - name: Commit and push generated changes
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No generated changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Run make gen-check: commit generated changes"
+          git push
