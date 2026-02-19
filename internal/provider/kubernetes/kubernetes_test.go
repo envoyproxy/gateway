@@ -110,8 +110,8 @@ func TestProvider(t *testing.T) {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "gatewayapi-crds.yaml")
-	egAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "generated")
+	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "gatewayapi-crds.yaml")
+	egAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "generated")
 	mcsAPIs := filepath.Join(".", "testdata", "crds", "multicluster-svc.yaml")
 
 	env := &envtest.Environment{
