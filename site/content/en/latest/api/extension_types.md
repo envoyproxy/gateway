@@ -2373,7 +2373,7 @@ _Appears in:_
 GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
 
 _Appears in:_
-- [GeoLocationPrincipal](#geolocationprincipal)
+- [GeoLocation](#geolocation)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2384,20 +2384,6 @@ _Appears in:_
 | `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
 
 
-#### GeoIPCity
-
-
-
-GeoIPCity selects a city, optionally scoped to a region.
-
-_Appears in:_
-- [GeoLocationPrincipal](#geolocationprincipal)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `countryCode` | _string_ |  true  |  | CountryCode is the ISO 3166-1 alpha-2 country code. |
-| `regionCode` | _string_ |  false  |  | RegionCode optionally scopes the city to a subdivision (ISO 3166-2 without country prefix). |
-| `cityName` | _string_ |  true  |  | CityName is the city name. |
 
 
 #### GeoIPMaxMind
@@ -2448,36 +2434,24 @@ _Appears in:_
 | `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
 
 
-#### GeoIPRegion
+
+
+#### GeoLocation
 
 
 
-GeoIPRegion selects a region within a country.
-
-_Appears in:_
-- [GeoLocationPrincipal](#geolocationprincipal)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `countryCode` | _string_ |  true  |  | CountryCode is the ISO 3166-1 alpha-2 country code. |
-| `regionCode` | _string_ |  true  |  | RegionCode is the ISO 3166-2 subdivision code (without country prefix). |
-
-
-#### GeoLocationPrincipal
-
-
-
-GeoLocationPrincipal specifies geolocation-based match criteria for authorization.
+GeoLocation specifies geolocation-based match criteria for authorization.
 
 _Appears in:_
 - [Principal](#principal)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `countries` | _string array_ |  false  |  | Countries is a list of ISO 3166-1 alpha-2 country codes. |
-| `regions` | _[GeoIPRegion](#geoipregion) array_ |  false  |  | Regions refines matching to ISO 3166-2 subdivisions. |
-| `cities` | _[GeoIPCity](#geoipcity) array_ |  false  |  | Cities refines matching to specific city names. |
-| `asns` | _integer array_ |  false  |  | ASNs matches the autonomous system numbers associated with the client IP. |
+| `country` | _string_ |  false  |  | Country is the country associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region associated with the client IP. |
+| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
+| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
+| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
 | `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
 
 

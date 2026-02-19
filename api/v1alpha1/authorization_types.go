@@ -72,7 +72,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.geoLocation))",message="at least one of clientCIDRs, jwt, headers, or geoLocation must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.geoLocations))",message="at least one of clientCIDRs, jwt, headers, or geoLocations must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -129,40 +129,43 @@ type Principal struct {
 	// +notImplementedHide
 	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
 
-	// GeoLocation authorizes the request based on geolocation metadata derived from the client IP.
+	// GeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// If multiple entries are specified,  one of the GeoLocation entries must match for the rule to match.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	// +notImplementedHide
-	GeoLocation *GeoLocationPrincipal `json:"geoLocation,omitempty"`
+	GeoLocations []GeoLocation `json:"geoLocations,omitempty"`
 }
 
-// GeoLocationPrincipal specifies geolocation-based match criteria for authorization.
+// GeoLocation specifies geolocation-based match criteria for authorization.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.countries) || has(self.regions) || has(self.cities) || has(self.asns) || has(self.anonymous))",message="at least one of countries, regions, cities, asns, or anonymous must be specified"
-type GeoLocationPrincipal struct {
-	// Countries is a list of ISO 3166-1 alpha-2 country codes.
+// +kubebuilder:validation:XValidation:rule="has(self.country) || has(self.region) || has(self.city) || has(self.asn) || has(self.isp) || has(self.anonymous)",message="at least one of country, region, city, asn, isp, or anonymous must be specified"
+type GeoLocation struct {
+	// Country is the country associated with the client IP.
 	//
 	// +optional
-	// +kubebuilder:validation:MinItems=1
-	Countries []string `json:"countries,omitempty"`
+	Country *string `json:"country,omitempty"`
 
-	// Regions refines matching to ISO 3166-2 subdivisions.
+	// Region is the region associated with the client IP.
 	//
 	// +optional
-	// +kubebuilder:validation:MinItems=1
-	Regions []GeoIPRegion `json:"regions,omitempty"`
+	Region *string `json:"region,omitempty"`
 
-	// Cities refines matching to specific city names.
+	// City is the city associated with the client IP.
 	//
 	// +optional
-	// +kubebuilder:validation:MinItems=1
-	Cities []GeoIPCity `json:"cities,omitempty"`
+	City *string `json:"city,omitempty"`
 
-	// ASNs matches the autonomous system numbers associated with the client IP.
+	// ASN is the autonomous system number associated with the client IP.
 	//
 	// +optional
-	// +kubebuilder:validation:MinItems=1
-	ASNs []uint32 `json:"asns,omitempty"`
+	ASN *uint32 `json:"asn,omitempty"`
+
+	// ISP is the internet service provider associated with the client IP.
+	//
+	// +optional
+	ISP *string `json:"isp,omitempty"`
 
 	// Anonymous matches anonymous network detection signals.
 	//
