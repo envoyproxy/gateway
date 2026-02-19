@@ -36,9 +36,11 @@ Some manual migration steps are required to upgrade Envoy Gateway.
 1. Update Gateway-API and Envoy Gateway CRDs:
 
 ```shell
-helm pull oci://docker.io/envoyproxy/gateway-helm --version {{< yaml-version >}} --untar
-kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/gatewayapi-crds.yaml
-kubectl apply --force-conflicts --server-side -f ./gateway-helm/crds/generated
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+  --version {{< yaml-version >}} \
+  --set crds.gatewayAPI.enabled=true \
+  --set crds.envoyGateway.enabled=true \
+  | kubectl apply --force-conflicts --server-side -f -
 ```
 
 2. Install Envoy Gateway {{< yaml-version >}}:
