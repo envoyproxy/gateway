@@ -262,7 +262,7 @@ func TestNamespaceSelectorClientEmptyList(t *testing.T) {
 	gwList := &gwapiv1.GatewayList{}
 	err := wrappedClient.List(ctx, gwList)
 	require.NoError(t, err)
-	require.Len(t, gwList.Items, 0)
+	require.Empty(t, gwList.Items)
 }
 
 func TestNamespaceSelectorClientUnderlyingListError(t *testing.T) {
