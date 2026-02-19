@@ -182,6 +182,17 @@ type EnvoyProxySpec struct {
 	// Default: Strict
 	// +optional
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
+
+	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
+	//
+	// +optional
+	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+}
+
+// EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
+type EnvoyProxyGeoIP struct {
+	// Provider defines the GeoIP provider configuration used by GeoIP filter instances.
+	Provider GeoIPProvider `json:"provider"`
 }
 
 // +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
