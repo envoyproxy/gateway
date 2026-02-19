@@ -273,8 +273,9 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 }
 
 func (s *snapshotCache) OnStreamResponse(_ context.Context, streamID int64, _ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
-	// No mutex lock required here because no writing to the cache.
+	s.mu.Lock()
 	node := s.streamIDNodeInfo[streamID]
+	s.mu.Unlock()
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
 	} else {
@@ -392,8 +393,9 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 }
 
 func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, _ *discoveryv3.DeltaDiscoveryRequest, _ *discoveryv3.DeltaDiscoveryResponse) {
-	// No mutex lock required here because no writing to the cache.
+	s.mu.Lock()
 	node := s.streamIDNodeInfo[streamID]
+	s.mu.Unlock()
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
 	} else {
