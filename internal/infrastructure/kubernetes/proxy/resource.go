@@ -77,6 +77,7 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
+	envoyConfig *egv1a1.Envoy,
 	topologyInjectorDisabled bool,
 	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
@@ -127,7 +128,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		return nil, err
 	}
 
-	proxyImage, err := resolveProxyImage(containerSpec)
+	proxyImage, err := resolveProxyImage(containerSpec, envoyConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -513,13 +514,12 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	return sc
 }
 
-func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {
+func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec, envoy *egv1a1.Envoy) (string, error) {
 	if containerSpec == nil {
 		return "", fmt.Errorf("containerSpec is nil")
 	}
 
-	repo := ptr.Deref(containerSpec.ImageRepository, "")
-	if repo != "" {
+	if repo := ptr.Deref(containerSpec.ImageRepository, ""); repo != "" {
 		tag, err := getImageTag(egv1a1.DefaultEnvoyProxyImage)
 		if err != nil {
 			return "", err
@@ -527,9 +527,12 @@ func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, e
 		return fmt.Sprintf("%s:%s", repo, tag), nil
 	}
 
-	image := ptr.Deref(containerSpec.Image, "")
-	if image != "" {
+	if image := ptr.Deref(containerSpec.Image, ""); image != "" && image != egv1a1.DefaultEnvoyProxyImage {
 		return image, nil
+	}
+
+	if envoy != nil && envoy.Image != nil {
+		return *envoy.Image, nil
 	}
 
 	return egv1a1.DefaultEnvoyProxyImage, nil

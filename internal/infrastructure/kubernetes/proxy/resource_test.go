@@ -71,6 +71,7 @@ func TestResolveProxyImage(t *testing.T) {
 	tests := []struct {
 		name        string
 		container   *egv1a1.KubernetesContainerSpec
+		envoy       *egv1a1.Envoy
 		expected    string
 		expectError bool
 	}{
@@ -113,11 +114,49 @@ func TestResolveProxyImage(t *testing.T) {
 			},
 			expected: fmt.Sprintf("docker.io:443/envoyproxy/envoy:%s", defaultTag),
 		},
+		{
+			name: "envoy image set and container image set to default proxy image",
+			container: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To(egv1a1.DefaultEnvoyProxyImage),
+			},
+			envoy: &egv1a1.Envoy{
+				Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+			},
+			expected: "private.registry/envoyproxy/envoy:distroless-dev",
+		},
+		{
+			name:      "envoy image set",
+			container: &egv1a1.KubernetesContainerSpec{},
+			envoy: &egv1a1.Envoy{
+				Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+			},
+			expected: "private.registry/envoyproxy/envoy:distroless-dev",
+		},
+		{
+			name: "envoy image set and container image set to non-default proxy image",
+			container: &egv1a1.KubernetesContainerSpec{
+				Image: ptr.To("custom.registry/envoyproxy/envoy:v1.2.3"),
+			},
+			envoy: &egv1a1.Envoy{
+				Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+			},
+			expected: "custom.registry/envoyproxy/envoy:v1.2.3",
+		},
+		{
+			name: "envoy image set and imageRepository set",
+			container: &egv1a1.KubernetesContainerSpec{
+				ImageRepository: ptr.To("custom.registry/envoyproxy/envoy"),
+			},
+			envoy: &egv1a1.Envoy{
+				Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+			},
+			expected: fmt.Sprintf("custom.registry/envoyproxy/envoy:%s", defaultTag),
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			image, err := resolveProxyImage(tc.container)
+			image, err := resolveProxyImage(tc.container, tc.envoy)
 
 			if tc.expectError {
 				require.Error(t, err)

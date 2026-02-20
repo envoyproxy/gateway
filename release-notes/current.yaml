@@ -21,6 +21,7 @@ bug fixes: |
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
   Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
+  Fixed Helm chart global.imageRegistry and global.imagePullSecrets not applying to proxy pods
 
 # Enhancements that improve performance.
 performance improvements: |

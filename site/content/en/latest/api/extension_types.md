@@ -1266,6 +1266,20 @@ _Appears in:_
 | `defaultValue` | _string_ |  false  |  | DefaultValue defines the default value to use if the environment variable is not set. |
 
 
+#### Envoy
+
+
+
+Envoy defines configuration for the envoy container.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `image` | _string_ |  false  |  | Image specifies the envoy container image to be used, instead of the default image. |
+
+
 #### EnvoyExtensionPolicy
 
 
@@ -1476,6 +1490,8 @@ _Appears in:_
 | `deploy` | _[KubernetesDeployMode](#kubernetesdeploymode)_ |  false  |  | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane<br />should be deployed |
 | `leaderElection` | _[LeaderElection](#leaderelection)_ |  false  |  | LeaderElection specifies the configuration for leader election.<br />If it's not set up, leader election will be active by default, using Kubernetes' standard settings. |
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
+| `envoy` | _[Envoy](#envoy)_ |  false  |  | Envoy defines the configuration for the envoy container. |
+| `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#localobjectreference-v1-core) array_ |  false  |  | ImagePullSecrets defines the pull secrets for the managed Envoy Proxy pods. |
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
 | `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
 | `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |

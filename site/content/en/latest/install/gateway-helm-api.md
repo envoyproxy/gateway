@@ -71,6 +71,8 @@ The Helm chart for Envoy Gateway
 | deployment.replicas | int | `1` |  |
 | global.imagePullSecrets | list | `[]` | Global override for image pull secrets |
 | global.imageRegistry | string | `""` | Global override for image registry |
+| global.images.envoy.image | string | `""` |  |
+| global.images.envoy.pullSecrets | list | `[]` |  |
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |

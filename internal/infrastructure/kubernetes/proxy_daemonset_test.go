@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,7 +50,7 @@ func daemonsetWithSelectorAndLabel(ds *appsv1.DaemonSet, selector *metav1.LabelS
 	return dCopy
 }
 
-func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
+func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool, opts ...proxyConfigOption) (*appsv1.DaemonSet, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
@@ -73,6 +74,10 @@ func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool) 
 				},
 			},
 		},
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
 	}
 
 	cli := fakeclient.NewClientBuilder().
@@ -114,6 +119,16 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 	require.NoError(t, err)
 
 	gwDs, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDaemonSet(t, true)
+	require.NoError(t, err)
+
+	proxyImageDs, proxyImageInfra, proxyImageCfg, err := setupCreateOrUpdateProxyDaemonSet(t, false, withEnvoy(&egv1a1.Envoy{
+		Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+	}))
+	require.NoError(t, err)
+
+	proxyPullSecretsDs, proxyPullSecretsInfra, proxyPullSecretsCfg, err := setupCreateOrUpdateProxyDaemonSet(t, false, withImagePullSecrets([]corev1.LocalObjectReference{
+		{Name: "global-secret"},
+	}))
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -302,6 +317,18 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 			in:                   gwInfra,
 			gatewayNamespaceMode: true,
 			want:                 gwDs,
+		},
+		{
+			name: "envoy image override",
+			cfg:  proxyImageCfg,
+			in:   proxyImageInfra,
+			want: proxyImageDs,
+		},
+		{
+			name: "imagePullSecrets",
+			cfg:  proxyPullSecretsCfg,
+			in:   proxyPullSecretsInfra,
+			want: proxyPullSecretsDs,
 		},
 	}
 
