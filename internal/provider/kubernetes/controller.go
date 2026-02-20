@@ -182,6 +182,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
+		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel)
 	}
 
 	// controller-runtime doesn't allow run controller with same name for more than once
@@ -1550,24 +1551,8 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 	}
 
-	refGrants := refGrantList.Items
-	if r.namespaceLabel != nil {
-		var rgs []gwapiv1b1.ReferenceGrant
-		for i := range refGrants {
-			refGrant := &refGrants[i]
-			if ok, err := r.checkObjectNamespaceLabels(refGrant); err != nil {
-				r.log.Error(err, "failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-			rgs = append(rgs, *refGrant)
-		}
-		refGrants = rgs
-	}
-
-	for i := range refGrants {
-		refGrant := &refGrants[i]
+	for i := range refGrantList.Items {
+		refGrant := &refGrantList.Items[i]
 		if refGrant.Namespace != to.namespace {
 			continue
 		}
@@ -1623,18 +1608,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 	for i := range gatewayList.Items {
 		gtw := &gatewayList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(gtw); err != nil {
-				// If the error is transient, we return it to allow Reconcile to retry.
-				if isTransientError(err) {
-					return err
-				}
-				r.log.Error(err, "failed to check namespace labels for gateway", "name", gtw.GetName(), "namespace", gtw.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-		}
 
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
@@ -1870,15 +1843,6 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 
 	for i := range xListenerSetList.Items {
 		xls := &xListenerSetList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(xls); err != nil {
-				r.log.Error(err, "failed to check namespace labels for XListenerSet",
-					"name", xls.GetName(), "namespace", xls.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-		}
 
 		key := utils.NamespacedName(xls).String()
 		if resourceMap.allAssociatedXListenerSets.Has(key) {

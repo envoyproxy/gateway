@@ -53,7 +53,7 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	ok, err := r.checkObjectNamespaceLabels(obj)
+	ok, err := checkObjectNamespaceLabels(r.client, r.namespaceLabel, obj)
 	if err != nil {
 		r.log.Error(
 			err, "failed to get Namespace",
@@ -68,16 +68,18 @@ type NamespaceGetter interface {
 	GetNamespace() string
 }
 
-// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
-func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
+// checkObjectNamespaceLabels returns true if the namespace of provided object has
+// the provided labels or false otherwise.
+// Cluster-scoped resources (empty namespace) always return true.
+func checkObjectNamespaceLabels(c client.Client, namespaceSelector *metav1.LabelSelector, obj metav1.Object) (bool, error) {
 	var nsString string
-	// TODO: it requires extra condition validate cluster resources or resources without namespace?
+	// Cluster-scoped resources should not be filtered
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {
-		return false, nil
+		return true, nil
 	}
 
 	ns := &corev1.Namespace{}
-	if err := r.client.Get(
+	if err := c.Get(
 		context.Background(),
 		client.ObjectKey{
 			Namespace: "", // Namespace object should have an empty Namespace
@@ -88,7 +90,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bo
 		return false, err
 	}
 
-	return matchLabelsAndExpressions(r.namespaceLabel, ns.Labels), nil
+	return matchLabelsAndExpressions(namespaceSelector, ns.Labels), nil
 }
 
 // matchLabelsAndExpressions extracts information from a given label selector and checks whether
