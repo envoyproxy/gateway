@@ -126,6 +126,8 @@ type Translator struct {
 
 	// Logger is the logger used by the translator.
 	Logger logging.Logger
+
+	XDSNameSchemeV2 bool
 }
 
 type TranslateResult struct {

@@ -259,7 +259,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
-		destName := irRouteDestinationName(httpRoute, ruleIdx)
+		destName := irRouteDestinationName(t.XDSNameSchemeV2, httpRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		var processDestinationError error
 		failedNoReadyEndpoints := false
@@ -586,7 +586,7 @@ func (t *Translator) processHTTPRouteRule(
 
 			// We generate a unique session name per route.
 			// `/` isn't allowed in the header key, so we just replace it with `-`.
-			sessionName = strings.ReplaceAll(irRouteDestinationName(httpRoute, ruleIdx), "/", "-")
+			sessionName = strings.ReplaceAll(irRouteDestinationName(t.XDSNameSchemeV2, httpRoute, ruleIdx), "/", "-")
 		} else {
 			sessionName = *rule.SessionPersistence.SessionName
 		}
@@ -980,7 +980,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		}
 
 		// process each backendRef, and calculate the destination settings for this rule
-		destName := irRouteDestinationName(grpcRoute, ruleIdx)
+		destName := irRouteDestinationName(t.XDSNameSchemeV2, grpcRoute, ruleIdx)
 		allDs := make([]*ir.DestinationSetting, 0, len(rule.BackendRefs))
 		var processDestinationError error
 		failedNoReadyEndpoints := false
@@ -1365,7 +1365,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		var (
 			destSettings []*ir.DestinationSetting
 			resolveErrs  = &status.MultiStatusError{}
-			destName     = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
+			destName     = irRouteDestinationName(t.XDSNameSchemeV2, tlsRoute, -1 /*rule index*/)
 		)
 
 		// compute backends
@@ -1544,7 +1544,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		var (
 			destSettings []*ir.DestinationSetting
 			resolveErrs  = &status.MultiStatusError{}
-			destName     = irRouteDestinationName(udpRoute, -1 /*rule index*/)
+			destName     = irRouteDestinationName(t.XDSNameSchemeV2, udpRoute, -1 /*rule index*/)
 		)
 
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
@@ -1695,7 +1695,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		var (
 			destSettings []*ir.DestinationSetting
 			resolveErrs  = &status.MultiStatusError{}
-			destName     = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
+			destName     = irRouteDestinationName(t.XDSNameSchemeV2, tcpRoute, -1 /*rule index*/)
 		)
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
