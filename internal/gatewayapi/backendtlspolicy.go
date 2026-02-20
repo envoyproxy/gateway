@@ -85,11 +85,13 @@ func (t *Translator) applyBackendTLSSetting(
 	parent gwapiv1.ParentReference,
 	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
+	gateway *gwapiv1.Gateway,
 ) (*ir.TLSUpstreamConfig, error) {
 	var (
 		backendValidationTLSConfig *ir.TLSUpstreamConfig // the TLS config to validate the server cert from Backend TLS settings
 		btpValidationTLSConfig     *ir.TLSUpstreamConfig // the TLS config to validate the server cert from BackendTLSPolicy
 		backendClientTLSConfig     *ir.TLSConfig         // the TLS config for client cert and common TLS settings from Backend TLS settings
+		gatewayClientTLSConfig     *ir.TLSConfig         // the TLS config for client cert from Gateway spec.tls.backend.clientCertificateRef
 		envoyProxyClientTLSConfig  *ir.TLSConfig         // the TLS config for client cert and common TLS settings from EnvoyProxy BackendTLS
 		mergedClientTLSConfig      *ir.TLSConfig         // the final merged client TLS config to return
 		mergedTLSConfig            *ir.TLSUpstreamConfig // the final merged TLS config to return
@@ -144,9 +146,16 @@ func (t *Translator) applyBackendTLSSetting(
 		}
 	}
 
-	// Merge client TLS settings from Backend resource and EnvoyProxy resource.
-	// Backend resource client TLS settings take precedence over EnvoyProxy client TLS settings.
-	mergedClientTLSConfig = mergeClientTLSConfigs(backendClientTLSConfig, envoyProxyClientTLSConfig)
+	// Get the client certificate settings from Gateway resource.
+	if t.GatewayBackendClientCertEnabled && gateway != nil && gateway.Spec.TLS != nil && gateway.Spec.TLS.Backend != nil {
+		if gatewayClientTLSConfig, err = t.processGatewayBackendTLS(gateway, resources); err != nil {
+			return nil, err
+		}
+	}
+
+	// Merge client TLS settings from Backend resource, Gateway, and EnvoyProxy resource.
+	// Precedence (highest to lowest): Backend > Gateway > EnvoyProxy.
+	mergedClientTLSConfig = mergeClientTLSConfigs(backendClientTLSConfig, gatewayClientTLSConfig, envoyProxyClientTLSConfig)
 	if mergedClientTLSConfig != nil {
 		mergedTLSConfig.TLSConfig = *mergedClientTLSConfig
 	}
@@ -154,7 +163,33 @@ func (t *Translator) applyBackendTLSSetting(
 	return mergedTLSConfig, nil
 }
 
-// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TL.
+func (t *Translator) processGatewayBackendTLS(gateway *gwapiv1.Gateway, resources *resource.Resources) (*ir.TLSConfig, error) {
+	ref := gateway.Spec.TLS.Backend.ClientCertificateRef
+	if ref == nil {
+		return nil, nil
+	}
+
+	secret, err := t.validateSecretRef(
+		true, // allowCrossNamespace – Gateway spec permits cross-ns refs via ReferenceGrant
+		crossNamespaceFrom{
+			group:     gwapiv1.GroupName,
+			kind:      resource.KindGateway,
+			namespace: gateway.Namespace,
+		},
+		*ref,
+		resources,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConf := irTLSConfigs(secret)
+	return &ir.TLSConfig{
+		ClientCertificates: tlsConf.Certificates,
+	}, nil
+}
+
+// Merges TLS settings from Gateway API BackendTLSPolicy and Envoy Gateway Backend TLS.
 // BackendTLSPolicy takes precedence for identical attributes that are set in both.
 func mergeServerValidationTLSConfigs(
 	backendValidationTLSConfig *ir.TLSUpstreamConfig,
@@ -190,58 +225,53 @@ func mergeServerValidationTLSConfigs(
 	return mergedConfig
 }
 
-// Merges client TLS settings from backend TLS settings and EnvoyProxy BackendTLS settings.
-// Backend TLS settings take precedence for identical attributes that are set in both.
+// Merges client TLS settings from Backend, Gateway, and EnvoyProxy resources.
+// Precedence (highest to lowest): Backend > Gateway > EnvoyProxy.
 func mergeClientTLSConfigs(
 	backendClientTLSConfig *ir.TLSConfig,
+	gatewayClientTLSConfig *ir.TLSConfig,
 	envoyProxyClientTLSConfig *ir.TLSConfig,
 ) *ir.TLSConfig {
-	if backendClientTLSConfig == nil && envoyProxyClientTLSConfig == nil {
-		return nil
+	// Merge order: envoyProxy (lowest) -> gateway -> backend (highest)
+	configs := []*ir.TLSConfig{envoyProxyClientTLSConfig, gatewayClientTLSConfig, backendClientTLSConfig}
+
+	var merged *ir.TLSConfig
+	for _, cfg := range configs {
+		if cfg == nil {
+			continue
+		}
+		if merged == nil {
+			// Clone the first non-nil config as base
+			c := *cfg
+			merged = &c
+			continue
+		}
+		// Overlay non-empty fields from higher-priority config
+		if len(cfg.ClientCertificates) > 0 {
+			merged.ClientCertificates = cfg.ClientCertificates
+		}
+		if cfg.MinVersion != nil {
+			minVersion := *cfg.MinVersion
+			merged.MinVersion = &minVersion
+		}
+		if cfg.MaxVersion != nil {
+			maxVersion := *cfg.MaxVersion
+			merged.MaxVersion = &maxVersion
+		}
+		if len(cfg.Ciphers) > 0 {
+			merged.Ciphers = cfg.Ciphers
+		}
+		if len(cfg.ECDHCurves) > 0 {
+			merged.ECDHCurves = cfg.ECDHCurves
+		}
+		if len(cfg.SignatureAlgorithms) > 0 {
+			merged.SignatureAlgorithms = cfg.SignatureAlgorithms
+		}
+		if len(cfg.ALPNProtocols) > 0 {
+			merged.ALPNProtocols = cfg.ALPNProtocols
+		}
 	}
-
-	if backendClientTLSConfig == nil {
-		return envoyProxyClientTLSConfig
-	}
-
-	if envoyProxyClientTLSConfig == nil {
-		return backendClientTLSConfig
-	}
-
-	// We don't use DeepCopy here to avoid unnecessary memory allocation.
-	mergedConfig := envoyProxyClientTLSConfig
-
-	if len(backendClientTLSConfig.ClientCertificates) > 0 {
-		mergedConfig.ClientCertificates = backendClientTLSConfig.ClientCertificates
-	}
-
-	if backendClientTLSConfig.MinVersion != nil {
-		minVersion := *backendClientTLSConfig.MinVersion
-		mergedConfig.MinVersion = &minVersion
-	}
-
-	if backendClientTLSConfig.MaxVersion != nil {
-		maxVersion := *backendClientTLSConfig.MaxVersion
-		mergedConfig.MaxVersion = &maxVersion
-	}
-
-	if len(backendClientTLSConfig.Ciphers) > 0 {
-		mergedConfig.Ciphers = backendClientTLSConfig.Ciphers
-	}
-
-	if len(backendClientTLSConfig.ECDHCurves) > 0 {
-		mergedConfig.ECDHCurves = backendClientTLSConfig.ECDHCurves
-	}
-
-	if len(backendClientTLSConfig.SignatureAlgorithms) > 0 {
-		mergedConfig.SignatureAlgorithms = backendClientTLSConfig.SignatureAlgorithms
-	}
-
-	if len(backendClientTLSConfig.ALPNProtocols) > 0 {
-		mergedConfig.ALPNProtocols = backendClientTLSConfig.ALPNProtocols
-	}
-
-	return mergedConfig
+	return merged
 }
 
 func (t *Translator) processServerValidationTLSSettings(
