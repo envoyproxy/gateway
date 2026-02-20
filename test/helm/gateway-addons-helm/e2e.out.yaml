@@ -52,7 +52,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -462,7 +462,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10268,7 +10268,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10380,7 +10380,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10563,7 +10563,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10828,7 +10828,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10850,7 +10850,7 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.9.0
+        helm.sh/chart: prometheus-28.9.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
