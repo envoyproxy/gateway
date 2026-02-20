@@ -1246,7 +1246,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | DecompressorType defines the decompressor type to use for decompression. |
+| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | Type defines the decompressor type to use for decompression. |
 | `brotli` | _[BrotliDecompressor](#brotlidecompressor)_ |  false  |  | The configuration for Brotli decompressor. |
 | `gzip` | _[GzipDecompressor](#gzipdecompressor)_ |  false  |  | The configuration for GZIP decompressor. |
 | `zstd` | _[ZstdDecompressor](#zstddecompressor)_ |  false  |  | The configuration for Zstd decompressor. |

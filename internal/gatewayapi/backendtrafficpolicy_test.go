@@ -407,6 +407,66 @@ func TestBuildCompression(t *testing.T) {
 	}
 }
 
+func TestBuildDecompression(t *testing.T) {
+	cases := []struct {
+		name         string
+		decompressor []*egv1a1.Decompression
+		expected     []*ir.Decompression
+	}{
+		{
+			name:         "nil decompressor",
+			decompressor: nil,
+			expected:     nil,
+		},
+		{
+			name:         "empty decompressor",
+			decompressor: []*egv1a1.Decompression{},
+			expected:     nil,
+		},
+		{
+			name: "single gzip decompressor",
+			decompressor: []*egv1a1.Decompression{
+				{Type: egv1a1.GzipDecompressorType},
+			},
+			expected: []*ir.Decompression{
+				{Type: egv1a1.GzipDecompressorType},
+			},
+		},
+		{
+			name: "multiple decompressor types",
+			decompressor: []*egv1a1.Decompression{
+				{Type: egv1a1.GzipDecompressorType},
+				{Type: egv1a1.BrotliDecompressorType},
+				{Type: egv1a1.ZstdDecompressorType},
+			},
+			expected: []*ir.Decompression{
+				{Type: egv1a1.GzipDecompressorType},
+				{Type: egv1a1.BrotliDecompressorType},
+				{Type: egv1a1.ZstdDecompressorType},
+			},
+		},
+		{
+			name: "decompressor with optional config",
+			decompressor: []*egv1a1.Decompression{
+				{
+					Type: egv1a1.GzipDecompressorType,
+					Gzip: &egv1a1.GzipDecompressor{},
+				},
+			},
+			expected: []*ir.Decompression{
+				{Type: egv1a1.GzipDecompressorType},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := buildDecompression(tc.decompressor)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
 func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 	testCases := []struct {
 		name        string

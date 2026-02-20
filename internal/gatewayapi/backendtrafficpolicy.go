@@ -1760,15 +1760,9 @@ func buildDecompression(decompressor []*egv1a1.Decompression) []*ir.Decompressio
 
 	result := make([]*ir.Decompression, 0, len(decompressor))
 	for _, d := range decompressor {
-		// Only add decompression if the corresponding decompressor config is not null
-		if (d.Type == egv1a1.GzipDecompressorType && d.Gzip != nil) ||
-			(d.Type == egv1a1.BrotliDecompressorType && d.Brotli != nil) ||
-			(d.Type == egv1a1.ZstdDecompressorType && d.Zstd != nil) {
-			irDecompression := ir.Decompression{
-				Type: d.Type,
-			}
-			result = append(result, &irDecompression)
-		}
+		result = append(result, &ir.Decompression{
+			Type: d.Type,
+		})
 	}
 	return result
 }
