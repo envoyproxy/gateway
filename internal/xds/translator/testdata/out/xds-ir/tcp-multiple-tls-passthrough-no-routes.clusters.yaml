@@ -1,0 +1,6 @@
+- name: EmptyCluster-tls-passthrough-1
+  type: STATIC
+- name: EmptyCluster-tls-passthrough-2
+  type: STATIC
+- name: EmptyCluster-tls-passthrough-3
+  type: STATIC
