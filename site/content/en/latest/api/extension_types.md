@@ -5804,6 +5804,7 @@ _Appears in:_
 | `HTTPListener` |  | 
 | `Translation` |  | 
 | `Cluster` |  | 
+| `Endpoints` |  | 
 
 
 #### XDSTranslatorHooks
