@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -128,6 +129,13 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
 					Sha256: wasm.Code.SHA256,
+					RetryPolicy: &corev3.RetryPolicy{
+						RetryBackOff: &corev3.BackoffStrategy{
+							BaseInterval: durationpb.New(1 * time.Second),
+							MaxInterval:  durationpb.New(10 * time.Second),
+						},
+						NumRetries: wrapperspb.UInt32(5),
+					},
 				},
 			},
 		},
