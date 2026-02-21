@@ -78,6 +78,28 @@ func SectionNamePtr(name string) *gwapiv1.SectionName {
 	return &sectionName
 }
 
+// BuildNamespaceMappingForMergedResources builds a map from item key to namespace from parent and route resources.
+// key produces a comparable key for each item (e.g. JSON). Parent items are applied first;
+// route items overwrite when the same key appears in both (route wins).
+func BuildNamespaceMappingForMergedResources[T any](
+	parentResources, routeResources []T,
+	parentNs, routeNs string,
+	key func(T) string,
+) map[string]string {
+	keyToNs := make(map[string]string)
+	for _, item := range parentResources {
+		if k := key(item); k != "" {
+			keyToNs[k] = parentNs
+		}
+	}
+	for _, item := range routeResources {
+		if k := key(item); k != "" {
+			keyToNs[k] = routeNs
+		}
+	}
+	return keyToNs
+}
+
 func PortNumPtr(val int32) *gwapiv1.PortNumber {
 	portNum := val
 	return &portNum

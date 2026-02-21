@@ -872,3 +872,182 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildNamespaceMappingForMergedResources(t *testing.T) {
+	tests := []struct {
+		name       string
+		parent     []*egv1a1.ResponseOverride
+		route      []*egv1a1.ResponseOverride
+		parentNs   string
+		routeNs    string
+		wantMapLen int
+	}{
+		{
+			name: "same LocalObjectRef different match criteria",
+			parent: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(404)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			route: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(500)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			parentNs:   "parent-ns",
+			routeNs:    "route-ns",
+			wantMapLen: 2,
+		},
+		{
+			name: "same key in parent and route route wins",
+			parent: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(404)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			route: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(404)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			parentNs:   "parent-ns",
+			routeNs:    "route-ns",
+			wantMapLen: 1,
+		},
+		{
+			name: "parent only",
+			parent: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(404)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			route:      nil,
+			parentNs:   "parent-ns",
+			routeNs:    "route-ns",
+			wantMapLen: 1,
+		},
+		{
+			name:   "route only",
+			parent: nil,
+			route: []*egv1a1.ResponseOverride{
+				{
+					Match: egv1a1.CustomResponseMatch{
+						StatusCodes: []egv1a1.StatusCodeMatch{
+							{Type: ptr.To(egv1a1.StatusCodeValueTypeValue), Value: ptr.To(500)},
+						},
+					},
+					Response: &egv1a1.CustomResponse{
+						Body: &egv1a1.CustomResponseBody{
+							Type: ptr.To(egv1a1.ResponseValueTypeValueRef),
+							ValueRef: &gwapiv1.LocalObjectReference{
+								Kind: gwapiv1.Kind("ConfigMap"),
+								Name: gwapiv1.ObjectName("my-cm"),
+							},
+						},
+					},
+				},
+			},
+			parentNs:   "parent-ns",
+			routeNs:    "route-ns",
+			wantMapLen: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keyToNs := BuildNamespaceMappingForMergedResources(
+				tt.parent,
+				tt.route,
+				tt.parentNs,
+				tt.routeNs,
+				responseOverrideKey,
+			)
+			require.Len(t, keyToNs, tt.wantMapLen, "output map should have expected length")
+			routeKeys := make(map[string]bool)
+			for _, ro := range tt.route {
+				routeKeys[responseOverrideKey(ro)] = true
+			}
+			for _, ro := range tt.parent {
+				k := responseOverrideKey(ro)
+				require.NotEmpty(t, k, "parent ResponseOverride key should not be empty")
+				require.Contains(t, keyToNs, k, "parent ResponseOverride should be present in output")
+				wantNs := tt.parentNs
+				if routeKeys[k] {
+					wantNs = tt.routeNs // route overwrites parent
+				}
+				require.Equal(t, wantNs, keyToNs[k], "parent ResponseOverride should map to correct namespace")
+			}
+			for _, ro := range tt.route {
+				k := responseOverrideKey(ro)
+				require.NotEmpty(t, k, "route ResponseOverride key should not be empty")
+				require.Contains(t, keyToNs, k, "route ResponseOverride should be present in output")
+				require.Equal(t, tt.routeNs, keyToNs[k], "route ResponseOverride should map to route namespace")
+			}
+		})
+	}
+}

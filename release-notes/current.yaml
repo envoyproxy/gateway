@@ -21,6 +21,7 @@ bug fixes: |
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
   Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
+  Fixed bug where merged BackendTrafficPolicy response body refs were not resolved in the parent policy namespace.
 
 # Enhancements that improve performance.
 performance improvements: |
