@@ -5,7 +5,7 @@ envoyExtensionPolicies:
     name: policy-for-http-route
     namespace: default
   spec:
-    dynamicModules:
+    dynamicModule:
     - config:
         maxTokensPerMinute: 10000
       filterName: token-ratelimit
@@ -40,7 +40,7 @@ envoyExtensionPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    dynamicModules:
+    dynamicModule:
     - config:
         authEndpoint: https://auth.example.com
       filterName: auth-check

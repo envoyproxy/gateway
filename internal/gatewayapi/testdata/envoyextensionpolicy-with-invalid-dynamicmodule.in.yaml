@@ -59,7 +59,7 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-    dynamicModules:
+    dynamicModule:
     - name: unregistered-module
       config:
         key: value

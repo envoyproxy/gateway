@@ -13,7 +13,7 @@ import (
 	dmfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/dynamic_modules/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -100,13 +100,8 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 		TerminalFilter: dm.TerminalFilter,
 	}
 
-	// Convert JSON config to google.protobuf.Struct wrapped in Any
 	if dm.Config != nil && dm.Config.Raw != nil {
-		s := &structpb.Struct{}
-		if err := s.UnmarshalJSON(dm.Config.Raw); err != nil {
-			return nil, err
-		}
-		configAny, err := anypb.New(s)
+		configAny, err := anypb.New(wrapperspb.String(string(dm.Config.Raw)))
 		if err != nil {
 			return nil, err
 		}

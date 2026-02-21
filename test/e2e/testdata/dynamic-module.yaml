@@ -67,6 +67,6 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: http-with-dynamic-module
-  dynamicModules:
+  dynamicModule:
     - name: header-mutation
       filterName: header_mutation

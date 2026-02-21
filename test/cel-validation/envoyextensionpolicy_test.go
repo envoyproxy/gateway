@@ -970,7 +970,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid DynamicModule with all fields",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					DynamicModules: []egv1a1.DynamicModule{
+					DynamicModule: []egv1a1.DynamicModule{
 						{
 							Name:           "my-module",
 							FilterName:     ptr.To("my-filter"),
@@ -994,7 +994,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "valid DynamicModule with minimal fields",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					DynamicModules: []egv1a1.DynamicModule{
+					DynamicModule: []egv1a1.DynamicModule{
 						{
 							Name: "my-module",
 						},
@@ -1016,7 +1016,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "DynamicModule with empty name",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					DynamicModules: []egv1a1.DynamicModule{
+					DynamicModule: []egv1a1.DynamicModule{
 						{
 							Name: "",
 						},
@@ -1033,7 +1033,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"spec.dynamicModules[0].name: Invalid value:",
+				"spec.dynamicModule[0].name: Invalid value:",
 				"should be at least 1 chars long",
 			},
 		},
@@ -1041,7 +1041,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "multiple valid DynamicModules",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					DynamicModules: []egv1a1.DynamicModule{
+					DynamicModule: []egv1a1.DynamicModule{
 						{
 							Name:       "module-a",
 							FilterName: ptr.To("filter-a"),
@@ -1068,7 +1068,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			desc: "DynamicModule with terminalFilter true",
 			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
-					DynamicModules: []egv1a1.DynamicModule{
+					DynamicModule: []egv1a1.DynamicModule{
 						{
 							Name:           "terminal-module",
 							TerminalFilter: ptr.To(true),

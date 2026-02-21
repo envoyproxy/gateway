@@ -46,9 +46,9 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
-              dynamicModules:
+              dynamicModule:
                 description: |-
-                  DynamicModules is an ordered list of dynamic module HTTP filters
+                  DynamicModule is an ordered list of dynamic module HTTP filters
                   that should be added to the envoy filter chain.
                   Each module must be registered in the EnvoyProxy resource's dynamicModules
                   allowlist.

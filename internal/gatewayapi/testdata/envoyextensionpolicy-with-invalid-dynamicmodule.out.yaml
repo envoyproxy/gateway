@@ -5,7 +5,7 @@ envoyExtensionPolicies:
     name: policy-with-unregistered-module
     namespace: default
   spec:
-    dynamicModules:
+    dynamicModule:
     - config:
         key: value
       name: unregistered-module

@@ -82,7 +82,7 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-    dynamicModules:
+    dynamicModule:
     - name: my-auth-module
       filterName: auth-check
       config:
@@ -97,7 +97,7 @@ envoyextensionpolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-    dynamicModules:
+    dynamicModule:
     - name: ai-gateway-filter
       filterName: token-ratelimit
       config:

@@ -1337,7 +1337,7 @@ _Appears in:_
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 | `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
-| `dynamicModules` | _[DynamicModule](#dynamicmodule) array_ |  false  |  | DynamicModules is an ordered list of dynamic module HTTP filters<br />that should be added to the envoy filter chain.<br />Each module must be registered in the EnvoyProxy resource's dynamicModules<br />allowlist.<br />Order matters, as the filters will be loaded in the order they are<br />defined in this list. |
+| `dynamicModule` | _[DynamicModule](#dynamicmodule) array_ |  false  |  | DynamicModule is an ordered list of dynamic module HTTP filters<br />that should be added to the envoy filter chain.<br />Each module must be registered in the EnvoyProxy resource's dynamicModules<br />allowlist.<br />Order matters, as the filters will be loaded in the order they are<br />defined in this list. |
 
 
 #### EnvoyFilter

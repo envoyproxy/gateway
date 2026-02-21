@@ -1140,7 +1140,7 @@ func (t *Translator) buildDynamicModules(
 ) ([]ir.DynamicModule, error) {
 	var errs error
 
-	if policy == nil || len(policy.Spec.DynamicModules) == 0 {
+	if policy == nil || len(policy.Spec.DynamicModule) == 0 {
 		return nil, nil
 	}
 
@@ -1153,9 +1153,9 @@ func (t *Translator) buildDynamicModules(
 		}
 	}
 
-	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModules))
+	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModule))
 
-	for idx, dm := range policy.Spec.DynamicModules {
+	for idx, dm := range policy.Spec.DynamicModule {
 		name := irConfigNameForDynamicModule(policy, idx)
 
 		// Validate module exists in registry

@@ -1987,8 +1987,8 @@ func (in *EnvoyExtensionPolicySpec) DeepCopyInto(out *EnvoyExtensionPolicySpec) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.DynamicModules != nil {
-		in, out := &in.DynamicModules, &out.DynamicModules
+	if in.DynamicModule != nil {
+		in, out := &in.DynamicModule, &out.DynamicModule
 		*out = make([]DynamicModule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
