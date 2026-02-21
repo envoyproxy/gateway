@@ -75,84 +75,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-tlsRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TLSRoute
-  metadata:
-    name: tls-app-passthrough
-    namespace: default
-  spec:
-    parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
-      name: tls-xls
-      namespace: gateway-xls
-      sectionName: extra-tls-passthrough
-    rules:
-    - backendRefs:
-      - name: service-1
-        namespace: default
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
-        name: tls-xls
-        namespace: gateway-xls
-        sectionName: extra-tls-passthrough
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: TLSRoute
-  metadata:
-    name: tls-app-terminate
-    namespace: default
-  spec:
-    parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
-      name: tls-xls
-      namespace: gateway-xls
-      sectionName: extra-tls-terminate
-    rules:
-    - backendRefs:
-      - name: service-1
-        namespace: default
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
-        name: tls-xls
-        namespace: gateway-xls
-        sectionName: extra-tls-terminate
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: tls-xls
     namespace: gateway-xls
@@ -186,8 +111,6 @@ xListenerSets:
           namespace: secret
         mode: Terminate
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -220,7 +143,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-tls-passthrough
-      port: 8443
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
@@ -242,10 +164,84 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-tls-terminate
-      port: 9443
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    name: tls-app-passthrough
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: tls-xls
+      namespace: gateway-xls
+      sectionName: extra-tls-passthrough
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: tls-xls
+        namespace: gateway-xls
+        sectionName: extra-tls-passthrough
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    name: tls-app-terminate
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: tls-xls
+      namespace: gateway-xls
+      sectionName: extra-tls-terminate
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: tls-xls
+        namespace: gateway-xls
+        sectionName: extra-tls-terminate
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:

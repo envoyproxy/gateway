@@ -26,9 +26,9 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: gateway-xls
     name: same-namespace-valid
@@ -70,8 +70,8 @@ httpRoutes:
     name: route-extra-http-one
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-valid
       sectionName: extra-http-one
@@ -86,8 +86,8 @@ httpRoutes:
     name: route-extra-http-two
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-valid
       sectionName: extra-http-two
@@ -102,8 +102,8 @@ httpRoutes:
     name: route-entire-xls
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-valid
     rules:

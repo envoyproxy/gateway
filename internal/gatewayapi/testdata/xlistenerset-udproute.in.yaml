@@ -26,9 +26,9 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
-xListenerSets:
-  - apiVersion: gateway.networking.x-k8s.io/v1alpha1
-    kind: XListenerSet
+listenerSets:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
     metadata:
       namespace: gateway-xls
       name: udproute-xls
@@ -53,8 +53,8 @@ udpRoutes:
       name: udp-app-1
     spec:
       parentRefs:
-        - group: gateway.networking.x-k8s.io
-          kind: XListenerSet
+        - group: gateway.networking.k8s.io
+          kind: ListenerSet
           namespace: gateway-xls
           name: udproute-xls
           sectionName: extra-udp

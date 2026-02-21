@@ -20,7 +20,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -402,9 +401,9 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fromGroup := gwapiv1.GroupName
 			fromKind := resource.KindGateway
 
-			if listener.isFromXListenerSet() {
-				fromGroup = gwapixv1a1.GroupName
-				fromKind = resource.KindXListenerSet
+			if listener.isFromListenerSet() {
+				fromGroup = gwapiv1.GroupVersion.Group
+				fromKind = resource.KindListenerSet
 			}
 
 			if !t.validateCrossNamespaceRef(
