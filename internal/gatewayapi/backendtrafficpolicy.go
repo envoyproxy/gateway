@@ -15,6 +15,7 @@ import (
 
 	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -35,6 +36,127 @@ const (
 	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
 	ResponseBodyConfigMapKey = "response.body"
 )
+
+// GetBTPRoutingTypeForRoute resolves the RoutingType from BackendTrafficPolicies
+// for a specific route rule and gateway/listener combination.
+// It checks BTPs in priority order:
+// 1. BTPs targeting a specific route rule via sectionName (most specific)
+// 2. BTPs targeting the route (by targetRef or targetSelector)
+// 3. BTPs targeting the gateway listener
+// 4. BTPs targeting the gateway (by targetRef or targetSelector)
+// Returns nil if no BTP with RoutingType targets the route/gateway.
+func GetBTPRoutingTypeForRoute(
+	btps []*egv1a1.BackendTrafficPolicy,
+	route RouteContext,
+	gateway *gwapiv1.Gateway,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.RoutingType {
+	var routeRuleBTPRoutingType *egv1a1.RoutingType
+	var routeBTPRoutingType *egv1a1.RoutingType
+	var listenerBTPRoutingType *egv1a1.RoutingType
+	var gatewayBTPRoutingType *egv1a1.RoutingType
+
+	routeKind := route.GetRouteType()
+	routeNN := types.NamespacedName{
+		Namespace: route.GetNamespace(),
+		Name:      route.GetName(),
+	}
+	gatewayNN := types.NamespacedName{
+		Namespace: gateway.GetNamespace(),
+		Name:      gateway.GetName(),
+	}
+
+	for _, btp := range btps {
+		if btp.Spec.RoutingType == nil {
+			continue
+		}
+
+		// Check explicit targetRef/targetRefs
+		targetRefs := btp.Spec.GetTargetRefs()
+		for _, ref := range targetRefs {
+			refNamespace := btp.Namespace
+			refName := string(ref.Name)
+			refKind := string(ref.Kind)
+
+			// Check if BTP targets the route
+			if refKind == string(routeKind) &&
+				refName == routeNN.Name &&
+				refNamespace == routeNN.Namespace {
+				if ref.SectionName != nil {
+					// Route-rule-level BTP: only matches if routeRuleName matches
+					if routeRuleBTPRoutingType == nil &&
+						routeRuleName != nil &&
+						string(*ref.SectionName) == string(*routeRuleName) {
+						routeRuleBTPRoutingType = btp.Spec.RoutingType
+					}
+				} else {
+					// Route-level BTP
+					if routeBTPRoutingType == nil {
+						routeBTPRoutingType = btp.Spec.RoutingType
+					}
+				}
+			}
+
+			// Check if BTP targets the gateway
+			if refKind == resource.KindGateway &&
+				refName == gatewayNN.Name &&
+				refNamespace == gatewayNN.Namespace {
+				if ref.SectionName != nil {
+					// Listener-level BTP
+					if listenerBTPRoutingType == nil &&
+						listenerName != nil && string(*ref.SectionName) == string(*listenerName) {
+						listenerBTPRoutingType = btp.Spec.RoutingType
+					}
+				} else {
+					// Gateway-level BTP
+					if gatewayBTPRoutingType == nil {
+						gatewayBTPRoutingType = btp.Spec.RoutingType
+					}
+				}
+			}
+		}
+
+		// Check targetSelectors (label-based targeting)
+		for _, sel := range btp.Spec.TargetSelectors {
+			selGroup := string(ptr.Deref(sel.Group, gwapiv1.GroupName))
+			selKind := string(sel.Kind)
+			labelSelector := selectorFromTargetSelector(sel)
+
+			// Check if selector targets the route
+			if selKind == string(routeKind) &&
+				selGroup == gwapiv1.GroupName &&
+				btp.Namespace == routeNN.Namespace &&
+				labelSelector.Matches(labels.Set(route.GetLabels())) {
+				if routeBTPRoutingType == nil {
+					routeBTPRoutingType = btp.Spec.RoutingType
+				}
+			}
+
+			// Check if selector targets the gateway
+			if selKind == resource.KindGateway &&
+				selGroup == gwapiv1.GroupName &&
+				btp.Namespace == gatewayNN.Namespace &&
+				labelSelector.Matches(labels.Set(gateway.GetLabels())) {
+				if gatewayBTPRoutingType == nil {
+					gatewayBTPRoutingType = btp.Spec.RoutingType
+				}
+			}
+		}
+	}
+
+	// Return by priority: routeRule > route > listener > gateway
+	if routeRuleBTPRoutingType != nil {
+		return routeRuleBTPRoutingType
+	}
+	if routeBTPRoutingType != nil {
+		return routeBTPRoutingType
+	}
+	if listenerBTPRoutingType != nil {
+		return listenerBTPRoutingType
+	}
+	return gatewayBTPRoutingType
+}
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
