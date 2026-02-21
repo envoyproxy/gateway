@@ -718,6 +718,33 @@ type HTTP2Settings struct {
 	// Default: TerminateConnection
 	// +optional
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+
+	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
+	// +optional
+	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.interval) || duration(self.timeout) < duration(self.interval)",message="timeout must be less than interval"
+type HTTP2ConnectionKeepalive struct {
+	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// Timeout specifies how long to wait for a PING response before considering the connection dead.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// IntervalJitter specifies a random jitter percentage added to each interval.
+	// Defaults to 15% if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty"`
+
+	// ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent.
+	// +optional
+	ConnectionIdleInterval *gwapiv1.Duration `json:"connectionIdleInterval,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
