@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/echo-basic/grpcechoserver"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/grpc"
@@ -55,8 +54,8 @@ func getListenerAddr(gwAddrWithPort, port string) string {
 func createXListenerSetParent(controllerName, xlistenerSetName, sectionName string) gwapiv1.RouteParentStatus {
 	return gwapiv1.RouteParentStatus{
 		ParentRef: gwapiv1.ParentReference{
-			Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-			Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
+			Group:       gatewayapi.GroupPtr(gwapiv1.GroupVersion.Group),
+			Kind:        gatewayapi.KindPtr(resource.KindListenerSet),
 			Name:        gwapiv1.ObjectName(xlistenerSetName),
 			Namespace:   gatewayapi.NamespacePtr("gateway-conformance-infra"),
 			SectionName: gatewayapi.SectionNamePtr(sectionName),
@@ -340,19 +339,12 @@ var XListenerSetTLSTerminationTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		req := http.MakeRequest(t, &expected, listenerAddr, "HTTPS", "https")
-
 		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: "xlistenerset-tls-termination-secret"}
-		cPem, keyPem, caPem, err := GetTLSSecret(suite.Client, certNN)
+		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
-		combined := string(cPem)
-		if len(caPem) > 0 {
-			combined += "\n" + string(caPem)
-		}
-
-		WaitForConsistentMTLSResponse(t, suite.RoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-			[]byte(combined), keyPem, "www.example.com")
+		tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+			listenerAddr, serverCertificate, nil, nil, "www.example.com", expected)
 	},
 }
 

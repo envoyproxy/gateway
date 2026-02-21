@@ -113,8 +113,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: listener-from-same-xls
       namespace: gateway-xls
       sectionName: non-existent-listener
@@ -137,8 +137,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: listener-from-same-xls
         namespace: gateway-xls
         sectionName: non-existent-listener
@@ -173,9 +173,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: listener-from-same-xls
     namespace: gateway-xls
@@ -188,8 +188,6 @@ xListenerSets:
       port: 8089
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -222,7 +220,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: listener-1
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

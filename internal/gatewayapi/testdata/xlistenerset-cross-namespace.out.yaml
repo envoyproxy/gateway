@@ -52,8 +52,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: cross-namespace-allowed
       namespace: cross-allowed
       sectionName: cross-http-allowed
@@ -76,8 +76,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: cross-namespace-allowed
         namespace: cross-allowed
         sectionName: cross-http-allowed
@@ -88,8 +88,8 @@ httpRoutes:
     namespace: cross-allowed
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: cross-namespace-same
       namespace: cross-allowed
       sectionName: cross-http-same
@@ -113,8 +113,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: cross-namespace-same
         namespace: cross-allowed
         sectionName: cross-http-same
@@ -149,9 +149,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: cross-namespace-allowed
     namespace: cross-allowed
@@ -164,8 +164,6 @@ xListenerSets:
       port: 8083
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
       namespace: gateway-xls
   status:
@@ -199,14 +197,13 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: cross-http-allowed
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: cross-namespace-same
     namespace: cross-allowed
@@ -219,8 +216,6 @@ xListenerSets:
       port: 8085
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
       namespace: gateway-xls
   status:
@@ -254,14 +249,13 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: cross-http-same
-      port: 8085
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: cross-namespace-denied
     namespace: cross-denied
@@ -274,15 +268,13 @@ xListenerSets:
       port: 8084
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
       namespace: gateway-xls
   status:
     conditions:
     - lastTransitionTime: null
-      message: XListenerSet attachment from namespace cross-denied not allowed by
-        Gateway gateway-xls/composite-gateway
+      message: ListenerSet attachment from namespace cross-denied not allowed by Gateway
+        gateway-xls/composite-gateway
       reason: NotAllowed
       status: "False"
       type: Accepted

@@ -96,7 +96,6 @@ func TestE2E(t *testing.T) {
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 		Hook:              Hook,
-		FailFast:          true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

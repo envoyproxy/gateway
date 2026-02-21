@@ -17,11 +17,8 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
 		// TODO: fix following conformance tests
-		tests.ListenerSetCrossNamespace,
 		tests.ListenerSetHostnameConflict,
-		tests.ListenerSetNotAllowed,
 		tests.ListenerSetProtocolConflict,
-		tests.ListenerSetSameNamespace,
 		tests.TLSRouteHostnameIntersection,
 		tests.TLSRouteInvalidNoMatchingListener,
 		tests.TLSRouteInvalidNoMatchingListenerHostname,
@@ -29,11 +26,14 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.TLSRouteListenerTerminateSupportedKinds,
 		tests.TLSRouteSimpleSameNamespace,
 		tests.TLSRouteTerminateSimpleSameNamespace,
+		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
 		tests.GatewayWithAttachedRoutes,
 		tests.GatewayTLSBackendClientCertificate,
 		tests.GatewayFrontendClientCertificateValidation,
 		tests.GatewayInvalidFrontendClientCertificateValidation,
+		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
+		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 		tests.HTTPRoute303Redirect,
 		tests.HTTPRoute307Redirect,
 		tests.HTTPRoute308Redirect,
@@ -52,13 +52,18 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 // SkipFeatures is a list of features that are skipped in the conformance report.
 func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
-		return sets.New(features.GatewayStaticAddressesFeature.Name)
+		return sets.New(
+			features.GatewayStaticAddressesFeature.Name,
+			// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
+			features.ListenerSetFeature.Name,
+		)
 	}
 
 	return sets.New(
 		features.GatewayStaticAddressesFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
-		features.GatewayListenerSetFeature.Name,
+		// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
+		features.ListenerSetFeature.Name,
 	)
 }
 

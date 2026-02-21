@@ -37,7 +37,6 @@ func TestExperimentalConformance(t *testing.T) {
 	opts.SkipTests = internalSuite.SkipTests
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
-	opts.FailFast = true
 
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,

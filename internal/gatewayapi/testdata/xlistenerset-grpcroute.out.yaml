@@ -84,8 +84,8 @@ grpcRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: xlistenerset-grpc-one
       namespace: gateway-xls
       sectionName: grpc-listener
@@ -108,8 +108,8 @@ grpcRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: xlistenerset-grpc-one
         namespace: gateway-xls
         sectionName: grpc-listener
@@ -120,8 +120,8 @@ grpcRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: xlistenerset-grpc-two
       namespace: gateway-xls
     rules:
@@ -143,8 +143,8 @@ grpcRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: xlistenerset-grpc-two
         namespace: gateway-xls
 infraIR:
@@ -178,9 +178,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: xlistenerset-grpc-one
     namespace: gateway-xls
@@ -193,8 +193,6 @@ xListenerSets:
       port: 8081
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -227,14 +225,13 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: grpc-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: xlistenerset-grpc-two
     namespace: gateway-xls
@@ -247,8 +244,6 @@ xListenerSets:
       port: 8082
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -281,7 +276,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: grpc-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

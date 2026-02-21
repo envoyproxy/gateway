@@ -45,7 +45,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
 	opts.RunTest = *flags.RunTest
 	opts.Hook = e2e.Hook
-	opts.FailFast = true
 
 	// I don't know why this happens, but the UDPRoute test failed on dual stack
 	// because on some VM(e.g. Ubuntu 22.04), the ipv4 address for UDP gateway is not

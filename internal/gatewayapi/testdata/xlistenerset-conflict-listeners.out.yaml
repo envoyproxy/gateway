@@ -104,9 +104,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: conflict-listener-from-same-xls
     namespace: gateway-xls
@@ -125,8 +125,6 @@ xListenerSets:
       port: 8089
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -159,7 +157,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener-1
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -183,14 +180,13 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener-2
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: conflict-listener-from-two-xlss
     namespace: gateway-xls
@@ -209,8 +205,6 @@ xListenerSets:
       port: 8090
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -243,7 +237,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -267,14 +260,13 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: good-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: listener-conflict-with-gateway
     namespace: gateway-xls
@@ -293,8 +285,6 @@ xListenerSets:
       port: 8091
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -327,7 +317,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: conflict-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -351,7 +340,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: good-listener
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

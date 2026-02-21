@@ -134,7 +134,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	updateGatewayProgrammedCondition(gw, envoyObj)
 }
 
-// Important: do not use this function directly, use listener.SetCondition instead so that listeners from XListenerSet can be updated correctly
+// Important: do not use this function directly, use listener.SetCondition instead so that listeners from ListenerSet can be updated correctly
 func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusIdx int,
 	conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string,
 ) {

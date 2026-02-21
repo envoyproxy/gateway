@@ -84,8 +84,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-valid
       namespace: gateway-xls
       sectionName: extra-http-one
@@ -108,8 +108,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-valid
         namespace: gateway-xls
         sectionName: extra-http-one
@@ -120,8 +120,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-valid
       namespace: gateway-xls
       sectionName: extra-http-two
@@ -144,8 +144,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-valid
         namespace: gateway-xls
         sectionName: extra-http-two
@@ -156,8 +156,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-valid
       namespace: gateway-xls
     rules:
@@ -179,8 +179,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-valid
         namespace: gateway-xls
 infraIR:
@@ -214,9 +214,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: same-namespace-valid
     namespace: gateway-xls
@@ -235,8 +235,6 @@ xListenerSets:
       port: 8082
       protocol: HTTP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -269,7 +267,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-http-one
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -293,7 +290,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-http-two
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute

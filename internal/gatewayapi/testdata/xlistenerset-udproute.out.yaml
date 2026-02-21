@@ -69,47 +69,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-udpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: UDPRoute
-  metadata:
-    name: udp-app-1
-    namespace: default
-  spec:
-    parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
-      name: udproute-xls
-      namespace: gateway-xls
-      sectionName: extra-udp
-    rules:
-    - backendRefs:
-      - name: service-1
-        namespace: default
-        port: 8162
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
-        name: udproute-xls
-        namespace: gateway-xls
-        sectionName: extra-udp
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: udproute-xls
     namespace: gateway-xls
@@ -125,8 +87,6 @@ xListenerSets:
       port: 8162
       protocol: UDP
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -159,10 +119,47 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-udp
-      port: 0
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    name: udp-app-1
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: udproute-xls
+      namespace: gateway-xls
+      sectionName: extra-udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8162
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: udproute-xls
+        namespace: gateway-xls
+        sectionName: extra-udp
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:

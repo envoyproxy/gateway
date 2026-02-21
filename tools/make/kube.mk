@@ -8,8 +8,8 @@ ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_MINOR_VERSION ?= 1.4
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
+GATEWAY_API_MINOR_VERSION ?= 1.5
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0-rc.1
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -201,7 +201,7 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
 .PHONY: kube-undeploy
 kube-undeploy: manifests helm-generate ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system
+	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system || true
 	# Uninstall CRDs
 	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
 		--set crds.gatewayAPI.enabled=true \

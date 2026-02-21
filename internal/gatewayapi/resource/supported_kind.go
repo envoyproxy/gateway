@@ -29,5 +29,5 @@ const (
 	KindHTTPRouteFilter      = "HTTPRouteFilter"
 	KindReferenceGrant       = "ReferenceGrant"
 	KindClusterTrustBundle   = "ClusterTrustBundle"
-	KindXListenerSet         = "XListenerSet"
+	KindListenerSet          = "ListenerSet"
 )
