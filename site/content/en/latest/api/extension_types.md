@@ -5741,6 +5741,21 @@ _Appears in:_
 | `hostKeys` | _string array_ |  false  |  | HostKeys is a list of keys for environment variables from the host envoy process<br />that should be passed into the Wasm VM. This is useful for passing secrets to to Wasm extensions. |
 
 
+#### WeightedZoneConfig
+
+
+
+WeightedZoneConfig defines the weight for a specific locality zone.
+
+_Appears in:_
+- [ZoneAware](#zoneaware)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `zone` | _string_ |  true  |  | Zone specifies the topology zone this weight applies to.<br />The value should match the topology.kubernetes.io/zone label<br />of the nodes where endpoints are running.<br />Zones not listed in the configuration receive a default weight of 1. |
+| `weight` | _integer_ |  true  |  | Weight defines the weight for this locality.<br />Higher values receive more traffic. The actual traffic distribution<br />is proportional to this value relative to other localities. |
+
+
 #### WithUnderscoresAction
 
 _Underlying type:_ _string_
@@ -5904,6 +5919,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `preferLocal` | _[PreferLocalZone](#preferlocalzone)_ |  false  |  | PreferLocalZone configures zone-aware routing to prefer sending traffic to the local locality zone. |
+| `weightedZones` | _[WeightedZoneConfig](#weightedzoneconfig) array_ |  false  |  | WeightedZones configures weight-based traffic distribution across locality zones.<br />Traffic is distributed proportionally based on the sum of all zone weights. |
 
 
 #### ZstdCompressor
