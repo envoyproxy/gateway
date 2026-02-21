@@ -1,0 +1,126 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-tlsroute-tls-passthrough-only
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls-passthrough
+          protocol: TLS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            mode: Passthrough
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-tlsroute-http-only
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: Same
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-tlsroute-tcproute-only
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls-passthrough
+          protocol: TLS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: Same
+            kinds:
+              - kind: TCPRoute
+          tls:
+            mode: Passthrough
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-tlsroute-https-only
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: tls-secret-1
+                namespace: envoy-gateway
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha3
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-not-allowed-protocol-http
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-tlsroute-http-only
+      hostnames:
+        - tls.example.com
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1alpha3
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-not-allowed-kind
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-tlsroute-tcproute-only
+      hostnames:
+        - tls.example.com
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1alpha3
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-not-allowed-protocol-https
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-tlsroute-https-only
+      hostnames:
+        - tls.example.com
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1alpha3
+    kind: TLSRoute
+    metadata:
+      name: tlsroute-no-matching-section-name
+      namespace: envoy-gateway
+    spec:
+      parentRefs:
+        - name: gateway-tlsroute-tls-passthrough-only
+          sectionName: nonexistent-listener
+      hostnames:
+        - tls.example.com
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
