@@ -21,6 +21,7 @@ bug fixes: |
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
   Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
+  Fixed standalone mode emitting non-actionable error logs for missing secrets and unsupported ratelimit deletion on every startup.
 
 # Enhancements that improve performance.
 performance improvements: |

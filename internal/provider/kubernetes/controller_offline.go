@@ -21,6 +21,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -74,6 +75,21 @@ func NewOfflineGatewayAPIController(
 	allExtensions = append(allExtensions, extBackendPoliciesGVKs...)
 
 	cli := newOfflineGatewayAPIClient(allExtensions)
+
+	// Seed the fake client with the secrets that the CertGen job would create
+	// in Kubernetes mode. This prevents spurious errors during reconciliation
+	// when the controller tries to look up OIDC HMAC and Envoy TLS secrets.
+	certs, err := crypto.GenerateCerts(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate certificates: %w", err)
+	}
+	secrets := CertsToSecret(cfg.ControllerNamespace, certs)
+	for i := range secrets {
+		if err := cli.Create(ctx, &secrets[i]); err != nil {
+			return nil, fmt.Errorf("failed to seed secret %s: %w", secrets[i].Name, err)
+		}
+	}
+
 	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
