@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -37,8 +38,9 @@ var (
 )
 
 const (
-	adminPort          = 19000 // TODO: make this configurable until EG support
-	rateLimitDebugPort = 6070  // TODO: make this configurable until EG support
+	adminPort            = 19000 // TODO: make this configurable until EG support
+	rateLimitDebugPort   = 6070  // TODO: make this configurable until EG support
+	configRequestTimeout = 30 * time.Second
 )
 
 type aggregatedConfigDump map[string]map[string]protoreflect.ProtoMessage
@@ -242,7 +244,10 @@ func configDumpRequest(address string, includeEds bool) ([]byte, error) {
 	if includeEds {
 		url = fmt.Sprintf("%s?include_eds", url)
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), configRequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -842,6 +842,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -869,6 +870,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1103,8 +1105,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	xdsCluster := result.cluster
-	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, preferLocal)
+	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {

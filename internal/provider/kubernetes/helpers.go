@@ -27,32 +27,14 @@ const (
 	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
 )
 
-var (
-	// cachedConfigMapKeys defines the keys to keep in ConfigMap data cache
-	cachedConfigMapKeys = map[string]bool{
-		gatewayapi.JWKSConfigMapKey:         true,
-		gatewayapi.LuaConfigMapKey:          true,
-		gatewayapi.ResponseBodyConfigMapKey: true,
-		gatewayapi.CACertKey:                true,
-		gatewayapi.CRLKey:                   true,
-	}
-
-	// cachedSecretKeys defines the keys to keep in Secret data cache
-	cachedSecretKeys = map[string]bool{
-		corev1.TLSCertKey:              true,
-		corev1.TLSPrivateKeyKey:        true,
-		egv1a1.TLSOCSPKey:              true,
-		egv1a1.OIDCClientIDKey:         true,
-		egv1a1.OIDCClientSecretKey:     true,
-		egv1a1.BasicAuthUsersSecretKey: true,
-		egv1a1.InjectedCredentialKey:   true,
-		egv1a1.APIKeysSecretKey:        true,
-		corev1.DockerConfigJsonKey:     true,
-		gatewayapi.CACertKey:           true,
-		gatewayapi.CRLKey:              true,
-		hmacSecretKey:                  true,
-	}
-)
+// cachedConfigMapKeys defines the keys to keep in ConfigMap data cache
+var cachedConfigMapKeys = map[string]bool{
+	gatewayapi.JWKSConfigMapKey:         true,
+	gatewayapi.LuaConfigMapKey:          true,
+	gatewayapi.ResponseBodyConfigMapKey: true,
+	gatewayapi.CACertKey:                true,
+	gatewayapi.CRLKey:                   true,
+}
 
 type ObjectKindNamespacedName struct {
 	kind      string
@@ -228,17 +210,6 @@ func transformConfigMapData(obj interface{}) (interface{}, error) {
 
 	cm.Data = expectedAndFirstFallbackFilter(cm.Data, cachedConfigMapKeys)
 	return cm, nil
-}
-
-// transformSecretData filters Secret data to only keep needed keys to reduce memory usage.
-func transformSecretData(obj interface{}) (interface{}, error) {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok || len(secret.Data) <= 1 {
-		return obj, nil
-	}
-
-	secret.Data = expectedAndFirstFallbackFilter(secret.Data, cachedSecretKeys)
-	return secret, nil
 }
 
 // composeTransforms chains multiple transform functions together.
