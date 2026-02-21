@@ -1110,6 +1110,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -2302,6 +2315,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -3696,6 +3722,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -5165,6 +5204,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
