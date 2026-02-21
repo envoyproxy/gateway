@@ -42,22 +42,28 @@ func MergeEnvoyProxyConfigs(
 	// Determine merge strategy from the configs (highest priority wins)
 	mergeType := determineMergeType(defaultSpec, gatewayClassProxy, gatewayProxy)
 
-	// Handle Replace strategy (nil/unset MergeType): most specific config wins, no merging
-	if mergeType == egv1a1.Replace {
-		return replaceEnvoyProxy(defaultSpec, gatewayClassProxy, gatewayProxy), nil
+	var defaultProxy *egv1a1.EnvoyProxy
+	if defaultSpec != nil {
+		defaultProxy = &egv1a1.EnvoyProxy{Spec: *defaultSpec}
 	}
 
-	// Handle merge strategies (StrategicMerge or JSONMerge)
-	merged, err := mergeEnvoyProxy(defaultSpec, gatewayClassProxy, gatewayProxy, mergeType)
+	// Step 1: Merge GatewayClass over EnvoyGateway defaults
+	base, err := mergeEnvoyProxies(defaultProxy, gatewayClassProxy, mergeType)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to merge GatewayClass EnvoyProxy with EnvoyGateway defaults: %w", err)
+	}
+
+	// Step 2: Merge Gateway over the GatewayClass result
+	merged, err := mergeEnvoyProxies(base, gatewayProxy, mergeType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to merge Gateway EnvoyProxy with GatewayClass config: %w", err)
 	}
 
 	return merged, nil
 }
 
 // determineMergeType finds the MergeType to use by checking configs in priority order.
-// Gateway > GatewayClass > Default. If no MergeType is specified, returns nil (Replace behavior).
+// Gateway > GatewayClass > Default. If no MergeType is specified, returns Replace.
 func determineMergeType(
 	defaultSpec *egv1a1.EnvoyProxySpec,
 	gatewayClassProxy *egv1a1.EnvoyProxy,
@@ -82,75 +88,31 @@ func determineMergeType(
 	return egv1a1.Replace
 }
 
-// replaceEnvoyProxy implements the Replace strategy where more specific configs completely replace less specific ones
-func replaceEnvoyProxy(
-	defaultSpec *egv1a1.EnvoyProxySpec,
-	gatewayClassProxy *egv1a1.EnvoyProxy,
-	gatewayProxy *egv1a1.EnvoyProxy,
-) *egv1a1.EnvoyProxy {
-	// Gateway level has highest priority
-	if gatewayProxy != nil {
-		return gatewayProxy
-	}
-
-	// GatewayClass level is next
-	if gatewayClassProxy != nil {
-		return gatewayClassProxy
-	}
-
-	// Default spec is used as fallback
-	if defaultSpec != nil {
-		return &egv1a1.EnvoyProxy{
-			Spec: *defaultSpec,
-		}
-	}
-
-	return nil
-}
-
-// mergeEnvoyProxy merges EnvoyProxy configs using the specified merge strategy
-func mergeEnvoyProxy(
-	defaultSpec *egv1a1.EnvoyProxySpec,
-	gatewayClassProxy *egv1a1.EnvoyProxy,
-	gatewayProxy *egv1a1.EnvoyProxy,
+// mergeEnvoyProxies merges an override EnvoyProxy over a base EnvoyProxy.
+// If base is nil, returns override. If override is nil, returns base.
+// For Replace strategy, override completely replaces base (no field-level merging).
+// For StrategicMerge or JSONMerge, fields are merged according to the strategy.
+func mergeEnvoyProxies(
+	base *egv1a1.EnvoyProxy,
+	override *egv1a1.EnvoyProxy,
 	mergeType egv1a1.MergeType,
 ) (*egv1a1.EnvoyProxy, error) {
-	var result *egv1a1.EnvoyProxy
-
-	// Start with default spec as base (if provided)
-	if defaultSpec != nil {
-		result = &egv1a1.EnvoyProxy{
-			Spec: *defaultSpec,
-		}
+	if override == nil {
+		return base, nil
+	}
+	if base == nil {
+		return override, nil
 	}
 
-	// Merge GatewayClass-level EnvoyProxy over default
-	if gatewayClassProxy != nil {
-		if result != nil {
-			merged, err := utils.Merge(*result, *gatewayClassProxy, mergeType)
-			if err != nil {
-				return nil, fmt.Errorf("failed to merge GatewayClass EnvoyProxy %s/%s with default EnvoyProxySpec using %s merge: %w",
-					gatewayClassProxy.Namespace, gatewayClassProxy.Name, mergeType, err)
-			}
-			result = &merged
-		} else {
-			result = gatewayClassProxy
-		}
+	// For Replace strategy, override completely wins
+	if mergeType == egv1a1.Replace {
+		return override, nil
 	}
 
-	// Merge Gateway-level EnvoyProxy over GatewayClass and default (highest priority)
-	if gatewayProxy != nil {
-		if result != nil {
-			merged, err := utils.Merge(*result, *gatewayProxy, mergeType)
-			if err != nil {
-				return nil, fmt.Errorf("failed to merge Gateway EnvoyProxy %s/%s with base configuration using %s merge: %w",
-					gatewayProxy.Namespace, gatewayProxy.Name, mergeType, err)
-			}
-			result = &merged
-		} else {
-			result = gatewayProxy
-		}
+	// For merge strategies, perform the actual merge
+	merged, err := utils.Merge(*base, *override, mergeType)
+	if err != nil {
+		return nil, err
 	}
-
-	return result, nil
+	return &merged, nil
 }
