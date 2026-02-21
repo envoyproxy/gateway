@@ -385,6 +385,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     before:
@@ -414,6 +415,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     name:
@@ -441,6 +443,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                   required:
