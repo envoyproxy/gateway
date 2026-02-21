@@ -287,7 +287,8 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			}
 
 			// Call attachEnvoyProxy
-			gCtx.attachEnvoyProxy(resources, epMap)
+			err := gCtx.attachEnvoyProxy(resources, epMap)
+			require.NoError(t, err)
 
 			// Verify results
 			if tc.expectEnvoyProxyNil {

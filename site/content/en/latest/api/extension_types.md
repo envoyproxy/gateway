@@ -1878,6 +1878,7 @@ _Appears in:_
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | If unset, no merging occurs, and only the most specific configuration takes effect. |
 
 
 #### EnvoyProxyStatus
@@ -3581,12 +3582,14 @@ MergeType defines the type of merge operation
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 
 | Value | Description |
 | ----- | ----------- |
 | `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
+| `Replace` | Replace type - ie no merging<br /> | 
 
 
 #### MethodMatch
