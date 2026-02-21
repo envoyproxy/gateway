@@ -1785,6 +1785,20 @@ _Appears in:_
 
 
 
+#### EnvoyProxyGeoIP
+
+
+
+EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration used by GeoIP filter instances. |
+
+
 #### EnvoyProxyHostProvider
 
 
@@ -1878,6 +1892,7 @@ _Appears in:_
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
+| `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 
 
 #### EnvoyProxyStatus
@@ -2311,6 +2326,95 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
+#### GeoIPAnonymousMatch
+
+
+
+GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+
+_Appears in:_
+- [GeoLocation](#geolocation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `isAnonymous` | _boolean_ |  false  |  | IsAnonymous matches whether the client IP is considered anonymous. |
+| `isVPN` | _boolean_ |  false  |  | IsVPN matches whether the client IP is detected as VPN. |
+| `isHosting` | _boolean_ |  false  |  | IsHosting matches whether the client IP belongs to a hosting provider. |
+| `isTor` | _boolean_ |  false  |  | IsTor matches whether the client IP belongs to a Tor exit node. |
+| `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
+
+
+
+
+#### GeoIPMaxMind
+
+
+
+GeoIPMaxMind configures the MaxMind provider.
+These database files are expected to be mounted into the Envoy container, and a sidecar container can be used to update the database files.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `cityDbPath` | _string_ |  false  |  | CityDBPath is the path to the City database (.mmdb). |
+| `countryDbPath` | _string_ |  false  |  | CountryDBPath is the path to the Country database (.mmdb). |
+| `asnDbPath` | _string_ |  false  |  | ASNDBPath is the path to the ASN database (.mmdb). |
+| `ispDbPath` | _string_ |  false  |  | ISPDBPath is the path to the ISP database (.mmdb). |
+| `anonymousIpDbPath` | _string_ |  false  |  | AnonymousIPDBPath is the path to the Anonymous IP database (.mmdb). |
+
+
+#### GeoIPProvider
+
+
+
+GeoIPProvider defines provider-specific settings.
+
+_Appears in:_
+- [EnvoyProxyGeoIP](#envoyproxygeoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[GeoIPProviderType](#geoipprovidertype)_ |  true  |  |  |
+| `MaxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
+
+
+#### GeoIPProviderType
+
+_Underlying type:_ _string_
+
+GeoIPProviderType enumerates GeoIP providers supported by Envoy Gateway.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
+
+
+
+
+#### GeoLocation
+
+
+
+GeoLocation specifies geolocation-based match criteria for authorization.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `country` | _string_ |  false  |  | Country is the country associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region associated with the client IP. |
+| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
+| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
+| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
+| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
 
 
 #### GlobalRateLimit
