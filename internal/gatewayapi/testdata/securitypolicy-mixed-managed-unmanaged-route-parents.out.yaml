@@ -126,19 +126,6 @@ securityPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: unmanaged-gateway
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
   default/managed-gateway:
     accessLog:
