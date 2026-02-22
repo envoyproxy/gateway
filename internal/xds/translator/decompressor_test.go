@@ -31,11 +31,11 @@ func TestBuildDecompressorFilter(t *testing.T) {
 	}{
 		{
 			name: "gzip decompressor",
-		decompression: &ir.Decompressor{
-			Type: egv1a1.GzipDecompressorType,
-		},
-		expectedName:    "envoy.filters.http.decompressor.gzip",
-		expectedExtName: "envoy.compression.gzip.decompressor",
+			decompression: &ir.Decompressor{
+				Type: egv1a1.GzipDecompressorType,
+			},
+			expectedName:    "envoy.filters.http.decompressor.gzip",
+			expectedExtName: "envoy.compression.gzip.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				gzip := &gzipdecompressorv3.Gzip{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(gzip))
@@ -45,11 +45,11 @@ func TestBuildDecompressorFilter(t *testing.T) {
 		},
 		{
 			name: "brotli decompressor",
-		decompression: &ir.Decompressor{
-			Type: egv1a1.BrotliDecompressorType,
-		},
-		expectedName:    "envoy.filters.http.decompressor.brotli",
-		expectedExtName: "envoy.compression.brotli.decompressor",
+			decompression: &ir.Decompressor{
+				Type: egv1a1.BrotliDecompressorType,
+			},
+			expectedName:    "envoy.filters.http.decompressor.brotli",
+			expectedExtName: "envoy.compression.brotli.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				brotli := &brotlidecompressorv3.Brotli{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(brotli))
@@ -59,11 +59,11 @@ func TestBuildDecompressorFilter(t *testing.T) {
 		},
 		{
 			name: "zstd decompressor",
-		decompression: &ir.Decompressor{
-			Type: egv1a1.ZstdDecompressorType,
-		},
-		expectedName:    "envoy.filters.http.decompressor.zstd",
-		expectedExtName: "envoy.compression.zstd.decompressor",
+			decompression: &ir.Decompressor{
+				Type: egv1a1.ZstdDecompressorType,
+			},
+			expectedName:    "envoy.filters.http.decompressor.zstd",
+			expectedExtName: "envoy.compression.zstd.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				zstd := &zstddecompressorv3.Zstd{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(zstd))
