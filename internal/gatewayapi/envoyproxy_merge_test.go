@@ -191,46 +191,18 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 
 func TestDetermineMergeType(t *testing.T) {
 	testCases := []struct {
-		name              string
-		defaultSpec       *egv1a1.EnvoyProxySpec
-		gatewayClassProxy *egv1a1.EnvoyProxy
-		gatewayProxy      *egv1a1.EnvoyProxy
-		expected          egv1a1.MergeType
+		name     string
+		base     *egv1a1.EnvoyProxy
+		override *egv1a1.EnvoyProxy
+		expected egv1a1.MergeType
 	}{
 		{
 			name:     "no configs - returns Replace (default)",
 			expected: egv1a1.Replace,
 		},
 		{
-			name: "default spec specifies StrategicMerge",
-			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
-			},
-			expected: egv1a1.StrategicMerge,
-		},
-		{
-			name: "gatewayclass overrides default",
-			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
-			},
-			gatewayClassProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.JSONMerge),
-				},
-			},
-			expected: egv1a1.JSONMerge,
-		},
-		{
-			name: "gateway overrides gatewayclass and default",
-			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
-			},
-			gatewayClassProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.JSONMerge),
-				},
-			},
-			gatewayProxy: &egv1a1.EnvoyProxy{
+			name: "base specifies StrategicMerge",
+			base: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					MergeType: ptr.To(egv1a1.StrategicMerge),
 				},
@@ -238,16 +210,27 @@ func TestDetermineMergeType(t *testing.T) {
 			expected: egv1a1.StrategicMerge,
 		},
 		{
-			name: "gateway with nil MergeType falls back to gatewayclass",
-			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+			name: "override overrides base",
+			base: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+				},
 			},
-			gatewayClassProxy: &egv1a1.EnvoyProxy{
+			override: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					MergeType: ptr.To(egv1a1.JSONMerge),
 				},
 			},
-			gatewayProxy: &egv1a1.EnvoyProxy{
+			expected: egv1a1.JSONMerge,
+		},
+		{
+			name: "override with nil MergeType falls back to base",
+			base: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.JSONMerge),
+				},
+			},
+			override: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Concurrency: ptr.To[int32](4), // No MergeType specified
 				},
@@ -258,7 +241,7 @@ func TestDetermineMergeType(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := determineMergeType(tc.defaultSpec, tc.gatewayClassProxy, tc.gatewayProxy)
+			result := determineMergeType(tc.base, tc.override)
 			require.Equal(t, tc.expected, result)
 		})
 	}
