@@ -50,8 +50,8 @@ func (*decompressor) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.H
 	)
 
 	for _, route := range irListener.Routes {
-		if route.Traffic != nil && route.Traffic.Decompression != nil {
-			for _, irDecomp := range route.Traffic.Decompression {
+		if route.Traffic != nil && route.Traffic.Decompressor != nil {
+			for _, irDecomp := range route.Traffic.Decompressor {
 				filterName := decompressorFilterName(irDecomp.Type)
 				if !hcmContainsFilter(mgr, filterName) {
 					if filter, err = buildDecompressorFilter(irDecomp); err != nil {
@@ -71,7 +71,7 @@ func decompressorFilterName(decompressorType egv1a1.DecompressorType) string {
 }
 
 // buildDecompressorFilter builds a decompressor filter with the provided decompressor type.
-func buildDecompressorFilter(decompression *ir.Decompression) (*hcmv3.HttpFilter, error) {
+func buildDecompressorFilter(decompression *ir.Decompressor) (*hcmv3.HttpFilter, error) {
 	var (
 		decompressorProto *decompressorv3.Decompressor
 		extensionName     string
@@ -134,7 +134,7 @@ func (*decompressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.Traffic == nil || len(irRoute.Traffic.Decompression) == 0 {
+	if irRoute.Traffic == nil || len(irRoute.Traffic.Decompressor) == 0 {
 		return nil
 	}
 
@@ -151,7 +151,7 @@ func (*decompressor) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *
 	}
 
 	decompressorProto := decompressorPerRouteConfig()
-	for _, irDecomp := range irRoute.Traffic.Decompression {
+	for _, irDecomp := range irRoute.Traffic.Decompressor {
 		filterName := decompressorFilterName(irDecomp.Type)
 		if _, ok := perFilterCfg[filterName]; ok {
 			// This should not happen since this is the only place where the filter

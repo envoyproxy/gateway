@@ -33,14 +33,14 @@ type BrotliDecompressor struct{}
 // https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/decompressor/v3/zstd.proto#extension-envoy-compression-zstd-decompressor
 type ZstdDecompressor struct{}
 
-// Decompression defines the config of enabling decompression.
+// Decompressor defines the config for enabling a decompressor.
 // This can help decompress compressed requests from clients and/or compressed responses from backends.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Gzip' ? !has(self.brotli) && !has(self.zstd) : true",message="If decompressor type is Gzip, brotli and zstd fields must not be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Brotli' ? !has(self.gzip) && !has(self.zstd) : true",message="If decompressor type is Brotli, gzip and zstd fields must not be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Zstd' ? !has(self.gzip) && !has(self.brotli) : true",message="If decompressor type is Zstd, gzip and brotli fields must not be set."
-type Decompression struct {
-	// Type defines the decompressor type to use for decompression.
+type Decompressor struct {
+	// Type defines the decompressor type to use.
 	//
 	// +kubebuilder:validation:Enum=Gzip;Brotli;Zstd
 	// +unionDiscriminator
