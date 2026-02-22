@@ -131,6 +131,8 @@ func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string,
 	// Check Manifest's digest if expManifestDigest is not empty.
 	d, _ := img.Digest()
 	actualDigest := d.Hex
+	o.logger.Info("fetched image manifest", "image", ref.Context().RepositoryStr(),
+		"registry", ref.Context().RegistryStr(), "tag", ref.Identifier(), "digest", actualDigest)
 	binaryFetcher := func() ([]byte, error) {
 		manifest, err := img.Manifest()
 		if err != nil {
