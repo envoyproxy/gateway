@@ -1,4 +1,4 @@
-git backendTrafficPolicies:
+backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
