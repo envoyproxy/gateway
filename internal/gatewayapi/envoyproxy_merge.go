@@ -39,22 +39,20 @@ func MergeEnvoyProxyConfigs(
 	gatewayClassProxy *egv1a1.EnvoyProxy,
 	gatewayProxy *egv1a1.EnvoyProxy,
 ) (*egv1a1.EnvoyProxy, error) {
-	// Determine merge strategy from the configs (highest priority wins)
-	mergeType := determineMergeType(defaultSpec, gatewayClassProxy, gatewayProxy)
 
 	var defaultProxy *egv1a1.EnvoyProxy
 	if defaultSpec != nil {
 		defaultProxy = &egv1a1.EnvoyProxy{Spec: *defaultSpec}
 	}
 
-	// Step 1: Merge GatewayClass over EnvoyGateway defaults
-	base, err := mergeEnvoyProxies(defaultProxy, gatewayClassProxy, mergeType)
+	// Merge GatewayClass over any EnvoyGateway defaults
+	base, err := mergeEnvoyProxies(defaultProxy, gatewayClassProxy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge GatewayClass EnvoyProxy with EnvoyGateway defaults: %w", err)
 	}
 
-	// Step 2: Merge Gateway over the GatewayClass result
-	merged, err := mergeEnvoyProxies(base, gatewayProxy, mergeType)
+	// Merge Gateway over the GatewayClass result
+	merged, err := mergeEnvoyProxies(base, gatewayProxy)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge Gateway EnvoyProxy with GatewayClass config: %w", err)
 	}
@@ -62,26 +60,18 @@ func MergeEnvoyProxyConfigs(
 	return merged, nil
 }
 
-// determineMergeType finds the MergeType to use by checking configs in priority order.
-// Gateway > GatewayClass > Default. If no MergeType is specified, returns Replace.
+// determineMergeType finds the MergeType to use for a base and override EnvoyProxy.
 func determineMergeType(
-	defaultSpec *egv1a1.EnvoyProxySpec,
-	gatewayClassProxy *egv1a1.EnvoyProxy,
-	gatewayProxy *egv1a1.EnvoyProxy,
+	base *egv1a1.EnvoyProxy,
+	override *egv1a1.EnvoyProxy,
 ) egv1a1.MergeType {
-	// Check gateway level first (highest priority)
-	if gatewayProxy != nil && gatewayProxy.Spec.MergeType != nil {
-		return *gatewayProxy.Spec.MergeType
+	// Check the override first as that will have higher priority.
+	if override != nil && override.Spec.MergeType != nil {
+		return *override.Spec.MergeType
 	}
 
-	// Check gatewayClass level next
-	if gatewayClassProxy != nil && gatewayClassProxy.Spec.MergeType != nil {
-		return *gatewayClassProxy.Spec.MergeType
-	}
-
-	// Check default spec last
-	if defaultSpec != nil && defaultSpec.MergeType != nil {
-		return *defaultSpec.MergeType
+	if base != nil && base.Spec.MergeType != nil {
+		return *base.Spec.MergeType
 	}
 
 	// No MergeType specified anywhere, return default Replace
@@ -95,7 +85,6 @@ func determineMergeType(
 func mergeEnvoyProxies(
 	base *egv1a1.EnvoyProxy,
 	override *egv1a1.EnvoyProxy,
-	mergeType egv1a1.MergeType,
 ) (*egv1a1.EnvoyProxy, error) {
 	if override == nil {
 		return base, nil
@@ -104,12 +93,12 @@ func mergeEnvoyProxies(
 		return override, nil
 	}
 
-	// For Replace strategy, override completely wins
+	mergeType := determineMergeType(base, override)
+
 	if mergeType == egv1a1.Replace {
 		return override, nil
 	}
 
-	// For merge strategies, perform the actual merge
 	merged, err := utils.Merge(*base, *override, mergeType)
 	if err != nil {
 		return nil, err
