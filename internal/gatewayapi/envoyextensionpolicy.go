@@ -1129,7 +1129,7 @@ func irConfigNameForWasm(policy client.Object, index int) string {
 
 func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
 	return fmt.Sprintf(
-		"%s/dynamicmodule/%s",
+		"%s/dynamic-module/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
 }

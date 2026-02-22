@@ -299,7 +299,7 @@ xdsIR:
             filterName: token-ratelimit
             loadGlobally: true
             moduleName: ai_gateway
-            name: envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0
+            name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false
@@ -339,7 +339,7 @@ xdsIR:
             filterName: auth-check
             loadGlobally: false
             moduleName: my_auth
-            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamicmodule/0
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false

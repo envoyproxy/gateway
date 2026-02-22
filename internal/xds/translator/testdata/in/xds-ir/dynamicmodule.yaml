@@ -34,7 +34,7 @@ http:
         filterName: token-ratelimit
         loadGlobally: true
         moduleName: ai_gateway
-        name: envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0
+        name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
         terminalFilter: false
   - destination:
       name: httproute/default/httproute-2/rule/0
@@ -61,7 +61,7 @@ http:
         filterName: auth-check
         loadGlobally: false
         moduleName: my_auth
-        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamicmodule/0
+        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
         terminalFilter: false
   - destination:
       name: httproute/default/httproute-3/rule/0
@@ -86,5 +86,5 @@ http:
         filterName: handler
         loadGlobally: false
         moduleName: my_handler
-        name: envoyextensionpolicy/default/policy-terminal/dynamicmodule/0
+        name: envoyextensionpolicy/default/policy-terminal/dynamic-module/0
         terminalFilter: true

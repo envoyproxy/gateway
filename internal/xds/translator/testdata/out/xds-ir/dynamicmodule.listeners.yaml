@@ -15,7 +15,7 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-http-route/dynamicmodule/0
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
             dynamicModuleConfig:
@@ -27,7 +27,7 @@
               value: '{"maxTokensPerMinute":10000}'
             filterName: token-ratelimit
         - disabled: true
-          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamicmodule/0
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamic-module/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
             dynamicModuleConfig:
@@ -35,7 +35,7 @@
             filterName: handler
             terminalFilter: true
         - disabled: true
-          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamicmodule/0
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
             dynamicModuleConfig:
