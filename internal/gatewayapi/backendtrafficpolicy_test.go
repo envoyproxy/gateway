@@ -407,11 +407,11 @@ func TestBuildCompression(t *testing.T) {
 	}
 }
 
-func TestBuildDecompression(t *testing.T) {
+func TestBuildDecompressor(t *testing.T) {
 	cases := []struct {
 		name         string
-		decompressor []*egv1a1.Decompression
-		expected     []*ir.Decompression
+		decompressor []*egv1a1.Decompressor
+		expected     []*ir.Decompressor
 	}{
 		{
 			name:         "nil decompressor",
@@ -420,26 +420,26 @@ func TestBuildDecompression(t *testing.T) {
 		},
 		{
 			name:         "empty decompressor",
-			decompressor: []*egv1a1.Decompression{},
+			decompressor: []*egv1a1.Decompressor{},
 			expected:     nil,
 		},
 		{
 			name: "single gzip decompressor",
-			decompressor: []*egv1a1.Decompression{
+			decompressor: []*egv1a1.Decompressor{
 				{Type: egv1a1.GzipDecompressorType},
 			},
-			expected: []*ir.Decompression{
+			expected: []*ir.Decompressor{
 				{Type: egv1a1.GzipDecompressorType},
 			},
 		},
 		{
 			name: "multiple decompressor types",
-			decompressor: []*egv1a1.Decompression{
+			decompressor: []*egv1a1.Decompressor{
 				{Type: egv1a1.GzipDecompressorType},
 				{Type: egv1a1.BrotliDecompressorType},
 				{Type: egv1a1.ZstdDecompressorType},
 			},
-			expected: []*ir.Decompression{
+			expected: []*ir.Decompressor{
 				{Type: egv1a1.GzipDecompressorType},
 				{Type: egv1a1.BrotliDecompressorType},
 				{Type: egv1a1.ZstdDecompressorType},
@@ -447,13 +447,13 @@ func TestBuildDecompression(t *testing.T) {
 		},
 		{
 			name: "decompressor with optional config",
-			decompressor: []*egv1a1.Decompression{
+			decompressor: []*egv1a1.Decompressor{
 				{
 					Type: egv1a1.GzipDecompressorType,
 					Gzip: &egv1a1.GzipDecompressor{},
 				},
 			},
-			expected: []*ir.Decompression{
+			expected: []*ir.Decompressor{
 				{Type: egv1a1.GzipDecompressorType},
 			},
 		},
@@ -461,7 +461,7 @@ func TestBuildDecompression(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildDecompression(tc.decompressor)
+			got := buildDecompressor(tc.decompressor)
 			require.Equal(t, tc.expected, got)
 		})
 	}

@@ -24,18 +24,18 @@ import (
 func TestBuildDecompressorFilter(t *testing.T) {
 	tests := []struct {
 		name            string
-		decompression   *ir.Decompression
+		decompression   *ir.Decompressor
 		expectedName    string
 		expectedExtName string
 		validateProto   func(*testing.T, *decompressorv3.Decompressor)
 	}{
 		{
 			name: "gzip decompressor",
-			decompression: &ir.Decompression{
-				Type: egv1a1.GzipDecompressorType,
-			},
-			expectedName:    "envoy.filters.http.decompressor.gzip",
-			expectedExtName: "envoy.compression.gzip.decompressor",
+		decompression: &ir.Decompressor{
+			Type: egv1a1.GzipDecompressorType,
+		},
+		expectedName:    "envoy.filters.http.decompressor.gzip",
+		expectedExtName: "envoy.compression.gzip.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				gzip := &gzipdecompressorv3.Gzip{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(gzip))
@@ -45,11 +45,11 @@ func TestBuildDecompressorFilter(t *testing.T) {
 		},
 		{
 			name: "brotli decompressor",
-			decompression: &ir.Decompression{
-				Type: egv1a1.BrotliDecompressorType,
-			},
-			expectedName:    "envoy.filters.http.decompressor.brotli",
-			expectedExtName: "envoy.compression.brotli.decompressor",
+		decompression: &ir.Decompressor{
+			Type: egv1a1.BrotliDecompressorType,
+		},
+		expectedName:    "envoy.filters.http.decompressor.brotli",
+		expectedExtName: "envoy.compression.brotli.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				brotli := &brotlidecompressorv3.Brotli{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(brotli))
@@ -59,11 +59,11 @@ func TestBuildDecompressorFilter(t *testing.T) {
 		},
 		{
 			name: "zstd decompressor",
-			decompression: &ir.Decompression{
-				Type: egv1a1.ZstdDecompressorType,
-			},
-			expectedName:    "envoy.filters.http.decompressor.zstd",
-			expectedExtName: "envoy.compression.zstd.decompressor",
+		decompression: &ir.Decompressor{
+			Type: egv1a1.ZstdDecompressorType,
+		},
+		expectedName:    "envoy.filters.http.decompressor.zstd",
+		expectedExtName: "envoy.compression.zstd.decompressor",
 			validateProto: func(t *testing.T, d *decompressorv3.Decompressor) {
 				zstd := &zstddecompressorv3.Zstd{}
 				require.NoError(t, d.DecompressorLibrary.TypedConfig.UnmarshalTo(zstd))
@@ -141,7 +141,7 @@ func TestDecompressorPatchHCM(t *testing.T) {
 			Routes: []*ir.HTTPRoute{
 				{
 					Traffic: &ir.TrafficFeatures{
-						Decompression: []*ir.Decompression{
+						Decompressor: []*ir.Decompressor{
 							{Type: egv1a1.GzipDecompressorType},
 						},
 					},
@@ -161,7 +161,7 @@ func TestDecompressorPatchHCM(t *testing.T) {
 			Routes: []*ir.HTTPRoute{
 				{
 					Traffic: &ir.TrafficFeatures{
-						Decompression: []*ir.Decompression{
+						Decompressor: []*ir.Decompressor{
 							{Type: egv1a1.GzipDecompressorType},
 							{Type: egv1a1.BrotliDecompressorType},
 						},
@@ -180,14 +180,14 @@ func TestDecompressorPatchHCM(t *testing.T) {
 			Routes: []*ir.HTTPRoute{
 				{
 					Traffic: &ir.TrafficFeatures{
-						Decompression: []*ir.Decompression{
+						Decompressor: []*ir.Decompressor{
 							{Type: egv1a1.GzipDecompressorType},
 						},
 					},
 				},
 				{
 					Traffic: &ir.TrafficFeatures{
-						Decompression: []*ir.Decompression{
+						Decompressor: []*ir.Decompressor{
 							{Type: egv1a1.GzipDecompressorType},
 						},
 					},
@@ -225,7 +225,7 @@ func TestDecompressorPatchRoute(t *testing.T) {
 		route := &routev3.Route{}
 		irRoute := &ir.HTTPRoute{
 			Traffic: &ir.TrafficFeatures{
-				Decompression: []*ir.Decompression{},
+				Decompressor: []*ir.Decompressor{},
 			},
 		}
 		err := d.patchRoute(route, irRoute, nil)
@@ -237,7 +237,7 @@ func TestDecompressorPatchRoute(t *testing.T) {
 		route := &routev3.Route{}
 		irRoute := &ir.HTTPRoute{
 			Traffic: &ir.TrafficFeatures{
-				Decompression: []*ir.Decompression{
+				Decompressor: []*ir.Decompressor{
 					{Type: egv1a1.GzipDecompressorType},
 				},
 			},
@@ -252,7 +252,7 @@ func TestDecompressorPatchRoute(t *testing.T) {
 		route := &routev3.Route{}
 		irRoute := &ir.HTTPRoute{
 			Traffic: &ir.TrafficFeatures{
-				Decompression: []*ir.Decompression{
+				Decompressor: []*ir.Decompressor{
 					{Type: egv1a1.GzipDecompressorType},
 					{Type: egv1a1.BrotliDecompressorType},
 					{Type: egv1a1.ZstdDecompressorType},
@@ -271,7 +271,7 @@ func TestDecompressorPatchRoute(t *testing.T) {
 		route := &routev3.Route{}
 		irRoute := &ir.HTTPRoute{
 			Traffic: &ir.TrafficFeatures{
-				Decompression: []*ir.Decompression{
+				Decompressor: []*ir.Decompressor{
 					{Type: egv1a1.GzipDecompressorType},
 				},
 			},

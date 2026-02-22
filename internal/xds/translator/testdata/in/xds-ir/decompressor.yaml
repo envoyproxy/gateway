@@ -36,7 +36,7 @@ http:
       name: ""
       prefix: /
     traffic:
-      decompression:
+      decompressor:
       - type: Brotli
       - type: Gzip
       - type: Zstd

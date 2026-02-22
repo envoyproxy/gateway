@@ -546,7 +546,7 @@ _Appears in:_
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
-| `decompressor` | _[Decompression](#decompression) array_ |  false  |  | The decompressor config for the http streams.<br />This enables decompression of compressed requests from clients and/or compressed responses from backends.<br />Supports HTTP and gRPC traffic. |
+| `decompressor` | _[Decompressor](#decompressor) array_ |  false  |  | The decompressor config for the http streams.<br />This enables decompression of compressed requests from clients and/or compressed responses from backends.<br />Supports HTTP and gRPC traffic. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
@@ -635,7 +635,7 @@ The default values can be found here:
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli/decompressor/v3/brotli.proto#extension-envoy-compression-brotli-decompressor
 
 _Appears in:_
-- [Decompression](#decompression)
+- [Decompressor](#decompressor)
 
 
 
@@ -1234,11 +1234,11 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
-#### Decompression
+#### Decompressor
 
 
 
-Decompression defines the config of enabling decompression.
+Decompressor defines the config for enabling a decompressor.
 This can help decompress compressed requests from clients and/or compressed responses from backends.
 
 _Appears in:_
@@ -1246,7 +1246,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | Type defines the decompressor type to use for decompression. |
+| `type` | _[DecompressorType](#decompressortype)_ |  true  |  | Type defines the decompressor type to use. |
 | `brotli` | _[BrotliDecompressor](#brotlidecompressor)_ |  false  |  | The configuration for Brotli decompressor. |
 | `gzip` | _[GzipDecompressor](#gzipdecompressor)_ |  false  |  | The configuration for GZIP decompressor. |
 | `zstd` | _[ZstdDecompressor](#zstddecompressor)_ |  false  |  | The configuration for Zstd decompressor. |
@@ -1259,7 +1259,7 @@ _Underlying type:_ _string_
 DecompressorType defines the types of decompressor library supported by Envoy Gateway.
 
 _Appears in:_
-- [Decompression](#decompression)
+- [Decompressor](#decompressor)
 
 | Value | Description |
 | ----- | ----------- |
@@ -2415,7 +2415,7 @@ The default values can be found here:
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/gzip/decompressor/v3/gzip.proto#extension-envoy-compression-gzip-decompressor
 
 _Appears in:_
-- [Decompression](#decompression)
+- [Decompressor](#decompressor)
 
 
 
@@ -6004,7 +6004,7 @@ The default values can be found here:
 https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/decompressor/v3/zstd.proto#extension-envoy-compression-zstd-decompressor
 
 _Appears in:_
-- [Decompression](#decompression)
+- [Decompressor](#decompressor)
 
 
 
