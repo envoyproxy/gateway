@@ -71,6 +71,7 @@ var (
 	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
+	ErrHealthCheckOverridesPortInvalid          = errors.New("field HealthCheckOverrides.Port must be between 1 and 65535")
 	ErrHealthCheckPayloadInvalid                = errors.New("one of Text, Binary fields must be set in payload")
 	ErrHTTPStatusInvalid                        = errors.New("HTTPStatus should be in [200,600)")
 	ErrOutlierDetectionBaseEjectionTimeInvalid  = errors.New("field OutlierDetection.BaseEjectionTime must be specified")
@@ -408,6 +409,15 @@ func (t TLSVersion) Int() uint16 {
 	}
 }
 
+type TLSFingerprintType egv1a1.TLSFingerprintType
+
+const (
+	// Enable JA3 TLS fingerprinting only.
+	TLSFingerprintTypeJA3 = TLSFingerprintType(egv1a1.TLSFingerprintTypeJA3)
+	// Enable JA4 TLS fingerprinting only.
+	TLSFingerprintTypeJA4 = TLSFingerprintType(egv1a1.TLSFingerprintTypeJA4)
+)
+
 // TLSConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSConfig struct {
@@ -443,6 +453,8 @@ type TLSConfig struct {
 	StatelessSessionResumption bool `json:"statelessSessionResumption,omitempty" yaml:"statelessSessionResumption,omitempty"`
 	// StatefulSessionResumption determines if stateful (session-id based) session resumption is enabled
 	StatefulSessionResumption bool `json:"statefulSessionResumption,omitempty" yaml:"statefulSessionResumption,omitempty"`
+	// EnableFingerprint enables TLS client fingerprinting.
+	Fingerprints []TLSFingerprintType `json:"fingerprints,omitempty" yaml:"fingerprints,omitempty"`
 }
 
 // TLSCertificate holds a single certificate's details
@@ -673,6 +685,7 @@ type CustomResponse struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the Custom Response
+	// Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
 	Body []byte `json:"body,omitempty"`
 
 	// StatusCode will be used for the response's status code.
@@ -880,7 +893,7 @@ func (h *HTTPRoute) GetRetry() *Retry {
 func (h *HTTPRoute) NeedsClusterPerSetting() bool {
 	if h.Traffic != nil &&
 		h.Traffic.LoadBalancer != nil &&
-		h.Traffic.LoadBalancer.PreferLocal != nil {
+		(h.Traffic.LoadBalancer.PreferLocal != nil || len(h.Traffic.LoadBalancer.WeightedZones) > 0) {
 		return true
 	}
 	// When the destination has both valid and invalid backend weights, we use weighted clusters to distribute between
@@ -2772,6 +2785,8 @@ type LoadBalancer struct {
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
+	// WeightedZones defines explicit weight-based traffic distribution across locality zones.
+	WeightedZones []WeightedZoneConfig `json:"weightedZones,omitempty" yaml:"weightedZones,omitempty"`
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
 	// based on the override information extracted from request headers or metadata.
@@ -2935,6 +2950,9 @@ type ActiveHealthCheck struct {
 	TCP *TCPHealthChecker `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// GRPC defines if the GRPC healthcheck service should be used
 	GRPC *GRPCHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+	// Overrides defines the configuration of the overriding health check settings for all endpoints
+	// in the backend cluster.
+	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
@@ -2986,6 +3004,12 @@ func (h *HealthCheck) Validate() error {
 		}
 		if h.Active.TCP != nil {
 			if err := h.Active.TCP.Validate(); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+
+		if h.Active.Overrides != nil {
+			if err := h.Active.Overrides.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -3105,6 +3129,19 @@ func (c *TCPHealthChecker) Validate() error {
 		}
 	}
 	return errs
+}
+
+// HealthCheckOverrides allows overriding default health check behavior for specific use cases.
+type HealthCheckOverrides struct {
+	Port uint32 `json:"port,omitempty" yaml:"port,omitempty"`
+}
+
+// Validate the fields within the HealthCheckOverrides structure.
+func (h *HealthCheckOverrides) Validate() error {
+	if h.Port < 1 || h.Port > 65535 {
+		return ErrHealthCheckOverridesPortInvalid
+	}
+	return nil
 }
 
 // HealthCheckPayload defines the encoding of the payload bytes in the payload.
@@ -3512,6 +3549,15 @@ type ForceLocalZone struct {
 	// MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone
 	// override. This is useful for protecting zones with fewer endpoints.
 	MinEndpointsInZoneThreshold *uint32 `json:"minEndpointsInZoneThreshold,omitempty" yaml:"minEndpointsInZoneThreshold,omitempty"`
+}
+
+// WeightedZoneConfig defines the weight for a specific locality zone.
+// +k8s:deepcopy-gen=true
+type WeightedZoneConfig struct {
+	// Zone is the locality zone name.
+	Zone string `json:"zone" yaml:"zone"`
+	// Weight is the proportional traffic weight for this zone.
+	Weight uint32 `json:"weight" yaml:"weight"`
 }
 
 // EndpointOverride defines the configuration for endpoint override.

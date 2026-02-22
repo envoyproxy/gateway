@@ -27,8 +27,7 @@ clientTrafficPolicies:
       alpnProtocols:
       - h2
       ciphers:
-      - cipher1
-      - cipher2
+      - ECDHE-RSA-AES128-GCM-SHA256
       ecdhCurves:
       - curve1
       maxVersion: "1.2"
@@ -133,15 +132,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tls-1
+      - name: envoy-gateway/gateway-1/tls-1
         ports:
         - containerPort: 10443
           name: tls-443
           protocol: TLS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-1/tcp-1
+      - name: envoy-gateway/gateway-1/tcp-1
         ports:
         - containerPort: 8080
           name: tcp-8080
@@ -268,8 +265,7 @@ xdsIR:
               name: envoy-gateway/tls-secret-1
               privateKey: '[redacted]'
             ciphers:
-            - cipher1
-            - cipher2
+            - ECDHE-RSA-AES128-GCM-SHA256
             ecdhCurves:
             - curve1
             maxVersion: "1.2"
@@ -292,8 +288,7 @@ xdsIR:
           name: envoy-gateway/tls-secret-1
           privateKey: '[redacted]'
         ciphers:
-        - cipher1
-        - cipher2
+        - ECDHE-RSA-AES128-GCM-SHA256
         ecdhCurves:
         - curve1
         maxVersion: "1.2"

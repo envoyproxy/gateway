@@ -20912,6 +20912,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -20979,6 +20981,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   insecureSkipVerify:
@@ -21695,6 +21714,23 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      overrides:
+                        description: |-
+                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                          in the backend cluster. This allows customization of port and other settings that may differ
+                          from the main service configuration.
+                        properties:
+                          port:
+                            description: |-
+                              Port overrides the health check port.
+                              If not set, the endpoint's serving port is used for health checks.
+                              This is useful when health checks are served on a different port than
+                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
                       tcp:
                         description: |-
                           TCP defines the configuration of tcp health checker.
@@ -22151,6 +22187,36 @@ spec:
                             minimum: 0
                             type: integer
                         type: object
+                      weightedZones:
+                        description: |-
+                          WeightedZones configures weight-based traffic distribution across locality zones.
+                          Traffic is distributed proportionally based on the sum of all zone weights.
+                        items:
+                          description: WeightedZoneConfig defines the weight for a
+                            specific locality zone.
+                          properties:
+                            weight:
+                              description: |-
+                                Weight defines the weight for this locality.
+                                Higher values receive more traffic. The actual traffic distribution
+                                is proportional to this value relative to other localities.
+                              format: int32
+                              type: integer
+                            zone:
+                              description: |-
+                                Zone specifies the topology zone this weight applies to.
+                                The value should match the topology.kubernetes.io/zone label
+                                of the nodes where endpoints are running.
+                                Zones not listed in the configuration receive a default weight of 1.
+                              type: string
+                          required:
+                          - weight
+                          - zone
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - zone
+                        x-kubernetes-list-type: map
                     type: object
                 required:
                 - type
@@ -22164,10 +22230,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
-                - message: Currently ZoneAware is only supported for LeastRequest,
-                    Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                - message: PreferLocal zone-aware routing is not supported for ConsistentHash
+                    load balancers. Use weightedZones instead.
+                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
+                    !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware PreferLocal and WeightedZones cannot be specified
+                    together.
+                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
+                    has(self.zoneAware.weightedZones)) : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -22927,9 +22997,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-
@@ -25372,6 +25440,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -25709,6 +25779,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -26636,6 +26723,23 @@ spec:
                                     health checks.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                overrides:
+                                  description: |-
+                                    Overrides defines the configuration of the overriding health check settings for all endpoints
+                                    in the backend cluster. This allows customization of port and other settings that may differ
+                                    from the main service configuration.
+                                  properties:
+                                    port:
+                                      description: |-
+                                        Port overrides the health check port.
+                                        If not set, the endpoint's serving port is used for health checks.
+                                        This is useful when health checks are served on a different port than
+                                        the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                  type: object
                                 tcp:
                                   description: |-
                                     TCP defines the configuration of tcp health checker.
@@ -27078,6 +27182,36 @@ spec:
                                       minimum: 0
                                       type: integer
                                   type: object
+                                weightedZones:
+                                  description: |-
+                                    WeightedZones configures weight-based traffic distribution across locality zones.
+                                    Traffic is distributed proportionally based on the sum of all zone weights.
+                                  items:
+                                    description: WeightedZoneConfig defines the weight
+                                      for a specific locality zone.
+                                    properties:
+                                      weight:
+                                        description: |-
+                                          Weight defines the weight for this locality.
+                                          Higher values receive more traffic. The actual traffic distribution
+                                          is proportional to this value relative to other localities.
+                                        format: int32
+                                        type: integer
+                                      zone:
+                                        description: |-
+                                          Zone specifies the topology zone this weight applies to.
+                                          The value should match the topology.kubernetes.io/zone label
+                                          of the nodes where endpoints are running.
+                                          Zones not listed in the configuration receive a default weight of 1.
+                                        type: string
+                                    required:
+                                    - weight
+                                    - zone
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-map-keys:
+                                  - zone
+                                  x-kubernetes-list-type: map
                               type: object
                           required:
                           - type
@@ -27091,10 +27225,15 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
-                          - message: Currently ZoneAware is only supported for LeastRequest,
-                              Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                              : true '
+                          - message: PreferLocal zone-aware routing is not supported
+                              for ConsistentHash load balancers. Use weightedZones
+                              instead.
+                            rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware PreferLocal and WeightedZones cannot
+                              be specified together.
+                            rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                              && has(self.zoneAware.weightedZones)) : true'
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -28879,6 +29018,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -28946,6 +29087,23 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
                       type: string
                     type: array
                   maxVersion:
@@ -40364,6 +40522,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -40852,6 +41027,37 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      - zone
+                                                      type: object
+                                                    type: array
+                                                    x-kubernetes-list-map-keys:
+                                                    - zone
+                                                    x-kubernetes-list-type: map
                                                 type: object
                                             required:
                                             - type
@@ -40866,11 +41072,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -41616,6 +41829,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -42104,6 +42334,37 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      - zone
+                                                      type: object
+                                                    type: array
+                                                    x-kubernetes-list-map-keys:
+                                                    - zone
+                                                    x-kubernetes-list-type: map
                                                 type: object
                                             required:
                                             - type
@@ -42118,11 +42379,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -43036,6 +43304,23 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            overrides:
+                                              description: |-
+                                                Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                in the backend cluster. This allows customization of port and other settings that may differ
+                                                from the main service configuration.
+                                              properties:
+                                                port:
+                                                  description: |-
+                                                    Port overrides the health check port.
+                                                    If not set, the endpoint's serving port is used for health checks.
+                                                    This is useful when health checks are served on a different port than
+                                                    the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                  format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
+                                                  type: integer
+                                              type: object
                                             tcp:
                                               description: |-
                                                 TCP defines the configuration of tcp health checker.
@@ -43504,6 +43789,37 @@ spec:
                                                   minimum: 0
                                                   type: integer
                                               type: object
+                                            weightedZones:
+                                              description: |-
+                                                WeightedZones configures weight-based traffic distribution across locality zones.
+                                                Traffic is distributed proportionally based on the sum of all zone weights.
+                                              items:
+                                                description: WeightedZoneConfig defines
+                                                  the weight for a specific locality
+                                                  zone.
+                                                properties:
+                                                  weight:
+                                                    description: |-
+                                                      Weight defines the weight for this locality.
+                                                      Higher values receive more traffic. The actual traffic distribution
+                                                      is proportional to this value relative to other localities.
+                                                    format: int32
+                                                    type: integer
+                                                  zone:
+                                                    description: |-
+                                                      Zone specifies the topology zone this weight applies to.
+                                                      The value should match the topology.kubernetes.io/zone label
+                                                      of the nodes where endpoints are running.
+                                                      Zones not listed in the configuration receive a default weight of 1.
+                                                    type: string
+                                                required:
+                                                - weight
+                                                - zone
+                                                type: object
+                                              type: array
+                                              x-kubernetes-list-map-keys:
+                                              - zone
+                                              x-kubernetes-list-type: map
                                           type: object
                                       required:
                                       - type
@@ -43517,11 +43833,17 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
-                                      - message: Currently ZoneAware is only supported
-                                          for LeastRequest, Random, and RoundRobin
-                                          load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                          : true '
+                                      - message: PreferLocal zone-aware routing is
+                                          not supported for ConsistentHash load balancers.
+                                          Use weightedZones instead.
+                                        rule: 'self.type == ''ConsistentHash'' &&
+                                          has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                          : true'
+                                      - message: ZoneAware PreferLocal and WeightedZones
+                                          cannot be specified together.
+                                        rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                          && has(self.zoneAware.weightedZones)) :
+                                          true'
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -44363,6 +44685,23 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      overrides:
+                                        description: |-
+                                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                                          in the backend cluster. This allows customization of port and other settings that may differ
+                                          from the main service configuration.
+                                        properties:
+                                          port:
+                                            description: |-
+                                              Port overrides the health check port.
+                                              If not set, the endpoint's serving port is used for health checks.
+                                              This is useful when health checks are served on a different port than
+                                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                            format: int32
+                                            maximum: 65535
+                                            minimum: 1
+                                            type: integer
+                                        type: object
                                       tcp:
                                         description: |-
                                           TCP defines the configuration of tcp health checker.
@@ -44824,6 +45163,36 @@ spec:
                                             minimum: 0
                                             type: integer
                                         type: object
+                                      weightedZones:
+                                        description: |-
+                                          WeightedZones configures weight-based traffic distribution across locality zones.
+                                          Traffic is distributed proportionally based on the sum of all zone weights.
+                                        items:
+                                          description: WeightedZoneConfig defines
+                                            the weight for a specific locality zone.
+                                          properties:
+                                            weight:
+                                              description: |-
+                                                Weight defines the weight for this locality.
+                                                Higher values receive more traffic. The actual traffic distribution
+                                                is proportional to this value relative to other localities.
+                                              format: int32
+                                              type: integer
+                                            zone:
+                                              description: |-
+                                                Zone specifies the topology zone this weight applies to.
+                                                The value should match the topology.kubernetes.io/zone label
+                                                of the nodes where endpoints are running.
+                                                Zones not listed in the configuration receive a default weight of 1.
+                                              type: string
+                                          required:
+                                          - weight
+                                          - zone
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-map-keys:
+                                        - zone
+                                        x-kubernetes-list-type: map
                                     type: object
                                 required:
                                 - type
@@ -44837,10 +45206,15 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
-                                - message: Currently ZoneAware is only supported for
-                                    LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                    : true '
+                                - message: PreferLocal zone-aware routing is not supported
+                                    for ConsistentHash load balancers. Use weightedZones
+                                    instead.
+                                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
+                                - message: ZoneAware PreferLocal and WeightedZones
+                                    cannot be specified together.
+                                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                    && has(self.zoneAware.weightedZones)) : true'
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -45564,7 +45938,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the direct response.
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -47036,6 +47412,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -47486,6 +47879,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -47499,10 +47922,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -48176,6 +48604,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -48626,6 +49071,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -48639,10 +49114,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -49518,6 +49998,23 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        overrides:
+                                          description: |-
+                                            Overrides defines the configuration of the overriding health check settings for all endpoints
+                                            in the backend cluster. This allows customization of port and other settings that may differ
+                                            from the main service configuration.
+                                          properties:
+                                            port:
+                                              description: |-
+                                                Port overrides the health check port.
+                                                If not set, the endpoint's serving port is used for health checks.
+                                                This is useful when health checks are served on a different port than
+                                                the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                          type: object
                                         tcp:
                                           description: |-
                                             TCP defines the configuration of tcp health checker.
@@ -49981,6 +50478,36 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
+                                                type: string
+                                            required:
+                                            - weight
+                                            - zone
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - zone
+                                          x-kubernetes-list-type: map
                                       type: object
                                   required:
                                   - type
@@ -49994,11 +50521,15 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -50936,6 +51467,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -51386,6 +51934,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -51399,10 +51977,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.

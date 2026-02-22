@@ -357,6 +357,17 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		}
 	}
 
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
+			}
+		}
+	}
+
 	// Add EndpointOverride if specified
 	if policy.LoadBalancer.EndpointOverride != nil {
 		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
@@ -525,6 +536,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		}
 	}
 
+	if hc.Overrides != nil {
+		irHC.Overrides = buildHealthCheckOverrides(hc.Overrides)
+	}
+
 	return irHC
 }
 
@@ -574,6 +589,18 @@ func buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealth
 		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
+}
+
+func buildHealthCheckOverrides(overrides *egv1a1.HealthCheckOverrides) *ir.HealthCheckOverrides {
+	if overrides == nil {
+		return nil
+	}
+
+	irOverrides := &ir.HealthCheckOverrides{
+		Port: uint32(overrides.Port),
+	}
+
+	return irOverrides
 }
 
 func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {

@@ -1,0 +1,60 @@
+- clusterName: route-with-weighted-zones-roundrobin-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 8080
+      loadBalancingWeight: 1
+    - endpoint:
+        address:
+          socketAddress:
+            address: 2.3.4.5
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 70
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.4.5.6
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      zone: us-east-1b
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 4.5.6.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      zone: us-east-1c
+- clusterName: route-with-weighted-zones-maglev-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.1
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 80
+    locality:
+      zone: us-west-2a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.2
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      zone: us-west-2b

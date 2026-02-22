@@ -1,0 +1,61 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  tls:
+    fingerprints:
+    - JA3
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: first-listener
+      # byte slice representation of "cert-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+tcp:
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  tls:
+    fingerprints:
+    - JA3
+    - JA4
+    alpnProtocols:
+    - h2
+    - http/1.1
+    certificates:
+    - name: first-listener
+      # byte slice representation of "cert-data"
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      # byte slice representation of "key-data"
+      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "second-route"
+    tls:
+      inspector:
+        snis:
+        - bar.com
+    destination:
+      name: "tcp-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "tcp-route-dest/backend/0"
