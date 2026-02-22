@@ -866,6 +866,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		h2          *ir.HTTP2Settings
 		ro          *ir.ResponseOverride
 		rb          *ir.RequestBuffer
+		tf          *ir.HTTPTransform
 		cp          []*ir.Compression
 		httpUpgrade []ir.HTTPUpgradeConfig
 		err, errs   error
@@ -925,6 +926,10 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		errs = errors.Join(errs, err)
 	}
 
+	if policy.Spec.Transform != nil {
+		tf = buildTransform(policy)
+	}
+
 	if err = validateTelemetry(policy.Spec.Telemetry); err != nil {
 		err = perr.WithMessage(err, "Telemetry")
 		errs = errors.Join(errs, err)
@@ -950,6 +955,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		Timeout:           to,
 		ResponseOverride:  ro,
 		RequestBuffer:     rb,
+		Transform:         tf,
 		Compression:       cp,
 		HTTPUpgrade:       httpUpgrade,
 		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
@@ -1559,6 +1565,64 @@ func buildRequestBuffer(spec *egv1a1.RequestBuffer) (*ir.RequestBuffer, error) {
 	return &ir.RequestBuffer{
 		Limit: spec.Limit,
 	}, nil
+}
+
+func buildTransform(policy *egv1a1.BackendTrafficPolicy) *ir.HTTPTransform {
+	if policy.Spec.Transform == nil {
+		return nil
+	}
+
+	t := &ir.HTTPTransform{
+		Name: irConfigName(policy),
+	}
+
+	if policy.Spec.Transform.RequestTransformation != nil {
+		t.RequestTransformation = buildHTTPTransformation(policy.Spec.Transform.RequestTransformation)
+	}
+	if policy.Spec.Transform.ResponseTransformation != nil {
+		t.ResponseTransformation = buildHTTPTransformation(policy.Spec.Transform.ResponseTransformation)
+	}
+	return t
+}
+
+func buildHTTPTransformation(spec *egv1a1.HTTPTransformation) *ir.HTTPTransformation {
+	if spec == nil {
+		return nil
+	}
+
+	t := &ir.HTTPTransformation{}
+
+	for _, h := range spec.SetHeaders {
+		t.SetHeaders = append(t.SetHeaders, ir.TransformHeader{
+			Name:  h.Name,
+			Value: h.Value,
+		})
+	}
+	for _, h := range spec.AddHeaders {
+		t.AddHeaders = append(t.AddHeaders, ir.TransformHeader{
+			Name:  h.Name,
+			Value: h.Value,
+		})
+	}
+	t.RemoveHeaders = spec.RemoveHeaders
+
+	if spec.Body != nil {
+		bt := &ir.HTTPBodyTransformation{
+			Action: ir.BodyTransformActionMerge,
+		}
+		if spec.Body.FormatString != nil {
+			bt.FormatString = spec.Body.FormatString
+		}
+		if spec.Body.JSON != nil {
+			bt.JSONBody = spec.Body.JSON.Raw
+		}
+		if spec.Body.Action != nil {
+			bt.Action = ir.BodyTransformAction(*spec.Body.Action)
+		}
+		t.Body = bt
+	}
+
+	return t
 }
 
 func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) (*ir.ResponseOverride, error) {
