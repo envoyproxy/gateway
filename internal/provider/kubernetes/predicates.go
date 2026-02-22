@@ -53,7 +53,7 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	ok, err := checkObjectNamespaceLabels(r.client, r.namespaceLabel, obj)
+	ok, err := checkObjectNamespaceLabels(context.Background(), r.client, r.namespaceLabel, obj)
 	if err != nil {
 		r.log.Error(
 			err, "failed to get Namespace",
@@ -71,7 +71,7 @@ type NamespaceGetter interface {
 // checkObjectNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 // Cluster-scoped resources (empty namespace) always return true.
-func checkObjectNamespaceLabels(c client.Client, namespaceSelector *metav1.LabelSelector, obj metav1.Object) (bool, error) {
+func checkObjectNamespaceLabels(ctx context.Context, c client.Client, namespaceSelector *metav1.LabelSelector, obj metav1.Object) (bool, error) {
 	var nsString string
 	// Cluster-scoped resources should not be filtered
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {
@@ -80,13 +80,17 @@ func checkObjectNamespaceLabels(c client.Client, namespaceSelector *metav1.Label
 
 	ns := &corev1.Namespace{}
 	if err := c.Get(
-		context.Background(),
+		ctx,
 		client.ObjectKey{
 			Namespace: "", // Namespace object should have an empty Namespace
 			Name:      nsString,
 		},
 		ns,
 	); err != nil {
+		// Namespace not found means the object doesn't match (it will likely be deleted soon)
+		if kerrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
 

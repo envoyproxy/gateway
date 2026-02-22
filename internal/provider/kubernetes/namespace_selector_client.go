@@ -11,7 +11,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -50,11 +49,11 @@ func (c *namespaceSelectorClient) List(ctx context.Context, list client.ObjectLi
 	}
 
 	// Filter the results by namespace labels
-	return c.filterByNamespaceLabels(list)
+	return c.filterByNamespaceLabels(ctx, list)
 }
 
 // filterByNamespaceLabels filters the list items based on namespace label matching.
-func (c *namespaceSelectorClient) filterByNamespaceLabels(list client.ObjectList) error {
+func (c *namespaceSelectorClient) filterByNamespaceLabels(ctx context.Context, list client.ObjectList) error {
 	listKind := list.GetObjectKind().GroupVersionKind().Kind
 
 	// Extract items from the list using k8s meta utilities
@@ -75,27 +74,42 @@ func (c *namespaceSelectorClient) filterByNamespaceLabels(list client.ObjectList
 		return nil
 	}
 
-	// Filter items based on namespace labels
-	var filtered []runtime.Object
-	for _, item := range items {
+	// Cache namespace match results to avoid repeated lookups for objects in the same namespace
+	namespaceMatches := make(map[string]bool)
+
+	// Filter items in-place based on namespace labels
+	writeIdx := 0
+	for i, item := range items {
 		obj, ok := item.(metav1.Object)
 		if !ok {
 			return fmt.Errorf("item in list is not a metav1.Object (listKind=%s)", listKind)
 		}
 
-		matches, err := checkObjectNamespaceLabels(c.Client, c.namespaceSelector, obj)
-		if err != nil {
-			return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
-				obj.GetNamespace(), obj.GetName(), err)
+		ns := obj.GetNamespace()
+		matches, cached := namespaceMatches[ns]
+		if !cached {
+			var err error
+			matches, err = checkObjectNamespaceLabels(ctx, c.Client, c.namespaceSelector, obj)
+			if err != nil {
+				return fmt.Errorf("failed to check namespace labels for object %s/%s: %w",
+					ns, obj.GetName(), err)
+			}
+			namespaceMatches[ns] = matches
 		}
 
 		if matches {
-			filtered = append(filtered, item)
+			items[writeIdx] = items[i]
+			writeIdx++
 		}
 	}
 
+	// Skip SetList if no items were filtered out
+	if writeIdx == len(items) {
+		return nil
+	}
+
 	// Set the filtered items back to the list
-	if err := meta.SetList(list, filtered); err != nil {
+	if err := meta.SetList(list, items[:writeIdx]); err != nil {
 		return fmt.Errorf("failed to set filtered items to list (listKind=%s): %w", listKind, err)
 	}
 	return nil
