@@ -2950,8 +2950,8 @@ func (in *OutlierDetection) DeepCopyInto(out *OutlierDetection) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.AlwaysEjectOneHost != nil {
-		in, out := &in.AlwaysEjectOneHost, &out.AlwaysEjectOneHost
+	if in.AlwaysEjectOneEndpoint != nil {
+		in, out := &in.AlwaysEjectOneEndpoint, &out.AlwaysEjectOneEndpoint
 		*out = new(bool)
 		**out = **in
 	}

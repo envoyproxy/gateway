@@ -82,12 +82,12 @@ type PassiveHealthCheck struct {
 	// +optional
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty"`
 
-	// AlwaysEjectOneHost defines whether at least one host should be ejected,
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
 	// regardless of MaxEjectionPercent.
 	//
 	// +kubebuilder:default=false
 	// +optional
-	AlwaysEjectOneHost *bool `json:"alwaysEjectOneHost,omitempty"`
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines the active health check configuration.

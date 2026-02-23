@@ -193,7 +193,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				BaseEjectionTime:               ptr.To(metav1.Duration{Duration: 30 * time.Second}),
 				MaxEjectionPercent:             ptr.To[int32](10),
 				FailurePercentageThreshold:     ptr.To[uint32](85),
-				AlwaysEjectOneHost:             ptr.To(true),
+				AlwaysEjectOneEndpoint:         ptr.To(true),
 			},
 			expected: &clusterv3.OutlierDetection{
 				SplitExternalLocalOriginErrors:     true,
