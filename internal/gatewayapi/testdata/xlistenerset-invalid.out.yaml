@@ -52,8 +52,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-invalid
       namespace: gateway-xls
       sectionName: invalid-one
@@ -76,8 +76,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-invalid
         namespace: gateway-xls
         sectionName: invalid-one
@@ -88,8 +88,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-invalid
       namespace: gateway-xls
       sectionName: invalid-two
@@ -112,8 +112,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-invalid
         namespace: gateway-xls
         sectionName: invalid-two
@@ -124,8 +124,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-mixed
       namespace: gateway-xls
       sectionName: mixed-valid
@@ -148,8 +148,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-mixed
         namespace: gateway-xls
         sectionName: mixed-valid
@@ -160,8 +160,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: same-namespace-mixed
       namespace: gateway-xls
       sectionName: mixed-invalid
@@ -184,8 +184,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: same-namespace-mixed
         namespace: gateway-xls
         sectionName: mixed-invalid
@@ -214,9 +214,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway-xls/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: same-namespace-invalid
     namespace: gateway-xls
@@ -235,8 +235,6 @@ xListenerSets:
       port: 8086
       protocol: INVALID
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -269,8 +267,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: invalid-one
-      port: 8085
-      supportedKinds: []
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
@@ -289,10 +285,8 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: invalid-two
-      port: 8086
-      supportedKinds: []
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: same-namespace-mixed
     namespace: gateway-xls
@@ -311,8 +305,6 @@ xListenerSets:
       port: 8088
       protocol: INVALID
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
   status:
     conditions:
@@ -345,7 +337,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: mixed-valid
-      port: 8087
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -369,8 +360,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: mixed-invalid
-      port: 8088
-      supportedKinds: []
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:
