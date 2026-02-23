@@ -314,22 +314,33 @@ spec:
                                     description: ASN is the autonomous system number
                                       associated with the client IP.
                                     format: int32
+                                    minimum: 1
                                     type: integer
                                   city:
                                     description: City is the city associated with
                                       the client IP.
+                                    maxLength: 128
+                                    minLength: 1
                                     type: string
                                   country:
-                                    description: Country is the country associated
+                                    description: Country is the country ISO code associated
                                       with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
                                     type: string
                                   isp:
                                     description: ISP is the internet service provider
                                       associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
                                     type: string
                                   region:
-                                    description: Region is the region associated with
-                                      the client IP.
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
                                     type: string
                                 type: object
                                 x-kubernetes-validations:
