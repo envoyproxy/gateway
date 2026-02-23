@@ -857,6 +857,34 @@ func (t *Translator) buildListenerTLSParameters(
 			namespace: policy.Namespace,
 		}
 
+		// Determine the effective client validation mode.
+		mode := egv1a1.ClientValidationRequireAndVerify
+		if tlsParams.ClientValidation.Mode != nil {
+			mode = *tlsParams.ClientValidation.Mode
+		} else if tlsParams.ClientValidation.Optional {
+			// Legacy mapping: Optional=true means VerifyIfGiven.
+			mode = egv1a1.ClientValidationVerifyIfGiven
+		}
+
+		irTLSConfig.ClientValidationEnabled = true
+		switch mode {
+		case egv1a1.ClientValidationRequest:
+			irTLSConfig.RequireClientCertificate = false
+			irTLSConfig.AcceptUntrusted = true
+		case egv1a1.ClientValidationRequireAny:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = true
+		case egv1a1.ClientValidationVerifyIfGiven:
+			irTLSConfig.RequireClientCertificate = false
+			irTLSConfig.AcceptUntrusted = false
+		case egv1a1.ClientValidationRequireAndVerify:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = false
+		default:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = false
+		}
+
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
 		}
@@ -880,11 +908,20 @@ func (t *Translator) buildListenerTLSParameters(
 			}
 			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
+
+		// CA certificates are required for verification modes.
+		if (mode == egv1a1.ClientValidationVerifyIfGiven || mode == egv1a1.ClientValidationRequireAndVerify) && len(irCACert.Certificate) == 0 {
+			if tlsParams.ClientValidation.Mode == nil && tlsParams.ClientValidation.Optional {
+				return irTLSConfig, fmt.Errorf(`tls.clientValidation.optional=true requires caCertificateRefs (maps to mode %q)`, mode)
+			}
+			return irTLSConfig, fmt.Errorf(`tls.clientValidation.mode %q requires caCertificateRefs`, mode)
+		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
-			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
-			setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 		}
+
+		// Apply additional validation context fields (SPKI/cert hashes and SAN matchers) regardless of CA presence.
+		setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 
 		irCrl := &ir.TLSCrl{
 			Name: irTLSCrlName(policy.Namespace, policy.Name),

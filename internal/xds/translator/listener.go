@@ -816,7 +816,7 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
 		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
 		setTLSValidationContext(tlsConfig, tlsCtx.DownstreamTlsContext.CommonTlsContext)
 	}
@@ -853,7 +853,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
@@ -874,37 +874,57 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 }
 
 func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
+	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		len(tlsConfig.VerifyCertificateSpki) > 0 ||
+		len(tlsConfig.VerifyCertificateHash) > 0 ||
+		len(tlsConfig.MatchTypedSubjectAltNames) > 0
+
+	validationContext := &tlsv3.CertificateValidationContext{}
+
+	if tlsConfig.AcceptUntrusted {
+		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+
+	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
+	validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
+
+	for _, match := range tlsConfig.MatchTypedSubjectAltNames {
+		sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
+		oid := ""
+		switch match.Name {
+		case "":
+			sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
+		case "EMAIL":
+			sanType = tlsv3.SubjectAltNameMatcher_EMAIL
+		case "DNS":
+			sanType = tlsv3.SubjectAltNameMatcher_DNS
+		case "URI":
+			sanType = tlsv3.SubjectAltNameMatcher_URI
+		case "IP_ADDRESS":
+			sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
+		default:
+			oid = match.Name
+		}
+		validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
+			SanType: sanType,
+			Matcher: buildXdsStringMatcher(match),
+			Oid:     oid,
+		})
+	}
+
+	if tlsConfig.CACertificate == nil {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContext{
+			ValidationContext: validationContext,
+		}
+		return
+	}
+
 	sdsSecretConfig := &tlsv3.SdsSecretConfig{
 		Name:      tlsConfig.CACertificate.Name,
 		SdsConfig: makeConfigSource(),
 	}
-	if len(tlsConfig.VerifyCertificateSpki) > 0 || len(tlsConfig.VerifyCertificateHash) > 0 || len(tlsConfig.MatchTypedSubjectAltNames) > 0 {
-		validationContext := &tlsv3.CertificateValidationContext{}
-		validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
-		validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
-		for _, match := range tlsConfig.MatchTypedSubjectAltNames {
-			sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
-			oid := ""
-			switch match.Name {
-			case "":
-				sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
-			case "EMAIL":
-				sanType = tlsv3.SubjectAltNameMatcher_EMAIL
-			case "DNS":
-				sanType = tlsv3.SubjectAltNameMatcher_DNS
-			case "URI":
-				sanType = tlsv3.SubjectAltNameMatcher_URI
-			case "IP_ADDRESS":
-				sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
-			default:
-				oid = match.Name
-			}
-			validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
-				SanType: sanType,
-				Matcher: buildXdsStringMatcher(match),
-				Oid:     oid,
-			})
-		}
+
+	if needsDefaultValidationContext {
 		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
 			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 				DefaultValidationContext:         validationContext,
