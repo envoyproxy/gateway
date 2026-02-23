@@ -332,18 +332,30 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		case listenerHostnameVal == routeHostname:
 			hostnamesSet.Insert(routeHostname)
 
+		// Both listener and route hostname have wildcards:
+		case strings.HasPrefix(listenerHostnameVal, "*") && strings.HasPrefix(routeHostname, "*"):
+			// the route hostname must be more wildcard than the listener hostname to match
+			// e.g. listener hostname *.example.com would match route hostname *.com.
+			// use regex to check this
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
+				hostnamesSet.Insert(listenerHostnameVal)
+			}
+
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
+				hostnamesSet.Insert(routeHostname)
+			}
+
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
-			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
 				hostnamesSet.Insert(routeHostname)
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
-			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
 				hostnamesSet.Insert(listenerHostnameVal)
 			}
-
 		}
 	}
 
@@ -369,16 +381,39 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 	return hostnamesSet.List()
 }
 
-// hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
-// portion of wildcardHostname as a suffix, plus at least one DNS label matching the
-// wildcard.
-func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
-	if !strings.HasSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*")) {
+// wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
+// ref: https://github.com/kubernetes-sigs/gateway-api/pull/1173, this's different with RFC-2818
+// e.g. *.com matches *.example.com, *.example.com matches foo.example.com
+func wildcardHostnameMatchesHostname(wildcardHostname, hostname string) bool {
+	// Strip the leading "*" from wildcardHostname
+	wildcardSuffix := strings.TrimPrefix(wildcardHostname, "*")
+
+	// If hostname is not a wildcard, check if it matches the pattern
+	if !strings.HasPrefix(hostname, "*") {
+		// hostname must end with the wildcard suffix
+		if !strings.HasSuffix(hostname, wildcardSuffix) {
+			return false
+		}
+		// The part before the suffix should be non-empty (there's a label matching the wildcard)
+		wildcardMatch := strings.TrimSuffix(hostname, wildcardSuffix)
+		return len(wildcardMatch) > 0
+	}
+
+	// Both are wildcards - strip the leading "*" from hostname too
+	hostnameSuffix := strings.TrimPrefix(hostname, "*")
+
+	// Check if the hostname suffix ends with the wildcard suffix
+	// This means wildcardHostname is a broader pattern
+	if !strings.HasSuffix(hostnameSuffix, wildcardSuffix) {
 		return false
 	}
 
-	wildcardMatch := strings.TrimSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*"))
-	return len(wildcardMatch) > 0
+	// Get the remaining part after removing the wildcard suffix from hostname
+	remaining := strings.TrimSuffix(hostnameSuffix, wildcardSuffix)
+
+	// The remaining part should have content (can't be identical patterns)
+	// and should start with "." to be a valid subdomain
+	return len(remaining) > 0 && strings.HasPrefix(remaining, ".")
 }
 
 func containsPort(ports []*protocolPort, port *protocolPort) bool {
