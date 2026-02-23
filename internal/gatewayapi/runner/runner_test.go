@@ -114,7 +114,7 @@ func setupTestRunner(t *testing.T) (*Runner, []types.NamespacedName) {
 	r.ProviderResources.GatewayStatuses.Store(keys[0], &gwapiv1.GatewayStatus{})
 	r.ProviderResources.HTTPRouteStatuses.Store(keys[1], &gwapiv1.HTTPRouteStatus{})
 	r.ProviderResources.GRPCRouteStatuses.Store(keys[2], &gwapiv1.GRPCRouteStatus{})
-	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1a2.TLSRouteStatus{})
+	r.ProviderResources.TLSRouteStatuses.Store(keys[3], &gwapiv1.TLSRouteStatus{})
 	r.ProviderResources.TCPRouteStatuses.Store(keys[4], &gwapiv1a2.TCPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[5], &gwapiv1a2.UDPRouteStatus{})
 	r.ProviderResources.UDPRouteStatuses.Store(keys[6], &gwapiv1a2.UDPRouteStatus{})

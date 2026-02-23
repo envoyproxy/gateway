@@ -72,7 +72,7 @@ func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gw
 	resourceMap.allAssociatedTLSRoutes.Insert(key)
 	// Discard Status to reduce memory consumption in watchable
 	// It will be recomputed by the gateway-api layer
-	tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
+	tlsRoute.Status = gwapiv1.TLSRouteStatus{}
 	resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, tlsRoute)
 }
 
@@ -96,13 +96,13 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		r.processTLSRoute(ctx, tlsRoute, resourceMap, resourceTree)
 	}
 
-	// Process TLSRoutes attached to the xListenerSet
-	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+	// Process TLSRoutes attached to the ListenerSet
+	for _, xlsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
 		tlsRouteList = &gwapiv1a3.TLSRouteList{}
 		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(xListenerTLSRouteIndex, xlsNN.String()),
+			FieldSelector: fields.OneTermEqualSelector(listenerSetTLSRouteIndex, xlsNN.String()),
 		}); err != nil {
-			r.log.Error(err, "failed to list TLSRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			r.log.Error(err, "failed to list TLSRoutes by ListenerSet", "listenerSet", xlsNN.String())
 			return err
 		}
 		for i := range tlsRouteList.Items {
@@ -133,13 +133,13 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		r.processGRPCRoute(ctx, grpcRoute, resourceMap, resourceTree)
 	}
 
-	// Process GRPCRoutes attached to the xListenerSet
-	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+	// Process GRPCRoutes attached to the ListenerSet
+	for _, xlsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
 		grpcRouteList = &gwapiv1.GRPCRouteList{}
 		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(xListenerGRPCRouteIndex, xlsNN.String()),
+			FieldSelector: fields.OneTermEqualSelector(listenerSetGRPCRouteIndex, xlsNN.String()),
 		}); err != nil {
-			r.log.Error(err, "failed to list GRPCRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			r.log.Error(err, "failed to list GRPCRoutes by ListenerSet", "listenerSet", xlsNN.String())
 			return err
 		}
 		for i := range grpcRouteList.Items {
@@ -276,13 +276,13 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		r.processHTTPRoute(ctx, httpRoute, resourceMap, resourceTree)
 	}
 
-	// Process HTTPRoutes attached to the xListenerSet
-	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+	// Process HTTPRoutes attached to the ListenerSet
+	for _, lsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
 		httpRouteList = &gwapiv1.HTTPRouteList{}
 		if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(xListenerHTTPRouteIndex, xlsNN.String()),
+			FieldSelector: fields.OneTermEqualSelector(listenerSetHTTPRouteIndex, lsNN.String()),
 		}); err != nil {
-			r.log.Error(err, "failed to list HTTPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			r.log.Error(err, "failed to list HTTPRoutes by ListenerSet", "listenerSet", lsNN.String())
 			return err
 		}
 		for i := range httpRouteList.Items {
@@ -528,13 +528,13 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		r.processTCPRoute(ctx, tcpRoute, resourceMap, resourceTree)
 	}
 
-	// Process TCPRoutes attached to the xListenerSet
-	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+	// Process TCPRoutes attached to the ListenerSet
+	for _, lsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
 		tcpRouteList = &gwapiv1a2.TCPRouteList{}
 		if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(xListenerTCPRouteIndex, xlsNN.String()),
+			FieldSelector: fields.OneTermEqualSelector(listenerSetTCPRouteIndex, lsNN.String()),
 		}); err != nil {
-			r.log.Error(err, "failed to list TCPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			r.log.Error(err, "failed to list TCPRoutes by ListenerSet", "listenerSet", lsNN.String())
 			return err
 		}
 		for i := range tcpRouteList.Items {
@@ -617,13 +617,13 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		r.processUDPRoute(ctx, udpRoute, resourceMap, resourceTree)
 	}
 
-	// Process UDPRoutes attached to the xListenerSet
-	for _, xlsNN := range resourceMap.gatewayToXListenerSets[gatewayNamespaceName] {
+	// Process UDPRoutes attached to the ListenerSet
+	for _, lsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
 		udpRouteList = &gwapiv1a2.UDPRouteList{}
 		if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(xListenerUDPRouteIndex, xlsNN.String()),
+			FieldSelector: fields.OneTermEqualSelector(listenerSetUDPRouteIndex, lsNN.String()),
 		}); err != nil {
-			r.log.Error(err, "failed to list UDPRoutes by XListenerSet", "xListenerSet", xlsNN.String())
+			r.log.Error(err, "failed to list UDPRoutes by ListenerSet", "listenerSet", lsNN.String())
 			return err
 		}
 		for i := range udpRouteList.Items {

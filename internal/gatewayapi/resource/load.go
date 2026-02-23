@@ -243,7 +243,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a3.TLSRouteSpec),
+				Spec: typedSpec.(gwapiv1.TLSRouteSpec),
 			}
 			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case KindHTTPRoute:

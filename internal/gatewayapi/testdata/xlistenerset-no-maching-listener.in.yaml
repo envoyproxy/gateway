@@ -32,9 +32,9 @@ gateways:
       name: conflict-listener
       port: 8888
       protocol: HTTP
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: gateway-xls
     name: listener-from-same-xls
@@ -70,8 +70,8 @@ httpRoutes:
     name: route-extra-http-one
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: listener-from-same-xls
       sectionName: non-existent-listener

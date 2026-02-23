@@ -48,9 +48,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret
+        - name: tls-secret
           namespace: envoy-gateway
         mode: Terminate
   status:
