@@ -15,12 +15,7 @@ package status
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/pkg/features"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 )
 
 const (
@@ -64,42 +59,4 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			ObservedGeneration: gatewayClass.Generation,
 		}
 	}
-}
-
-func getSupportedFeatures(gatewaySuite *suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []gwapiv1.SupportedFeature {
-	supportedFeatures := gatewaySuite.SupportedFeatures.Clone()
-	unsupportedFeatures := getUnsupportedFeatures(gatewaySuite, skippedTests)
-	supportedFeatures.Delete(unsupportedFeatures...)
-
-	ret := sets.New[gwapiv1.SupportedFeature]()
-	for _, feature := range supportedFeatures.UnsortedList() {
-		ret.Insert(gwapiv1.SupportedFeature{
-			Name: gwapiv1.FeatureName(feature),
-		})
-	}
-
-	featureList := make([]gwapiv1.SupportedFeature, 0, len(ret))
-	for feature := range ret {
-		featureList = append(featureList, feature)
-	}
-	return featureList
-}
-
-func getUnsupportedFeatures(gatewaySuite *suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
-	unsupportedFeatures := gatewaySuite.ExemptFeatures.UnsortedList()
-
-	for _, skippedTest := range skippedTests {
-		switch conformance.GetTestSupportLevel(&skippedTest) {
-		case conformance.Core:
-			unsupportedFeatures = append(unsupportedFeatures, skippedTest.Features...)
-		case conformance.Extended:
-			for _, feature := range skippedTest.Features {
-				if conformance.GetFeatureSupportLevel(feature) == conformance.Extended {
-					unsupportedFeatures = append(unsupportedFeatures, feature)
-				}
-			}
-		}
-	}
-
-	return unsupportedFeatures
 }
