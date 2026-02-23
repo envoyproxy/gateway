@@ -73,11 +73,12 @@ helm-generate.%:
 helm-template: ## Render helm chart templates with test values.
 	@for chart in $(CHARTS); do \
   		$(LOG_TARGET); \
-  		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
+  		$(MAKE) $(addprefix helm-template., $$(basename $${chart})); \
   	done
 
 .PHONY: helm-template.%
 helm-template.%: ## Render helm chart templates with test values.
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	$(call log, "Run helm template for chart: ${CHART_NAME}!");
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \

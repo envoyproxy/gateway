@@ -1353,7 +1353,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController:    egv1a1.GatewayControllerName,
 		log:                logger,
-		mergeGateways:      sets.New[string]("test-mg"),
+		mergeGateways:      sets.New("test-mg"),
 		resources:          &message.ProviderResources{},
 		grpcRouteCRDExists: true,
 		tcpRouteCRDExists:  true,
@@ -1472,7 +1472,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
-		mergeGateways:   sets.New[string]("test-mg"),
+		mergeGateways:   sets.New("test-mg"),
 		resources:       &message.ProviderResources{},
 	}
 
