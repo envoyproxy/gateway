@@ -1357,7 +1357,6 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		grpcRouteCRDExists: true,
 		tcpRouteCRDExists:  true,
 		udpRouteCRDExists:  true,
-		tlsRouteCRDExists:  true,
 		spCRDExists:        true,
 		eepCRDExists:       true,
 		epCRDExists:        true,
