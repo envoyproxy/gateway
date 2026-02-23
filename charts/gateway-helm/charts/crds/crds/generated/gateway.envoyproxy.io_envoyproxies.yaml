@@ -11712,10 +11712,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -13033,10 +13034,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -14516,10 +14518,11 @@ spec:
                                               type: string
                                             unhealthyThreshold:
                                               default: 3
-                                              description: UnhealthyThreshold defines
-                                                the number of unhealthy health checks
-                                                required before a backend host is
-                                                marked unhealthy.
+                                              description: |-
+                                                UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                up to this threshold before the host is marked unhealthy.
                                               format: int32
                                               minimum: 1
                                               type: integer
@@ -15910,9 +15913,11 @@ spec:
                                         type: string
                                       unhealthyThreshold:
                                         default: 3
-                                        description: UnhealthyThreshold defines the
-                                          number of unhealthy health checks required
-                                          before a backend host is marked unhealthy.
+                                        description: |-
+                                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                          up to this threshold before the host is marked unhealthy.
                                         format: int32
                                         minimum: 1
                                         type: integer
