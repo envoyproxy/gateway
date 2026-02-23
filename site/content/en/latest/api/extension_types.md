@@ -196,6 +196,7 @@ _Appears in:_
 AdmissionControl defines the admission control policy to be applied.
 This configuration probabilistically rejects requests based on the success rate
 of previous requests in a configurable sliding time window.
+All fields are optional and will use Envoy's defaults when not specified.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
@@ -2482,6 +2483,37 @@ _Appears in:_
 | `enableWeb` | _boolean_ |  false  |  | EnableWeb configures the gRPC-web filter on the listener.<br />The gRPC-web filter allows clients (typically browsers) to make gRPC calls<br />using HTTP/1.1 or HTTP/2.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 
 
+#### GRPCSuccessCode
+
+_Underlying type:_ _string_
+
+GRPCSuccessCode defines gRPC status codes as defined in
+https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+
+_Appears in:_
+- [GRPCSuccessCriteria](#grpcsuccesscriteria)
+
+| Value | Description |
+| ----- | ----------- |
+| `OK` |  |
+| `CANCELLED` |  |
+| `UNKNOWN` |  |
+| `INVALID_ARGUMENT` |  |
+| `DEADLINE_EXCEEDED` |  |
+| `NOT_FOUND` |  |
+| `ALREADY_EXISTS` |  |
+| `PERMISSION_DENIED` |  |
+| `RESOURCE_EXHAUSTED` |  |
+| `FAILED_PRECONDITION` |  |
+| `ABORTED` |  |
+| `OUT_OF_RANGE` |  |
+| `UNIMPLEMENTED` |  |
+| `INTERNAL` |  |
+| `UNAVAILABLE` |  |
+| `DATA_LOSS` |  |
+| `UNAUTHENTICATED` |  |
+
+
 #### GRPCSuccessCriteria
 
 
@@ -2493,7 +2525,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `grpcSuccessStatus` | _integer array_ |  false  |  | GRPCSuccessStatus defines gRPC status codes that are considered successful. |
+| `grpcSuccessStatus` | _[GRPCSuccessCode](#grpcsuccesscode) array_ |  false  |  | GRPCSuccessStatus defines gRPC status codes that are considered successful.<br />Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc. |
 
 
 #### Gateway
@@ -2989,23 +3021,9 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [HTTPSuccessCriteria](#httpsuccesscriteria)
 - [RetryOn](#retryon)
 
-
-
-#### HTTPStatusRange
-
-
-
-HTTPStatusRange defines a range of HTTP status codes.
-
-_Appears in:_
-- [HTTPSuccessCriteria](#httpsuccesscriteria)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `start` | _integer_ |  true  |  | Start is the inclusive start of the status code range (100-600). |
-| `end` | _integer_ |  true  |  | End is the inclusive end of the status code range (100-600). |
 
 
 #### HTTPSuccessCriteria
@@ -3019,7 +3037,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `httpSuccessStatus` | _[HTTPStatusRange](#httpstatusrange) array_ |  false  |  | HTTPSuccessStatus defines ranges of HTTP status codes that are considered successful.<br />Each range is inclusive on both ends. |
+| `httpSuccessStatus` | _[HTTPStatus](#httpstatus) array_ |  false  |  | HTTPSuccessStatus defines HTTP status codes that are considered successful. |
 
 
 #### HTTPTimeout
