@@ -1537,18 +1537,22 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 		ac.SuccessCriteria = &ir.AdmissionControlSuccessCriteria{}
 
 		if policy.Spec.AdmissionControl.SuccessCriteria.HTTP != nil {
-			ac.SuccessCriteria.HTTP = &ir.HTTPSuccessCriteria{}
-			for _, statusRange := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
-				ac.SuccessCriteria.HTTP.HTTPSuccessStatus = append(ac.SuccessCriteria.HTTP.HTTPSuccessStatus, ir.HTTPStatusRange{
-					Start: statusRange.Start,
-					End:   statusRange.End,
-				})
+			httpStatuses := make([]int32, len(policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
+				httpStatuses[i] = int32(s)
+			}
+			ac.SuccessCriteria.HTTP = &ir.HTTPSuccessCriteria{
+				HTTPSuccessStatus: httpStatuses,
 			}
 		}
 
 		if policy.Spec.AdmissionControl.SuccessCriteria.GRPC != nil {
+			grpcStatuses := make([]string, len(policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
+				grpcStatuses[i] = string(s)
+			}
 			ac.SuccessCriteria.GRPC = &ir.GRPCSuccessCriteria{
-				GRPCSuccessStatus: policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus,
+				GRPCSuccessStatus: grpcStatuses,
 			}
 		}
 	}

@@ -187,23 +187,25 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 	successCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria{}
 
 	if admissionControl.SuccessCriteria != nil {
-		// HTTP success criteria
+		// HTTP success criteria: each individual status code becomes a single-element range [code, code+1)
 		if admissionControl.SuccessCriteria.HTTP != nil && len(admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus) > 0 {
 			httpCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_HttpCriteria{}
-			for _, statusRange := range admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
+			for _, code := range admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
 				httpCriteria.HttpSuccessStatus = append(httpCriteria.HttpSuccessStatus, &typev3.Int32Range{
-					Start: statusRange.Start,
-					End:   statusRange.End,
+					Start: code,
+					End:   code + 1,
 				})
 			}
 			successCriteria.HttpCriteria = httpCriteria
 		}
 
-		// gRPC success criteria
+		// gRPC success criteria: map string enum names to numeric codes
 		if admissionControl.SuccessCriteria.GRPC != nil && len(admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus) > 0 {
 			grpcCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_GrpcCriteria{}
 			for _, status := range admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
-				grpcCriteria.GrpcSuccessStatus = append(grpcCriteria.GrpcSuccessStatus, uint32(status))
+				if code, ok := grpcStatusCodeToUint32(status); ok {
+					grpcCriteria.GrpcSuccessStatus = append(grpcCriteria.GrpcSuccessStatus, code)
+				}
 			}
 			successCriteria.GrpcCriteria = grpcCriteria
 		}
@@ -219,6 +221,32 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 // parseDuration parses a duration string and returns a time.Duration.
 func parseDuration(s string) (time.Duration, error) {
 	return time.ParseDuration(s)
+}
+
+// grpcStatusCodeToUint32 maps a gRPC status code string name to its numeric value.
+// See https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
+func grpcStatusCodeToUint32(name string) (uint32, bool) {
+	codes := map[string]uint32{
+		"OK":                  0,
+		"CANCELLED":           1,
+		"UNKNOWN":             2,
+		"INVALID_ARGUMENT":    3,
+		"DEADLINE_EXCEEDED":   4,
+		"NOT_FOUND":           5,
+		"ALREADY_EXISTS":      6,
+		"PERMISSION_DENIED":   7,
+		"RESOURCE_EXHAUSTED":  8,
+		"FAILED_PRECONDITION": 9,
+		"ABORTED":             10,
+		"OUT_OF_RANGE":        11,
+		"UNIMPLEMENTED":       12,
+		"INTERNAL":            13,
+		"UNAVAILABLE":         14,
+		"DATA_LOSS":           15,
+		"UNAUTHENTICATED":     16,
+	}
+	code, ok := codes[name]
+	return code, ok
 }
 
 // patchResources adds all the other needed resources referenced by this filter.

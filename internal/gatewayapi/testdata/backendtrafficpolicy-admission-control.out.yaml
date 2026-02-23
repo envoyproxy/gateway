@@ -13,8 +13,9 @@ backendTrafficPolicies:
       successCriteria:
         http:
           httpSuccessStatus:
-          - end: 299
-            start: 200
+          - 200
+          - 201
+          - 204
       successRateThreshold: 0.95
     targetRef:
       group: gateway.networking.k8s.io
@@ -223,8 +224,9 @@ xdsIR:
             successCriteria:
               http:
                 httpSuccessStatus:
-                - end: 299
-                  start: 200
+                - 200
+                - 201
+                - 204
             successRateThreshold: 0.95
     readyListener:
       address: 0.0.0.0

@@ -31,8 +31,14 @@
           successCriteria:
             httpCriteria:
               httpSuccessStatus:
-              - end: 299
+              - end: 201
                 start: 200
+              - end: 202
+                start: 201
+              - end: 203
+                start: 202
+              - end: 205
+                start: 204
     - match:
         path: example
       name: second-route

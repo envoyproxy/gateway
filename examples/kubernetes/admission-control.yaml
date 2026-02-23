@@ -23,11 +23,12 @@ spec:
     successCriteria:
       http:
         httpSuccessStatus:
-          - start: 200
-            end: 299
+          - 200
+          - 201
+          - 204
       grpc:
         grpcSuccessStatus:
-          - 0
+          - OK
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

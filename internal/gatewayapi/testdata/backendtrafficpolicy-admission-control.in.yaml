@@ -53,5 +53,6 @@ backendTrafficPolicies:
       successCriteria:
         http:
           httpSuccessStatus:
-          - start: 200
-            end: 299
+          - 200
+          - 201
+          - 204

@@ -128,13 +128,10 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 				MaxRejectionProbability: ptr.To(0.80),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
-						HTTPSuccessStatus: []ir.HTTPStatusRange{
-							{Start: 200, End: 299},
-							{Start: 300, End: 399},
-						},
+						HTTPSuccessStatus: []int32{200, 201, 300, 301},
 					},
 					GRPC: &ir.GRPCSuccessCriteria{
-						GRPCSuccessStatus: []int32{0, 1},
+						GRPCSuccessStatus: []string{"OK", "CANCELLED"},
 					},
 				},
 			},
@@ -145,9 +142,7 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			config: &ir.AdmissionControl{
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
-						HTTPSuccessStatus: []ir.HTTPStatusRange{
-							{Start: 200, End: 299},
-						},
+						HTTPSuccessStatus: []int32{200, 201, 202},
 					},
 				},
 			},
@@ -158,7 +153,7 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			config: &ir.AdmissionControl{
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					GRPC: &ir.GRPCSuccessCriteria{
-						GRPCSuccessStatus: []int32{0},
+						GRPCSuccessStatus: []string{"OK"},
 					},
 				},
 			},
@@ -252,12 +247,10 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 		MaxRejectionProbability: ptr.To(0.75),
 		SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 			HTTP: &ir.HTTPSuccessCriteria{
-				HTTPSuccessStatus: []ir.HTTPStatusRange{
-					{Start: 200, End: 299},
-				},
+				HTTPSuccessStatus: []int32{200, 201, 202},
 			},
 			GRPC: &ir.GRPCSuccessCriteria{
-				GRPCSuccessStatus: []int32{0, 1, 2},
+				GRPCSuccessStatus: []string{"OK", "CANCELLED", "UNKNOWN"},
 			},
 		},
 	}
@@ -465,9 +458,7 @@ func TestAdmissionControlPatchRoute(t *testing.T) {
 						MaxRejectionProbability: ptr.To(0.80),
 						SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 							HTTP: &ir.HTTPSuccessCriteria{
-								HTTPSuccessStatus: []ir.HTTPStatusRange{
-									{Start: 200, End: 299},
-								},
+								HTTPSuccessStatus: []int32{200, 201, 202},
 							},
 						},
 					},

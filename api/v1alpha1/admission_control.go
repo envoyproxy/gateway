@@ -12,6 +12,7 @@ import (
 // AdmissionControl defines the admission control policy to be applied.
 // This configuration probabilistically rejects requests based on the success rate
 // of previous requests in a configurable sliding time window.
+// All fields are optional and will use Envoy's defaults when not specified.
 type AdmissionControl struct {
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	// Defaults to 60s if not specified.
@@ -73,32 +74,42 @@ type AdmissionControlSuccessCriteria struct {
 
 // HTTPSuccessCriteria defines success criteria for HTTP requests.
 type HTTPSuccessCriteria struct {
-	// HTTPSuccessStatus defines ranges of HTTP status codes that are considered successful.
-	// Each range is inclusive on both ends.
+	// HTTPSuccessStatus defines HTTP status codes that are considered successful.
 	//
 	// +optional
-	HTTPSuccessStatus []HTTPStatusRange `json:"httpSuccessStatus,omitempty"`
+	HTTPSuccessStatus []HTTPStatus `json:"httpSuccessStatus,omitempty"`
 }
 
-// HTTPStatusRange defines a range of HTTP status codes.
-type HTTPStatusRange struct {
-	// Start is the inclusive start of the status code range (100-600).
-	//
-	// +kubebuilder:validation:Minimum=100
-	// +kubebuilder:validation:Maximum=600
-	Start int32 `json:"start"`
+// GRPCSuccessCode defines gRPC status codes as defined in
+// https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+// +kubebuilder:validation:Enum=OK;CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
+type GRPCSuccessCode string
 
-	// End is the inclusive end of the status code range (100-600).
-	//
-	// +kubebuilder:validation:Minimum=100
-	// +kubebuilder:validation:Maximum=600
-	End int32 `json:"end"`
-}
+const (
+	GRPCSuccessCodeOK                 GRPCSuccessCode = "OK"
+	GRPCSuccessCodeCancelled          GRPCSuccessCode = "CANCELLED"
+	GRPCSuccessCodeUnknown            GRPCSuccessCode = "UNKNOWN"
+	GRPCSuccessCodeInvalidArgument    GRPCSuccessCode = "INVALID_ARGUMENT"
+	GRPCSuccessCodeDeadlineExceeded   GRPCSuccessCode = "DEADLINE_EXCEEDED"
+	GRPCSuccessCodeNotFound           GRPCSuccessCode = "NOT_FOUND"
+	GRPCSuccessCodeAlreadyExists      GRPCSuccessCode = "ALREADY_EXISTS"
+	GRPCSuccessCodePermissionDenied   GRPCSuccessCode = "PERMISSION_DENIED"
+	GRPCSuccessCodeResourceExhausted  GRPCSuccessCode = "RESOURCE_EXHAUSTED"
+	GRPCSuccessCodeFailedPrecondition GRPCSuccessCode = "FAILED_PRECONDITION"
+	GRPCSuccessCodeAborted            GRPCSuccessCode = "ABORTED"
+	GRPCSuccessCodeOutOfRange         GRPCSuccessCode = "OUT_OF_RANGE"
+	GRPCSuccessCodeUnimplemented      GRPCSuccessCode = "UNIMPLEMENTED"
+	GRPCSuccessCodeInternal           GRPCSuccessCode = "INTERNAL"
+	GRPCSuccessCodeUnavailable        GRPCSuccessCode = "UNAVAILABLE"
+	GRPCSuccessCodeDataLoss           GRPCSuccessCode = "DATA_LOSS"
+	GRPCSuccessCodeUnauthenticated    GRPCSuccessCode = "UNAUTHENTICATED"
+)
 
 // GRPCSuccessCriteria defines success criteria for gRPC requests.
 type GRPCSuccessCriteria struct {
 	// GRPCSuccessStatus defines gRPC status codes that are considered successful.
+	// Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
 	//
 	// +optional
-	GRPCSuccessStatus []int32 `json:"grpcSuccessStatus,omitempty"`
+	GRPCSuccessStatus []GRPCSuccessCode `json:"grpcSuccessStatus,omitempty"`
 }

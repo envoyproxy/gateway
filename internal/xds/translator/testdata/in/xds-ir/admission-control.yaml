@@ -20,8 +20,10 @@ http:
         successCriteria:
           http:
             httpSuccessStatus:
-            - start: 200
-              end: 299
+            - 200
+            - 201
+            - 202
+            - 204
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -42,8 +44,8 @@ http:
         successCriteria:
           grpc:
             grpcSuccessStatus:
-            - 0
-            - 1
+            - "OK"
+            - "CANCELLED"
     pathMatch:
       exact: "example"
     destination:
