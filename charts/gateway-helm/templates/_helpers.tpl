@@ -153,6 +153,33 @@ imagePullSecrets: {{ toYaml list }}
 
 
 {{/*
+The name of the Envoy Proxy image.
+*/}}
+{{- define "eg.proxy.image" -}}
+{{-   $imageParts := splitn "/" 2 .Values.global.images.envoy.image -}}
+{{/*    if global.imageRegistry is defined, it takes precedence always */}}
+{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
+{{-   $repositoryTag := $imageParts._1 -}}
+{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
+{{-   $repositoryName := $repositoryParts._0 -}}
+{{-   $imageTag := $repositoryParts._1 -}}
+{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- end -}}
+
+{{/*
+Pull secrets for the Envoy Proxy pods.
+*/}}
+{{- define "eg.proxy.image.pullSecrets" -}}
+{{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{ toYaml .Values.global.imagePullSecrets }}
+{{- else if .Values.global.images.envoy.pullSecrets -}}
+imagePullSecrets:
+{{ toYaml .Values.global.images.envoy.pullSecrets }}
+{{- end }}
+{{- end }}
+
+{{/*
 The default Envoy Gateway configuration.
 */}}
 {{- define "eg.default-envoy-gateway-config" -}}
@@ -179,6 +206,11 @@ provider:
       {{- end }}
     shutdownManager:
       image: {{ include "eg.image" . }}
+    {{- if .Values.global.imageRegistry }}
+    envoy:
+      image: {{ include "eg.proxy.image" . }}
+    {{- end }}
+    {{- include "eg.proxy.image.pullSecrets" . | nindent 4 }}
 {{- with .Values.config.envoyGateway.extensionApis }}
 extensionApis:
   {{- toYaml . | nindent 2 }}

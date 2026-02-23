@@ -36,6 +36,8 @@ data:
         default: info
     provider:
       kubernetes:
+        envoy:
+          image: private.registry/envoyproxy/envoy:distroless-dev
         rateLimitDeployment:
           container:
             image: private.registry/envoyproxy/ratelimit:master

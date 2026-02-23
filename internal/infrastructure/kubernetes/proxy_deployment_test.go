@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,7 +55,21 @@ func deploymentWithSelectorAndLabel(deploy *appsv1.Deployment, selector *metav1.
 	return dCopy
 }
 
-func setupCreateOrUpdateProxyDeployment(t *testing.T, gatewayNamespaceMode bool) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
+type proxyConfigOption func(cfg *config.Server)
+
+func withEnvoy(envoy *egv1a1.Envoy) proxyConfigOption {
+	return func(cfg *config.Server) {
+		cfg.EnvoyGateway.Provider.Kubernetes.Envoy = envoy
+	}
+}
+
+func withImagePullSecrets(secrets []corev1.LocalObjectReference) proxyConfigOption {
+	return func(cfg *config.Server) {
+		cfg.EnvoyGateway.Provider.Kubernetes.ImagePullSecrets = secrets
+	}
+}
+
+func setupCreateOrUpdateProxyDeployment(t *testing.T, gatewayNamespaceMode bool, opts ...proxyConfigOption) (*appsv1.Deployment, *ir.Infra, *config.Server, error) {
 	ctx := context.Background()
 	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
@@ -66,6 +81,10 @@ func setupCreateOrUpdateProxyDeployment(t *testing.T, gatewayNamespaceMode bool)
 	infra.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
 		Kind: resource.KindGatewayClass,
 		Name: testGatewayClass,
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
 	}
 
 	cli := fakeclient.NewClientBuilder().
@@ -107,6 +126,16 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	gwDeploy, gwInfra, gwCfg, err := setupCreateOrUpdateProxyDeployment(t, true)
+	require.NoError(t, err)
+
+	proxyImageDeploy, proxyImageInfra, proxyImageCfg, err := setupCreateOrUpdateProxyDeployment(t, false, withEnvoy(&egv1a1.Envoy{
+		Image: ptr.To("private.registry/envoyproxy/envoy:distroless-dev"),
+	}))
+	require.NoError(t, err)
+
+	proxyPullSecretsDeploy, proxyPullSecretsInfra, proxyPullSecretsCfg, err := setupCreateOrUpdateProxyDeployment(t, false, withImagePullSecrets([]corev1.LocalObjectReference{
+		{Name: "global-secret"},
+	}))
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -295,6 +324,18 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			in:                   gwInfra,
 			gatewayNamespaceMode: true,
 			want:                 gwDeploy,
+		},
+		{
+			name: "envoy image override",
+			cfg:  proxyImageCfg,
+			in:   proxyImageInfra,
+			want: proxyImageDeploy,
+		},
+		{
+			name: "envoy imagePullSecrets",
+			cfg:  proxyPullSecretsCfg,
+			in:   proxyPullSecretsInfra,
+			want: proxyPullSecretsDeploy,
 		},
 	}
 
