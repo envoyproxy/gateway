@@ -737,6 +737,17 @@ func TestGetCaCertFromConfigMap(t *testing.T) {
 			expected:      "fake-cert",
 		},
 		{
+			name: "get from tls.crt",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"tls.crt":       "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
 			name: "get from first key",
 			cm: &corev1.ConfigMap{
 				Data: map[string]string{
@@ -753,11 +764,21 @@ func TestGetCaCertFromConfigMap(t *testing.T) {
 			},
 			expectedFound: false,
 		},
+		{
+			name: "not found multiple keys",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"fake.crt":      "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getOrFirstFromData(tc.cm.Data, CACertKey)
+			got, found := getFirstMatchOrFirstFromData(tc.cm.Data, CACertKey, TLSCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, got)
 		})
@@ -783,6 +804,17 @@ func TestGetCaCertFromSecret(t *testing.T) {
 			expected:      "fake-cert",
 		},
 		{
+			name: "get from tls.crt",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"tls.crt":       []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
 			name: "get from first key",
 			s: &corev1.Secret{
 				Data: map[string][]byte{
@@ -799,11 +831,21 @@ func TestGetCaCertFromSecret(t *testing.T) {
 			},
 			expectedFound: false,
 		},
+		{
+			name: "not found multiple keys",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"fake.crt":      []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: false,
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, found := getOrFirstFromData(tc.s.Data, CACertKey)
+			got, found := getFirstMatchOrFirstFromData(tc.s.Data, CACertKey, TLSCertKey)
 			require.Equal(t, tc.expectedFound, found)
 			require.Equal(t, tc.expected, string(got))
 		})

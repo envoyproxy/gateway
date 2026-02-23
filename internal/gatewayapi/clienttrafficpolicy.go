@@ -862,7 +862,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		for _, caCertRef := range tlsParams.ClientValidation.CACertificateRefs {
-			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, CACertKey, resources, from)
+			caCertBytes, err := t.validateAndGetDataAtKeyInRef(caCertRef, resources, from, CACertKey)
 			if err != nil {
 				return irTLSConfig, fmt.Errorf("failed to get certificate from ref: %w", err)
 			}
@@ -892,7 +892,7 @@ func (t *Translator) buildListenerTLSParameters(
 
 		if tlsParams.ClientValidation.Crl != nil {
 			for _, crlRef := range tlsParams.ClientValidation.Crl.Refs {
-				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, CRLKey, resources, from)
+				crlBytes, err := t.validateAndGetDataAtKeyInRef(crlRef, resources, from, CRLKey)
 				if err != nil {
 					return irTLSConfig, fmt.Errorf("failed to get crl from ref: %w", err)
 				}
@@ -925,10 +925,13 @@ func (t *Translator) buildListenerTLSParameters(
 // validateAndGetDataAtKeyInRef validates the secret object reference and gets the data at the key in the secret or configmap
 func (t *Translator) validateAndGetDataAtKeyInRef(
 	ref gwapiv1.SecretObjectReference,
-	key string,
 	resources *resource.Resources,
 	from crossNamespaceFrom,
+	keys ...string,
 ) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("unsupported call with no key")
+	}
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
@@ -937,9 +940,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		secretCertBytes, ok := getOrFirstFromData(secret.Data, key)
+		secretCertBytes, ok := getFirstMatchOrFirstFromData(secret.Data, keys...)
 		if !ok || len(secretCertBytes) == 0 {
-			return nil, fmt.Errorf("ref secret [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref secret [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
@@ -948,9 +951,9 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 			return nil, err
 		}
 
-		configMapData, ok := getOrFirstFromData(configMap.Data, key)
+		configMapData, ok := getFirstMatchOrFirstFromData(configMap.Data, keys...)
 		if !ok || len(configMapData) == 0 {
-			return nil, fmt.Errorf("ref configmap [%s] has no key %s and more than one entry", ref.Name, key)
+			return nil, fmt.Errorf("ref configmap [%s] has none of the expected keys %v and more than one entry", ref.Name, keys)
 		}
 		return []byte(configMapData), nil
 	case resource.KindClusterTrustBundle:
