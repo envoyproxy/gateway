@@ -90,3 +90,8 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 
 {{% /tab %}}
 {{< /tabpane >}}
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)

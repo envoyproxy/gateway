@@ -123,6 +123,17 @@ Delete the Gateway API CRDs and Envoy Gateway:
 helm uninstall eg -n envoy-gateway-system
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)
+
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

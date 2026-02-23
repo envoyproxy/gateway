@@ -127,6 +127,10 @@ Error distribution:
 
 With the new connection limit, only 5 of 10 connections are established, and so only 50 requests succeed.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
 
 [Client Traffic Policy]: ../../../api/extension_types#clienttrafficpolicy
 [Hey project]: https://github.com/rakyll/hey

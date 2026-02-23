@@ -294,8 +294,13 @@ curl -sS -H "Host: bar.example.com" -H "Authorization: Bearer $TOKEN" "http://${
 ```
 The request should return the pod name, for example `bar-backend-6688b8944c-s8htr`
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/

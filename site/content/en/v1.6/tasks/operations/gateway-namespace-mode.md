@@ -265,3 +265,8 @@ curl --header "Host: www.team-b.com" http://$GATEWAY_HOST_B:8081/example
  "service": "",
  "pod": "team-b-backend-966b5f47c-d6jwj"
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)

@@ -568,3 +568,8 @@ Checkout the [Developer Guide](../../../contributions/develop) to get involved i
 [backend-routing]: ../traffic/backend
 [backend-tls]: ../backend-tls
 [BackendSettings]: ../../../api/extension_types/#clustersettings
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../api/gateway_api/httproute)

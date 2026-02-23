@@ -334,6 +334,11 @@ version and cipher suite used for the connection.
  }
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTLSPolicy API reference](../../api/extension_types#backendtlspolicy)
+
 [Backend Routing]: ../traffic/backend/#enable-backend
 [Backend]: ../../../api/extension_types#backend
 [EnvoyGateway]: ../../../api/extension_types#envoygateway

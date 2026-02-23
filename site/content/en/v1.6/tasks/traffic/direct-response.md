@@ -203,3 +203,8 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/value-ref
 * Connection #0 to host 127.0.0.1 left intact
 {"error": "Internal Server Error"}
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)

@@ -228,6 +228,11 @@ marketing   backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
 product     backend   gateway/eg   ResolvedRefs   True      ResolvedRefs
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
+
 [Multi-tenancy]: ../deployment-mode#multi-tenancy
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 

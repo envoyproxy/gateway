@@ -596,6 +596,11 @@ $ curl -vvv "http://${GATEWAY_HOST}/get" \
 ...
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpheaderfilter
