@@ -310,9 +310,11 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: composite-gateway
@@ -352,9 +354,11 @@ xdsIR:
         name: grpcroute/default/route-core-grpc/rule/0/match/-1/*
     - address: 0.0.0.0
       externalPort: 8081
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: composite-gateway
@@ -394,9 +398,11 @@ xdsIR:
         name: grpcroute/default/route-grpc-one/rule/0/match/-1/*
     - address: 0.0.0.0
       externalPort: 8082
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: composite-gateway

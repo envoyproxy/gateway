@@ -124,9 +124,11 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
