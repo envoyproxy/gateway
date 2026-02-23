@@ -270,6 +270,54 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
                 type: object
+              decompressor:
+                description: |-
+                  The decompressor config for the http streams.
+                  This enables decompression of compressed requests from clients and/or compressed responses from backends.
+                  Supports HTTP and gRPC traffic.
+                items:
+                  description: |-
+                    Decompressor defines the config for enabling a decompressor.
+                    This can help decompress compressed requests from clients and/or compressed responses from backends.
+                  properties:
+                    brotli:
+                      description: The configuration for Brotli decompressor.
+                      type: object
+                    gzip:
+                      description: The configuration for GZIP decompressor.
+                      type: object
+                    type:
+                      allOf:
+                      - enum:
+                        - Gzip
+                        - Brotli
+                        - Zstd
+                      - enum:
+                        - Gzip
+                        - Brotli
+                        - Zstd
+                      description: Type defines the decompressor type to use.
+                      type: string
+                    zstd:
+                      description: The configuration for Zstd decompressor.
+                      type: object
+                  required:
+                  - type
+                  type: object
+                  x-kubernetes-validations:
+                  - message: If decompressor type is Gzip, brotli and zstd fields
+                      must not be set.
+                    rule: 'self.type == ''Gzip'' ? !has(self.brotli) && !has(self.zstd)
+                      : true'
+                  - message: If decompressor type is Brotli, gzip and zstd fields
+                      must not be set.
+                    rule: 'self.type == ''Brotli'' ? !has(self.gzip) && !has(self.zstd)
+                      : true'
+                  - message: If decompressor type is Zstd, gzip and brotli fields
+                      must not be set.
+                    rule: 'self.type == ''Zstd'' ? !has(self.gzip) && !has(self.brotli)
+                      : true'
+                type: array
               dns:
                 description: DNS includes dns resolution settings.
                 properties:

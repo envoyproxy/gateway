@@ -931,6 +931,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	}
 
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
+	dp := buildDecompressor(policy.Spec.Decompressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
 
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
@@ -951,6 +952,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		ResponseOverride:  ro,
 		RequestBuffer:     rb,
 		Compression:       cp,
+		Decompressor:      dp,
 		HTTPUpgrade:       httpUpgrade,
 		Telemetry:         buildBackendTelemetry(policy.Spec.Telemetry),
 	}, errs
@@ -1748,6 +1750,20 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		result = append(result, &irCompression)
 	}
 
+	return result
+}
+
+func buildDecompressor(decompressor []*egv1a1.Decompressor) []*ir.Decompressor {
+	if len(decompressor) == 0 {
+		return nil
+	}
+
+	result := make([]*ir.Decompressor, 0, len(decompressor))
+	for _, d := range decompressor {
+		result = append(result, &ir.Decompressor{
+			Type: d.Type,
+		})
+	}
 	return result
 }
 

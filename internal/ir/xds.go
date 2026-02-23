@@ -960,6 +960,13 @@ type Compression struct {
 	MinContentLength *uint32 `json:"minContentLength,omitempty" yaml:"minContentLength,omitempty"`
 }
 
+// Decompressor holds the configuration for the HTTP decompressor.
+// +k8s:deepcopy-gen=true
+type Decompressor struct {
+	// Type of decompressor to be used.
+	Type egv1a1.DecompressorType `json:"type" yaml:"type"`
+}
+
 // TrafficFeatures holds the information associated with the Backend Traffic Policy.
 // +k8s:deepcopy-gen=true
 type TrafficFeatures struct {
@@ -993,6 +1000,8 @@ type TrafficFeatures struct {
 	ResponseOverride *ResponseOverride `json:"responseOverride,omitempty" yaml:"responseOverride,omitempty"`
 	// Compression settings for HTTP Response
 	Compression []*Compression `json:"compression,omitempty" yaml:"compression,omitempty"`
+	// Decompressor settings for HTTP Request and Response
+	Decompressor []*Decompressor `json:"decompressor,omitempty" yaml:"decompressor,omitempty"`
 	// HTTPUpgrade defines the schema for upgrading the HTTP protocol.
 	HTTPUpgrade []HTTPUpgradeConfig `json:"httpUpgrade,omitempty" yaml:"httpUpgrade,omitempty"`
 	// Telemetry defines the schema for telemetry configuration.
