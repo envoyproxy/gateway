@@ -213,7 +213,7 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 			createXListenerSetParent(suite.ControllerName, "xlistener-set-tcp", "extra-tcp"),
 		}
 
-		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
+		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, []bool{false})
 
 		expected := http.ExpectedResponse{
 			Request: http.Request{
@@ -249,7 +249,7 @@ var XListenerSetUDPTest = suite.ConformanceTest{
 			createXListenerSetParent(suite.ControllerName, "xlistener-set-udp", "extra-udp"),
 		}
 
-		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
+		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, []bool{false})
 
 		domain := "foo.bar.com."
 		msg := new(dns.Msg)
@@ -384,7 +384,7 @@ func TLSRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig *
 		}
 
 		actual = route.Status.Parents
-		return parentsForRouteMatch(t, routeName, parents, actual, false), nil
+		return parentsForRouteMatch(t, routeName, parents, actual, []bool{false}), nil
 	})
 	require.NoErrorf(t, waitErr, "error waiting for TLSRoute to have parents matching expectations")
 }
