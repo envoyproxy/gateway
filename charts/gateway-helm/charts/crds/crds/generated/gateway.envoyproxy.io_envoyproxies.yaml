@@ -533,7 +533,6 @@ spec:
                           asnDbPath:
                             description: ASNDBPath is the path to the ASN database
                               (.mmdb).
-                            pattern: ^.*\\.mmdb$
                             type: string
                           cityDbPath:
                             description: CityDBPath is the path to the City database

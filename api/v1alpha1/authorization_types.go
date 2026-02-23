@@ -142,29 +142,40 @@ type Principal struct {
 //
 // +kubebuilder:validation:XValidation:rule="has(self.country) || has(self.region) || has(self.city) || has(self.asn) || has(self.isp) || has(self.anonymous)",message="at least one of country, region, city, asn, isp, or anonymous must be specified"
 type GeoLocation struct {
-	// Country is the country associated with the client IP.
+	// Country is the country ISO code associated with the client IP.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=2
+	// +kubebuilder:validation:Pattern=`^[A-Za-z]{2}$`
 	Country *string `json:"country,omitempty"`
 
-	// Region is the region associated with the client IP.
+	// Region is the region ISO code associated with the client IP.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=16
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9-]+$`
 	Region *string `json:"region,omitempty"`
 
 	// City is the city associated with the client IP.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
 	City *string `json:"city,omitempty"`
 
 	// ASN is the autonomous system number associated with the client IP.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=1
 	ASN *uint32 `json:"asn,omitempty"`
 
 	// ISP is the internet service provider associated with the client IP.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
 	ISP *string `json:"isp,omitempty"`
 
 	// Anonymous matches anonymous network detection signals.

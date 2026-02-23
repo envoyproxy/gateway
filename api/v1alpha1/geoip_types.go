@@ -61,42 +61,11 @@ type GeoIPMaxMind struct {
 	AnonymousIPDBPath *string `json:"anonymousIpDbPath,omitempty"`
 }
 
-// GeoIPRegion selects a region within a country.
-// +kubebuilder:validation:XValidation:rule="has(self.countryCode) && has(self.regionCode)",message="countryCode and regionCode must both be set"
-type GeoIPRegion struct {
-	// CountryCode is the ISO 3166-1 alpha-2 country code.
-	//
-	// +kubebuilder:validation:Pattern=`^[A-Z]{2}$`
-	CountryCode string `json:"countryCode"`
-
-	// RegionCode is the ISO 3166-2 subdivision code (without country prefix).
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=32
-	RegionCode string `json:"regionCode"`
-}
-
-// GeoIPCity selects a city, optionally scoped to a region.
-// +kubebuilder:validation:XValidation:rule="has(self.countryCode) && has(self.cityName)",message="countryCode and cityName must be set"
-type GeoIPCity struct {
-	// CountryCode is the ISO 3166-1 alpha-2 country code.
-	//
-	// +kubebuilder:validation:Pattern=`^[A-Z]{2}$`
-	CountryCode string `json:"countryCode"`
-
-	// RegionCode optionally scopes the city to a subdivision (ISO 3166-2 without country prefix).
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=32
-	RegionCode *string `json:"regionCode,omitempty"`
-
-	// CityName is the city name.
-	//
-	// +kubebuilder:validation:MinLength=1
-	CityName string `json:"cityName"`
-}
-
 // GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+// If multiple fields are specified, all specified fields must match.
+// These signals are not mutually exclusive. A single IP may satisfy multiple
+// flags at the same time (for example, a commercial VPN exit IP may also be
+// classified as a public proxy, so both IsVPN and IsProxy can be true).
 //
 // +kubebuilder:validation:XValidation:rule="has(self.isAnonymous) || has(self.isVPN) || has(self.isHosting) || has(self.isTor) || has(self.isProxy)",message="at least one of isAnonymous, isVPN, isHosting, isTor, or isProxy must be specified"
 type GeoIPAnonymousMatch struct {

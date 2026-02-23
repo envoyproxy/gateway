@@ -2371,6 +2371,10 @@ _Appears in:_
 
 
 GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+If multiple fields are specified, all specified fields must match.
+These signals are not mutually exclusive. A single IP may satisfy multiple
+flags at the same time (for example, a commercial VPN exit IP may also be
+classified as a public proxy, so both IsVPN and IsProxy can be true).
 
 _Appears in:_
 - [GeoLocation](#geolocation)
@@ -2382,8 +2386,6 @@ _Appears in:_
 | `isHosting` | _boolean_ |  false  |  | IsHosting matches whether the client IP belongs to a hosting provider. |
 | `isTor` | _boolean_ |  false  |  | IsTor matches whether the client IP belongs to a Tor exit node. |
 | `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
-
-
 
 
 #### GeoIPMaxMind
@@ -2434,8 +2436,6 @@ _Appears in:_
 | `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
 
 
-
-
 #### GeoLocation
 
 
@@ -2447,8 +2447,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `country` | _string_ |  false  |  | Country is the country associated with the client IP. |
-| `region` | _string_ |  false  |  | Region is the region associated with the client IP. |
+| `country` | _string_ |  false  |  | Country is the country ISO code associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region ISO code associated with the client IP. |
 | `city` | _string_ |  false  |  | City is the city associated with the client IP. |
 | `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
 | `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |

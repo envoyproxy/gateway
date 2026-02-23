@@ -30872,7 +30872,6 @@ spec:
                           asnDbPath:
                             description: ASNDBPath is the path to the ASN database
                               (.mmdb).
-                            pattern: ^.*\\.mmdb$
                             type: string
                           cityDbPath:
                             description: CityDBPath is the path to the City database
@@ -48158,115 +48157,85 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
-                            geoLocation:
-                              description: GeoLocation authorizes the request based
-                                on geolocation metadata derived from the client IP.
-                              properties:
-                                anonymous:
-                                  description: Anonymous matches anonymous network
-                                    detection signals.
-                                  properties:
-                                    isAnonymous:
-                                      description: IsAnonymous matches whether the
-                                        client IP is considered anonymous.
-                                      type: boolean
-                                    isHosting:
-                                      description: IsHosting matches whether the client
-                                        IP belongs to a hosting provider.
-                                      type: boolean
-                                    isProxy:
-                                      description: IsProxy matches whether the client
-                                        IP belongs to a public proxy.
-                                      type: boolean
-                                    isTor:
-                                      description: IsTor matches whether the client
-                                        IP belongs to a Tor exit node.
-                                      type: boolean
-                                    isVPN:
-                                      description: IsVPN matches whether the client
-                                        IP is detected as VPN.
-                                      type: boolean
-                                  type: object
-                                asns:
-                                  description: ASNs matches the autonomous system
-                                    numbers associated with the client IP.
-                                  items:
+                            geoLocations:
+                              description: |-
+                                GeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the GeoLocation entries must match for the rule to match.
+                              items:
+                                description: GeoLocation specifies geolocation-based
+                                  match criteria for authorization.
+                                properties:
+                                  anonymous:
+                                    description: Anonymous matches anonymous network
+                                      detection signals.
+                                    properties:
+                                      isAnonymous:
+                                        description: IsAnonymous matches whether the
+                                          client IP is considered anonymous.
+                                        type: boolean
+                                      isHosting:
+                                        description: IsHosting matches whether the
+                                          client IP belongs to a hosting provider.
+                                        type: boolean
+                                      isProxy:
+                                        description: IsProxy matches whether the client
+                                          IP belongs to a public proxy.
+                                        type: boolean
+                                      isTor:
+                                        description: IsTor matches whether the client
+                                          IP belongs to a Tor exit node.
+                                        type: boolean
+                                      isVPN:
+                                        description: IsVPN matches whether the client
+                                          IP is detected as VPN.
+                                        type: boolean
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of isAnonymous, isVPN,
+                                        isHosting, isTor, or isProxy must be specified
+                                      rule: has(self.isAnonymous) || has(self.isVPN)
+                                        || has(self.isHosting) || has(self.isTor)
+                                        || has(self.isProxy)
+                                  asn:
+                                    description: ASN is the autonomous system number
+                                      associated with the client IP.
                                     format: int32
+                                    minimum: 1
                                     type: integer
-                                  minItems: 1
-                                  type: array
-                                cities:
-                                  description: Cities refines matching to specific
-                                    city names.
-                                  items:
-                                    description: GeoIPCity selects a city, optionally
-                                      scoped to a region.
-                                    properties:
-                                      cityName:
-                                        description: CityName is the city name.
-                                        minLength: 1
-                                        type: string
-                                      countryCode:
-                                        description: CountryCode is the ISO 3166-1
-                                          alpha-2 country code.
-                                        pattern: ^[A-Z]{2}$
-                                        type: string
-                                      regionCode:
-                                        description: RegionCode optionally scopes
-                                          the city to a subdivision (ISO 3166-2 without
-                                          country prefix).
-                                        maxLength: 32
-                                        type: string
-                                    required:
-                                    - cityName
-                                    - countryCode
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: countryCode and cityName must be set
-                                      rule: has(self.countryCode) && has(self.cityName)
-                                  minItems: 1
-                                  type: array
-                                countries:
-                                  description: Countries is a list of ISO 3166-1 alpha-2
-                                    country codes.
-                                  items:
+                                  city:
+                                    description: City is the city associated with
+                                      the client IP.
+                                    maxLength: 128
+                                    minLength: 1
                                     type: string
-                                  minItems: 1
-                                  type: array
-                                regions:
-                                  description: Regions refines matching to ISO 3166-2
-                                    subdivisions.
-                                  items:
-                                    description: GeoIPRegion selects a region within
-                                      a country.
-                                    properties:
-                                      countryCode:
-                                        description: CountryCode is the ISO 3166-1
-                                          alpha-2 country code.
-                                        pattern: ^[A-Z]{2}$
-                                        type: string
-                                      regionCode:
-                                        description: RegionCode is the ISO 3166-2
-                                          subdivision code (without country prefix).
-                                        maxLength: 32
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - countryCode
-                                    - regionCode
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: countryCode and regionCode must both
-                                        be set
-                                      rule: has(self.countryCode) && has(self.regionCode)
-                                  minItems: 1
-                                  type: array
-                              type: object
-                              x-kubernetes-validations:
-                              - message: at least one of countries, regions, cities,
-                                  asns, or anonymous must be specified
-                                rule: (has(self.countries) || has(self.regions) ||
-                                  has(self.cities) || has(self.asns) || has(self.anonymous))
+                                  country:
+                                    description: Country is the country ISO code associated
+                                      with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
+                                    type: string
+                                  isp:
+                                    description: ISP is the internet service provider
+                                      associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
+                                    type: string
+                                  region:
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: at least one of country, region, city,
+                                    asn, isp, or anonymous must be specified
+                                  rule: has(self.country) || has(self.region) || has(self.city)
+                                    || has(self.asn) || has(self.isp) || has(self.anonymous)
+                              minItems: 1
+                              type: array
                             headers:
                               description: |-
                                 Headers authorize the request based on user identity extracted from custom headers.
@@ -48410,9 +48379,9 @@ spec:
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, headers, or
-                              geoLocation must be specified
+                              geoLocations must be specified
                             rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
-                              || has(self.geoLocation))
+                              || has(self.geoLocations))
                       required:
                       - action
                       - principal
