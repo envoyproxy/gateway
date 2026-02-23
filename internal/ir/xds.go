@@ -999,6 +999,8 @@ type TrafficFeatures struct {
 	Telemetry *BackendTelemetry `json:"telemetry,omitempty" yaml:"telemetry,omitempty"`
 	// RequestBuffer defines the schema for enabling buffered requests
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty" yaml:"requestBuffer,omitempty"`
+	// Transform defines the schema for HTTP header and body transformations.
+	Transform *HTTPTransform `json:"transform,omitempty" yaml:"transform,omitempty"`
 }
 
 // BackendTelemetry defines the telemetry configuration for the backend.
@@ -3528,4 +3530,47 @@ const (
 	RandomLoadBalancer LoadBalancerType = "Random"
 	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+)
+
+// HTTPTransform defines the configuration for HTTP header and body transformations.
+// +k8s:deepcopy-gen=true
+type HTTPTransform struct {
+	Name                   string              `json:"name" yaml:"name"`
+	RequestTransformation  *HTTPTransformation `json:"requestTransformation,omitempty" yaml:"requestTransformation,omitempty"`
+	ResponseTransformation *HTTPTransformation `json:"responseTransformation,omitempty" yaml:"responseTransformation,omitempty"`
+}
+
+// HTTPTransformation defines header and body transformations.
+// +k8s:deepcopy-gen=true
+type HTTPTransformation struct {
+	SetHeaders    []TransformHeader      `json:"setHeaders,omitempty" yaml:"setHeaders,omitempty"`
+	AddHeaders    []TransformHeader      `json:"addHeaders,omitempty" yaml:"addHeaders,omitempty"`
+	RemoveHeaders []string               `json:"removeHeaders,omitempty" yaml:"removeHeaders,omitempty"`
+	Body          *HTTPBodyTransformation `json:"body,omitempty" yaml:"body,omitempty"`
+}
+
+// TransformHeader defines a header name-value pair for the transform filter.
+// +k8s:deepcopy-gen=true
+type TransformHeader struct {
+	Name  string `json:"name" yaml:"name"`
+	Value string `json:"value" yaml:"value"`
+}
+
+// HTTPBodyTransformation defines body transformation configuration.
+// +k8s:deepcopy-gen=true
+type HTTPBodyTransformation struct {
+	// FormatString is a text format template.
+	FormatString *string `json:"formatString,omitempty" yaml:"formatString,omitempty"`
+	// JSONBody is a raw JSON template for body transformation.
+	JSONBody []byte `json:"jsonBody,omitempty" yaml:"jsonBody,omitempty"`
+	// Action is the transform action (Merge or Replace).
+	Action BodyTransformAction `json:"action" yaml:"action"`
+}
+
+// BodyTransformAction specifies the action to take with the transformed body.
+type BodyTransformAction string
+
+const (
+	BodyTransformActionMerge   BodyTransformAction = "Merge"
+	BodyTransformActionReplace BodyTransformAction = "Replace"
 )
