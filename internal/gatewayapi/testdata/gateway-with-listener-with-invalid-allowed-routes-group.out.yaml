@@ -31,7 +31,6 @@ gateways:
         status: "False"
         type: Programmed
       name: http
-      supportedKinds: []
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute

@@ -71,9 +71,7 @@ gateways:
       protocol: TLS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
     - allowedRoutes:

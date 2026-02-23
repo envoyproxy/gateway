@@ -16,7 +16,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -176,7 +175,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		message.HandleSubscription(r.log,
 			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.TLSRouteStatusMessageName},
 			r.subscriptions.tlsRouteStatuses,
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
+			func(update message.Update[types.NamespacedName, *gwapiv1.TLSRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -199,7 +198,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,
-							Status: gwapiv1a2.TLSRouteStatus{
+							Status: gwapiv1.TLSRouteStatus{
 								RouteStatus: gwapiv1.RouteStatus{
 									Parents: mergeRouteParentStatus(t.Namespace, t.Status.Parents, valCopy.Parents),
 								},
@@ -297,20 +296,20 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 		r.log.Info("udpRoute status subscriber shutting down")
 	}()
 
-	// XListenerSet object status updater
+	// ListenerSet object status updater
 	go func() {
 		message.HandleSubscription(r.log,
-			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.XListenerSetStatusMessageName},
-			r.subscriptions.xListenerSetStatuses,
-			func(update message.Update[types.NamespacedName, *gwapixv1a1.ListenerSetStatus], errChan chan error) {
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.ListenerSetStatusMessageName},
+			r.subscriptions.listenerSetStatuses,
+			func(update message.Update[types.NamespacedName, *gwapiv1.ListenerSetStatus], errChan chan error) {
 				if update.Delete {
 					return
 				}
 				r.statusUpdater.Send(Update{
 					NamespacedName: update.Key,
-					Resource:       new(gwapixv1a1.XListenerSet),
+					Resource:       new(gwapiv1.ListenerSet),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						xls, ok := obj.(*gwapixv1a1.XListenerSet)
+						xls, ok := obj.(*gwapiv1.ListenerSet)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -321,7 +320,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						for i := range statusCopy.Listeners {
 							setLastTransitionTimeInConditions(statusCopy.Listeners[i].Conditions, metav1.Now())
 						}
-						return &gwapixv1a1.XListenerSet{
+						return &gwapiv1.ListenerSet{
 							TypeMeta:   xls.TypeMeta,
 							ObjectMeta: xls.ObjectMeta,
 							Spec:       xls.Spec,
@@ -331,7 +330,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				})
 			},
 		)
-		r.log.Info("xListenerSet status subscriber shutting down")
+		r.log.Info("listenerSet status subscriber shutting down")
 	}()
 
 	// EnvoyPatchPolicy object status updater

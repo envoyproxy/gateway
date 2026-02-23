@@ -29,7 +29,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -1806,13 +1805,13 @@ func TestProcessBackendRefs(t *testing.T) {
 	}
 }
 
-func TestProcessXListenerSets(t *testing.T) {
+func TestProcessListenerSets(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	scheme := envoygateway.GetScheme()
 
 	testCases := []struct {
 		name             string
-		xls              *gwapixv1a1.XListenerSet
+		xls              *gwapiv1.ListenerSet
 		secret           *corev1.Secret
 		referenceGrant   *gwapiv1b1.ReferenceGrant
 		gatewayNamespace string
@@ -1821,22 +1820,22 @@ func TestProcessXListenerSets(t *testing.T) {
 	}{
 		{
 			name: "matching gateway with TLS secret and XLS in same namespace",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "default",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("default")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
@@ -1859,22 +1858,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS in different namespace",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1898,22 +1897,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces with valid ReferenceGrant",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("https"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8443),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("https"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8443),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1938,8 +1937,8 @@ func TestProcessXListenerSets(t *testing.T) {
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
-							Group:     gwapiv1.Group(gwapixv1a1.GroupName),
-							Kind:      gwapiv1.Kind(resource.KindXListenerSet),
+							Group:     gwapiv1.Group(gwapiv1.GroupName),
+							Kind:      gwapiv1.Kind(resource.KindListenerSet),
 							Namespace: gwapiv1.Namespace("xls"),
 						},
 					},
@@ -1958,22 +1957,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("https"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8443),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("https"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8443),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1997,22 +1996,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "non-matching gateway",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "default",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("other-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("other-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("default")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
@@ -2041,7 +2040,7 @@ func TestProcessXListenerSets(t *testing.T) {
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objs...).
-				WithIndex(&gwapixv1a1.XListenerSet{}, gatewayXListenerSetIndex, gatewayXListenerSetIndexFunc).
+				WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
 				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 				Build()
 
@@ -2053,14 +2052,14 @@ func TestProcessXListenerSets(t *testing.T) {
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			gatewayNamespaceName := tc.gatewayNamespace + "/test-gateway"
-			err := r.processXListenerSets(
+			err := r.processListenerSets(
 				context.Background(),
 				gatewayNamespaceName,
 				resourceMap,
 				resourceTree)
 			require.NoError(t, err)
 
-			require.Len(t, resourceTree.XListenerSets, tc.expectXLSCount)
+			require.Len(t, resourceTree.ListenerSets, tc.expectXLSCount)
 			if tc.expectSecretRef {
 				require.Contains(t, resourceTree.Secrets, tc.secret)
 			}

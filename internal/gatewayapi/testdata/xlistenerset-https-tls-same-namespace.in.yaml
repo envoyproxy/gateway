@@ -30,9 +30,9 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: xls
     name: https-xls
@@ -62,8 +62,8 @@ httpRoutes:
     name: route-extra-https
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: xls
       name: https-xls
       sectionName: extra-https-same-ns

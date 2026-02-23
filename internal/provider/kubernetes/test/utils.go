@@ -209,14 +209,14 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 			Namespace: nsName.Namespace,
 			Name:      nsName.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1.TLSRouteSpec{
 			Hostnames: []gwapiv1a3.Hostname{"example.com"},
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{
 					{Name: gwapiv1.ObjectName(parent)},
 				},
 			},
-			Rules: []gwapiv1a2.TLSRouteRule{
+			Rules: []gwapiv1.TLSRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{

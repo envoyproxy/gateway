@@ -34,7 +34,6 @@ gateways:
         status: "False"
         type: Programmed
       name: tls
-      supportedKinds: []
 infraIR:
   envoy-gateway/gateway-1:
     proxy:

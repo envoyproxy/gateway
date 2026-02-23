@@ -36,9 +36,9 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: cross-allowed
     name: cross-namespace-allowed
@@ -53,8 +53,8 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: cross-allowed
     name: cross-namespace-same
@@ -69,8 +69,8 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: Same
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: cross-denied
     name: cross-namespace-denied
@@ -93,8 +93,8 @@ httpRoutes:
     name: route-cross-http-allowed
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: cross-allowed
       name: cross-namespace-allowed
       sectionName: cross-http-allowed
@@ -109,8 +109,8 @@ httpRoutes:
     name: route-same-namespace
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: cross-allowed
       name: cross-namespace-same
       sectionName: cross-http-same
@@ -126,8 +126,8 @@ httpRoutes:
     name: route-cross-http-denied
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: cross-denied
       name: cross-namespace-denied
       sectionName: cross-http-denied

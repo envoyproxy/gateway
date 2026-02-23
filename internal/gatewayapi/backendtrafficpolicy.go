@@ -847,7 +847,7 @@ func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolic
 		return routePolicy, nil
 	}
 
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	return utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
