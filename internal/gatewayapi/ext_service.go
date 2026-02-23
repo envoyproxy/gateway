@@ -156,6 +156,7 @@ func (t *Translator) processExtServiceDestination(
 		},
 		resources,
 		envoyProxy,
+		nil, // no gateway context for ext service
 	)
 	if err != nil {
 		return nil, err

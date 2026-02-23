@@ -1843,9 +1843,11 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	}
 
 	var envoyProxy *egv1a1.EnvoyProxy
+	var gateway *gwapiv1.Gateway
 	gatewayCtx := GetRouteParentContext(route, *parentRef.ParentReference, t.GatewayControllerName).GetGateway()
 	if gatewayCtx != nil {
 		envoyProxy = gatewayCtx.envoyProxy
+		gateway = gatewayCtx.Gateway
 	}
 
 	protocol := inspectAppProtocolByRouteKind(routeType)
@@ -1864,6 +1866,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		},
 		resources,
 		envoyProxy,
+		gateway,
 	)
 	if tlsErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
