@@ -32,6 +32,10 @@ var RetryTest = suite.ConformanceTest{
 	Description: "Test that the BackendTrafficPolicy API implementation supports retry",
 	Manifests:   []string{"testdata/retry.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if XDSNameSchemeV2() {
+			t.Skip("cluster name format changed")
+		}
+
 		promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
 		require.NoError(t, err)
 

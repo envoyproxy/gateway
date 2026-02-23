@@ -464,11 +464,21 @@ func irUDPRouteName(route RouteContext) string {
 	return irTCPRouteName(route)
 }
 
-func irRouteDestinationName(route RouteContext, ruleIdx int) string {
+// irRouteDestinationName returns the name for a route destination in the IR.
+// The format of the name depends on the xdsNameSchemeV2 flag:
+//   - If xdsNameSchemeV2 is true, the name will be "{routePrefix}rule/{ruleIdx}/backend/0"
+//     this will avoid naming changes for issue like https://github.com/envoyproxy/gateway/issues/6287.
+//   - If xdsNameSchemeV2 is false, the name will be "{routePrefix}rule/{ruleIdx}"
+func irRouteDestinationName(xdsNameSchemeV2 bool, route RouteContext, ruleIdx int) string {
+	if xdsNameSchemeV2 {
+		return fmt.Sprintf("%srule/%d/backend/0", irRoutePrefix(route), ruleIdx)
+	}
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
 func irDestinationSettingName(destName string, backendIdx int) string {
+	// Trim the "/backend/0" suffix if it exists to avoid duplication when appending the backend index
+	destName = strings.TrimSuffix(destName, "/backend/0")
 	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
 }
 

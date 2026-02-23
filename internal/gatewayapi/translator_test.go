@@ -56,6 +56,7 @@ func TestTranslate(t *testing.T) {
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
+		XDSNameSchemeV2                 bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -83,6 +84,10 @@ func TestTranslate(t *testing.T) {
 			name:                            "envoyextensionpolicy-lua-feature-disabled",
 			LuaEnvoyExtensionPolicyDisabled: true,
 		},
+		{
+			name:            "xds-name-scheme-v2",
+			XDSNameSchemeV2: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -107,6 +112,7 @@ func TestTranslate(t *testing.T) {
 			gatewayNamespaceMode := false
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
+			xdsNameSchemeV2 := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -115,6 +121,7 @@ func TestTranslate(t *testing.T) {
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
+					xdsNameSchemeV2 = config.XDSNameSchemeV2
 				}
 			}
 
@@ -131,6 +138,7 @@ func TestTranslate(t *testing.T) {
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				XDSNameSchemeV2:                 xdsNameSchemeV2,
 			}
 
 			// Add common test fixtures

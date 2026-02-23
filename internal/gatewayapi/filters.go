@@ -1039,7 +1039,7 @@ func (t *Translator) processRequestMirrorFilter(
 			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
 	}
 
-	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
+	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(t.XDSNameSchemeV2, filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 	if err != nil {

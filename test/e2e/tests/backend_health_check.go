@@ -39,6 +39,9 @@ var BackendHealthCheckActiveHTTPTest = suite.ConformanceTest{
 	Description: "Resource with BackendHealthCheckActiveHTTP enabled",
 	Manifests:   []string{"testdata/backend-health-check-active-http.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if XDSNameSchemeV2() {
+			t.Skip("cluster name format changed")
+		}
 		t.Run("active http", func(t *testing.T) {
 			ctx := context.Background()
 			ns := "gateway-conformance-infra"
@@ -152,6 +155,9 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 	Description: "Test backend health check with override configuration",
 	Manifests:   []string{"testdata/backend-health-check-with-override.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		if XDSNameSchemeV2() {
+			t.Skip("cluster name format changed")
+		}
 		ns := "gateway-conformance-infra"
 		withOverrideRouteNN := types.NamespacedName{Name: "httproute-with-health-check-override", Namespace: ns}
 		withoutOverrideRouteNN := types.NamespacedName{Name: "httproute-without-health-check-override", Namespace: ns}
