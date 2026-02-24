@@ -4,7 +4,7 @@ date: Pending
 breaking changes: |
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. Existing configurations including the template syntax (%) will be interpolated.
   The `0s` timeout in SecurityPolicy is now treated as infinite timeout instead of immediate timeout.
-  `SamplingFraction` in EnvoyProxy will result `[0, 100]` instead of `[0, 1]`, `numerator: 100` will result 100% sampling rate.
+  `SamplingFraction` behavior changed from raw fraction to percentage ratio. This will lead to 100x more sampling than before. E.g. `numerator: 100` used to result in 1% sampling rate, now will result in 100% sampling.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
