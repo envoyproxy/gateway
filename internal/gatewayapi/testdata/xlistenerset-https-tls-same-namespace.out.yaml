@@ -52,8 +52,8 @@ httpRoutes:
     namespace: default
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       name: https-xls
       namespace: xls
       sectionName: extra-https-same-ns
@@ -76,8 +76,8 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        group: gateway.networking.x-k8s.io
-        kind: XListenerSet
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
         name: https-xls
         namespace: xls
         sectionName: extra-https-same-ns
@@ -106,9 +106,9 @@ infraIR:
           name: envoy-gateway-class
       name: gateway/composite-gateway
       namespace: envoy-gateway-system
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     name: https-xls
     namespace: xls
@@ -128,8 +128,6 @@ xListenerSets:
           namespace: xls
         mode: Terminate
     parentRef:
-      group: null
-      kind: null
       name: composite-gateway
       namespace: gateway
   status:
@@ -163,7 +161,6 @@ xListenerSets:
         status: "True"
         type: ResolvedRefs
       name: extra-https-same-ns
-      port: 8443
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
