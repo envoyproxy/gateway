@@ -985,7 +985,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a3.TLSRouteSpec{
+				Spec: gwapiv1.TLSRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
 							{
@@ -994,7 +994,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 						},
 					},
 					Hostnames: []gwapiv1a2.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1a2.TLSRouteRule{
+					Rules: []gwapiv1.TLSRouteRule{
 						{
 							BackendRefs: []gwapiv1a2.BackendRef{
 								{
@@ -1133,14 +1133,14 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1.TLSRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{{
 					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
-			Rules: []gwapiv1a2.TLSRouteRule{
+			Rules: []gwapiv1.TLSRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{

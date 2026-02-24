@@ -77,6 +77,10 @@ func TestE2E(t *testing.T) {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
 		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
 	}
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if *flags.RunTest != "" {
+		skipTests = nil
+	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,

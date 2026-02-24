@@ -14,6 +14,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,42 +48,38 @@ func (q *QuicRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roun
 	transport := &http3.Transport{
 		TLSClientConfig: tlsConfig,
 	}
-	if request.Server != "" && len(request.CertPem) != 0 && len(request.KeyPem) != 0 {
-		clientTLS, err := tlsClientConfig(request.Server, request.CertPem, request.KeyPem)
+	if request.Protocol == roundtripper.HTTPSProtocol {
+		tlsConfig, err := createTLSClientConfig(&request)
 		if err != nil {
 			return nil, nil, err
 		}
-		transport.TLSClientConfig = clientTLS
+		transport.TLSClientConfig = tlsConfig
 	}
 
 	return q.defaultRoundTrip(&request, transport)
 }
 
-func tlsClientConfig(server string, certPem, keyPem []byte) (*tls.Config, error) {
-	// Create a certificate from the provided cert and key
-	cert, err := tls.X509KeyPair(certPem, keyPem)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error creating cert: %w", err)
+func createTLSClientConfig(request *roundtripper.Request) (*tls.Config, error) {
+	if request.ServerName == "" {
+		return nil, errors.New("https request has no server name configured")
+	}
+	if len(request.ServerCertificate) == 0 {
+		return nil, errors.New("https request has no trusted certificates configured")
 	}
 
-	// Add the provided cert as a trusted CA
-	certPool := x509.NewCertPool()
-	if !certPool.AppendCertsFromPEM(certPem) {
-		return nil, fmt.Errorf("unexpected error adding trusted CA: %w", err)
-	}
-
-	if server == "" {
-		return nil, fmt.Errorf("unexpected error, server name required for TLS")
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(request.ServerCertificate) {
+		return nil, errors.New("unexpected error adding trusted certificates failed")
 	}
 
 	// Create the tls Config for this provided host, cert, and trusted CA
 	// Disable G402: TLS MinVersion too low. (gosec)
+	// Use GetClientCertificate hook for testing purposes.
 	// #nosec G402
 	return &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ServerName:   server,
-		RootCAs:      certPool,
-		NextProtos:   []string{"h3"}, // Required for HTTP/3
+		ServerName:           request.ServerName,
+		RootCAs:              rootCAs,
+		GetClientCertificate: request.GetClientCertificateHook,
 	}, nil
 }
 

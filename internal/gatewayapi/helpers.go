@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -143,15 +142,15 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway or XListenerSet
-// in the given list, and if so, a list of the Listeners within that Gateway or XListenerSet that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or ListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or ListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway or XListenerSet, depending on whether section name is specified or not).
+// in the Gateway or ListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
-	// The parentRef is an XListenerSet
-	if isRefToXListenerSet(parentRef) {
+	// The parentRef is an ListenerSet
+	if isRefToListenerSet(parentRef) {
 		ns := routeNamespace
 		if parentRef.Namespace != nil {
 			ns = *parentRef.Namespace
@@ -159,11 +158,11 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 		var matchedListenerSet bool
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if !listener.isFromXListenerSet() {
+				if !listener.isFromListenerSet() {
 					continue
 				}
-				if listener.xListenerSet.Namespace != string(ns) ||
-					listener.xListenerSet.Name != string(parentRef.Name) {
+				if listener.listenerSet.Namespace != string(ns) ||
+					listener.listenerSet.Name != string(parentRef.Name) {
 					continue
 				}
 				matchedListenerSet = true
@@ -180,7 +179,7 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
 			for _, listener := range gateway.listeners {
-				if listener.isFromXListenerSet() {
+				if listener.isFromListenerSet() {
 					continue
 				}
 				// The parentRef may be to the entire Gateway, or to a specific listener.
@@ -195,9 +194,9 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	return false, referencedListeners
 }
 
-func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
-	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindXListenerSet &&
-		parentRef.Group != nil && string(*parentRef.Group) == gwapixv1a1.GroupVersion.Group {
+func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapiv1.GroupVersion.Group {
 		return true
 	}
 	return false
@@ -437,8 +436,8 @@ func extractGatewayNameFromListener(listenerName string) string {
 }
 
 func irListenerName(listener *ListenerContext) string {
-	if listener.isFromXListenerSet() {
-		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.xListenerSet.Namespace, listener.xListenerSet.Name, listener.Name)
+	if listener.isFromListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
 	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
