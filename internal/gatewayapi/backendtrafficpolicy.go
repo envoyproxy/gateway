@@ -648,7 +648,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap, resources *resource.Resources,
 ) error {
-	mergedPolicy, err := mergeBackendTrafficPolicy(policy, parentPolicy)
+	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy, resources)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
@@ -810,14 +810,24 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	}
 }
 
-func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+// mergeBackendTrafficPolicy merges route policy into gateway policy.
+func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*egv1a1.BackendTrafficPolicy, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
 		return routePolicy, nil
 	}
 
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	// Resolve LocalObjectReferences to inline content in the policies before merge so the merge operates on concrete values.
+	if err := t.resolveLocalObjectRefsInPolicy(gwPolicy, resources); err != nil {
+		return nil, err
+	}
+	if err := t.resolveLocalObjectRefsInPolicy(routePolicy, resources); err != nil {
+		return nil, err
+	}
+
+	return utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy.
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
@@ -1549,10 +1559,10 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 					return binData, nil
 				}
 			default:
-				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s", body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the key response.body in the referenced configmap %s/%s", policyNs, body.ValueRef.Name)
 			}
 		} else {
-			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
+			return nil, fmt.Errorf("can't find the referenced configmap %s/%s", policyNs, body.ValueRef.Name)
 		}
 	} else if body != nil && body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
@@ -1563,6 +1573,47 @@ func getCustomResponseBody(body *egv1a1.CustomResponseBody, resources *resource.
 	}
 
 	return nil, nil
+}
+
+// resolveCustomResponseBodyRefToInline resolves a ValueRef in body to inline content using the given namespace.
+// It mutates body in place: replaces Type and ValueRef with Inline content. No-op if body is nil or already Inline.
+func (t *Translator) resolveCustomResponseBodyRefToInline(body *egv1a1.CustomResponseBody, resources *resource.Resources, policyNs string) error {
+	if body == nil {
+		return nil
+	}
+	if body.Type == nil || *body.Type != egv1a1.ResponseValueTypeValueRef || body.ValueRef == nil {
+		return nil
+	}
+	data, err := getCustomResponseBody(body, resources, policyNs)
+	if err != nil {
+		return err
+	}
+	inlineStr := string(data)
+	t.Logger.Info("resolved custom response body ref to inline before merge",
+		"namespace", policyNs,
+		"ref", body.ValueRef.Name,
+	)
+	body.Type = ptr.To(egv1a1.ResponseValueTypeInline)
+	body.Inline = &inlineStr
+	body.ValueRef = nil
+	return nil
+}
+
+// resolveLocalObjectRefsInPolicy resolves LocalObjectReferences to inline content in the given policy (mutates in place).
+// Currently handles ResponseOverride body ValueRefs; may be extended for other refs BackendTrafficPolicy supports.
+func (t *Translator) resolveLocalObjectRefsInPolicy(policy *egv1a1.BackendTrafficPolicy, resources *resource.Resources) error {
+	if policy == nil || len(policy.Spec.ResponseOverride) == 0 {
+		return nil
+	}
+	policyNs := policy.Namespace
+	for _, ro := range policy.Spec.ResponseOverride {
+		if ro != nil && ro.Response != nil && ro.Response.Body != nil {
+			if err := t.resolveCustomResponseBodyRefToInline(ro.Response.Body, resources, policyNs); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
