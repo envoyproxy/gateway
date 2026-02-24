@@ -200,7 +200,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Find the Gateway that the route belongs to and add it to the
 	// gatewayRouteMap and ancestor list, which will be used to check
 	// policy overrides and populate its ancestor status.
-	parentRefs := GetParentReferences(targetedRoute)
+	parentRefs := GetManagedParentReferences(targetedRoute)
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
 			namespace := targetedRoute.GetNamespace()
@@ -482,11 +482,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		wasms                             []ir.Wasm
-		luas                              []ir.Lua
-		wasmFailOpen, extProcFailOpen     bool
-		wasmError, luaError, extProcError error
-		errs                              error
+		wasms                                                 []ir.Wasm
+		luas                                                  []ir.Lua
+		wasmFailOpen, extProcFailOpen                         bool
+		wasmError, luaError, extProcError, dynamicModuleError error
+		errs                                                  error
 	)
 
 	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
@@ -521,6 +521,12 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 			errs = errors.Join(errs, extProcError)
 		}
 
+		var dynamicModules []ir.DynamicModule
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gtwCtx.envoyProxy); dynamicModuleError != nil {
+			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
+			errs = errors.Join(errs, dynamicModuleError)
+		}
+
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
@@ -551,6 +557,9 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						if extProcError != nil {
 							failRoute = failRoute || !extProcFailOpen
 						}
+						if dynamicModuleError != nil {
+							failRoute = true
+						}
 						if failRoute {
 							r.DirectResponse = &ir.CustomResponse{
 								StatusCode: ptr.To(uint32(500)),
@@ -558,9 +567,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-								ExtProcs: extProcs,
-								Wasms:    wasms,
-								Luas:     luas,
+								ExtProcs:       extProcs,
+								Wasms:          wasms,
+								Luas:           luas,
+								DynamicModules: dynamicModules,
 							}
 						}
 					}
@@ -587,12 +597,13 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 ) error {
 	var (
-		extProcs                          []ir.ExtProc
-		wasms                             []ir.Wasm
-		luas                              []ir.Lua
-		wasmFailOpen, extProcFailOpen     bool
-		wasmError, luaError, extProcError error
-		errs                              error
+		extProcs                                              []ir.ExtProc
+		wasms                                                 []ir.Wasm
+		luas                                                  []ir.Lua
+		dynamicModules                                        []ir.DynamicModule
+		wasmFailOpen, extProcFailOpen                         bool
+		wasmError, luaError, extProcError, dynamicModuleError error
+		errs                                                  error
 	)
 
 	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway.envoyProxy); extProcError != nil {
@@ -606,6 +617,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
+	}
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gateway.envoyProxy); dynamicModuleError != nil {
+		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
+		errs = errors.Join(errs, dynamicModuleError)
 	}
 
 	irKey := t.getIRKey(gateway.Gateway)
@@ -645,6 +660,9 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			if extProcError != nil {
 				failRoute = failRoute || !extProcFailOpen
 			}
+			if dynamicModuleError != nil {
+				failRoute = true
+			}
 			if failRoute {
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: ptr.To(uint32(500)),
@@ -652,9 +670,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs: extProcs,
-					Wasms:    wasms,
-					Luas:     luas,
+					ExtProcs:       extProcs,
+					Wasms:          wasms,
+					Luas:           luas,
+					DynamicModules: dynamicModules,
 				}
 			}
 		}
@@ -1106,4 +1125,68 @@ func irConfigNameForWasm(policy client.Object, index int) string {
 		"%s/wasm/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/dynamic-module/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
+}
+
+func (t *Translator) buildDynamicModules(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.DynamicModule, error) {
+	var errs error
+
+	if policy == nil || len(policy.Spec.DynamicModule) == 0 {
+		return nil, nil
+	}
+
+	// Build registry lookup map from EnvoyProxy
+	registry := make(map[string]*egv1a1.DynamicModuleEntry)
+	if envoyProxy != nil {
+		for i := range envoyProxy.Spec.DynamicModules {
+			entry := &envoyProxy.Spec.DynamicModules[i]
+			registry[entry.Name] = entry
+		}
+	}
+
+	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModule))
+
+	for idx, dm := range policy.Spec.DynamicModule {
+		name := irConfigNameForDynamicModule(policy, idx)
+
+		// Validate module exists in registry
+		entry, ok := registry[dm.Name]
+		if !ok {
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", dm.Name))
+			continue
+		}
+
+		// Resolve library name (default to entry name)
+		moduleName := entry.Name
+		if entry.LibraryName != nil {
+			moduleName = *entry.LibraryName
+		}
+
+		filterName := ""
+		if dm.FilterName != nil {
+			filterName = *dm.FilterName
+		}
+
+		dmIR := ir.DynamicModule{
+			Name:           name,
+			ModuleName:     moduleName,
+			FilterName:     filterName,
+			Config:         dm.Config,
+			DoNotClose:     ptr.Deref(entry.DoNotClose, false),
+			LoadGlobally:   ptr.Deref(entry.LoadGlobally, false),
+			TerminalFilter: ptr.Deref(dm.TerminalFilter, false),
+		}
+		dmIRList = append(dmIRList, dmIR)
+	}
+
+	return dmIRList, errs
 }
