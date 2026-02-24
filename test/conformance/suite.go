@@ -34,9 +34,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.GatewayInvalidFrontendClientCertificateValidation,
 		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
-		tests.HTTPRoute303Redirect,
-		tests.HTTPRoute307Redirect,
-		tests.HTTPRoute308Redirect,
 		tests.HTTPRouteHostnameIntersection,
 	}
 
