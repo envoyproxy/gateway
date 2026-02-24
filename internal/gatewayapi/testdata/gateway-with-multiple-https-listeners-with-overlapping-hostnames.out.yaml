@@ -258,6 +258,8 @@ xdsIR:
           name: envoy-gateway/tls-secret-example-com
           privateKey: '[redacted]'
       tlsOverlaps: true
+      tlsOverlapsHostnames:
+      - '*.example.com'
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
@@ -311,6 +313,8 @@ xdsIR:
           name: envoy-gateway/tls-secret-example-com
           privateKey: '[redacted]'
       tlsOverlaps: true
+      tlsOverlapsHostnames:
+      - foo.example.com
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
