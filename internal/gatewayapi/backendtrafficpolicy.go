@@ -263,7 +263,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Find the Gateway that the route belongs to and add it to the
 	// gatewayRouteMap and ancestor list, which will be used to check
 	// policy overrides and populate its ancestor status.
-	parentRefs := GetParentReferences(targetedRoute)
+	parentRefs := GetManagedParentReferences(targetedRoute)
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
@@ -295,12 +295,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			// Do need a section name since the policy is targeting to a route.
 			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
-
-			// Only process parentRefs that were handled by this translator
-			// (skip those referencing Gateways with different GatewayClasses)
-			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
-				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
-			}
+			parentRefCtxs = append(parentRefCtxs, targetedRoute.GetRouteParentContext(p))
 		}
 	}
 
