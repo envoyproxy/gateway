@@ -90,9 +90,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret
+        - name: tls-secret
         mode: Terminate
   status:
     listeners:
