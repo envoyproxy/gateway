@@ -32,7 +32,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.HTTPRoute303Redirect,
 		tests.HTTPRoute307Redirect,
 		tests.HTTPRoute308Redirect,
-		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
