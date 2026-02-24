@@ -1,0 +1,225 @@
+http:
+  - address: 0.0.0.0
+    externalPort: 443
+    hostnames:
+      - "*"
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: https
+    name: envoy-gateway/gateway-1/https
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10443
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: https-listener-detect-misdirected-requests-test-1
+            namespace: default
+          name: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-1
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: example.org
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: https-listener-detect-misdirected-requests-test-1
+          namespace: default
+        name: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0/match/0/example_org
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /detect-misdirected-requests
+    tls:
+      alpnProtocols: null
+      certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: "[redacted]"
+    tlsOverlaps: true
+    tlsOverlapsHostnames:
+      - second-example.org
+      - "*.wildcard.org"
+      - fourth-example.wildcard.org
+  - address: 0.0.0.0
+    externalPort: 443
+    hostnames:
+      - second-example.org
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: https-with-hostname
+    name: envoy-gateway/gateway-1/https-with-hostname
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10443
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: https-listener-detect-misdirected-requests-test-2
+            namespace: default
+          name: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-2
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: second-example.org
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: https-listener-detect-misdirected-requests-test-2
+          namespace: default
+        name: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0/match/0/second-example_org
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /detect-misdirected-requests
+    tls:
+      alpnProtocols: null
+      certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: "[redacted]"
+    tlsOverlaps: true
+    tlsOverlapsHostnames:
+      - "*"
+  - address: 0.0.0.0
+    externalPort: 443
+    hostnames:
+      - "*.wildcard.org"
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: https-with-wildcard-hostname
+    name: envoy-gateway/gateway-1/https-with-wildcard-hostname
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10443
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: https-listener-detect-misdirected-requests-test-3
+            namespace: default
+          name: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-3
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: "*.wildcard.org"
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: https-listener-detect-misdirected-requests-test-3
+          namespace: default
+        name: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0/match/0/*_wildcard_org
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /detect-misdirected-requests
+    tls:
+      alpnProtocols: null
+      certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: "[redacted]"
+    tlsOverlaps: true
+    tlsOverlapsHostnames:
+      - "*"
+      - fourth-example.wildcard.org
+  - address: 0.0.0.0
+    externalPort: 443
+    hostnames:
+      - fourth-example.wildcard.org
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: https-with-hostname-matching-wildcard
+    name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10443
+    routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: https-listener-detect-misdirected-requests-test-4
+            namespace: default
+          name: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0
+          settings:
+            - addressType: IP
+              endpoints:
+                - host: 7.7.7.7
+                  port: 8080
+              metadata:
+                kind: Service
+                name: service-4
+                namespace: default
+                sectionName: "8080"
+              name: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0/backend/0
+              protocol: HTTP
+              weight: 1
+        hostname: fourth-example.wildcard.org
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: https-listener-detect-misdirected-requests-test-4
+          namespace: default
+        name: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0/match/0/fourth-example_wildcard_org
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /detect-misdirected-requests
+    tls:
+      alpnProtocols: null
+      certificates:
+        - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+          name: envoy-gateway/tls-secret-1
+          privateKey: "[redacted]"
+    tlsOverlaps: true
+    tlsOverlapsHostnames:
+      - "*"
+      - "*.wildcard.org"

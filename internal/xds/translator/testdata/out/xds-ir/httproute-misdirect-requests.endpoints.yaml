@@ -1,0 +1,80 @@
+- clusterName: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-2
+            namespace: default
+            sectionName: "8080"
+- clusterName: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-3
+            namespace: default
+            sectionName: "8080"
+- clusterName: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Service
+            name: service-4
+            namespace: default
+            sectionName: "8080"
