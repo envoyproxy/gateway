@@ -534,6 +534,22 @@ func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return route.GetParentReferences()
 }
 
+// GetManagedParentReferences returns route parentRefs that are managed by this controller.
+func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
+	parentRefs := GetParentReferences(route)
+	managed := make([]gwapiv1.ParentReference, 0, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		// RouteParentContext is only created for parentRefs handled by this
+		// translator run. If absent, the parentRef points to a Gateway that is
+		// not managed by this controller.
+		if route.GetRouteParentContext(parentRef) == nil {
+			continue
+		}
+		managed = append(managed, parentRef)
+	}
+	return managed
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()

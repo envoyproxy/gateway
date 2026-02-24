@@ -200,7 +200,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Find the Gateway that the route belongs to and add it to the
 	// gatewayRouteMap and ancestor list, which will be used to check
 	// policy overrides and populate its ancestor status.
-	parentRefs := GetParentReferences(targetedRoute)
+	parentRefs := GetManagedParentReferences(targetedRoute)
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
 			namespace := targetedRoute.GetNamespace()
