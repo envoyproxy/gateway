@@ -2036,6 +2036,95 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 			wantErrors: []string{"ImageRepository must contain only allowed characters and must not include a tag."},
 		},
+		{
+			desc: "valid: dynamicModules with all fields",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name:         "my-module",
+							LibraryName:  ptr.To("my_module"),
+							DoNotClose:   ptr.To(true),
+							LoadGlobally: ptr.To(true),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: dynamicModules with minimal fields",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: multiple dynamicModules",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name:        "auth-module",
+							LibraryName: ptr.To("auth_lib"),
+						},
+						{
+							Name:         "rate-limiter",
+							LibraryName:  ptr.To("rate_limit_lib"),
+							DoNotClose:   ptr.To(true),
+							LoadGlobally: ptr.To(false),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: dynamicModules with empty name",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].name in body should be at least 1 chars long"},
+		},
+		{
+			desc: "invalid: dynamicModules name with uppercase",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "My-Module",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].name in body should match"},
+		},
+		{
+			desc: "invalid: dynamicModules libraryName with invalid chars",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name:        "my-module",
+							LibraryName: ptr.To("my module!"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].libraryName in body should match"},
+		},
 	}
 
 	for _, tc := range cases {
