@@ -290,6 +290,62 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              dynamicModules:
+                description: |-
+                  DynamicModules defines the set of dynamic modules that are allowed to be
+                  used by EnvoyExtensionPolicy resources. Each entry registers a module by
+                  a logical name and specifies the shared library that Envoy will load.
+
+                  The EnvoyProxy owner is responsible for ensuring the module .so files are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes).
+                items:
+                  description: |-
+                    DynamicModuleEntry defines a dynamic module that is registered and allowed
+                    for use by EnvoyExtensionPolicy resources.
+                  properties:
+                    doNotClose:
+                      default: false
+                      description: |-
+                        DoNotClose prevents the module from being unloaded with dlclose when no
+                        more references exist. This is useful for modules that maintain global
+                        state that should not be destroyed on configuration updates.
+                        Defaults to false.
+                      type: boolean
+                    libraryName:
+                      description: |-
+                        LibraryName is the name of the shared library file that Envoy will load.
+                        Envoy searches for lib${libraryName}.so in the path specified by the
+                        ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+                        If not specified, defaults to the value of Name.
+                      maxLength: 253
+                      pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
+                      type: string
+                    loadGlobally:
+                      default: false
+                      description: |-
+                        LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.
+                        By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.
+                        Set this to true when the module needs to share symbols with other
+                        dynamic libraries it loads.
+                        Defaults to false.
+                      type: boolean
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -335,6 +391,8 @@ spec:
 
                   - envoy.filters.http.wasm
 
+                  - envoy.filters.http.dynamic_modules
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -378,6 +436,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -407,6 +466,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -434,6 +494,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
