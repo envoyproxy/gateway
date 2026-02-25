@@ -4,6 +4,11 @@ on:
     branches:
     - "main"
     - "release/v*"
+    tags:
+    - "v*.*.*"
+    # Exclude rc.0 tags — they're not real release candidates but markers for main
+    # See: https://github.com/envoyproxy/gateway/issues/7248
+    - "!v*.*.*-rc.0"
     paths-ignore:
     - "**/*.png"
   pull_request:
@@ -113,10 +118,26 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      # For main branch builds, we need to fetch tags so go binary will be built with
+      # the recent vX.Y.Z-rc.0 tag, which helps avoid false positives in vulnerability scans.
+      # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
+      # As a workaround `filter: tree:0` is used to create a treeless clone.
+      # See:
+      # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
+      # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      with:
+        fetch-depth: ${{ github.ref == 'refs/heads/main' && 0 || 1 }}
+        filter: ${{ github.ref == 'refs/heads/main' && 'tree:0' || '' }}
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
-      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
+      # Build all platforms for release tags, only linux for other builds
+      run: |
+        PLATFORMS="linux_amd64 linux_arm64"
+        if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+          PLATFORMS=""
+        fi
+        make build-multiarch PLATFORMS="$PLATFORMS"
 
     - name: Upload EG Binaries
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
@@ -245,9 +266,8 @@ jobs:
     needs:
     - build
     - changes
-    # There's a different workflow for benchmark-test on push.
-    # So we need to check if this is a pull request and changes.
-    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
+    # Run for pull requests or release tags.
+    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true') || startsWith(github.ref, 'refs/tags/') }}
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -291,6 +311,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
+    # Only run for main branch pushes. Tags are handled by the release job.
+    if: github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -308,33 +330,115 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      if: github.event_name == 'push'
       uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Setup Multiarch Environment
-      if: github.event_name == 'push'
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
-      if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
       run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
       run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
       # use `Always` image pull policy for latest version.
       run: |
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
+
+  release:
+    runs-on: ubuntu-22.04
+    needs: [conformance-test, e2e-test, benchmark-test, resilience-test]
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: ./tools/github-actions/setup-deps
+    - uses: ./tools/github-actions/reclaim-storage
+
+    - name: Extract Release Tag and Commit SHA
+      shell: bash
+      run: |
+        {
+          echo "release_tag=${GITHUB_REF##*/}"
+          echo "without_v_release_tag=${GITHUB_REF##*/v}"
+          echo "sha_short=$(git rev-parse --short HEAD)"
+        } >> "$GITHUB_ENV"
+
+    - name: Download EG Binaries
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
+      with:
+        name: envoy-gateway
+        path: bin/
+
+    - name: Login to DockerHub
+      uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
+      with:
+        username: ${{ vars.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+    - name: Setup Multiarch Environment
+      run: make image.multiarch.setup
+
+    - name: Build and Push EG Release Image
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }}
+
+    - name: Download Benchmark Report
+      uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131  # v7.0.0
+      with:
+        name: benchmark_report
+        path: release-artifacts/benchmark_report
+
+    - name: Package Benchmark Report
+      run: cd release-artifacts && zip -r benchmark_report.zip benchmark_report
+
+    - name: Generate Release Artifacts
+      run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
+
+    - name: Build and Push EG Release Helm Chart
+      run: |
+        IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
+        IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.without_v_release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
+
+    - name: Package release binaries
+      run: |
+        tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
+        tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
+        tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/envoy-gateway
+        tar -zcvf egctl_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/egctl
+        tar -zcvf egctl_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/egctl
+        tar -zcvf egctl_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/egctl
+        tar -zcvf egctl_${{ env.release_tag }}_darwin_arm64.tar.gz bin/darwin/arm64/egctl
+        zip -r egctl_${{ env.release_tag }}_windows_amd64.zip bin/windows/amd64/egctl
+
+    - name: Upload Release Manifests
+      uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b  # v2.5.0
+      with:
+        files: |
+          release-artifacts/install.yaml
+          release-artifacts/quickstart.yaml
+          release-artifacts/envoy-gateway-crds.yaml
+          release-artifacts/release-notes.yaml
+          release-artifacts/benchmark_report.zip
+          release-artifacts/benchmark_report/benchmark_result.json
+          envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz
+          envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz
+          envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz
+          envoy-gateway_${{ env.release_tag }}_darwin_arm64.tar.gz
+          egctl_${{ env.release_tag }}_linux_amd64.tar.gz
+          egctl_${{ env.release_tag }}_linux_arm64.tar.gz
+          egctl_${{ env.release_tag }}_darwin_amd64.tar.gz
+          egctl_${{ env.release_tag }}_darwin_arm64.tar.gz
+          egctl_${{ env.release_tag }}_windows_amd64.zip
 
   # Aggregate all the required jobs and make it easier to customize CI required jobs
   ci-checks:
@@ -350,6 +454,7 @@ jobs:
     - benchmark-test
     - resilience-test
     - publish
+    - release
     # We need this to run always to force-fail (and not skip) if any needed
     # job has failed. Otherwise, a skipped job will not fail the workflow.
     if: always()
