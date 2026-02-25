@@ -1501,6 +1501,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 		reconcileLabels string
 		ns              *corev1.Namespace
 		expect          bool
+		expectErr       bool
 	}{
 		{
 			name: "matching labels of namespace of the object is a subset of namespaceLabels",
@@ -1551,7 +1552,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 			expect:          false,
 		},
 		{
-			name: "non-matching labels of namespace of the cluster-level object is a subset of namespaceLabels",
+			name: "cluster-scoped resources are not filtered",
 			object: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo-1",
@@ -1569,23 +1570,41 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				},
 			},
 			reconcileLabels: "label-1",
+			expect:          true,
+		},
+		{
+			name: "namespace not found returns false without error",
+			object: test.GetHTTPRoute(
+				types.NamespacedName{
+					Name:      "orphan-route",
+					Namespace: "non-existent-ns",
+				},
+				"eg",
+				test.GetServiceBackendRef(types.NamespacedName{
+					Name:      "orphan-svc",
+					Namespace: "non-existent-ns",
+				}, 8080),
+				""),
+			ns:              nil, // namespace doesn't exist
+			reconcileLabels: "label-1",
 			expect:          false,
+			expectErr:       false,
 		},
 	}
 
-	// Create the reconciler.
-	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
-
-	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-	}
-
 	for _, tc := range testCases {
-		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
-		r.namespaceLabel = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
-		ok, err := r.checkObjectNamespaceLabels(tc.object)
-		require.NoError(t, err)
+		builder := fakeclient.NewClientBuilder()
+		if tc.ns != nil {
+			builder = builder.WithObjects(tc.ns)
+		}
+		c := builder.Build()
+		namespaceLabel := &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
+		ok, err := checkObjectNamespaceLabels(context.Background(), c, namespaceLabel, tc.object)
+		if tc.expectErr {
+			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
+		}
 		require.Equal(t, tc.expect, ok)
 	}
 }
