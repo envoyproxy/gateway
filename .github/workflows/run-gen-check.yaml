@@ -38,18 +38,16 @@ jobs:
         run: |
           PR_NUM="${{ github.event.issue.number }}"
           HEAD_REF=$(gh pr view "$PR_NUM" --json headRefName -q .headRefName)
-          HEAD_REPO=$(gh pr view "$PR_NUM" --json headRepository -q '.headRepository.owner.login + "/" + .headRepository.name')
+          HEAD_REPO=$(gh pr view "$PR_NUM" --json headRepository -q .headRepository.full_name)
           echo "head_ref=$HEAD_REF" >> $GITHUB_OUTPUT
-          if [ "$HEAD_REPO" != "${{ github.repository }}" ]; then
-            echo "::error::Cannot run /run-gen-check on pull requests from forks. Push to a branch in this repository."
-            exit 1
-          fi
+          echo "head_repo=$HEAD_REPO" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout PR branch
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
         with:
+          repository: ${{ steps.pr.outputs.head_repo }}
           ref: ${{ steps.pr.outputs.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
 

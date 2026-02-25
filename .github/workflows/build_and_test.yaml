@@ -35,7 +35,8 @@ jobs:
       with:
         filters: |
           run_test_workflow:
-            - "!?(site|release-notes)/**"
+            - "!?(.github|site|release-notes)/**"
+            - ".github/workflows/build_and_test.yaml"
 
   lint:
     runs-on: ubuntu-22.04
