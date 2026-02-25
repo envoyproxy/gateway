@@ -803,12 +803,9 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 		rate = float64(*tracing.SamplingRate)
 	} else if tracing.SamplingFraction != nil {
 		numerator := float64(tracing.SamplingFraction.Numerator)
-		denominator := float64(100)
-		if tracing.SamplingFraction.Denominator != nil {
-			denominator = float64(*tracing.SamplingFraction.Denominator)
-		}
+		denominator := ptr.Deref(tracing.SamplingFraction.Denominator, 100)
 
-		rate = numerator / denominator
+		rate = numerator * 100 / float64(denominator)
 		// Identifies a percentage, in the range [0.0, 100.0]
 		rate = math.Max(0, rate)
 		rate = math.Min(100, rate)
