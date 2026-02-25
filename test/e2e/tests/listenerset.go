@@ -135,7 +135,7 @@ var ListenerSetHTTPSTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18443")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-http", "extra-https"),
+			createListenerSetParent(suite.ControllerName, "listener-set-http", "extra-https"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -177,14 +177,14 @@ var ListenerSetGRPCTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18082")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-grpc", "extra-grpc"),
+			createListenerSetParent(suite.ControllerName, "listener-set-grpc", "extra-grpc"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.GRPCRoute{})
 
 		expected := grpc.ExpectedResponse{
 			EchoRequest: &grpcechoserver.EchoRequest{},
-			Backend:     "grpc-listenerset-backend",
+			Backend:     "grpc-listener-backend",
 			Namespace:   ns,
 		}
 
@@ -209,7 +209,7 @@ var ListenerSetTCPTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18083")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-tcp", "extra-tcp"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tcp", "extra-tcp"),
 		}
 
 		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
@@ -245,7 +245,7 @@ var ListenerSetUDPTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "5300")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-udp", "extra-udp"),
+			createListenerSetParent(suite.ControllerName, "listener-set-udp", "extra-udp"),
 		}
 
 		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
@@ -287,7 +287,7 @@ var ListenerSetTLSPassthroughTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18444")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-tls-passthrough", "extra-tls"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tls-passthrough", "extra-tls"),
 		}
 
 		TLSRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents)
@@ -329,7 +329,7 @@ var ListenerSetTLSTerminationTest = suite.ConformanceTest{
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "19443")
 		parents := []gwapiv1.RouteParentStatus{
-			createListenerSetParent(suite.ControllerName, "listenerset-set-tls-termination", "extra-https-tls-termination"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tls-termination", "extra-https-tls-termination"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
