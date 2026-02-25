@@ -71,6 +71,23 @@ type LocalRateLimit struct {
 	Rules []RateLimitRule `json:"rules"`
 }
 
+// XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+// Valid values are "Off" and "DraftVersion03".
+// This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+//
+// +kubebuilder:validation:Enum=Off;DraftVersion03
+type XRateLimitHeadersOption string
+
+const (
+	// XRateLimitHeadersOptionOff disables X-RateLimit headers for this rate limit rule,
+	// regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionOff XRateLimitHeadersOption = "Off"
+
+	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
+	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDraftVersion03 XRateLimitHeadersOption = "DraftVersion03"
+)
+
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
@@ -119,6 +136,14 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// XRateLimit controls whether X-RateLimit response headers are emitted for this rate limit rule.
+	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+	// If not set, the rule inherits the listener-level setting (default behavior).
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	XRateLimit *XRateLimitHeadersOption `json:"xRateLimit,omitempty"`
 }
 
 type RateLimitCost struct {
