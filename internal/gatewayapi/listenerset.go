@@ -149,7 +149,7 @@ func (t *Translator) ProcessListenerSetStatus(listenerSets []*gwapiv1.ListenerSe
 		default:
 			lsAccepted = false
 			lsReason = gwapiv1.ListenerSetReasonListenersNotValid
-			lsProgrammedReason = gwapiv1.ListenerSetReasonInvalid
+			lsProgrammedReason = gwapiv1.ListenerSetReasonListenersNotValid
 			lsMsg = "All listeners are invalid"
 		}
 

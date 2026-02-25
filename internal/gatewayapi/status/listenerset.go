@@ -43,12 +43,12 @@ func UpdateListenerSetStatusCondition(ls *gwapiv1.ListenerSet, conditionType gwa
 
 // SetListenerSetListenerStatusCondition sets a condition for a specific listener in the ListenerSet.
 func SetListenerSetListenerStatusCondition(ls *gwapiv1.ListenerSet, listenerStatusIdx int,
-	conditionType gwapiv1.ListenerEntryConditionType, status metav1.ConditionStatus, reason gwapiv1.ListenerEntryConditionReason, message string,
+	conditionType gwapiv1.ListenerEntryConditionType, status metav1.ConditionStatus, reason string, message string,
 ) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
-		Reason:             string(reason),
+		Reason:             reason,
 		Message:            message,
 		ObservedGeneration: ls.Generation,
 	}

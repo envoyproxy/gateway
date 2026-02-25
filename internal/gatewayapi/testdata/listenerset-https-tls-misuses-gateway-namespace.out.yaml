@@ -134,7 +134,7 @@ listenerSets:
       type: Accepted
     - lastTransitionTime: null
       message: All listeners are invalid
-      reason: Invalid
+      reason: ListenersNotValid
       status: "False"
       type: Programmed
     listeners:
@@ -148,7 +148,7 @@ listenerSets:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       name: extra-https-same-ns

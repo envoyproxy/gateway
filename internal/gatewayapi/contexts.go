@@ -229,12 +229,15 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 
 func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, conditionStatus metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
 	if l.isFromListenerSet() {
+		r := string(reason)
+		if reason == gwapiv1.ListenerReasonInvalid {
+			r = string(gwapiv1.ListenerSetReasonListenersNotValid)
+		}
 		// Convert Gateway API types to ListenerSet types
 		// Note: The string values are expected to match between the APIs
 		status.SetListenerSetListenerStatusCondition(l.listenerSet, l.listenerSetStatusIdx,
 			gwapiv1.ListenerEntryConditionType(conditionType),
-			conditionStatus,
-			gwapiv1.ListenerEntryConditionReason(reason),
+			conditionStatus, r,
 			message)
 	} else {
 		status.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,

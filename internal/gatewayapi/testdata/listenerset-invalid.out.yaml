@@ -246,7 +246,7 @@ listenerSets:
       type: Accepted
     - lastTransitionTime: null
       message: All listeners are invalid
-      reason: Invalid
+      reason: ListenersNotValid
       status: "False"
       type: Programmed
     listeners:
@@ -259,7 +259,7 @@ listenerSets:
         type: Accepted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -277,7 +277,7 @@ listenerSets:
         type: Accepted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -357,7 +357,7 @@ listenerSets:
         type: Accepted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
