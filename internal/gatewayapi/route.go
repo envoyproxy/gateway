@@ -1856,7 +1856,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
 			route.GetRouteType(),
 			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
-			types.NamespacedName{Namespace: gatewayCtx.Gateway.GetNamespace(), Name: gatewayCtx.Gateway.GetName()},
+			types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
 			parentRef.SectionName,
 			routeRuleName,
 		)
