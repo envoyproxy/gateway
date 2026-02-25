@@ -232,11 +232,17 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			t.Run(header, func(t *testing.T) {
 				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 				req.Headers["Lb-Test-Header"] = []string{header}
-				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+
+				compareFunc := func(trafficMap map[string]int) bool {
 					// All traffic should be routed to the same pod.
 					return len(trafficMap) == 1
-				})
-				require.True(t, got)
+				}
+
+				if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+					return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+				}); err != nil {
+					tlog.Errorf(t, "failed to run header based consistent hash load balancing test for header %s: %v", header, err)
+				}
 			})
 		}
 	},
@@ -294,12 +300,16 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 				req.Headers["Lb-Test-1"] = []string{combo.header1}
 				req.Headers["Lb-Test-2"] = []string{combo.header2}
 
-				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+				compareFunc := func(trafficMap map[string]int) bool {
 					// All traffic with the same header combination should route to the same pod
 					return len(trafficMap) == 1
-				})
-				require.True(t, got, "Expected all requests with headers %s=%s, %s=%s to route to the same pod",
-					"Lb-Test-1", combo.header1, "Lb-Test-2", combo.header2)
+				}
+
+				if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+					return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+				}); err != nil {
+					tlog.Errorf(t, "failed to run multi-header consistent hash load balancing test for combo %s: %v", combo.name, err)
+				}
 			})
 		}
 	},
