@@ -26,7 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	gwapischeme "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/scheme"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -721,11 +720,11 @@ func TestProcessGRPCRoutes(t *testing.T) {
 	gwNsName := utils.NamespacedName(gw).String()
 
 	testCases := []struct {
-		name                   string
-		routes                 []*gwapiv1.GRPCRoute
-		extensionAPIGroups     []schema.GroupVersionKind
-		gatewayToXListenerSets []types.NamespacedName
-		expected               bool
+		name                  string
+		routes                []*gwapiv1.GRPCRoute
+		extensionAPIGroups    []schema.GroupVersionKind
+		gatewayToListenerSets []types.NamespacedName
+		expected              bool
 	}{
 		{
 			name: "valid grpcroute",
@@ -771,7 +770,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "grpcroute referencing xlistenerset",
+			name: "grpcroute referencing listenerset",
 			routes: []*gwapiv1.GRPCRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -782,9 +781,9 @@ func TestProcessGRPCRoutes(t *testing.T) {
 						CommonRouteSpec: gwapiv1.CommonRouteSpec{
 							ParentRefs: []gwapiv1.ParentReference{
 								{
-									Group:       gatewayapi.GroupPtr(gwapixv1a1.GroupVersion.Group),
-									Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-									Name:        "xlistener-set",
+									Group:       gatewayapi.GroupPtr(gwapiv1.GroupVersion.Group),
+									Kind:        gatewayapi.KindPtr(resource.KindListenerSet),
+									Name:        "listener-set",
 									Namespace:   gatewayapi.NamespacePtr("test"),
 									SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
 								},
@@ -806,11 +805,11 @@ func TestProcessGRPCRoutes(t *testing.T) {
 					},
 				},
 			},
-			gatewayToXListenerSets: []types.NamespacedName{{Namespace: "test", Name: "xlistener-set"}},
-			expected:               true,
+			gatewayToListenerSets: []types.NamespacedName{{Namespace: "test", Name: "listener-set"}},
+			expected:              true,
 		},
 		{
-			name: "grpcroute referencing gateway and xlistenerset",
+			name: "grpcroute referencing gateway and listenerSet",
 			routes: []*gwapiv1.GRPCRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -825,8 +824,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								},
 								{
 									Group:       gatewayapi.GroupPtr(gwapiv1.GroupName),
-									Kind:        gatewayapi.KindPtr(resource.KindXListenerSet),
-									Name:        "xlistener-set",
+									Kind:        gatewayapi.KindPtr(resource.KindListenerSet),
+									Name:        "listener-set",
 									Namespace:   gatewayapi.NamespacePtr("test"),
 									SectionName: gatewayapi.SectionNamePtr("extra-grpc"),
 								},
@@ -848,8 +847,8 @@ func TestProcessGRPCRoutes(t *testing.T) {
 					},
 				},
 			},
-			gatewayToXListenerSets: []types.NamespacedName{{Namespace: "test", Name: "xlistener-set"}},
-			expected:               true,
+			gatewayToListenerSets: []types.NamespacedName{{Namespace: "test", Name: "listener-set"}},
+			expected:              true,
 		},
 	}
 
@@ -881,14 +880,14 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(objs...).
 				WithIndex(&gwapiv1.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
-				WithIndex(&gwapiv1.GRPCRoute{}, xListenerGRPCRouteIndex, xListenerGRPCRouteIndexFunc).
+				WithIndex(&gwapiv1.GRPCRoute{}, listenerSetGRPCRouteIndex, listenerSetGRPCRouteIndexFunc).
 				Build()
 
 			// Process the test case httproutes.
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
-			if len(tc.gatewayToXListenerSets) > 0 {
-				resourceMap.gatewayToXListenerSets[gwNsName] = append(resourceMap.gatewayToXListenerSets[gwNsName], tc.gatewayToXListenerSets...)
+			if len(tc.gatewayToListenerSets) > 0 {
+				resourceMap.gatewayToListenerSets[gwNsName] = append(resourceMap.gatewayToListenerSets[gwNsName], tc.gatewayToListenerSets...)
 			}
 			err := r.processGRPCRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {

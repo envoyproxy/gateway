@@ -56,16 +56,15 @@ func testJAFingerprint(t *testing.T, suite *suite.ConformanceTestSuite, routeNam
 		Namespace: ConformanceInfraNamespace,
 	}
 
-	certPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: secretName, Namespace: ConformanceInfraNamespace})
+	certPem, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: secretName, Namespace: ConformanceInfraNamespace})
 	if err != nil {
 		t.Fatalf("unexpected error finding TLS secret: %v", err)
 	}
 
 	req := http.MakeRequest(t, &expected, net.JoinHostPort(gwAddr, strconv.Itoa(port)), "HTTPS", "https")
-	req.Server = serverName
+	req.ServerName = serverName
 	// Use the certificate and key for TLS setup, CA cert for validation (self-signed cert)
-	req.CertPem = certPem
-	req.KeyPem = keyPem
+	req.ServerCertificate = certPem
 
 	http.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency, func(elapsed time.Duration) bool {
 		cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)

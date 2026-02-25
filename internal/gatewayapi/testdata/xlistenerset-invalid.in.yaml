@@ -26,9 +26,9 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
-xListenerSets:
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: gateway-xls
     name: same-namespace-invalid
@@ -48,8 +48,8 @@ xListenerSets:
       allowedRoutes:
         namespaces:
           from: All
-- apiVersion: gateway.networking.x-k8s.io/v1alpha1
-  kind: XListenerSet
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
   metadata:
     namespace: gateway-xls
     name: same-namespace-mixed
@@ -77,8 +77,8 @@ httpRoutes:
     name: route-invalid-one
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-invalid
       sectionName: invalid-one
@@ -93,8 +93,8 @@ httpRoutes:
     name: route-invalid-two
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-invalid
       sectionName: invalid-two
@@ -109,8 +109,8 @@ httpRoutes:
     name: route-mixed-valid
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-mixed
       sectionName: mixed-valid
@@ -125,8 +125,8 @@ httpRoutes:
     name: route-mixed-invalid
   spec:
     parentRefs:
-    - group: gateway.networking.x-k8s.io
-      kind: XListenerSet
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
       namespace: gateway-xls
       name: same-namespace-mixed
       sectionName: mixed-invalid

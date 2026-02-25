@@ -68,8 +68,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.foo.bar.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       provider:
         issuer: https://gateway.envoyproxy.io

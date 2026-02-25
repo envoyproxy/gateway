@@ -43,7 +43,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -96,11 +95,11 @@ type gatewayAPIReconciler struct {
 	tcpRouteCRDExists      bool
 	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
+	listenerSetEnabled     bool
 
 	clusterTrustBundleExits bool
 
 	// Experimental Gateway API features
-	xListenerSetEnabled bool
 }
 
 // isGatewayClassMerged reports whether the supplied GatewayClass has mergeGateways enabled.
@@ -126,10 +125,10 @@ type subscriptions struct {
 	gatewayStatuses              <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GatewayStatus]
 	httpRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	grpcRouteStatuses            <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
-	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	tlsRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.TLSRouteStatus]
 	tcpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	udpRouteStatuses             <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
-	xListenerSetStatuses         <-chan watchable.Snapshot[types.NamespacedName, *gwapixv1a1.ListenerSetStatus]
+	listenerSetStatuses          <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 	backendTLSPolicyStatuses     <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendTrafficPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	envoyExtensionPolicyStatuses <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
@@ -182,6 +181,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 
 	if byNamespaceSelectorEnabled(cfg.EnvoyGateway) {
 		r.namespaceLabel = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelector
+		r.client = newNamespaceSelectorClient(r.client, r.namespaceLabel)
 	}
 
 	// controller-runtime doesn't allow run controller with same name for more than once
@@ -250,7 +250,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.tlsRouteStatuses = r.resources.TLSRouteStatuses.Subscribe(ctx)
 	r.subscriptions.tcpRouteStatuses = r.resources.TCPRouteStatuses.Subscribe(ctx)
 	r.subscriptions.udpRouteStatuses = r.resources.UDPRouteStatuses.Subscribe(ctx)
-	r.subscriptions.xListenerSetStatuses = r.resources.XListenerSetStatuses.Subscribe(ctx)
+	r.subscriptions.listenerSetStatuses = r.resources.ListenerSetStatuses.Subscribe(ctx)
 	r.subscriptions.backendTLSPolicyStatuses = r.resources.BackendTLSPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendTrafficPolicyStatuses = r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.envoyExtensionPolicyStatuses = r.resources.EnvoyExtensionPolicyStatuses.Subscribe(ctx)
@@ -443,7 +443,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			gcLogger.Error(err, "failed to process EnvoyTLSSecret")
 		}
 
-		// Add all Gateways, their associated XListenerSets, Routes, and referenced resources to the resourceTree
+		// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
 		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing gateways")
@@ -1550,24 +1550,8 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %w", err)
 	}
 
-	refGrants := refGrantList.Items
-	if r.namespaceLabel != nil {
-		var rgs []gwapiv1b1.ReferenceGrant
-		for i := range refGrants {
-			refGrant := &refGrants[i]
-			if ok, err := r.checkObjectNamespaceLabels(refGrant); err != nil {
-				r.log.Error(err, "failed to check namespace labels for ReferenceGrant %s in namespace %s: %w", refGrant.GetName(), refGrant.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-			rgs = append(rgs, *refGrant)
-		}
-		refGrants = rgs
-	}
-
-	for i := range refGrants {
-		refGrant := &refGrants[i]
+	for i := range refGrantList.Items {
+		refGrant := &refGrantList.Items[i]
 		if refGrant.Namespace != to.namespace {
 			continue
 		}
@@ -1623,18 +1607,6 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 	for i := range gatewayList.Items {
 		gtw := &gatewayList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(gtw); err != nil {
-				// If the error is transient, we return it to allow Reconcile to retry.
-				if isTransientError(err) {
-					return err
-				}
-				r.log.Error(err, "failed to check namespace labels for gateway", "name", gtw.GetName(), "namespace", gtw.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-		}
 
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces.Insert(gtw.Namespace)
@@ -1661,13 +1633,13 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
-		// XListenerSet Processing (must be done before route processing)
-		if r.xListenerSetEnabled {
-			if err := r.processXListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+		// ListenerSet Processing (must be done before route processing)
+		if r.listenerSetEnabled {
+			if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
 				if isTransientError(err) {
 					return err
 				}
-				r.log.Error(err, "failed to process XListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+				r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 			}
 		}
 
@@ -1855,37 +1827,28 @@ func (r *gatewayAPIReconciler) processClientTrafficPolicies(
 	return r.processCTPCrlRefs(ctx, resourceTree, resourceMap)
 }
 
-func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gatewayNamespaceName string,
+func (r *gatewayAPIReconciler) processListenerSets(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	resourceMap.gatewayToXListenerSets[gatewayNamespaceName] = nil
+	resourceMap.gatewayToListenerSets[gatewayNamespaceName] = nil
 
-	xListenerSetList := &gwapixv1a1.XListenerSetList{}
-	if err := r.client.List(ctx, xListenerSetList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(gatewayXListenerSetIndex, gatewayNamespaceName),
+	listenerSetList := &gwapiv1.ListenerSetList{}
+	if err := r.client.List(ctx, listenerSetList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gatewayListenerSetIndex, gatewayNamespaceName),
 	}); err != nil {
-		r.log.Error(err, "failed to list XListenerSets", "gateway", gatewayNamespaceName)
+		r.log.Error(err, "failed to list ListenerSets", "gateway", gatewayNamespaceName)
 		return err
 	}
 
-	for i := range xListenerSetList.Items {
-		xls := &xListenerSetList.Items[i]
-		if r.namespaceLabel != nil {
-			if ok, err := r.checkObjectNamespaceLabels(xls); err != nil {
-				r.log.Error(err, "failed to check namespace labels for XListenerSet",
-					"name", xls.GetName(), "namespace", xls.GetNamespace())
-				continue
-			} else if !ok {
-				continue
-			}
-		}
+	for i := range listenerSetList.Items {
+		ls := &listenerSetList.Items[i]
 
-		key := utils.NamespacedName(xls).String()
-		if resourceMap.allAssociatedXListenerSets.Has(key) {
+		key := utils.NamespacedName(ls).String()
+		if resourceMap.allAssociatedListenerSets.Has(key) {
 			continue
 		}
 
-		for _, listener := range xls.Spec.Listeners {
+		for _, listener := range ls.Spec.Listeners {
 			// Listener TLS is optional; only process when TLS termination occurs.
 			if !isListenerEntryTerminatesTLS(&listener) {
 				continue
@@ -1895,27 +1858,27 @@ func (r *gatewayAPIReconciler) processXListenerSets(ctx context.Context, gateway
 				if refsSecret(&certRef) {
 					if err := r.processSecretRef(ctx,
 						resourceMap, resourceTree,
-						resource.KindXListenerSet, xls.Namespace, xls.Name,
+						resource.KindListenerSet, ls.Namespace, ls.Name,
 						certRef); err != nil {
 						if isTransientError(err) {
 							return err
 						}
-						r.log.Error(err, "failed to process TLS SecretRef for XListenerSet",
-							"xListenerSet", xls, "secretRef", certRef)
+						r.log.Error(err, "failed to process TLS SecretRef for ListenerSet",
+							"listenerSet", ls, "secretRef", certRef)
 					}
 				}
 			}
 		}
 
 		// Drop Status to reduce memory
-		xls.Status = gwapixv1a1.ListenerSetStatus{}
-		resourceMap.allAssociatedNamespaces.Insert(xls.Namespace)
-		resourceMap.allAssociatedXListenerSets.Insert(key)
-		resourceMap.gatewayToXListenerSets[gatewayNamespaceName] = append(
-			resourceMap.gatewayToXListenerSets[gatewayNamespaceName],
-			utils.NamespacedName(xls),
+		ls.Status = gwapiv1.ListenerSetStatus{}
+		resourceMap.allAssociatedNamespaces.Insert(ls.Namespace)
+		resourceMap.allAssociatedListenerSets.Insert(key)
+		resourceMap.gatewayToListenerSets[gatewayNamespaceName] = append(
+			resourceMap.gatewayToListenerSets[gatewayNamespaceName],
+			utils.NamespacedName(ls),
 		)
-		resourceTree.XListenerSets = append(resourceTree.XListenerSets, xls)
+		resourceTree.ListenerSets = append(resourceTree.ListenerSets, ls)
 	}
 
 	return nil
@@ -2100,44 +2063,34 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch XListenerSet CRUDs when the experimental API is enabled and the CRD exists.
-	r.xListenerSetEnabled = false
-	exists, err := checkCRD(resource.KindXListenerSet, gwapixv1a1.GroupVersion.String())
+	// Watch ListenerSet CRUDs when the experimental API is enabled and the CRD exists.
+	r.listenerSetEnabled, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
 	if err != nil {
 		return err
 	}
-
-	disabled := r.envoyGateway == nil || r.envoyGateway.GatewayAPI == nil ||
-		!r.envoyGateway.GatewayAPI.IsEnabled(egv1a1.XListenerSet)
-
-	switch {
-	case !exists:
-		r.log.Info("XListenerSet CRD not found, skipping XListenerSet watch")
-	case disabled:
-		r.log.Info("XListenerSet API disabled, skipping XListenerSet watch")
-	default:
-		r.log.Info("XListenerSet API enabled, watching XListenerSets")
-		xlsPredicates := []predicate.TypedPredicate[*gwapixv1a1.XListenerSet]{
-			predicate.TypedGenerationChangedPredicate[*gwapixv1a1.XListenerSet]{},
+	if !r.listenerSetEnabled {
+		r.log.Info("ListenerSet API not enabled, skipping ListenerSet watch")
+	} else {
+		xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
+			predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
 		}
 		if r.namespaceLabel != nil {
-			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapixv1a1.XListenerSet) bool {
+			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
 				return r.hasMatchingNamespaceLabels(obj)
 			}))
 		}
 
 		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapixv1a1.XListenerSet{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapixv1a1.XListenerSet) []reconcile.Request {
+			source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
+				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
 					return r.enqueueClass(ctx, obj)
 				}),
 				xlsPredicates...)); err != nil {
 			return err
 		}
-		if err := addXListenerSetIndexers(ctx, mgr); err != nil {
+		if err := addListenerSetIndexers(ctx, mgr); err != nil {
 			return err
 		}
-		r.xListenerSetEnabled = true
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
