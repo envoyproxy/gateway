@@ -10,6 +10,9 @@ metadata:
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
+  {{- with .Values.deployment.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
 {{- if not .Values.hpa.enabled }}
   replicas: {{ .Values.deployment.replicas }}
