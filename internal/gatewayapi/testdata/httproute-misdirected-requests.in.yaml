@@ -65,7 +65,7 @@ httpRoutes:
     spec:
       parentRefs:
         - name: gateway-1
-          namespace: envoy-gateway  
+          namespace: envoy-gateway
           sectionName: https
       hostnames:
         - example.org
