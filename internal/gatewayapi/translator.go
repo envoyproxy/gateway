@@ -251,6 +251,14 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
+	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
+	t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
+		resources.BackendTrafficPolicies,
+		resources.HTTPRoutes, resources.GRPCRoutes,
+		resources.TLSRoutes, resources.TCPRoutes, resources.UDPRoutes,
+		acceptedGateways,
+	)
+
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
 

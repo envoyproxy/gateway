@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1852,10 +1853,10 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	// Resolve BTP RoutingType for this route/gateway combination
 	var btpRoutingType *egv1a1.RoutingType
 	if gatewayCtx != nil {
-		btpRoutingType = GetBTPRoutingTypeForRoute(
-			resources.BackendTrafficPolicies,
-			route,
-			gatewayCtx.Gateway,
+		btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
+			route.GetRouteType(),
+			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
+			types.NamespacedName{Namespace: gatewayCtx.Gateway.GetNamespace(), Name: gatewayCtx.Gateway.GetName()},
 			parentRef.SectionName,
 			routeRuleName,
 		)

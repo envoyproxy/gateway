@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -873,40 +874,49 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 	}
 }
 
-func TestGetBTPRoutingTypeForRoute(t *testing.T) {
+func TestBTPRoutingTypeIndex(t *testing.T) {
 	serviceRouting := egv1a1.ServiceRoutingType
 	endpointRouting := egv1a1.EndpointRoutingType
 
-	defaultRoute := &HTTPRouteContext{
-		HTTPRoute: &gwapiv1.HTTPRoute{
+	defaultHTTPRoute := &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "route-1",
+		},
+	}
+	defaultGateway := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
-				Name:      "route-1",
+				Name:      "gateway-1",
 			},
 		},
 	}
-	defaultGateway := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "gateway-1",
-		},
-	}
+
+	routeNN := types.NamespacedName{Namespace: "default", Name: "route-1"}
+	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway-1"}
 
 	tests := []struct {
 		name          string
 		btps          []*egv1a1.BackendTrafficPolicy
-		route         RouteContext
-		gateway       *gwapiv1.Gateway
+		httpRoutes    []*gwapiv1.HTTPRoute
+		gateways      []*GatewayContext
+		routeKind     gwapiv1.Kind
+		routeNN       types.NamespacedName
+		gatewayNN     types.NamespacedName
 		listenerName  *gwapiv1.SectionName
 		routeRuleName *gwapiv1.SectionName
 		expected      *egv1a1.RoutingType
 	}{
 		{
-			name:     "no BTPs",
-			btps:     nil,
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: nil,
+			name:       "no BTPs",
+			btps:       nil,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   nil,
 		},
 		{
 			name: "BTP targeting route has priority over gateway",
@@ -948,9 +958,12 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: &serviceRouting,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   &serviceRouting,
 		},
 		{
 			name: "BTP targeting gateway",
@@ -974,9 +987,12 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: &serviceRouting,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   &serviceRouting,
 		},
 		{
 			name: "BTP targeting listener (sectionName) has priority over gateway",
@@ -1019,8 +1035,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:        defaultRoute,
-			gateway:      defaultGateway,
+			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:     []*GatewayContext{defaultGateway},
+			routeKind:    "HTTPRoute",
+			routeNN:      routeNN,
+			gatewayNN:    gatewayNN,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
@@ -1065,8 +1084,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:        defaultRoute,
-			gateway:      defaultGateway,
+			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:     []*GatewayContext{defaultGateway},
+			routeKind:    "HTTPRoute",
+			routeNN:      routeNN,
+			gatewayNN:    gatewayNN,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
@@ -1110,9 +1132,12 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: &serviceRouting,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   &serviceRouting,
 		},
 		{
 			name: "BTP in different namespace does not match",
@@ -1136,9 +1161,12 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: nil,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   nil,
 		},
 		{
 			name: "BTP using targetRefs instead of targetRef",
@@ -1171,9 +1199,12 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:    defaultRoute,
-			gateway:  defaultGateway,
-			expected: &serviceRouting,
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:   []*GatewayContext{defaultGateway},
+			routeKind:  "HTTPRoute",
+			routeNN:    routeNN,
+			gatewayNN:  gatewayNN,
+			expected:   &serviceRouting,
 		},
 		{
 			name: "full priority chain: route > listener > gateway",
@@ -1234,8 +1265,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:        defaultRoute,
-			gateway:      defaultGateway,
+			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:     []*GatewayContext{defaultGateway},
+			routeKind:    "HTTPRoute",
+			routeNN:      routeNN,
+			gatewayNN:    gatewayNN,
 			listenerName: ptr.To(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
@@ -1280,8 +1314,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:         defaultRoute,
-			gateway:       defaultGateway,
+			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:      []*GatewayContext{defaultGateway},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     gatewayNN,
 			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
@@ -1326,8 +1363,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:         defaultRoute,
-			gateway:       defaultGateway,
+			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:      []*GatewayContext{defaultGateway},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     gatewayNN,
 			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
@@ -1354,8 +1394,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:         defaultRoute,
-			gateway:       defaultGateway,
+			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:      []*GatewayContext{defaultGateway},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     gatewayNN,
 			routeRuleName: nil,
 			expected:      nil,
 		},
@@ -1380,8 +1423,8 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route: &HTTPRouteContext{
-				HTTPRoute: &gwapiv1.HTTPRoute{
+			httpRoutes: []*gwapiv1.HTTPRoute{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "route-1",
@@ -1389,8 +1432,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			gateway:  defaultGateway,
-			expected: &serviceRouting,
+			gateways:  []*GatewayContext{defaultGateway},
+			routeKind: "HTTPRoute",
+			routeNN:   routeNN,
+			gatewayNN: gatewayNN,
+			expected:  &serviceRouting,
 		},
 		{
 			name: "BTP with targetSelector matching gateway labels",
@@ -1413,15 +1459,22 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route: defaultRoute,
-			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "gateway-1",
-					Labels:    map[string]string{"env": "prod"},
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways: []*GatewayContext{
+				{
+					Gateway: &gwapiv1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "gateway-1",
+							Labels:    map[string]string{"env": "prod"},
+						},
+					},
 				},
 			},
-			expected: &serviceRouting,
+			routeKind: "HTTPRoute",
+			routeNN:   routeNN,
+			gatewayNN: gatewayNN,
+			expected:  &serviceRouting,
 		},
 		{
 			name: "BTP with targetSelector not matching labels returns nil",
@@ -1444,8 +1497,8 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route: &HTTPRouteContext{
-				HTTPRoute: &gwapiv1.HTTPRoute{
+			httpRoutes: []*gwapiv1.HTTPRoute{
+				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "route-1",
@@ -1453,8 +1506,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			gateway:  defaultGateway,
-			expected: nil,
+			gateways:  []*GatewayContext{defaultGateway},
+			routeKind: "HTTPRoute",
+			routeNN:   routeNN,
+			gatewayNN: gatewayNN,
+			expected:  nil,
 		},
 		{
 			name: "explicit route targetRef takes priority over targetSelector gateway",
@@ -1495,15 +1551,22 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route: defaultRoute,
-			gateway: &gwapiv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "gateway-1",
-					Labels:    map[string]string{"env": "prod"},
+			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways: []*GatewayContext{
+				{
+					Gateway: &gwapiv1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "gateway-1",
+							Labels:    map[string]string{"env": "prod"},
+						},
+					},
 				},
 			},
-			expected: &serviceRouting,
+			routeKind: "HTTPRoute",
+			routeNN:   routeNN,
+			gatewayNN: gatewayNN,
+			expected:  &serviceRouting,
 		},
 		{
 			name: "full priority chain: routeRule > route > listener > gateway",
@@ -1583,8 +1646,11 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 					},
 				},
 			},
-			route:         defaultRoute,
-			gateway:       defaultGateway,
+			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			gateways:      []*GatewayContext{defaultGateway},
+			routeKind:     "HTTPRoute",
+			routeNN:       routeNN,
+			gatewayNN:     gatewayNN,
 			listenerName:  ptr.To(gwapiv1.SectionName("http")),
 			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
@@ -1593,7 +1659,8 @@ func TestGetBTPRoutingTypeForRoute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GetBTPRoutingTypeForRoute(tt.btps, tt.route, tt.gateway, tt.listenerName, tt.routeRuleName)
+			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.httpRoutes, nil, nil, nil, nil, tt.gateways)
+			got := idx.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
 	}
