@@ -26,6 +26,7 @@ gateways:
       port: 8888
       protocol: HTTP
   status:
+    attachedListenerSets: 3
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -259,6 +260,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: good-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -339,6 +345,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: good-listener
       supportedKinds:
       - group: gateway.networking.k8s.io

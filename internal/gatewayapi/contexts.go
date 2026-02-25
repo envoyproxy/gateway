@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -38,6 +39,7 @@ type GatewayContext struct {
 // ListenerContexts from the Gateway spec.
 func (g *GatewayContext) ResetListeners() {
 	numListeners := len(g.Spec.Listeners)
+	g.Status.AttachedListenerSets = nil
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
 	for i := range g.Spec.Listeners {
@@ -81,6 +83,14 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 		g.envoyProxy = &egv1a1.EnvoyProxy{
 			Spec: *resources.EnvoyProxyDefaultSpec,
 		}
+	}
+}
+
+func (g *GatewayContext) IncreaseAttachedListenerSets() {
+	if g.Status.AttachedListenerSets == nil {
+		g.Status.AttachedListenerSets = ptr.To[int32](1)
+	} else {
+		*g.Status.AttachedListenerSets++
 	}
 }
 

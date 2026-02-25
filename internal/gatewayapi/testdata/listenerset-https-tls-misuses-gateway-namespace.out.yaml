@@ -20,6 +20,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 0
       conditions:

@@ -20,6 +20,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 2
     listeners:
     - attachedRoutes: 1
       conditions:
@@ -224,6 +225,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: grpc-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -275,6 +281,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: grpc-listener
       supportedKinds:
       - group: gateway.networking.k8s.io

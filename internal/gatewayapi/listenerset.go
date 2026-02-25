@@ -59,7 +59,7 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		xlsReason = gwapiv1.ListenerSetReasonNotAllowed
 		xlsMsg = fmt.Sprintf("ListenerSet attachment from namespace %s not allowed by Gateway %s/%s", ls.Namespace, gatewayCtx.Namespace, gatewayCtx.Name)
 		status.UpdateListenerSetStatusAccepted(ls, false, xlsReason, xlsMsg)
-		status.UpdateListenerSetStatusProgrammed(ls, false, gwapiv1.ListenerSetReasonProgrammed, "Not Programmed")
+		status.UpdateListenerSetStatusProgrammed(ls, false, gwapiv1.ListenerSetReasonNotAllowed, "Not Programmed")
 		return
 	}
 
@@ -93,6 +93,7 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
 	}
+	gatewayCtx.IncreaseAttachedListenerSets()
 }
 
 // ProcessListenerSetStatus computes the status of ListenerSets after their listeners have been processed.
