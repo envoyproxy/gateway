@@ -284,6 +284,9 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			// Create a rate limit object for the current rule.
 			rateLimit := &routev3.RateLimit{Actions: rlActions}
 
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+
 			if c := rule.RequestCost; c != nil {
 				// Set the hits addend for the request cost if specified.
 				rateLimit.HitsAddend = rateLimitCostToHitsAddend(c)
@@ -295,6 +298,7 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 			// Handle response cost by creating a separate rate limit object.
 			if c := rule.ResponseCost; c != nil {
 				responseRule := &routev3.RateLimit{Actions: rlActions, ApplyOnStreamDone: true}
+				responseRule.XRatelimitOption = rateLimit.XRatelimitOption
 				responseRule.HitsAddend = rateLimitCostToHitsAddend(c)
 				rateLimits = append(rateLimits, responseRule)
 				costSpecified = true
@@ -302,6 +306,23 @@ func buildRouteRateLimits(route *ir.HTTPRoute) (rateLimits []*routev3.RateLimit,
 		}
 	}
 	return rateLimits, costSpecified
+}
+
+// toEnvoyXRateLimitOption maps the EG API XRateLimitHeadersOption to the Envoy
+// per-descriptor XRateLimitOption. When nil (unset), UNSPECIFIED is returned,
+// meaning the rule inherits the listener-level setting.
+func toEnvoyXRateLimitOption(opt *egv1a1.XRateLimitHeadersOption) routev3.RateLimit_XRateLimitOption {
+	if opt == nil {
+		return routev3.RateLimit_UNSPECIFIED
+	}
+	switch *opt {
+	case egv1a1.XRateLimitHeadersOptionOff:
+		return routev3.RateLimit_OFF
+	case egv1a1.XRateLimitHeadersOptionDraftVersion03:
+		return routev3.RateLimit_DRAFT_VERSION_03
+	default:
+		return routev3.RateLimit_UNSPECIFIED
+	}
 }
 
 func buildHeaderMatchRateLimitActions(

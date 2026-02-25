@@ -1279,10 +1279,11 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			Requests: rule.Limit.Requests,
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
-		HeaderMatches: make([]*ir.StringMatch, 0),
-		MethodMatches: make([]*ir.StringMatch, 0),
-		Shared:        rule.Shared,
-		ShadowMode:    rule.ShadowMode,
+		HeaderMatches:    make([]*ir.StringMatch, 0),
+		MethodMatches:    make([]*ir.StringMatch, 0),
+		Shared:           rule.Shared,
+		ShadowMode:       rule.ShadowMode,
+		XRateLimitOption: rule.XRateLimit,
 	}
 
 	for _, match := range rule.ClientSelectors {
