@@ -36,6 +36,7 @@ import (
 )
 
 func init() {
+	// TODO: move all ListenerSet tests to upstream
 	ConformanceTests = append(ConformanceTests,
 		ListenerSetHTTPTest,
 		ListenerSetHTTPSTest,
