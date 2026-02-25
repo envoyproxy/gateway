@@ -30,7 +30,7 @@ func UpdateListenerSetStatusProgrammed(ls *gwapiv1.ListenerSet, programmed bool,
 	ls.Status.Conditions = MergeConditions(ls.Status.Conditions, cond)
 }
 
-func UpdateListenerSetStatusCondition(ls *gwapiv1.ListenerSet, conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason string, message string) {
+func UpdateListenerSetStatusCondition(ls *gwapiv1.ListenerSet, conditionType gwapiv1.ListenerConditionType, status metav1.ConditionStatus, reason, message string) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
@@ -43,7 +43,7 @@ func UpdateListenerSetStatusCondition(ls *gwapiv1.ListenerSet, conditionType gwa
 
 // SetListenerSetListenerStatusCondition sets a condition for a specific listener in the ListenerSet.
 func SetListenerSetListenerStatusCondition(ls *gwapiv1.ListenerSet, listenerStatusIdx int,
-	conditionType gwapiv1.ListenerEntryConditionType, status metav1.ConditionStatus, reason string, message string,
+	conditionType gwapiv1.ListenerEntryConditionType, status metav1.ConditionStatus, reason, message string,
 ) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
