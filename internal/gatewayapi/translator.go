@@ -425,6 +425,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 		}
 		if err := gCtx.attachEnvoyProxy(resources, envoyproxyMap); err != nil {
 			t.Logger.Error(err, "Error attaching EnvoyProxy", logKeysAndValues...)
+			// TODO - Add error to envoy proxy status message.
 		} else if gCtx.envoyProxy != nil {
 			// Debug logging to inspect the final merged EnvoyProxy configuration
 			if configJSON, jsonErr := json.Marshal(gCtx.envoyProxy.Spec); jsonErr == nil {
