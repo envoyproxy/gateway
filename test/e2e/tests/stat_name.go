@@ -25,7 +25,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, ClusterStatNameTest, HTTPRouteStatNameTest, TCPRouteStatNameTest)
+	ConformanceTests = append(ConformanceTests,
+		ClusterStatNameTest,
+		RouteStatNameTest,
+	)
 }
 
 var ClusterStatNameTest = suite.ConformanceTest{
@@ -86,23 +89,27 @@ var ClusterStatNameTest = suite.ConformanceTest{
 	},
 }
 
-var HTTPRouteStatNameTest = suite.ConformanceTest{
-	ShortName:   "HTTPRouteStatNameTest",
-	Description: "Make sure per http route metrics is working",
-	Manifests:   []string{"testdata/httproute-metrics-stat.yaml"},
+var RouteStatNameTest = suite.ConformanceTest{
+	ShortName:   "RouteStatName",
+	Description: "Make sure per route metrics is working",
+	Manifests: []string{
+		"testdata/metrics-stat-httproute.yaml",
+		"testdata/metrics-stat-tcproute.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "http-route-stat-name", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		t.Run("prometheus", func(t *testing.T) {
+		t.Run("HTTPRoute", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "http-route-stat-name", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "http-stat-name-backend-gateway", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
-					Path: "/foo",
+					Path: "/http",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -110,26 +117,17 @@ var HTTPRouteStatNameTest = suite.ConformanceTest{
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			verifyMetrics(t, suite, `envoy_vhost_route_upstream_rq{envoy_route="gateway-conformance-infra/http-route-stat-name"}`)
 		})
-	},
-}
 
-var TCPRouteStatNameTest = suite.ConformanceTest{
-	ShortName:   "TCPRouteStatNameTest",
-	Description: "Make sure per tcp route metrics is working",
-	Manifests:   []string{"testdata/tcproute-metrics-stat.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "tcp-stat-name-backend-gateway", Namespace: ns}
-		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
-
-		t.Run("prometheus", func(t *testing.T) {
+		t.Run("TCPRoute", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "tcp-stat-name-backend-gateway", Namespace: ns}
+			gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
-					Path: "/foo",
+					Path: "/tcp",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -145,7 +143,7 @@ func verifyMetrics(t *testing.T, suite *suite.ConformanceTestSuite, promQuery st
 	if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 		v, err := prometheus.QueryPrometheus(suite.Client, promQuery)
 		if err != nil {
-			tlog.Logf(t, "failed to query prometheus: %v", err)
+			tlog.Logf(t, "failed to query Prometheus: %v", err)
 			return false, err
 		}
 		if v != nil && v.Type() == model.ValVector {
