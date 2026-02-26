@@ -860,7 +860,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := buildRateLimitRule(tc.rule)
+			got, err := buildRateLimitRule(&tc.rule)
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorMsg)
