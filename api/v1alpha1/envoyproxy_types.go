@@ -202,6 +202,7 @@ type EnvoyProxySpec struct {
 	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
 	//
 	// +optional
+	// +notImplementedHide
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
 }
 
