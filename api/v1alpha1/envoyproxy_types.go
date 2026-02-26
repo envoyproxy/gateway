@@ -132,6 +132,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.wasm
 	//
+	// - envoy.filters.http.dynamic_modules
+	//
 	// - envoy.filters.http.rbac
 	//
 	// - envoy.filters.http.local_ratelimit
@@ -183,6 +185,20 @@ type EnvoyProxySpec struct {
 	// +optional
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 
+	// DynamicModules defines the set of dynamic modules that are allowed to be
+	// used by EnvoyExtensionPolicy resources. Each entry registers a module by
+	// a logical name and specifies the shared library that Envoy will load.
+	//
+	// The EnvoyProxy owner is responsible for ensuring the module .so files are available
+	// on the proxy container's filesystem (e.g., via init containers, custom images,
+	// or shared volumes).
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
+	
 	// If unset, no merging occurs, and only the most specific configuration takes effect.
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
@@ -253,7 +269,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -302,6 +318,9 @@ const (
 
 	// EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.
 	EnvoyFilterWasm EnvoyFilter = "envoy.filters.http.wasm"
+
+	// EnvoyFilterDynamicModules defines the Envoy HTTP dynamic modules filter.
+	EnvoyFilterDynamicModules EnvoyFilter = "envoy.filters.http.dynamic_modules"
 
 	// EnvoyFilterRBAC defines the Envoy RBAC filter.
 	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"
