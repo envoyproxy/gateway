@@ -28,6 +28,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
+  Reduce chances of listener drain due to Lua policy updates by migrating to LuaPerRoute.
 
 # Deprecated features or APIs.
 deprecations: |
