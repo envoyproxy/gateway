@@ -30,20 +30,6 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		}
 
 		uExtResources := uExtResourceList.Items
-		if r.namespaceLabel != nil {
-			var extRs []unstructured.Unstructured
-			for _, extR := range uExtResources {
-				ok, err := r.checkObjectNamespaceLabels(&extR)
-				if err != nil {
-					r.log.Error(err, "failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %w", extR.GetName(), extR.GetNamespace())
-					continue
-				}
-				if ok {
-					extRs = append(extRs, extR)
-				}
-			}
-			uExtResources = extRs
-		}
 
 		resourceItems = append(resourceItems, uExtResources...)
 	}
@@ -63,20 +49,6 @@ func (r *gatewayAPIReconciler) getExtensionBackendResources(ctx context.Context)
 		}
 
 		uExtResources := uExtResourceList.Items
-		if r.namespaceLabel != nil {
-			var extRs []unstructured.Unstructured
-			for _, extR := range uExtResources {
-				ok, err := r.checkObjectNamespaceLabels(&extR)
-				if err != nil {
-					r.log.Error(err, "failed to check namespace labels for ExtensionBackendResource %s in namespace %s: %w", extR.GetName(), extR.GetNamespace())
-					continue
-				}
-				if ok {
-					extRs = append(extRs, extR)
-				}
-			}
-			uExtResources = extRs
-		}
 
 		resourceItems = append(resourceItems, uExtResources...)
 	}
