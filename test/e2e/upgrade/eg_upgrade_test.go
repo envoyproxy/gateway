@@ -60,6 +60,7 @@ func TestEGUpgrade(t *testing.T) {
 		SupportedFeatures:    sets.New(features.SupportGateway),
 		SkipTests:            skipTests,
 		Hook:                 e2e.Hook,
+		FailFast:             true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)
