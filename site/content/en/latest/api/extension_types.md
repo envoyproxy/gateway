@@ -1933,7 +1933,6 @@ _Appears in:_
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
-| `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 
 
 #### EnvoyProxyStatus
@@ -2388,6 +2387,20 @@ _Appears in:_
 | `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
 
 
+#### GeoIPDBSource
+
+
+
+GeoIPDBSource defines where a GeoIP .mmdb database can be loaded from.
+
+_Appears in:_
+- [GeoIPMaxMind](#geoipmaxmind)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  false  |  | Local is a database source from a local file. |
+
+
 #### GeoIPMaxMind
 
 
@@ -2400,11 +2413,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `cityDbPath` | _string_ |  false  |  | CityDBPath is the path to the City database (.mmdb). |
-| `countryDbPath` | _string_ |  false  |  | CountryDBPath is the path to the Country database (.mmdb). |
-| `asnDbPath` | _string_ |  false  |  | ASNDBPath is the path to the ASN database (.mmdb). |
-| `ispDbPath` | _string_ |  false  |  | ISPDBPath is the path to the ISP database (.mmdb). |
-| `anonymousIpDbPath` | _string_ |  false  |  | AnonymousIPDBPath is the path to the Anonymous IP database (.mmdb). |
+| `cityDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CityDBSource configures the City database source. |
+| `countryDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CountryDBSource configures the Country database source. |
+| `asnDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ASNDBSource configures the ASN database source. |
+| `ispDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ISPDBSource configures the ISP database source. |
+| `anonymousIpDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | AnonymousIPDBSource configures the Anonymous IP database source. |
 
 
 #### GeoIPProvider
@@ -2419,7 +2432,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[GeoIPProviderType](#geoipprovidertype)_ |  true  |  |  |
-| `MaxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
+| `maxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
 
 
 #### GeoIPProviderType
@@ -3585,6 +3598,20 @@ _Appears in:_
 | `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
+
+
+#### LocalGeoIPDBSource
+
+
+
+LocalGeoIPDBSource configures a GeoIP database from a local file path.
+
+_Appears in:_
+- [GeoIPDBSource](#geoipdbsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the path to the database file. |
 
 
 #### LocalJWKS
@@ -4887,6 +4914,17 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+
+
+#### RemoteGeoIPDBSource
+
+
+
+RemoteGeoIPDBSource configures a GeoIP database fetched from a remote URL.
+
+_Appears in:_
+- [GeoIPDBSource](#geoipdbsource)
+
 
 
 #### RemoteJWKS
