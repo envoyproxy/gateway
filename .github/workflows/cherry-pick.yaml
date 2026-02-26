@@ -1,0 +1,94 @@
+name: Manual Cherry-Pick
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  cherry-pick:
+    # Only trigger if the comment starts with /cherry-pick on a Pull Request
+    if: contains(github.event.comment.body, '/cherry-pick') && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check User Status
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ACTOR="${{ github.actor }}"
+
+          # Check if actor is listed anywhere in the OWNERS file
+          if ! grep -i "^- $ACTOR$" OWNERS > /dev/null; then
+            gh pr comment ${{ github.event.issue.number }} --body "❌ Only people listed in the OWNERS file can use the cherry-pick command."
+            exit 1
+          fi
+
+      - name: Parse Branch and PR Data
+        id: data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Extract only the first argument after /cherry-pick (ignore trailing text)
+          TARGET_BRANCH=$(echo "${{ github.event.comment.body }}" | awk '/\/cherry-pick/{print $2}')
+
+          if [ -z "$TARGET_BRANCH" ]; then
+            gh pr comment ${{ github.event.issue.number }} --body "⚠️ Usage: \`/cherry-pick <branch>\` (e.g. \`/cherry-pick release/v1.7\`)"
+            exit 1
+          fi
+
+          echo "target_branch=$TARGET_BRANCH" >> $GITHUB_OUTPUT
+
+          # Get original PR title and merge status
+          PR_JSON=$(gh pr view ${{ github.event.issue.number }} --json title,merged,mergeCommit)
+
+          IS_MERGED=$(echo "$PR_JSON" | jq -r '.merged')
+          if [ "$IS_MERGED" != "true" ]; then
+            gh pr comment ${{ github.event.issue.number }} --body "⚠️ Cannot cherry-pick. This PR must be merged first."
+            exit 1
+          fi
+
+          ORIGINAL_TITLE=$(echo "$PR_JSON" | jq -r '.title')
+          SHA=$(echo "$PR_JSON" | jq -r '.mergeCommit.oid')
+
+          echo "original_title=$ORIGINAL_TITLE" >> $GITHUB_OUTPUT
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
+      - name: Git Config
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create Cherry-Pick PR
+        id: create_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ steps.data.outputs.target_branch }}
+          ORIGINAL_TITLE: ${{ steps.data.outputs.original_title }}
+          COMMIT_SHA: ${{ steps.data.outputs.sha }}
+        run: |
+          # Sanitize branch name for the local 'head' branch (replace / with -)
+          SAFE_NAME=$(echo "$TARGET_BRANCH" | tr '/' '-')
+          NEW_BRANCH="cherry-pick-$COMMIT_SHA-to-$SAFE_NAME"
+
+          git checkout -b "$NEW_BRANCH" "origin/$TARGET_BRANCH"
+
+          if git cherry-pick "$COMMIT_SHA"; then
+            git push origin "$NEW_BRANCH"
+
+            # Formulate the new title: [release/v1.7] Original Title
+            NEW_TITLE="[$TARGET_BRANCH] $ORIGINAL_TITLE"
+
+            gh pr create \
+              --title "$NEW_TITLE" \
+              --body "Automated cherry-pick of $COMMIT_SHA to $TARGET_BRANCH. Triggered by @${{ github.actor }}." \
+              --base "$TARGET_BRANCH" \
+              --head "$NEW_BRANCH"
+
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            gh pr comment ${{ github.event.issue.number }} --body "❌ Cherry-pick to \`$TARGET_BRANCH\` failed due to merge conflicts."
+            exit 1
+          fi
