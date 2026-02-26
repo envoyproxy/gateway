@@ -55,6 +55,7 @@ func TestMultipleGC(t *testing.T) {
 			SupportedFeatures: sets.New(features.SupportGateway),
 			SkipTests:         []string{},
 			Hook:              e2e.Hook,
+			FailFast:          true,
 		})
 		if err != nil {
 			t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
