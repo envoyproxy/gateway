@@ -39,7 +39,8 @@ type SecurityPolicy struct {
 //
 // NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
 // When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
-// (Authorization rules that use Principal.ClientCIDRs) is applied. Other
+// (Authorization rules that use Principal.ClientCIDRs and Principal.SourceCIDRs)
+// is applied. Other
 // authentication/authorization features such as JWT, API Key, Basic Auth,
 // OIDC, or External Authorization are not applicable to TCPRoute targets.
 //

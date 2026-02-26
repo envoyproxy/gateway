@@ -660,7 +660,7 @@ func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
 					JWT:  tt.JWT,
 				},
 			}
-			err := validateSecurityPolicy(&securityPolicy)
+			err := validateSecurityPolicyForHTTP(&securityPolicy)
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateSecurityPolicy() error = %v, wantErr %v", err, tt.wantError)
 				return
@@ -1099,6 +1099,22 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "allow with valid source cidr ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								SourceCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "allow with invalid cidr errors",
 			spec: egv1a1.SecurityPolicySpec{
 				Authorization: &egv1a1.Authorization{
@@ -1107,6 +1123,22 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 							Action: egv1a1.AuthorizationActionAllow,
 							Principal: egv1a1.Principal{
 								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "allow with invalid source cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								SourceCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
 							},
 						},
 					},
@@ -1197,6 +1229,27 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_validateSecurityPolicyForHTTPRoute_SourceCIDRs(t *testing.T) {
+	p := &egv1a1.SecurityPolicy{
+		Spec: egv1a1.SecurityPolicySpec{
+			Authorization: &egv1a1.Authorization{
+				Rules: []egv1a1.AuthorizationRule{
+					{
+						Action: egv1a1.AuthorizationActionAllow,
+						Principal: egv1a1.Principal{
+							SourceCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := validateSecurityPolicyForHTTP(p)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "sourceCIDRs is only supported for TCP/L4 targets")
 }
 
 func Test_buildContextExtensions(t *testing.T) {

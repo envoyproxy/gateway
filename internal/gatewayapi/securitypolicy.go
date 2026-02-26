@@ -277,7 +277,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 	// Protocol-specific validation: pick the appropriate validator and message,
 	// then run it once to keep the flow linear and easier to read.
-	validator := validateSecurityPolicy
+	validator := validateSecurityPolicyForHTTP
 	errMsg := "invalid SecurityPolicy"
 	if currTarget.Kind == resource.KindTCPRoute {
 		validator = validateSecurityPolicyForTCP
@@ -399,7 +399,7 @@ func (t *Translator) processSecurityPolicyForGateway(
 
 // validateSecurityPolicy validates the SecurityPolicy.
 // It checks some constraints that are not covered by the CRD schema validation.
-func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
+func validateSecurityPolicyForHTTP(p *egv1a1.SecurityPolicy) error {
 	apiKeyAuth := p.Spec.APIKeyAuth
 	if apiKeyAuth != nil {
 		if err := validateAPIKeyAuth(apiKeyAuth); err != nil {
@@ -433,12 +433,20 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 			return err
 		}
 	}
+
+	if p.Spec.Authorization != nil {
+		for _, rule := range p.Spec.Authorization.Rules {
+			if len(rule.Principal.SourceCIDRs) > 0 {
+				return errors.New("sourceCIDRs is only supported for TCP/L4 targets")
+			}
+		}
+	}
 	return nil
 }
 
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
 //
-// TCP supports Authorization with ClientCIDRs ONLY.
+// TCP supports Authorization with ClientCIDRs and SourceCIDRs ONLY.
 // - Principals.JWT      => invalid (HTTP-only)
 // - Principals.Headers  => invalid (HTTP-only)
 // - Empty/no Authorization is allowed and results in no-op on TCP.
@@ -460,6 +468,9 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
 		}
+		if err := validateCIDRs(rule.Principal.SourceCIDRs); err != nil {
+			return fmt.Errorf("rule %d: %w", i, err)
+		}
 	}
 	return nil
 }
@@ -468,7 +479,7 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 func validateCIDRs(cidrs []egv1a1.CIDR) error {
 	for _, c := range cidrs {
 		if _, _, err := net.ParseCIDR(string(c)); err != nil {
-			return fmt.Errorf("invalid ClientCIDR %q: %w", c, err)
+			return fmt.Errorf("invalid CIDR %q: %w", c, err)
 		}
 	}
 	return nil
@@ -872,7 +883,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			errs = errors.Join(errs, err)
 		}
 	}
-
 	hasNonExtAuthError = errs != nil
 
 	if policy.Spec.ExtAuth != nil {
@@ -2096,6 +2106,15 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 			}
 
 			irPrincipal.ClientCIDRs = append(irPrincipal.ClientCIDRs, cidrMatch)
+		}
+
+		for _, cidr := range rule.Principal.SourceCIDRs {
+			cidrMatch, err := parseCIDR(string(cidr))
+			if err != nil {
+				return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
+			}
+
+			irPrincipal.SourceCIDRs = append(irPrincipal.SourceCIDRs, cidrMatch)
 		}
 
 		irPrincipal.JWT = rule.Principal.JWT

@@ -21,6 +21,7 @@ import (
 	ipmatcherv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/metadata/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	gproto "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -203,7 +204,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 
 		if len(rule.Principal.ClientCIDRs) > 0 {
-			if ipPredicate, err = buildIPPredicate(rule.Principal.ClientCIDRs); err != nil {
+			if ipPredicate, err = buildClientIPPredicate(rule.Principal.ClientCIDRs); err != nil {
 				return nil, err
 			}
 		}
@@ -320,19 +321,27 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 	return rbac, nil
 }
 
-func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+func buildClientIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	return buildIPPredicate(clientCIDRs, "client_ip", &networkinput.SourceIPInput{})
+}
+
+func buildDirectSourceIPPredicate(sourceCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	return buildIPPredicate(sourceCIDRs, "source_ip", &networkinput.DirectSourceIPInput{})
+}
+
+func buildIPPredicate(cidrs []*ir.CIDRMatch, inputName string, inputMsg gproto.Message) (*matcherv3.Matcher_MatcherList_Predicate, error) {
 	var (
 		sourceIPInput *anypb.Any
 		ipMatcher     *anypb.Any
 		err           error
 	)
 
-	// Build the IPMatcher based on the client CIDRs.
+	// Build the IP matcher based on the provided CIDRs.
 	ipRangeMatcher := &ipmatcherv3.Ip{
-		StatPrefix: "client_ip",
+		StatPrefix: inputName,
 	}
 
-	for _, cidr := range clientCIDRs {
+	for _, cidr := range cidrs {
 		ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
 			AddressPrefix: cidr.IP,
 			PrefixLen: &wrapperspb.UInt32Value{
@@ -345,7 +354,7 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		return nil, err
 	}
 
-	if sourceIPInput, err = proto.ToAnyWithValidation(&networkinput.SourceIPInput{}); err != nil {
+	if sourceIPInput, err = proto.ToAnyWithValidation(inputMsg); err != nil {
 		return nil, err
 	}
 
@@ -353,7 +362,7 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
 			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
 				Input: &cncfv3.TypedExtensionConfig{
-					Name:        "client_ip",
+					Name:        inputName,
 					TypedConfig: sourceIPInput,
 				},
 				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{

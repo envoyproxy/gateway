@@ -18,19 +18,34 @@
                     action: DENY
                     name: DENY
               predicate:
-                singlePredicate:
-                  customMatch:
-                    name: ip_matcher
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
-                      cidrRanges:
-                      - addressPrefix: 10.0.0.0
-                        prefixLen: 24
-                      statPrefix: client_ip
-                  input:
-                    name: client_ip
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                andMatcher:
+                  predicate:
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 10.0.0.0
+                            prefixLen: 24
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 172.16.0.0
+                            prefixLen: 16
+                          statPrefix: source_ip
+                      input:
+                        name: source_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DirectSourceIPInput
             - onMatch:
                 action:
                   name: allow-corp
@@ -38,19 +53,34 @@
                     '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                     name: ALLOW
               predicate:
-                singlePredicate:
-                  customMatch:
-                    name: ip_matcher
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
-                      cidrRanges:
-                      - addressPrefix: 192.168.100.0
-                        prefixLen: 24
-                      statPrefix: client_ip
-                  input:
-                    name: client_ip
-                    typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                andMatcher:
+                  predicate:
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 192.168.100.0
+                            prefixLen: 24
+                          statPrefix: client_ip
+                      input:
+                        name: client_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+                  - singlePredicate:
+                      customMatch:
+                        name: ip_matcher
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.input_matchers.ip.v3.Ip
+                          cidrRanges:
+                          - addressPrefix: 172.16.1.0
+                            prefixLen: 16
+                          statPrefix: source_ip
+                      input:
+                        name: source_ip
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DirectSourceIPInput
           onNoMatch:
             action:
               name: default

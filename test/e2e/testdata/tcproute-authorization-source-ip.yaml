@@ -1,0 +1,100 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: tcp-sourceip-authorization-backend
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: blocked
+      protocol: TCP
+      port: 8100
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+    - name: allowed
+      protocol: TCP
+      port: 8101
+      allowedRoutes:
+        kinds:
+          - kind: TCPRoute
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-backend-authorization-sourceip-blocked
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tcp-sourceip-authorization-backend
+      sectionName: blocked
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: tcp-backend-authorization-sourceip-allowed
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tcp-sourceip-authorization-backend
+      sectionName: allowed
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-fqdn
+  namespace: gateway-conformance-infra
+spec:
+  endpoints:
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: tcp-backend-authorization-sourceip-blocked-security-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-backend-authorization-sourceip-blocked
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          sourceCIDRs:
+            - 192.0.2.0/24
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: tcp-backend-authorization-sourceip-allowed-security-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcp-backend-authorization-sourceip-allowed
+  authorization:
+    defaultAction: Deny
+    rules:
+      - action: Allow
+        principal:
+          sourceCIDRs:
+            - 0.0.0.0/0
+            - ::/0

@@ -230,6 +230,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.2.0/24
+          sourceCIDRs:
+          - 192.168.1.0/24
     targetRef:
       group: gateway.networking.k8s.io
       kind: TCPRoute
@@ -771,6 +773,12 @@ xdsIR:
               - cidr: 10.10.2.0/24
                 distinct: false
                 ip: 10.10.2.0
+                isIPv6: false
+                maskLen: 24
+              sourceCIDRs:
+              - cidr: 192.168.1.0/24
+                distinct: false
+                ip: 192.168.1.0
                 isIPv6: false
                 maskLen: 24
         destination:
