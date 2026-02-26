@@ -121,6 +121,7 @@ kubernetesClusterDomain: cluster.local
 certgen:
   job:
     annotations: {}
+    labels: {}
     args: []
     pod:
       annotations: {}

@@ -5,6 +5,9 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
+  {{- with .Values.certgen.job.labels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
   {{- if .Values.certgen.job.annotations }}
