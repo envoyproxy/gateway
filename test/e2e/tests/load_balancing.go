@@ -142,12 +142,8 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		}
 	}
 
-	ret := compareFunc(trafficMap)
-	if !ret {
-		tlog.Logf(t, "traffic map: %v", trafficMap)
-	}
-
-	return ret
+	tlog.Logf(t, "traffic map: %v", trafficMap)
+	return compareFunc(trafficMap)
 }
 
 var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
