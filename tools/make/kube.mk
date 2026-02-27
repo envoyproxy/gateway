@@ -41,6 +41,9 @@ E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
 E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
 
+# Define the Gateway API channel used in tests
+E2E_GATEWAY_API_CHANNEL ?= experimental
+
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
 EXPERIMENTAL_CONFORMANCE_TEST_ARGS ?= -v -tags experimental -timeout $(E2E_TIMEOUT)
@@ -174,12 +177,25 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
+ifeq ($(E2E_GATEWAY_API_CHANNEL),standard)
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		-f $(ROOT_DIR)/test/helm/gateway-crds-helm/e2e.in.yaml \
+		| kubectl apply -f - --server-side
+	$(GO_TOOL) helm install eg charts/gateway-helm \
+		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		--set crds.enabled=false \
+		-n envoy-gateway-system --create-namespace \
+		--debug --timeout='$(WAIT_TIMEOUT)' \
+		--wait --wait-for-jobs \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+else
 	$(GO_TOOL) helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
 		--wait --wait-for-jobs \
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+endif
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
