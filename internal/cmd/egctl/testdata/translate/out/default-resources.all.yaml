@@ -211,7 +211,7 @@ gateways:
         namespaces:
           from: Same
       name: udp
-      port: 1234
+      port: 2345
       protocol: UDP
     - allowedRoutes:
         namespaces:
@@ -1502,7 +1502,7 @@ xds:
             address:
               socketAddress:
                 address: 0.0.0.0
-                portValue: 1234
+                portValue: 2345
                 protocol: UDP
             listenerFilters:
             - name: envoy.filters.udp_listener.udp_proxy
