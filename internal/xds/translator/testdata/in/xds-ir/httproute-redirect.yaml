@@ -1,0 +1,97 @@
+http:
+  - address: 0.0.0.0
+    externalPort: 80
+    hostnames:
+      - "*.envoyproxy.io"
+    isHTTP2: false
+    metadata:
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    name: envoy-gateway/gateway-1/http
+    path:
+      escapedSlashesAction: UnescapeAndRedirect
+      mergeSlashes: true
+    port: 10080
+    routes:
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-301
+          namespace: default
+        name: httproute/default/httproute-301/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/301
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 301
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-302
+          namespace: default
+        name: httproute/default/httproute-302/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/302
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 302
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-303
+          namespace: default
+        name: httproute/default/httproute-303/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/303
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 303
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-307
+          namespace: default
+        name: httproute/default/httproute-307/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/307
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 307
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-308
+          namespace: default
+        name: httproute/default/httproute-308/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/308
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 308
