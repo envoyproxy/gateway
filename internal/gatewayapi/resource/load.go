@@ -21,7 +21,6 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -234,7 +233,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case KindTLSRoute:
 			typedSpec := spec.Interface()
-			tlsRoute := &gwapiv1a3.TLSRoute{
+			tlsRoute := &gwapiv1.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindTLSRoute,
 					APIVersion: gv,
@@ -594,7 +593,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
-	case *gwapiv1a3.TLSRoute:
+	case *gwapiv1.TLSRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)

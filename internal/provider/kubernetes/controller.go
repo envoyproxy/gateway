@@ -41,7 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -93,7 +92,6 @@ type gatewayAPIReconciler struct {
 	serviceImportCRDExists bool
 	spCRDExists            bool
 	tcpRouteCRDExists      bool
-	tlsRouteCRDExists      bool
 	udpRouteCRDExists      bool
 	listenerSetEnabled     bool
 
@@ -1645,11 +1643,9 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 
 		// Route Processing
 
-		if r.tlsRouteCRDExists {
-			// Get TLSRoute objects and check if it exists.
-			if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-				return err
-			}
+		// Get TLSRoute objects and check if it exists.
+		if err := r.processTLSRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+			return err
 		}
 
 		// Get HTTPRoute objects and check if it exists.
@@ -2140,31 +2136,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.tlsRouteCRDExists, err = checkCRD(resource.KindTLSRoute, gwapiv1a3.GroupVersion.String())
-	if err != nil {
+	// Watch TLSRoute CRUDs and process affected Gateways.
+	tlsrPredicates := commonPredicates[*gwapiv1.TLSRoute]()
+	if r.namespaceLabel != nil {
+		tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1.TLSRoute) bool {
+			return r.hasMatchingNamespaceLabels(route)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1.TLSRoute{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.TLSRoute) []reconcile.Request {
+				return r.enqueueClass(ctx, route)
+			}),
+			tlsrPredicates...)); err != nil {
 		return err
 	}
-	if !r.tlsRouteCRDExists {
-		r.log.Info("TLSRoute CRD not found, skipping TLSRoute watch")
-	} else {
-		// Watch TLSRoute CRUDs and process affected Gateways.
-		tlsrPredicates := commonPredicates[*gwapiv1a3.TLSRoute]()
-		if r.namespaceLabel != nil {
-			tlsrPredicates = append(tlsrPredicates, predicate.NewTypedPredicateFuncs(func(route *gwapiv1a3.TLSRoute) bool {
-				return r.hasMatchingNamespaceLabels(route)
-			}))
-		}
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1a3.TLSRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1a3.TLSRoute) []reconcile.Request {
-					return r.enqueueClass(ctx, route)
-				}),
-				tlsrPredicates...)); err != nil {
-			return err
-		}
-		if err := addTLSRouteIndexers(ctx, mgr); err != nil {
-			return err
-		}
+	if err := addTLSRouteIndexers(ctx, mgr); err != nil {
+		return err
 	}
 
 	r.udpRouteCRDExists, err = checkCRD(resource.KindUDPRoute, gwapiv1a2.GroupVersion.String())
