@@ -9,7 +9,7 @@ ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_MINOR_VERSION ?= 1.5
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0-rc.2
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
