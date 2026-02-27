@@ -725,7 +725,6 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 	unSupportedKinds := make([]gwapiv1.RouteGroupKind, 0)
 
 	for _, kind := range listener.AllowedRoutes.Kinds {
-
 		// if there is a group it must match `gateway.networking.k8s.io`
 		if kind.Group != nil && string(*kind.Group) != gwapiv1.GroupName {
 			listener.SetCondition(
@@ -780,7 +779,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 type portListeners struct {
 	listeners []*ListenerContext
-	protocols sets.Set[string]
+	protocols map[string]bool
 	hostnames map[string]int
 }
 
@@ -812,56 +811,103 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	}
 }
 
-// validateConflictedProtocolsListeners checks for listeners that have conflicting protocols on the same port.
-// UDP can coexist with any protocol. HTTPS and TLS are treated as compatible via getProtocolForListener.
+// validateConflictedProtocolsListeners checks for listeners that have conflicting protocols on the same port and sets the Conflicted condition on those listeners.
 func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayContext) {
-	validateByPort := func(listeners []*ListenerContext) {
-		portListenerInfo := map[gwapiv1.PortNumber][]*ListenerContext{}
-		for _, listener := range listeners {
-			if !isSpecValidForConflictChecks(listener) || !isSupportedListenerProtocol(listener.Protocol) {
-				continue
-			}
-			portListenerInfo[listener.Port] = append(portListenerInfo[listener.Port], listener)
-		}
-
-		for _, listenersOnPort := range portListenerInfo {
-			var firstNonUDPProtocol string
-			seenNonUDPProtocol := false
-
-			for _, listener := range listenersOnPort {
-				protocol := getProtocolForListener(listener)
-				if protocol == string(gwapiv1.UDPProtocolType) {
-					continue
-				}
-
-				if !seenNonUDPProtocol {
-					firstNonUDPProtocol = protocol
-					seenNonUDPProtocol = true
-					continue
-				}
-
-				if protocol != firstNonUDPProtocol {
-					listener.SetCondition(
-						gwapiv1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-				}
-			}
-		}
-	}
-
+	// Per-gateway check: within each gateway, listeners on the same port must use compatible protocols.
+	// HTTPS and TLS are considered compatible with each other but not with HTTP or TCP.
 	for _, gateway := range gateways {
-		validateByPort(gateway.listeners)
+		portListenerInfo := collectPortListeners(gateway.listeners)
+		markProtocolConflicts(portListenerInfo)
 	}
 
+	// In merge mode, also check for protocol conflicts across all gateways that share
+	// the same infra port, since they share the same IR key. A Gateway with HTTP/80
+	// and another with TCP/80 would each pass the per-gateway check above (single
+	// listener per gateway), but must still be flagged as conflicted in merge mode.
 	if t.MergeGateways {
-		allListeners := make([]*ListenerContext, 0)
+		var allListeners []*ListenerContext
 		for _, gateway := range gateways {
 			allListeners = append(allListeners, gateway.listeners...)
 		}
-		validateByPort(allListeners)
+		portListenerInfo := collectPortListeners(allListeners)
+		markProtocolConflicts(portListenerInfo)
+	}
+}
+
+// collectPortListeners groups the provided listeners by port, skipping any with unsupported protocols.
+func collectPortListeners(listeners []*ListenerContext) map[gwapiv1.PortNumber]*portListeners {
+	portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
+	for _, listener := range listeners {
+		// Skip listeners that already failed per-listener validation.
+		// This avoids invalid listeners blocking valid listeners in conflict checks.
+		if !isSpecValidForConflictChecks(listener) {
+			continue
+		}
+		if !isSupportedListenerProtocol(listener.Protocol) {
+			continue
+		}
+		if portListenerInfo[listener.Port] == nil {
+			portListenerInfo[listener.Port] = &portListeners{
+				hostnames: map[string]int{},
+				protocols: map[string]bool{},
+			}
+		}
+		portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
+		protocol := getProtocolForListener(listener)
+		portListenerInfo[listener.Port].protocols[protocol] = true
+	}
+	return portListenerInfo
+}
+
+// markProtocolConflicts iterates portListenerInfo and marks any listeners whose protocol
+// is incompatible with the first non-UDP listener on the same port.
+func markProtocolConflicts(portListenerInfo map[gwapiv1.PortNumber]*portListeners) {
+	for _, info := range portListenerInfo {
+		// For protocol conflict detection, the first listener on a port wins.
+		// Subsequent listeners with incompatible protocols are marked as conflicted.
+		// UDP can coexist with TCP/HTTP/HTTPS/TLS, but TCP/HTTP/HTTPS/TLS cannot mix.
+		var firstNonUDPProtocol string
+		seenNonUDPProtocol := false
+
+		for _, listener := range info.listeners {
+			protocol := getProtocolForListener(listener)
+
+			// UDP listeners can coexist with any other protocol
+			if protocol == "UDP" {
+				continue
+			}
+
+			// This is the first non-UDP listener we've seen on this port
+			if !seenNonUDPProtocol {
+				firstNonUDPProtocol = protocol
+				seenNonUDPProtocol = true
+				continue
+			}
+
+			// This is a subsequent non-UDP listener - check if it conflicts
+			if protocol != firstNonUDPProtocol {
+				listener.SetCondition(
+					gwapiv1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+				// TODO: remove following once https://github.com/kubernetes-sigs/gateway-api/pull/4692 landed,
+				// we may want to have similar logic when protocol conflict happened.
+				listener.SetCondition(
+					gwapiv1.ListenerConditionAccepted,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+				listener.SetCondition(
+					gwapiv1.ListenerConditionProgrammed,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+			}
+		}
 	}
 }
 
@@ -881,22 +927,12 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			}
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
-					protocols: sets.Set[string]{},
 					hostnames: map[string]int{},
+					protocols: map[string]bool{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			var protocol string
-			switch listener.Protocol {
-			// HTTPS and TLS can co-exist on the same port
-			case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-				protocol = "https/tls"
-			default:
-				protocol = string(listener.Protocol)
-			}
-			portListenerInfo[listener.Port].protocols.Insert(protocol)
 
 			var hostname string
 			if listener.Hostname != nil {
@@ -908,25 +944,37 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
 		for _, info := range portListenerInfo {
+			perHostnameListenerFound := map[string]bool{}
 			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
-					listener.SetCondition(
-						gwapiv1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-				}
 
 				var hostname string
 				if listener.Hostname != nil {
 					hostname = string(*listener.Hostname)
 				}
 
+				// the first listener with a given hostname on a given port is allowed to be non-conflicted,
+				// but any additional listener with the same hostname and port is a conflict
+				if found := perHostnameListenerFound[hostname]; !found {
+					perHostnameListenerFound[hostname] = true
+					continue
+				}
 				if info.hostnames[hostname] > 1 {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					// TODO: remove following once https://github.com/kubernetes-sigs/gateway-api/pull/4692 landed.
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
 						gwapiv1.ListenerReasonHostnameConflict,
 						"All listeners for a given port must use a unique hostname",
 					)
