@@ -2170,7 +2170,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 						{
 							Name: "my-module",
 							Source: egv1a1.DynamicModuleSource{
-								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Type:   ptr.To(egv1a1.LocalDynamicModuleSourceType),
 								Remote: &egv1a1.RemoteDynamicModuleSource{},
 							},
 						},

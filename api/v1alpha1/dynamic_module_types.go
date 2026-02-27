@@ -65,7 +65,7 @@ type LocalDynamicModuleSource struct {
 // RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
 //
 // +notImplementedHide
-type RemoteDynamicModuleSource struct {}
+type RemoteDynamicModuleSource struct{}
 
 // DynamicModuleEntry defines a dynamic module that is registered and allowed
 // for use by EnvoyExtensionPolicy resources.
