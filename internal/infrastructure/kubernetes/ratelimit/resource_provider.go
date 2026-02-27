@@ -102,9 +102,10 @@ func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      "statsd-exporter-config",
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            "statsd-exporter-config",
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Data: map[string]string{
 			"conf.yaml": statsConf,
@@ -325,9 +326,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      r.Name(),
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
