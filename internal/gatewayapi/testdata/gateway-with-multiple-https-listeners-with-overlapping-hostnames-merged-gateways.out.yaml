@@ -38,6 +38,11 @@ gateways:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
           in listener https-1 of gateway gateway-2. ALPN will default to HTTP/1.1
           to prevent HTTP/2 connection coalescing, unless explicitly configured via
@@ -101,6 +106,11 @@ gateways:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      - lastTransitionTime: null
         message: The hostname *.example.com overlaps with the hostname foo.example.com
           in listener https-1 of gateway gateway-1. ALPN will default to HTTP/1.1
           to prevent HTTP/2 connection coalescing, unless explicitly configured via
@@ -131,6 +141,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: https-2
       supportedKinds:
       - group: gateway.networking.k8s.io
