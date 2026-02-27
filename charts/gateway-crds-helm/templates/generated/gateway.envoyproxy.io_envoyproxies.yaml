@@ -313,15 +313,6 @@ spec:
                         state that should not be destroyed on configuration updates.
                         Defaults to false.
                       type: boolean
-                    libraryName:
-                      description: |-
-                        LibraryName is the name of the shared library file that Envoy will load.
-                        Envoy searches for lib${libraryName}.so in the path specified by the
-                        ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-                        If not specified, defaults to the value of Name.
-                      maxLength: 253
-                      pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
-                      type: string
                     loadGlobally:
                       default: false
                       description: |-
@@ -339,8 +330,47 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                       type: string
+                    source:
+                      description: Source defines where the dynamic module code is
+                        loaded from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem.
+                            Envoy searches for lib${libraryName}.so in the path specified by the
+                            ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+                          properties:
+                            libraryName:
+                              description: |-
+                                LibraryName is the name of the shared library file that Envoy will load.
+                                Envoy searches for lib${libraryName}.so in the path specified by the
+                                ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+                                If not specified, defaults to the value of the DynamicModuleEntry's Name.
+                              maxLength: 253
+                              pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
+                              type: string
+                          type: object
+                        remote:
+                          description: |-
+                            Remote specifies a module fetched from a remote source.
+                            The module binary is downloaded and cached by Envoy.
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the dynamic module code.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          - Remote
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Remote, remote field needs to be set.
+                        rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
                   required:
                   - name
+                  - source
                   type: object
                 maxItems: 16
                 type: array

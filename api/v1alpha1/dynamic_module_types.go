@@ -9,6 +9,64 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
+// DynamicModuleSourceType specifies the types of sources for dynamic module code.
+// +kubebuilder:validation:Enum=Local;Remote
+type DynamicModuleSourceType string
+
+const (
+	// LocalDynamicModuleSourceType specifies a module loaded from the local filesystem.
+	LocalDynamicModuleSourceType DynamicModuleSourceType = "Local"
+
+	// RemoteDynamicModuleSourceType specifies a module fetched from a remote source.
+	RemoteDynamicModuleSourceType DynamicModuleSourceType = "Remote"
+)
+
+// DynamicModuleSource defines the source of the dynamic module code.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'Remote' ? has(self.remote) : !has(self.remote)",message="If type is Remote, remote field needs to be set."
+type DynamicModuleSource struct {
+	// Type is the type of the source of the dynamic module code.
+	// Defaults to Local.
+	//
+	// +kubebuilder:default=Local
+	// +unionDiscriminator
+	// +optional
+	Type *DynamicModuleSourceType `json:"type,omitempty"`
+
+	// Local specifies a module loaded from the proxy's local filesystem.
+	// Envoy searches for lib${libraryName}.so in the path specified by the
+	// ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+	//
+	// +optional
+	Local *LocalDynamicModuleSource `json:"local,omitempty"`
+
+	// Remote specifies a module fetched from a remote source.
+	// The module binary is downloaded and cached by Envoy.
+	//
+	// +optional
+	// +notImplementedHide
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
+}
+
+// LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
+type LocalDynamicModuleSource struct {
+	// LibraryName is the name of the shared library file that Envoy will load.
+	// Envoy searches for lib${libraryName}.so in the path specified by the
+	// ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+	// If not specified, defaults to the value of the DynamicModuleEntry's Name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$`
+	LibraryName *string `json:"libraryName,omitempty"`
+}
+
+// RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+//
+// +notImplementedHide
+type RemoteDynamicModuleSource struct {}
+
 // DynamicModuleEntry defines a dynamic module that is registered and allowed
 // for use by EnvoyExtensionPolicy resources.
 type DynamicModuleEntry struct {
@@ -20,15 +78,8 @@ type DynamicModuleEntry struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
 	Name string `json:"name"`
 
-	// LibraryName is the name of the shared library file that Envoy will load.
-	// Envoy searches for lib${libraryName}.so in the path specified by the
-	// ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-	// If not specified, defaults to the value of Name.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$`
-	LibraryName *string `json:"libraryName,omitempty"`
+	// Source defines where the dynamic module code is loaded from.
+	Source DynamicModuleSource `json:"source"`
 
 	// DoNotClose prevents the module from being unloaded with dlclose when no
 	// more references exist. This is useful for modules that maintain global

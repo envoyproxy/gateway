@@ -205,12 +205,17 @@ infraIR:
           namespace: envoy-gateway
         spec:
           dynamicModules:
-          - libraryName: my_auth
-            name: my-auth-module
+          - name: my-auth-module
+            source:
+              local:
+                libraryName: my_auth
+              type: Local
           - doNotClose: true
-            libraryName: ai_gateway
             loadGlobally: true
             name: ai-gateway-filter
+            source:
+              local:
+                libraryName: ai_gateway
           logging: {}
         status: {}
       listeners:
