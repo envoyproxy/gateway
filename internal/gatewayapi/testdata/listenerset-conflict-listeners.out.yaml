@@ -26,6 +26,7 @@ gateways:
       port: 8888
       protocol: HTTP
   status:
+    attachedListenerSets: 3
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -135,7 +136,7 @@ listenerSets:
       type: Accepted
     - lastTransitionTime: null
       message: All listeners are invalid
-      reason: Invalid
+      reason: ListenersNotValid
       status: "False"
       type: Programmed
     listeners:
@@ -148,7 +149,7 @@ listenerSets:
         type: Conflicted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -171,7 +172,7 @@ listenerSets:
         type: Conflicted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -228,7 +229,7 @@ listenerSets:
         type: Conflicted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -259,6 +260,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: good-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -308,7 +314,7 @@ listenerSets:
         type: Conflicted
       - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        reason: ListenersNotValid
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -339,6 +345,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: good-listener
       supportedKinds:
       - group: gateway.networking.k8s.io

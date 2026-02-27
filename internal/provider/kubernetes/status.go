@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -184,9 +183,9 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 				val := update.Value
 				r.statusUpdater.Send(Update{
 					NamespacedName: key,
-					Resource:       new(gwapiv1a3.TLSRoute),
+					Resource:       new(gwapiv1.TLSRoute),
 					Mutator: MutatorFunc(func(obj client.Object) client.Object {
-						t, ok := obj.(*gwapiv1a3.TLSRoute)
+						t, ok := obj.(*gwapiv1.TLSRoute)
 						if !ok {
 							err := fmt.Errorf("unsupported object type %T", obj)
 							errChan <- err
@@ -194,7 +193,7 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 						}
 						valCopy := val.DeepCopy()
 						setLastTransitionTimeInConditionsForRouteStatus(&valCopy.RouteStatus, metav1.Now())
-						tCopy := &gwapiv1a3.TLSRoute{
+						tCopy := &gwapiv1.TLSRoute{
 							TypeMeta:   t.TypeMeta,
 							ObjectMeta: t.ObjectMeta,
 							Spec:       t.Spec,

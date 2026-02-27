@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -179,7 +178,7 @@ func newTranslateResult(
 	}
 
 	if n := len(tlsRoutes); n > 0 {
-		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
+		translateResult.TLSRoutes = make([]*gwapiv1.TLSRoute, n)
 		for i, tlsRoute := range tlsRoutes {
 			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
 		}

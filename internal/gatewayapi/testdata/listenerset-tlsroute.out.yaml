@@ -20,6 +20,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -142,6 +143,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: extra-tls-passthrough
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -163,6 +169,11 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: extra-tls-terminate
       supportedKinds:
       - group: gateway.networking.k8s.io
