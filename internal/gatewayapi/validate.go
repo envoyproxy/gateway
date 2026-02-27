@@ -283,10 +283,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
-		if listener.isFromListenerSet() {
-			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
-				"No conflicts detected")
-		}
+		listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+			"No conflicts detected")
 		return true
 	}
 
@@ -742,6 +740,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
 		for _, info := range portListenerInfo {
+			perHostnameListenerFound := map[string]bool{}
 			for _, listener := range info.listeners {
 				if len(info.protocols) > 1 {
 					listener.SetCondition(
@@ -757,10 +756,28 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 					hostname = string(*listener.Hostname)
 				}
 
+				// the first listener with a given hostname on a given port is allowed to be non-conflicted,
+				// but any additional listener with the same hostname and port is a conflict
+				if found := perHostnameListenerFound[hostname]; !found {
+					perHostnameListenerFound[hostname] = true
+					continue
+				}
 				if info.hostnames[hostname] > 1 {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
 						gwapiv1.ListenerReasonHostnameConflict,
 						"All listeners for a given port must use a unique hostname",
 					)

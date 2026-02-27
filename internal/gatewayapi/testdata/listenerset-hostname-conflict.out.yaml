@@ -1,0 +1,557 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-with-listenerset-hostname-conflict
+    namespace: envoy-gateway
+  spec:
+    allowedListeners:
+      namespaces:
+        from: Same
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: gateway-listener.com
+      name: gateway-listener
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-gateway-listener.com
+      name: hostname-conflict-with-gateway-listener
+      port: 80
+      protocol: HTTP
+  status:
+    attachedListenerSets: 2
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: gateway-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: hostname-conflict-with-gateway-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+infraIR:
+  envoy-gateway/gateway-with-listenerset-hostname-conflict:
+    proxy:
+      listeners:
+      - name: envoy-gateway/gateway-with-listenerset-hostname-conflict/gateway-listener
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-with-listenerset-hostname-conflict
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-with-hostname-conflict-with-gateway-1
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: listener-set-1-listener.com
+      name: listener-set-1-listener
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-gateway-listener.com
+      name: hostname-conflict-with-gateway-listener
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-listener-set-listener.com
+      name: hostname-conflict-with-listener-set-listener
+      port: 80
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: listener-set-1-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: hostname-conflict-with-gateway-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: hostname-conflict-with-listener-set-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-with-hostname-conflict-with-gateway-2
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-gateway-listener.com
+      name: hostname-conflict-with-gateway-listener
+      port: 80
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are invalid
+      reason: ListenersNotValid
+      status: "False"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are invalid
+      reason: ListenersNotValid
+      status: "False"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: hostname-conflict-with-gateway-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-with-hostname-conflict-with-listener-set-1
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: listener-set-2-listener.com
+      name: listener-set-2-listener
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-listener-set-listener.com
+      name: hostname-conflict-with-listener-set-listener
+      port: 80
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: listener-set-2-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: hostname-conflict-with-listener-set-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-with-hostname-conflict-with-listener-set-2
+    namespace: envoy-gateway
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: hostname-conflict-with-listener-set-listener.com
+      name: hostname-conflict-with-listener-set-listener
+      port: 80
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-listenerset-hostname-conflict
+      namespace: envoy-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are invalid
+      reason: ListenersNotValid
+      status: "False"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are invalid
+      reason: ListenersNotValid
+      status: "False"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: hostname-conflict-with-listener-set-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+xdsIR:
+  envoy-gateway/gateway-with-listenerset-hostname-conflict:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-with-listenerset-hostname-conflict
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-with-listenerset-hostname-facad556
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-with-listenerset-hostname-conflict
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - gateway-listener.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+        sectionName: gateway-listener
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/gateway-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - hostname-conflict-with-gateway-listener.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+        sectionName: hostname-conflict-with-gateway-listener
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/hostname-conflict-with-gateway-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - listener-set-1-listener.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+        sectionName: listener-set-1-listener
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/listener-set-1-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - hostname-conflict-with-listener-set-listener.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+        sectionName: hostname-conflict-with-listener-set-listener
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-listener-set-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - listener-set-2-listener.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-hostname-conflict
+        namespace: envoy-gateway
+        sectionName: listener-set-2-listener
+      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-listener-set-1/listener-set-2-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

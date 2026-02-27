@@ -93,7 +93,6 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		}
 		gatewayCtx.listeners = append(gatewayCtx.listeners, listenerCtx)
 	}
-	gatewayCtx.IncreaseAttachedListenerSets()
 }
 
 // ProcessListenerSetStatus computes the status of ListenerSets after their listeners have been processed.
