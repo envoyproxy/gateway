@@ -7,8 +7,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -393,7 +393,7 @@ spec:
 
                       Implementations MAY define their own sets of CA certificates. Such definitions
                       MUST use an implementation-specific, prefixed name, such as
-                      `mycompany.com/my-custom-ca-certifcates`.
+                      `mycompany.com/my-custom-ca-certificates`.
 
                       Support: Implementation-specific
                     maxLength: 253
@@ -1069,7 +1069,7 @@ spec:
 
                       Implementations MAY define their own sets of CA certificates. Such definitions
                       MUST use an implementation-specific, prefixed name, such as
-                      `mycompany.com/my-custom-ca-certifcates`.
+                      `mycompany.com/my-custom-ca-certificates`.
 
                       Support: Implementation-specific
                     maxLength: 253
@@ -1394,8 +1394,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1914,8 +1914,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -5202,8 +5202,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -7277,8 +7277,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -7905,12 +7905,12 @@ spec:
                                         description: |-
                                           The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
                                           encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
-                                          scheme (e.g., "http" or "spiffe") and a scheme-specific-part, or it should be a single '*' character.
+                                          scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
                                           URIs that include an authority MUST include a fully qualified domain name or
                                           IP address as the host.
                                         maxLength: 253
                                         minLength: 1
-                                        pattern: (^\*$)|(^([a-zA-Z][a-zA-Z0-9+\-.]+):\/\/([^:/?#]+)(:([0-9]{1,5}))?$)
+                                        pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                         type: string
                                       maxItems: 64
                                       type: array
@@ -9160,12 +9160,12 @@ spec:
                                   description: |-
                                     The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
                                     encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
-                                    scheme (e.g., "http" or "spiffe") and a scheme-specific-part, or it should be a single '*' character.
+                                    scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
                                     URIs that include an authority MUST include a fully qualified domain name or
                                     IP address as the host.
                                   maxLength: 253
                                   minLength: 1
-                                  pattern: (^\*$)|(^([a-zA-Z][a-zA-Z0-9+\-.]+):\/\/([^:/?#]+)(:([0-9]{1,5}))?$)
+                                  pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                   type: string
                                 maxItems: 64
                                 type: array
@@ -11353,12 +11353,12 @@ spec:
                                         description: |-
                                           The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
                                           encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
-                                          scheme (e.g., "http" or "spiffe") and a scheme-specific-part, or it should be a single '*' character.
+                                          scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
                                           URIs that include an authority MUST include a fully qualified domain name or
                                           IP address as the host.
                                         maxLength: 253
                                         minLength: 1
-                                        pattern: (^\*$)|(^([a-zA-Z][a-zA-Z0-9+\-.]+):\/\/([^:/?#]+)(:([0-9]{1,5}))?$)
+                                        pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                         type: string
                                       maxItems: 64
                                       type: array
@@ -12608,12 +12608,12 @@ spec:
                                   description: |-
                                     The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
                                     encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
-                                    scheme (e.g., "http" or "spiffe") and a scheme-specific-part, or it should be a single '*' character.
+                                    scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
                                     URIs that include an authority MUST include a fully qualified domain name or
                                     IP address as the host.
                                   maxLength: 253
                                   minLength: 1
-                                  pattern: (^\*$)|(^([a-zA-Z][a-zA-Z0-9+\-.]+):\/\/([^:/?#]+)(:([0-9]{1,5}))?$)
+                                  pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                   type: string
                                 maxItems: 64
                                 type: array
@@ -14203,8 +14203,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: listenersets.gateway.networking.k8s.io
 spec:
@@ -14988,8 +14988,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -15346,8 +15346,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/3328
-    gateway.networking.k8s.io/bundle-version: v1.5.0-rc.1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
+    gateway.networking.k8s.io/bundle-version: v1.5.0
     gateway.networking.k8s.io/channel: standard
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -15656,10 +15656,9 @@ spec:
                         a Service with no endpoints), the rule performs no forwarding; if no
                         filters are specified that would result in a response being sent, the
                         underlying implementation must actively reject request attempts to this
-                        backend, by rejecting the connection or returning a 500 status code.
-                        Request rejections must respect weight; if an invalid backend is
-                        requested to have 80% of requests, then 80% of requests must be rejected
-                        instead.
+                        backend, by rejecting the connection. Request rejections must respect
+                        weight; if an invalid backend is requested to have 80% of requests, then
+                        80% of requests must be rejected instead.
 
                         Support: Core for Kubernetes Service
 
@@ -16362,10 +16361,9 @@ spec:
                         a Service with no endpoints), the rule performs no forwarding; if no
                         filters are specified that would result in a response being sent, the
                         underlying implementation must actively reject request attempts to this
-                        backend, by rejecting the connection or returning a 500 status code.
-                        Request rejections must respect weight; if an invalid backend is
-                        requested to have 80% of requests, then 80% of requests must be rejected
-                        instead.
+                        backend, by rejecting the connection. Request rejections must respect
+                        weight; if an invalid backend is requested to have 80% of requests, then
+                        80% of requests must be rejected instead.
 
                         Support: Core for Kubernetes Service
 
@@ -17056,10 +17054,9 @@ spec:
                         a Service with no endpoints), the rule performs no forwarding; if no
                         filters are specified that would result in a response being sent, the
                         underlying implementation must actively reject request attempts to this
-                        backend, by rejecting the connection or returning a 500 status code.
-                        Request rejections must respect weight; if an invalid backend is
-                        requested to have 80% of requests, then 80% of requests must be rejected
-                        instead.
+                        backend, by rejecting the connection. Request rejections must respect
+                        weight; if an invalid backend is requested to have 80% of requests, then
+                        80% of requests must be rejected instead.
 
                         Support: Core for Kubernetes Service
 
@@ -17461,7 +17458,7 @@ status:
   storedVersions: null
 ---
 # Source: gateway-crds-helm/templates/standard-gatewayapi-crds.yaml
-# Copyright 2026 The Kubernetes Authors.
+# Copyright The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17499,9 +17496,11 @@ spec:
       operations:  ["CREATE", "UPDATE"]
       resources:   ["*"]
   validations:
-    - expression: "object.spec.group != 'gateway.networking.k8s.io' || (
-        has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') &&
-        object.metadata.annotations['gateway.networking.k8s.io/channel'] == 'standard' )"
+    - expression: "object.spec.group != 'gateway.networking.k8s.io' || oldObject == null || (
+        has(object.metadata.annotations) && object.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        object.metadata.annotations['gateway.networking.k8s.io/channel'] == 'standard' ) || (
+        oldObject != null && has(oldObject.metadata.annotations) && oldObject.metadata.annotations.exists(k, k == 'gateway.networking.k8s.io/channel') && 
+        oldObject.metadata.annotations['gateway.networking.k8s.io/channel'] == 'experimental' )"
       message: "Installing experimental CRDs on top of standard channel CRDs is prohibited by default. Uninstall ValidatingAdmissionPolicy safe-upgrades.gateway.networking.k8s.io to install experimental CRDs on top of standard channel CRDs."
       reason: Invalid
     - expression: "object.spec.group != 'gateway.networking.k8s.io' ||
