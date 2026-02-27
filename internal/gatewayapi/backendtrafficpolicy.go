@@ -15,14 +15,11 @@ import (
 
 	perr "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -40,53 +37,40 @@ const (
 	ResponseBodyConfigMapKey = "response.body"
 )
 
-// btpRoutingRouteRuleKey identifies a BTP routing type at the route-rule level.
-type btpRoutingRouteRuleKey struct {
+// btpRoutingKey identifies a BTP routing type target
+type btpRoutingKey struct {
 	Kind, Namespace, Name, SectionName string
 }
 
-// btpRoutingListenerKey identifies a BTP routing type at the listener level.
-type btpRoutingListenerKey struct {
-	Namespace, Name, SectionName string
-}
-
-// BTPRoutingTypeIndex is a pre-computed index of RoutingType values from
-// BackendTrafficPolicies, organized by priority level.
-// This is to avoid an O(BTPs) lookup for every iteration
-// of processDestination.
+// BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
+// This avoids an O(BTPs) lookup for every iteration of processDestination.
 type BTPRoutingTypeIndex struct {
-	routeRuleLevel map[btpRoutingRouteRuleKey]*egv1a1.RoutingType
-	routeLevel     map[policyTargetRouteKey]*egv1a1.RoutingType
-	listenerLevel  map[btpRoutingListenerKey]*egv1a1.RoutingType
-	gatewayLevel   map[types.NamespacedName]*egv1a1.RoutingType
+	routeRuleLevel map[btpRoutingKey]*egv1a1.RoutingType
+	routeLevel     map[btpRoutingKey]*egv1a1.RoutingType
+	listenerLevel  map[btpRoutingKey]*egv1a1.RoutingType
+	gatewayLevel   map[btpRoutingKey]*egv1a1.RoutingType
 }
 
 // BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
-// from BackendTrafficPolicies. It iterates over all BTPs once and populates
-// maps for each priority level (route-rule, route, listener, gateway).
+// from BackendTrafficPolicies, organized by priority-level.
+// BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
 func BuildBTPRoutingTypeIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
-	httpRoutes []*gwapiv1.HTTPRoute,
-	grpcRoutes []*gwapiv1.GRPCRoute,
-	tlsRoutes []*gwapiv1a3.TLSRoute,
-	tcpRoutes []*gwapiv1a2.TCPRoute,
-	udpRoutes []*gwapiv1a2.UDPRoute,
+	routes []client.Object,
 	gateways []*GatewayContext,
 ) *BTPRoutingTypeIndex {
 	idx := &BTPRoutingTypeIndex{
-		routeRuleLevel: make(map[btpRoutingRouteRuleKey]*egv1a1.RoutingType),
-		routeLevel:     make(map[policyTargetRouteKey]*egv1a1.RoutingType),
-		listenerLevel:  make(map[btpRoutingListenerKey]*egv1a1.RoutingType),
-		gatewayLevel:   make(map[types.NamespacedName]*egv1a1.RoutingType),
+		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
+		routeLevel:     make(map[btpRoutingKey]*egv1a1.RoutingType),
+		listenerLevel:  make(map[btpRoutingKey]*egv1a1.RoutingType),
+		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.RoutingType),
 	}
 
-	// Build per-kind route slices as []client.Object for targetSelector matching.
-	routesByKind := map[string][]client.Object{
-		resource.KindHTTPRoute: toClientObjects(httpRoutes),
-		resource.KindGRPCRoute: toClientObjects(grpcRoutes),
-		resource.KindTLSRoute:  toClientObjects(tlsRoutes),
-		resource.KindTCPRoute:  toClientObjects(tcpRoutes),
-		resource.KindUDPRoute:  toClientObjects(udpRoutes),
+	// Combine routes and gateways into a single target slice for getPolicyTargetRefs.
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
 	}
 
 	for _, btp := range btps {
@@ -94,93 +78,34 @@ func BuildBTPRoutingTypeIndex(
 			continue
 		}
 
-		// Process explicit targetRef/targetRefs.
-		for _, ref := range btp.Spec.GetTargetRefs() {
-			refKind := string(ref.Kind)
-			refName := string(ref.Name)
-			refNamespace := btp.Namespace
+		refs := getPolicyTargetRefs(btp.Spec.PolicyTargetReferences, allTargets, btp.Namespace)
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:      kind,
+				Namespace: btp.Namespace,
+				Name:      string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
 
-			if isRouteKind(refKind) {
+			if kind == resource.KindGateway {
 				if ref.SectionName != nil {
-					// Route-rule level
-					key := btpRoutingRouteRuleKey{
-						Kind:        refKind,
-						Namespace:   refNamespace,
-						Name:        refName,
-						SectionName: string(*ref.SectionName),
-					}
-					if _, exists := idx.routeRuleLevel[key]; !exists {
-						idx.routeRuleLevel[key] = btp.Spec.RoutingType
-					}
-				} else {
-					// Route level
-					key := policyTargetRouteKey{
-						Kind:      refKind,
-						Namespace: refNamespace,
-						Name:      refName,
-					}
-					if _, exists := idx.routeLevel[key]; !exists {
-						idx.routeLevel[key] = btp.Spec.RoutingType
-					}
-				}
-			} else if refKind == resource.KindGateway {
-				if ref.SectionName != nil {
-					// Listener level
-					key := btpRoutingListenerKey{
-						Namespace:   refNamespace,
-						Name:        refName,
-						SectionName: string(*ref.SectionName),
-					}
 					if _, exists := idx.listenerLevel[key]; !exists {
 						idx.listenerLevel[key] = btp.Spec.RoutingType
 					}
 				} else {
-					// Gateway level
-					key := types.NamespacedName{
-						Namespace: refNamespace,
-						Name:      refName,
-					}
 					if _, exists := idx.gatewayLevel[key]; !exists {
 						idx.gatewayLevel[key] = btp.Spec.RoutingType
 					}
 				}
-			}
-		}
-
-		// Process targetSelectors (label-based targeting).
-		for _, sel := range btp.Spec.TargetSelectors {
-			selGroup := string(ptr.Deref(sel.Group, gwapiv1.GroupName))
-			selKind := string(sel.Kind)
-			if selGroup != gwapiv1.GroupName {
-				continue
-			}
-			labelSelector := selectorFromTargetSelector(sel)
-
-			if isRouteKind(selKind) {
-				for _, r := range routesByKind[selKind] {
-					if r.GetNamespace() == btp.Namespace &&
-						labelSelector.Matches(labels.Set(r.GetLabels())) {
-						key := policyTargetRouteKey{
-							Kind:      selKind,
-							Namespace: r.GetNamespace(),
-							Name:      r.GetName(),
-						}
-						if _, exists := idx.routeLevel[key]; !exists {
-							idx.routeLevel[key] = btp.Spec.RoutingType
-						}
+			} else {
+				if ref.SectionName != nil {
+					if _, exists := idx.routeRuleLevel[key]; !exists {
+						idx.routeRuleLevel[key] = btp.Spec.RoutingType
 					}
-				}
-			} else if selKind == resource.KindGateway {
-				for _, gw := range gateways {
-					if gw.Namespace == btp.Namespace &&
-						labelSelector.Matches(labels.Set(gw.Labels)) {
-						key := types.NamespacedName{
-							Namespace: gw.Namespace,
-							Name:      gw.Name,
-						}
-						if _, exists := idx.gatewayLevel[key]; !exists {
-							idx.gatewayLevel[key] = btp.Spec.RoutingType
-						}
+				} else {
+					if _, exists := idx.routeLevel[key]; !exists {
+						idx.routeLevel[key] = btp.Spec.RoutingType
 					}
 				}
 			}
@@ -190,29 +115,8 @@ func BuildBTPRoutingTypeIndex(
 	return idx
 }
 
-// toClientObjects converts a typed slice of pointers to client.Object.
-func toClientObjects[T any, PT interface {
-	*T
-	client.Object
-}](slice []PT) []client.Object {
-	out := make([]client.Object, len(slice))
-	for i, item := range slice {
-		out[i] = item
-	}
-	return out
-}
-
-// isRouteKind returns true if the given kind is a route kind.
-func isRouteKind(kind string) bool {
-	switch kind {
-	case resource.KindHTTPRoute, resource.KindGRPCRoute, resource.KindTLSRoute, resource.KindTCPRoute, resource.KindUDPRoute:
-		return true
-	}
-	return false
-}
-
 // LookupBTPRoutingType resolves the RoutingType for a specific route rule
-// and gateway/listener combination by checking the pre-computed index in
+// and gateway/listener combination by checking the index in
 // priority order: routeRule > route > listener > gateway.
 // Returns nil if no matching BTP RoutingType is found, or if the index is nil.
 func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
@@ -228,7 +132,7 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 
 	// 1. Route-rule level (most specific)
 	if routeRuleName != nil {
-		key := btpRoutingRouteRuleKey{
+		key := btpRoutingKey{
 			Kind:        string(routeKind),
 			Namespace:   routeNN.Namespace,
 			Name:        routeNN.Name,
@@ -240,7 +144,7 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 
 	// 2. Route level
-	routeKey := policyTargetRouteKey{
+	routeKey := btpRoutingKey{
 		Kind:      string(routeKind),
 		Namespace: routeNN.Namespace,
 		Name:      routeNN.Name,
@@ -251,7 +155,8 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 
 	// 3. Listener level
 	if listenerName != nil {
-		listenerKey := btpRoutingListenerKey{
+		listenerKey := btpRoutingKey{
+			Kind:        resource.KindGateway,
 			Namespace:   gatewayNN.Namespace,
 			Name:        gatewayNN.Name,
 			SectionName: string(*listenerName),
@@ -262,7 +167,12 @@ func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
 	}
 
 	// 4. Gateway level (least specific)
-	if rt, ok := idx.gatewayLevel[gatewayNN]; ok {
+	gwKey := btpRoutingKey{
+		Kind:      resource.KindGateway,
+		Namespace: gatewayNN.Namespace,
+		Name:      gatewayNN.Name,
+	}
+	if rt, ok := idx.gatewayLevel[gwKey]; ok {
 		return rt
 	}
 

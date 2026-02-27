@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -899,7 +900,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 	tests := []struct {
 		name          string
 		btps          []*egv1a1.BackendTrafficPolicy
-		httpRoutes    []*gwapiv1.HTTPRoute
+		routes        []client.Object
 		gateways      []*GatewayContext
 		routeKind     gwapiv1.Kind
 		routeNN       types.NamespacedName
@@ -911,7 +912,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 		{
 			name:       "no BTPs",
 			btps:       nil,
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -958,7 +959,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -987,7 +988,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -1035,7 +1036,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:       []client.Object{defaultHTTPRoute},
 			gateways:     []*GatewayContext{defaultGateway},
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
@@ -1084,7 +1085,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:       []client.Object{defaultHTTPRoute},
 			gateways:     []*GatewayContext{defaultGateway},
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
@@ -1132,7 +1133,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -1161,7 +1162,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -1199,7 +1200,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways:   []*GatewayContext{defaultGateway},
 			routeKind:  "HTTPRoute",
 			routeNN:    routeNN,
@@ -1265,7 +1266,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:   []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:       []client.Object{defaultHTTPRoute},
 			gateways:     []*GatewayContext{defaultGateway},
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
@@ -1314,7 +1315,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:        []client.Object{defaultHTTPRoute},
 			gateways:      []*GatewayContext{defaultGateway},
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
@@ -1363,7 +1364,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:        []client.Object{defaultHTTPRoute},
 			gateways:      []*GatewayContext{defaultGateway},
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
@@ -1394,7 +1395,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:        []client.Object{defaultHTTPRoute},
 			gateways:      []*GatewayContext{defaultGateway},
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
@@ -1423,8 +1424,9 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{
-				{
+			routes: []client.Object{
+				&gwapiv1.HTTPRoute{
+					TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "route-1",
@@ -1459,10 +1461,11 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways: []*GatewayContext{
 				{
 					Gateway: &gwapiv1.Gateway{
+						TypeMeta: metav1.TypeMeta{Kind: "Gateway", APIVersion: "gateway.networking.k8s.io/v1"},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "gateway-1",
@@ -1497,8 +1500,9 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{
-				{
+			routes: []client.Object{
+				&gwapiv1.HTTPRoute{
+					TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "route-1",
@@ -1551,10 +1555,11 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes: []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes: []client.Object{defaultHTTPRoute},
 			gateways: []*GatewayContext{
 				{
 					Gateway: &gwapiv1.Gateway{
+						TypeMeta: metav1.TypeMeta{Kind: "Gateway", APIVersion: "gateway.networking.k8s.io/v1"},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      "gateway-1",
@@ -1646,7 +1651,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 					},
 				},
 			},
-			httpRoutes:    []*gwapiv1.HTTPRoute{defaultHTTPRoute},
+			routes:        []client.Object{defaultHTTPRoute},
 			gateways:      []*GatewayContext{defaultGateway},
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
@@ -1659,7 +1664,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.httpRoutes, nil, nil, nil, nil, tt.gateways)
+			idx := BuildBTPRoutingTypeIndex(tt.btps, tt.routes, tt.gateways)
 			got := idx.LookupBTPRoutingType(tt.routeKind, tt.routeNN, tt.gatewayNN, tt.listenerName, tt.routeRuleName)
 			require.Equal(t, tt.expected, got)
 		})
