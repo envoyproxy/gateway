@@ -20,6 +20,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -54,12 +55,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: gateway-xls/composite-gateway/gateway-xls/udproute-xls/extra-udp
+      - name: gateway-xls/composite-gateway/gateway-xls/tcproute-xls/extra-tcp
         ports:
-        - containerPort: 8162
-          name: udp-8162
-          protocol: UDP
-          servicePort: 8162
+        - containerPort: 8089
+          name: tcp-8089
+          protocol: TCP
+          servicePort: 8089
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
@@ -73,19 +74,19 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: udproute-xls
+    name: tcproute-xls
     namespace: gateway-xls
   spec:
     listeners:
     - allowedRoutes:
         kinds:
         - group: gateway.networking.k8s.io
-          kind: UDPRoute
+          kind: TCPRoute
         namespaces:
           from: All
-      name: extra-udp
-      port: 8162
-      protocol: UDP
+      name: extra-tcp
+      port: 8089
+      protocol: TCP
     parentRef:
       name: composite-gateway
   status:
@@ -118,28 +119,33 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: extra-udp
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: extra-tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
-        kind: UDPRoute
-udpRoutes:
+        kind: TCPRoute
+tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: UDPRoute
+  kind: TCPRoute
   metadata:
-    name: udp-app-1
+    name: tcproute
     namespace: default
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: udproute-xls
+      name: tcproute-xls
       namespace: gateway-xls
-      sectionName: extra-udp
+      sectionName: extra-tcp
     rules:
     - backendRefs:
       - name: service-1
         namespace: default
-        port: 8162
+        port: 8163
   status:
     parents:
     - conditions:
@@ -157,9 +163,9 @@ udpRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: udproute-xls
+        name: tcproute-xls
         namespace: gateway-xls
-        sectionName: extra-udp
+        sectionName: extra-tcp
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:
@@ -207,34 +213,38 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
-    udp:
+    tcp:
     - address: 0.0.0.0
-      externalPort: 8162
+      externalPort: 8089
       metadata:
         kind: Gateway
         name: composite-gateway
         namespace: gateway-xls
-        sectionName: extra-udp
-      name: gateway-xls/composite-gateway/gateway-xls/udproute-xls/extra-udp
-      port: 8162
-      route:
-        destination:
+        sectionName: extra-tcp
+      name: gateway-xls/composite-gateway/gateway-xls/tcproute-xls/extra-tcp
+      port: 8089
+      routes:
+      - destination:
           metadata:
-            kind: UDPRoute
-            name: udp-app-1
+            kind: TCPRoute
+            name: tcproute
             namespace: default
-          name: udproute/default/udp-app-1/rule/-1
+          name: tcproute/default/tcproute/rule/-1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
-              port: 8162
+              port: 8163
             metadata:
               kind: Service
               name: service-1
               namespace: default
-              sectionName: "8162"
-            name: udproute/default/udp-app-1/rule/-1/backend/0
-            protocol: UDP
+              sectionName: "8163"
+            name: tcproute/default/tcproute/rule/-1/backend/0
+            protocol: TCP
             weight: 1
-        name: udproute/default/udp-app-1
+        metadata:
+          kind: TCPRoute
+          name: tcproute
+          namespace: default
+        name: tcproute/default/tcproute

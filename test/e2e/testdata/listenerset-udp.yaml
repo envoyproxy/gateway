@@ -1,11 +1,11 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
-  name: xlistener-set-udp
+  name: listener-set-udp
   namespace: gateway-conformance-infra
 spec:
   parentRef:
-    name: xlistener-gateway
+    name: listener-gateway
     namespace: gateway-conformance-infra
   listeners:
     - name: extra-udp
@@ -22,13 +22,13 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
   namespace: gateway-conformance-infra
-  name: xlistener-udproute
+  name: listener-udproute
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
       namespace: gateway-conformance-infra
-      name: xlistener-set-udp
+      name: listener-set-udp
       sectionName: extra-udp
   rules:
     - backendRefs:

@@ -36,9 +36,15 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, XListenerSetHTTPTest, XListenerSetHTTPSTest,
-		XListenerSetGRPCTest, XListenerSetTCPTest, XListenerSetUDPTest, XListenerSetTLSPassthroughTest,
-		XListenerSetTLSTerminationTest)
+	// TODO: move all ListenerSet tests to upstream
+	ConformanceTests = append(ConformanceTests,
+		ListenerSetHTTPTest,
+		ListenerSetHTTPSTest,
+		ListenerSetGRPCTest,
+		ListenerSetTCPTest,
+		ListenerSetUDPTest,
+		ListenerSetTLSPassthroughTest,
+		ListenerSetTLSTerminationTest)
 }
 
 // getListenerAddr extracts the host from a gateway address and joins it with a port
@@ -50,13 +56,13 @@ func getListenerAddr(gwAddrWithPort, port string) string {
 	return net.JoinHostPort(hostOnly, port)
 }
 
-// createXListenerSetParent creates a RouteParentStatus for an XListenerSet
-func createXListenerSetParent(controllerName, xlistenerSetName, sectionName string) gwapiv1.RouteParentStatus {
+// createListenerSetParent creates a RouteParentStatus for a ListenerSet
+func createListenerSetParent(controllerName, listenerSetName, sectionName string) gwapiv1.RouteParentStatus {
 	return gwapiv1.RouteParentStatus{
 		ParentRef: gwapiv1.ParentReference{
 			Group:       gatewayapi.GroupPtr(gwapiv1.GroupVersion.Group),
 			Kind:        gatewayapi.KindPtr(resource.KindListenerSet),
-			Name:        gwapiv1.ObjectName(xlistenerSetName),
+			Name:        gwapiv1.ObjectName(listenerSetName),
 			Namespace:   gatewayapi.NamespacePtr("gateway-conformance-infra"),
 			SectionName: gatewayapi.SectionNamePtr(sectionName),
 		},
@@ -76,23 +82,23 @@ func createXListenerSetParent(controllerName, xlistenerSetName, sectionName stri
 	}
 }
 
-var XListenerSetHTTPTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetHTTP",
-	Description: "HTTPRoute should attach to an XListenerSet listener and serve traffic",
+var ListenerSetHTTPTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetHTTP",
+	Description: "HTTPRoute should attach to a ListenerSet listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-http.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-http.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-httproute", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-httproute", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-http", "extra-http"),
+			createListenerSetParent(suite.ControllerName, "listener-set-http", "extra-http"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -100,7 +106,7 @@ var XListenerSetHTTPTest = suite.ConformanceTest{
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18081")
 		expected := http.ExpectedResponse{
 			Request: http.Request{
-				Path: "/xlistener",
+				Path: "/listener",
 			},
 			Response: http.Response{
 				StatusCodes: []int{200},
@@ -112,24 +118,24 @@ var XListenerSetHTTPTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetHTTPSTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetHTTPS",
-	Description: "HTTPRoute should attach to an HTTPS XListenerSet listener and serve traffic",
+var ListenerSetHTTPSTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetHTTPS",
+	Description: "HTTPRoute should attach to an HTTPS ListenerSet listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-https.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-https.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-httpsroute", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-httpsroute", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18443")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-http", "extra-https"),
+			createListenerSetParent(suite.ControllerName, "listener-set-http", "extra-https"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -137,7 +143,7 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 		expected := http.ExpectedResponse{
 			Request: http.Request{
 				Host: "www.example.com",
-				Path: "/xlistener-https",
+				Path: "/listener-https",
 			},
 			Response: http.Response{
 				StatusCodes: []int{200},
@@ -145,7 +151,7 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: ns}
+		certNN := types.NamespacedName{Name: "listener-https-certificate", Namespace: ns}
 		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
@@ -154,31 +160,31 @@ var XListenerSetHTTPSTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetGRPCTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetGRPC",
-	Description: "GRPCRoute should attach to an XListenerSet listener and serve traffic",
+var ListenerSetGRPCTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetGRPC",
+	Description: "GRPCRoute should attach to a ListenerSet listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-grpc.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-grpc.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-grpcroute", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-grpcroute", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18082")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-grpc", "extra-grpc"),
+			createListenerSetParent(suite.ControllerName, "listener-set-grpc", "extra-grpc"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.GRPCRoute{})
 
 		expected := grpc.ExpectedResponse{
 			EchoRequest: &grpcechoserver.EchoRequest{},
-			Backend:     "grpc-xlistener-backend",
+			Backend:     "grpc-listener-backend",
 			Namespace:   ns,
 		}
 
@@ -186,31 +192,31 @@ var XListenerSetGRPCTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetTCPTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetTCP",
-	Description: "TCPRoute should attach to an XListenerSet listener and serve traffic",
+var ListenerSetTCPTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetTCP",
+	Description: "TCPRoute should attach to a ListenerSet listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-tcp.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-tcp.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-tcproute", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-tcproute", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18083")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-tcp", "extra-tcp"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tcp", "extra-tcp"),
 		}
 
 		TCPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
 
 		expected := http.ExpectedResponse{
 			Request: http.Request{
-				Path: "/xlistener",
+				Path: "/listener",
 			},
 			Response: http.Response{
 				StatusCodes: []int{200},
@@ -222,24 +228,24 @@ var XListenerSetTCPTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetUDPTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetUDP",
-	Description: "UDPRoute should attach to an XListenerSet listener and serve traffic",
+var ListenerSetUDPTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetUDP",
+	Description: "UDPRoute should attach to a ListenerSet listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-udp.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-udp.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-udproute", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-udproute", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "5300")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-udp", "extra-udp"),
+			createListenerSetParent(suite.ControllerName, "listener-set-udp", "extra-udp"),
 		}
 
 		UDPRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents, false)
@@ -264,24 +270,24 @@ var XListenerSetUDPTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetTLSPassthroughTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetTLSPassthrough",
-	Description: "TLSRoute should attach to an XListenerSet TLS passthrough listener and serve traffic",
+var ListenerSetTLSPassthroughTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetTLSPassthrough",
+	Description: "TLSRoute should attach to a ListenerSet TLS passthrough listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-tls-passthrough.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-tls-passthrough.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-tlsroute-passthrough", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-tlsroute-passthrough", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "18444")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-tls-passthrough", "extra-tls"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tls-passthrough", "extra-tls"),
 		}
 
 		TLSRouteMustHaveParents(t, suite.Client, &suite.TimeoutConfig, routeNN, parents)
@@ -306,24 +312,24 @@ var XListenerSetTLSPassthroughTest = suite.ConformanceTest{
 	},
 }
 
-var XListenerSetTLSTerminationTest = suite.ConformanceTest{
-	ShortName:   "XListenerSetTLSTermination",
-	Description: "HTTPRoute should attach to an XListenerSet TLS termination listener and serve traffic",
+var ListenerSetTLSTerminationTest = suite.ConformanceTest{
+	ShortName:   "ListenerSetTLSTermination",
+	Description: "HTTPRoute should attach to a ListenerSet TLS termination listener and serve traffic",
 	Manifests: []string{
-		"testdata/xlistenerset-base.yaml",
-		"testdata/xlistenerset-tls-termination.yaml",
+		"testdata/listenerset-base.yaml",
+		"testdata/listenerset-tls-termination.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
-		gwNN := types.NamespacedName{Name: "xlistener-gateway", Namespace: ns}
-		routeNN := types.NamespacedName{Name: "xlistener-httproute-tls-termination", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "listener-gateway", Namespace: ns}
+		routeNN := types.NamespacedName{Name: "listener-httproute-tls-termination", Namespace: ns}
 
 		gwAddrWithPort, err := kubernetes.WaitForGatewayAddress(t, suite.Client, suite.TimeoutConfig, kubernetes.NewGatewayRef(gwNN, "core"))
 		require.NoError(t, err)
 
 		listenerAddr := getListenerAddr(gwAddrWithPort, "19443")
 		parents := []gwapiv1.RouteParentStatus{
-			createXListenerSetParent(suite.ControllerName, "xlistener-set-tls-termination", "extra-https-tls-termination"),
+			createListenerSetParent(suite.ControllerName, "listener-set-tls-termination", "extra-https-tls-termination"),
 		}
 
 		kubernetes.RouteMustHaveParents(t, suite.Client, suite.TimeoutConfig, routeNN, parents, false, &gwapiv1.HTTPRoute{})
@@ -339,7 +345,7 @@ var XListenerSetTLSTerminationTest = suite.ConformanceTest{
 			Namespace: ns,
 		}
 
-		certNN := types.NamespacedName{Name: "xlistener-https-certificate", Namespace: "xlistenerset-tls-termination-secret"}
+		certNN := types.NamespacedName{Name: "listener-https-certificate", Namespace: "listenerset-tls-termination-secret"}
 		serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 		require.NoError(t, err)
 
