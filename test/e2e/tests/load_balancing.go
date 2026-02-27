@@ -442,6 +442,8 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 		"testdata/load_balancing_consistent_hash_query_parameter.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Skip("QueryParamsBasedConsistentHashLoadBalancing test is skipped due to the underlying implementation is not stable yet." +
+			" See https://github.com/envoyproxy/gateway/issues/8330")
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "query-parameter-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
