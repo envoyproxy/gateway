@@ -733,6 +733,18 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 						gwapiv1.ListenerReasonProtocolConflict,
 						"All listeners for a given port must use a compatible protocol",
 					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
 				}
 			}
 		}

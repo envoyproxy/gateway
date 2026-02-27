@@ -59,6 +59,11 @@ gateways:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
         message: Listener must have TLS set when protocol is HTTPS.
         reason: Invalid
         status: "False"

@@ -62,12 +62,12 @@ gateways:
         type: Conflicted
       - lastTransitionTime: null
         message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        reason: ProtocolConflict
         status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        reason: ProtocolConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null

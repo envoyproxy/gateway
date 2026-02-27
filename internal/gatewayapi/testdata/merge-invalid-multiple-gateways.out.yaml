@@ -87,8 +87,13 @@ gateways:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
