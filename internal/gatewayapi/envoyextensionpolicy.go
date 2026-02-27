@@ -1165,10 +1165,14 @@ func (t *Translator) buildDynamicModules(
 			continue
 		}
 
-		// Resolve library name (default to entry name)
+		// Resolve library name from source (default to entry name)
 		moduleName := entry.Name
-		if entry.LibraryName != nil {
-			moduleName = *entry.LibraryName
+		if entry.Source.Type != nil && *entry.Source.Type == egv1a1.RemoteDynamicModuleSourceType {
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q uses remote source which is not yet implemented", dm.Name))
+			continue
+		}
+		if entry.Source.Local != nil && entry.Source.Local.LibraryName != nil {
+			moduleName = *entry.Source.Local.LibraryName
 		}
 
 		filterName := ""

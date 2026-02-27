@@ -7,7 +7,9 @@ envoyProxiesForGateways:
   spec:
     dynamicModules:
     - name: allowed-module
-      libraryName: allowed
+      source:
+        local:
+          libraryName: allowed
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
