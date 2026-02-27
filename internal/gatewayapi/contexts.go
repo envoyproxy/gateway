@@ -85,11 +85,11 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	}
 }
 
-func (g *GatewayContext) IncreaseAttachedListenerSets() {
-	if g.Status.AttachedListenerSets == nil {
-		g.Status.AttachedListenerSets = ptr.To[int32](1)
-	} else {
-		*g.Status.AttachedListenerSets++
+func (g *GatewayContext) IncreaseAttachedListenerSets(count int32) {
+	if g.Status.AttachedListenerSets == nil && count > 0 {
+		g.Status.AttachedListenerSets = ptr.To(count)
+	} else if g.Status.AttachedListenerSets != nil {
+		*g.Status.AttachedListenerSets += count
 	}
 }
 
