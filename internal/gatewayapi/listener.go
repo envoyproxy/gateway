@@ -17,6 +17,7 @@ import (
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -235,7 +236,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
-
+		gatewayAttachedListenerSets := sets.New[string]()
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -279,7 +280,15 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			t.validateListenerConditions(listener)
+			isReady := t.validateListenerConditions(listener)
+
+			if listener.isFromListenerSet() && isReady {
+				lsKey := types.NamespacedName{
+					Namespace: listener.listenerSet.Namespace,
+					Name:      listener.listenerSet.Name,
+				}.String()
+				gatewayAttachedListenerSets.Insert(lsKey)
+			}
 
 			// Skip listeners with invalid frontend TLS validation as they are not functional.
 			if listener.frontendTLSValidationInvalid() {
@@ -363,7 +372,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				t.processInfraIRListener(listener, infraIR, irKey, servicePort, containerPort)
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
+
 		}
+		gateway.IncreaseAttachedListenerSets(int32(len(gatewayAttachedListenerSets)))
 	}
 
 	t.checkOverlappingTLSConfig(gateways)
