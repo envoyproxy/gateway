@@ -116,6 +116,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: foo
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -137,6 +142,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: bar
       supportedKinds:
       - group: gateway.networking.k8s.io
