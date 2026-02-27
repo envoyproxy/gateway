@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -50,7 +49,7 @@ type Resources struct {
 	ListenerSets            []*gwapiv1.ListenerSet         `json:"listenerSets,omitempty" yaml:"listenerSets,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
-	TLSRoutes               []*gwapiv1a3.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TLSRoutes               []*gwapiv1.TLSRoute            `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
 	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
@@ -80,7 +79,7 @@ func NewResources() *Resources {
 		ListenerSets:            []*gwapiv1.ListenerSet{},
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
-		TLSRoutes:               []*gwapiv1a3.TLSRoute{},
+		TLSRoutes:               []*gwapiv1.TLSRoute{},
 		Services:                []*corev1.Service{},
 		EndpointSlices:          []*discoveryv1.EndpointSlice{},
 		Secrets:                 []*corev1.Secret{},

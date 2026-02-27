@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -26,7 +25,7 @@ import (
 
 // processTLSRoute processes a single TLSRoute, performing namespace label checks,
 // backend reference validation, and updating the resource map and tree.
-func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1a3.TLSRoute,
+func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1.TLSRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
@@ -72,7 +71,7 @@ func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gw
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	tlsRouteList := &gwapiv1a3.TLSRouteList{}
+	tlsRouteList := &gwapiv1.TLSRouteList{}
 
 	// Process TLSRoutes attached to the gateway
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
@@ -89,7 +88,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 	// Process TLSRoutes attached to the ListenerSet
 	for _, xlsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
-		tlsRouteList = &gwapiv1a3.TLSRouteList{}
+		tlsRouteList = &gwapiv1.TLSRouteList{}
 		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(listenerSetTLSRouteIndex, xlsNN.String()),
 		}); err != nil {
