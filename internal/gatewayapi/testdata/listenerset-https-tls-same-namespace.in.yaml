@@ -9,6 +9,10 @@ namespaces:
     name: xls
     labels:
       allow-xls: "true"
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: listenerset-not-allowed-ns
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -54,6 +58,19 @@ listenerSets:
       allowedRoutes:
         namespaces:
           from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: listenerset-not-allowed-ns
+    name: not-allowded
+  spec:
+    parentRef:
+      name: composite-gateway
+      namespace: gateway
+    listeners:
+    - name: listener-not-allowed
+      protocol: HTTP
+      port: 8080
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute

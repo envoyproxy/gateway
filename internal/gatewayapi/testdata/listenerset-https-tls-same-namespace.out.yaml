@@ -20,6 +20,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 1
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -160,12 +161,43 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: extra-https-same-ns
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: not-allowded
+    namespace: listenerset-not-allowed-ns
+  spec:
+    listeners:
+    - name: listener-not-allowed
+      port: 8080
+      protocol: HTTP
+    parentRef:
+      name: composite-gateway
+      namespace: gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: ListenerSet attachment from namespace listenerset-not-allowed-ns not
+        allowed by Gateway gateway/composite-gateway
+      reason: NotAllowed
+      status: "False"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Not Programmed
+      reason: NotAllowed
+      status: "False"
+      type: Programmed
 xdsIR:
   gateway/composite-gateway:
     accessLog:

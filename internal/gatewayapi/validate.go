@@ -283,6 +283,10 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
+		if listener.isFromListenerSet() {
+			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+				"No conflicts detected")
+		}
 		return true
 	}
 

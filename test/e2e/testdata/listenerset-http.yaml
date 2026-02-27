@@ -1,22 +1,20 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: xlistener-httpsroute
+  name: listener-httproute
   namespace: gateway-conformance-infra
 spec:
-  hostnames:
-  - www.example.com
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: ListenerSet
     namespace: gateway-conformance-infra
-    name: xlistener-set-http
-    sectionName: extra-https
+    name: listener-set-http
+    sectionName: extra-http
   rules:
   - matches:
     - path:
         type: PathPrefix
-        value: /xlistener-https
+        value: /listener
     backendRefs:
     - name: infra-backend-v1
       port: 8080
