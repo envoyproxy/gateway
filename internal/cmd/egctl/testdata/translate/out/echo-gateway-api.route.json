@@ -79,6 +79,13 @@
                 "lastTransitionTime": null,
                 "reason": "ResolvedRefs",
                 "message": "Listener references have been resolved"
+              },
+              {
+                "type": "Conflicted",
+                "status": "False",
+                "lastTransitionTime": null,
+                "reason": "NoConflicts",
+                "message": "No conflicts detected"
               }
             ]
           }
