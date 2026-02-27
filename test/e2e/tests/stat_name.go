@@ -21,6 +21,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
@@ -96,6 +98,14 @@ var HTTPRouteStatNameTest = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "http-route-stat-name", Namespace: ns}, suite.ControllerName, ancestorRef)
+
 		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
@@ -122,6 +132,14 @@ var TCPRouteStatNameTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "tcp-stat-name-backend-gateway", Namespace: ns}
 		gwAddr := GatewayAndTCPRoutesMustBeAccepted(t, suite.Client, &suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
+
+		tcpAncestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "tcp-route-stat-name", Namespace: ns}, suite.ControllerName, tcpAncestorRef)
 
 		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -157,6 +175,6 @@ func verifyMetrics(t *testing.T, suite *suite.ConformanceTestSuite, promQuery st
 		}
 		return false, nil
 	}); err != nil {
-		t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+		t.Errorf("failed to get expected metric from prometheus: %v", err)
 	}
 }
