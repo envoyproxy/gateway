@@ -50,6 +50,11 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
