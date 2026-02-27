@@ -1,37 +1,41 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
 metadata:
-  name: xlistener-set-tcp
+  name: listener-set-tls-passthrough
   namespace: gateway-conformance-infra
 spec:
   parentRef:
-    name: xlistener-gateway
+    name: listener-gateway
     namespace: gateway-conformance-infra
   listeners:
-    - name: extra-tcp
-      port: 18083
-      protocol: TCP
+    - name: extra-tls
+      port: 18444
+      protocol: TLS
+      hostname: "example.com"
+      tls:
+        mode: Passthrough
       allowedRoutes:
         namespaces:
           from: Same
         kinds:
-          - kind: TCPRoute
+          - kind: TLSRoute
             group: gateway.networking.k8s.io
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: TCPRoute
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: TLSRoute
 metadata:
+  name: listener-tlsroute-passthrough
   namespace: gateway-conformance-infra
-  name: xlistener-tcproute
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
       namespace: gateway-conformance-infra
-      name: xlistener-set-tcp
-      sectionName: extra-tcp
+      name: listener-set-tls-passthrough
+      sectionName: extra-tls
+  hostnames:
+    - "example.com"
   rules:
     - backendRefs:
-        - name: infra-backend-v1
-          port: 8080
-
+        - name: tls-backend-2
+          port: 443

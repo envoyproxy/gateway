@@ -16,12 +16,13 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: core-http
+      name: core-grpc
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 2
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -38,25 +39,57 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: core-http
+      name: core-grpc
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
+grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+  kind: GRPCRoute
   metadata:
-    name: route-cross-http-allowed
+    name: route-core-grpc
+    namespace: default
+  spec:
+    parentRefs:
+    - name: composite-gateway
+      namespace: gateway-xls
+      sectionName: core-grpc
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: core-grpc
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: GRPCRoute
+  metadata:
+    name: route-grpc-one
     namespace: default
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: cross-namespace-allowed
-      namespace: cross-allowed
-      sectionName: cross-http-allowed
+      name: xlistenerset-grpc-one
+      namespace: gateway-xls
+      sectionName: grpc-listener
     rules:
     - backendRefs:
       - name: service-1
@@ -78,25 +111,23 @@ httpRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: cross-namespace-allowed
-        namespace: cross-allowed
-        sectionName: cross-http-allowed
+        name: xlistenerset-grpc-one
+        namespace: gateway-xls
+        sectionName: grpc-listener
 - apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+  kind: GRPCRoute
   metadata:
-    name: route-same-namespace
-    namespace: cross-allowed
+    name: route-grpc-two
+    namespace: default
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: cross-namespace-same
-      namespace: cross-allowed
-      sectionName: cross-http-same
+      name: xlistenerset-grpc-two
+      namespace: gateway-xls
     rules:
     - backendRefs:
       - name: service-1
-        namespace: default
         port: 8080
   status:
     parents:
@@ -115,31 +146,30 @@ httpRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: cross-namespace-same
-        namespace: cross-allowed
-        sectionName: cross-http-same
+        name: xlistenerset-grpc-two
+        namespace: gateway-xls
 infraIR:
   gateway-xls/composite-gateway:
     proxy:
       listeners:
-      - name: gateway-xls/composite-gateway/core-http
+      - name: gateway-xls/composite-gateway/core-grpc
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-allowed/cross-http-allowed
+      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
         ports:
-        - containerPort: 8083
-          name: http-8083
+        - containerPort: 8081
+          name: http-8081
           protocol: HTTP
-          servicePort: 8083
-      - name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
+          servicePort: 8081
+      - name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
         ports:
-        - containerPort: 8085
-          name: http-8085
+        - containerPort: 8082
+          name: http-8082
           protocol: HTTP
-          servicePort: 8085
+          servicePort: 8082
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
@@ -153,19 +183,18 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: cross-namespace-allowed
-    namespace: cross-allowed
+    name: xlistenerset-grpc-one
+    namespace: gateway-xls
   spec:
     listeners:
     - allowedRoutes:
         namespaces:
           from: All
-      name: cross-http-allowed
-      port: 8083
+      name: grpc-listener
+      port: 8081
       protocol: HTTP
     parentRef:
       name: composite-gateway
-      namespace: gateway-xls
   status:
     conditions:
     - lastTransitionTime: null
@@ -196,7 +225,12 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: cross-http-allowed
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: grpc-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -205,19 +239,18 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: cross-namespace-same
-    namespace: cross-allowed
+    name: xlistenerset-grpc-two
+    namespace: gateway-xls
   spec:
     listeners:
     - allowedRoutes:
         namespaces:
-          from: Same
-      name: cross-http-same
-      port: 8085
+          from: All
+      name: grpc-listener
+      port: 8082
       protocol: HTTP
     parentRef:
       name: composite-gateway
-      namespace: gateway-xls
   status:
     conditions:
     - lastTransitionTime: null
@@ -248,41 +281,17 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: cross-http-same
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: grpc-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: ListenerSet
-  metadata:
-    name: cross-namespace-denied
-    namespace: cross-denied
-  spec:
-    listeners:
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: cross-http-denied
-      port: 8084
-      protocol: HTTP
-    parentRef:
-      name: composite-gateway
-      namespace: gateway-xls
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: ListenerSet attachment from namespace cross-denied not allowed by Gateway
-        gateway-xls/composite-gateway
-      reason: NotAllowed
-      status: "False"
-      type: Accepted
-    - lastTransitionTime: null
-      message: Not Programmed
-      reason: Programmed
-      status: "False"
-      type: Programmed
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:
@@ -314,39 +323,24 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: composite-gateway
         namespace: gateway-xls
-        sectionName: core-http
-      name: gateway-xls/composite-gateway/core-http
+        sectionName: core-grpc
+      name: gateway-xls/composite-gateway/core-grpc
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-    - address: 0.0.0.0
-      externalPort: 8083
-      hostnames:
-      - '*'
-      isHTTP2: false
-      metadata:
-        kind: Gateway
-        name: composite-gateway
-        namespace: gateway-xls
-        sectionName: cross-http-allowed
-      name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-allowed/cross-http-allowed
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 8083
       routes:
       - destination:
           metadata:
-            kind: HTTPRoute
-            name: route-cross-http-allowed
+            kind: GRPCRoute
+            name: route-core-grpc
             namespace: default
-          name: httproute/default/route-cross-http-allowed/rule/0
+          name: grpcroute/default/route-core-grpc/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -357,38 +351,38 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/route-cross-http-allowed/rule/0/backend/0
-            protocol: HTTP
+            name: grpcroute/default/route-core-grpc/rule/0/backend/0
+            protocol: GRPC
             weight: 1
         hostname: '*'
-        isHTTP2: false
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: route-cross-http-allowed
+          kind: GRPCRoute
+          name: route-core-grpc
           namespace: default
-        name: httproute/default/route-cross-http-allowed/rule/0/match/-1/*
+        name: grpcroute/default/route-core-grpc/rule/0/match/-1/*
     - address: 0.0.0.0
-      externalPort: 8085
+      externalPort: 8081
       hostnames:
       - '*'
-      isHTTP2: false
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: composite-gateway
         namespace: gateway-xls
-        sectionName: cross-http-same
-      name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
+        sectionName: grpc-listener
+      name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-one/grpc-listener
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 8085
+      port: 8081
       routes:
       - destination:
           metadata:
-            kind: HTTPRoute
-            name: route-same-namespace
-            namespace: cross-allowed
-          name: httproute/cross-allowed/route-same-namespace/rule/0
+            kind: GRPCRoute
+            name: route-grpc-one
+            namespace: default
+          name: grpcroute/default/route-grpc-one/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -399,16 +393,58 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/cross-allowed/route-same-namespace/rule/0/backend/0
-            protocol: HTTP
+            name: grpcroute/default/route-grpc-one/rule/0/backend/0
+            protocol: GRPC
             weight: 1
         hostname: '*'
-        isHTTP2: false
+        isHTTP2: true
         metadata:
-          kind: HTTPRoute
-          name: route-same-namespace
-          namespace: cross-allowed
-        name: httproute/cross-allowed/route-same-namespace/rule/0/match/-1/*
+          kind: GRPCRoute
+          name: route-grpc-one
+          namespace: default
+        name: grpcroute/default/route-grpc-one/rule/0/match/-1/*
+    - address: 0.0.0.0
+      externalPort: 8082
+      hostnames:
+      - '*'
+      isHTTP2: true
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: grpc-listener
+      name: gateway-xls/composite-gateway/gateway-xls/xlistenerset-grpc-two/grpc-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8082
+      routes:
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: route-grpc-two
+            namespace: default
+          name: grpcroute/default/route-grpc-two/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/route-grpc-two/rule/0/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: route-grpc-two
+          namespace: default
+        name: grpcroute/default/route-grpc-two/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

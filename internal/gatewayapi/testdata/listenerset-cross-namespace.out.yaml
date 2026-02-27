@@ -20,8 +20,9 @@ gateways:
       port: 80
       protocol: HTTP
   status:
+    attachedListenerSets: 2
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -48,47 +49,15 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: route-core-listener
-    namespace: default
-  spec:
-    parentRefs:
-    - name: composite-gateway
-      namespace: gateway-xls
-      sectionName: core-http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: composite-gateway
-        namespace: gateway-xls
-        sectionName: core-http
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: route-extra-http-one
+    name: route-cross-http-allowed
     namespace: default
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: same-namespace-valid
-      namespace: gateway-xls
-      sectionName: extra-http-one
+      name: cross-namespace-allowed
+      namespace: cross-allowed
+      sectionName: cross-http-allowed
     rules:
     - backendRefs:
       - name: service-1
@@ -110,24 +79,25 @@ httpRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: same-namespace-valid
-        namespace: gateway-xls
-        sectionName: extra-http-one
+        name: cross-namespace-allowed
+        namespace: cross-allowed
+        sectionName: cross-http-allowed
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: route-extra-http-two
-    namespace: default
+    name: route-same-namespace
+    namespace: cross-allowed
   spec:
     parentRefs:
     - group: gateway.networking.k8s.io
       kind: ListenerSet
-      name: same-namespace-valid
-      namespace: gateway-xls
-      sectionName: extra-http-two
+      name: cross-namespace-same
+      namespace: cross-allowed
+      sectionName: cross-http-same
     rules:
     - backendRefs:
       - name: service-1
+        namespace: default
         port: 8080
   status:
     parents:
@@ -146,43 +116,9 @@ httpRoutes:
       parentRef:
         group: gateway.networking.k8s.io
         kind: ListenerSet
-        name: same-namespace-valid
-        namespace: gateway-xls
-        sectionName: extra-http-two
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: route-entire-xls
-    namespace: default
-  spec:
-    parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: ListenerSet
-      name: same-namespace-valid
-      namespace: gateway-xls
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        group: gateway.networking.k8s.io
-        kind: ListenerSet
-        name: same-namespace-valid
-        namespace: gateway-xls
+        name: cross-namespace-same
+        namespace: cross-allowed
+        sectionName: cross-http-same
 infraIR:
   gateway-xls/composite-gateway:
     proxy:
@@ -193,18 +129,18 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-valid/extra-http-one
+      - name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-allowed/cross-http-allowed
         ports:
-        - containerPort: 8081
-          name: http-8081
+        - containerPort: 8083
+          name: http-8083
           protocol: HTTP
-          servicePort: 8081
-      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-valid/extra-http-two
+          servicePort: 8083
+      - name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
         ports:
-        - containerPort: 8082
-          name: http-8082
+        - containerPort: 8085
+          name: http-8085
           protocol: HTTP
-          servicePort: 8082
+          servicePort: 8085
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
@@ -218,24 +154,19 @@ listenerSets:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: ListenerSet
   metadata:
-    name: same-namespace-valid
-    namespace: gateway-xls
+    name: cross-namespace-allowed
+    namespace: cross-allowed
   spec:
     listeners:
     - allowedRoutes:
         namespaces:
           from: All
-      name: extra-http-one
-      port: 8081
-      protocol: HTTP
-    - allowedRoutes:
-        namespaces:
-          from: All
-      name: extra-http-two
-      port: 8082
+      name: cross-http-allowed
+      port: 8083
       protocol: HTTP
     parentRef:
       name: composite-gateway
+      namespace: gateway-xls
   status:
     conditions:
     - lastTransitionTime: null
@@ -249,7 +180,7 @@ listenerSets:
       status: "True"
       type: Programmed
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -266,13 +197,47 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: extra-http-one
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: cross-http-allowed
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 2
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: cross-namespace-same
+    namespace: cross-allowed
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: cross-http-same
+      port: 8085
+      protocol: HTTP
+    parentRef:
+      name: composite-gateway
+      namespace: gateway-xls
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are valid
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are valid
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -289,12 +254,46 @@ listenerSets:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: extra-http-two
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: cross-http-same
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: cross-namespace-denied
+    namespace: cross-denied
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: cross-http-denied
+      port: 8084
+      protocol: HTTP
+    parentRef:
+      name: composite-gateway
+      namespace: gateway-xls
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: ListenerSet attachment from namespace cross-denied not allowed by Gateway
+        gateway-xls/composite-gateway
+      reason: NotAllowed
+      status: "False"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Not Programmed
+      reason: NotAllowed
+      status: "False"
+      type: Programmed
 xdsIR:
   gateway-xls/composite-gateway:
     accessLog:
@@ -337,35 +336,8 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
-      routes:
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: route-core-listener
-            namespace: default
-          name: httproute/default/route-core-listener/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-core-listener/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: route-core-listener
-          namespace: default
-        name: httproute/default/route-core-listener/rule/0/match/-1/*
     - address: 0.0.0.0
-      externalPort: 8081
+      externalPort: 8083
       hostnames:
       - '*'
       isHTTP2: false
@@ -373,19 +345,19 @@ xdsIR:
         kind: Gateway
         name: composite-gateway
         namespace: gateway-xls
-        sectionName: extra-http-one
-      name: gateway-xls/composite-gateway/gateway-xls/same-namespace-valid/extra-http-one
+        sectionName: cross-http-allowed
+      name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-allowed/cross-http-allowed
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 8081
+      port: 8083
       routes:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: route-extra-http-one
+            name: route-cross-http-allowed
             namespace: default
-          name: httproute/default/route-extra-http-one/rule/0
+          name: httproute/default/route-cross-http-allowed/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -396,44 +368,18 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/route-extra-http-one/rule/0/backend/0
+            name: httproute/default/route-cross-http-allowed/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: route-extra-http-one
+          name: route-cross-http-allowed
           namespace: default
-        name: httproute/default/route-extra-http-one/rule/0/match/-1/*
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: route-entire-xls
-            namespace: default
-          name: httproute/default/route-entire-xls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-entire-xls/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: route-entire-xls
-          namespace: default
-        name: httproute/default/route-entire-xls/rule/0/match/-1/*
+        name: httproute/default/route-cross-http-allowed/rule/0/match/-1/*
     - address: 0.0.0.0
-      externalPort: 8082
+      externalPort: 8085
       hostnames:
       - '*'
       isHTTP2: false
@@ -441,19 +387,19 @@ xdsIR:
         kind: Gateway
         name: composite-gateway
         namespace: gateway-xls
-        sectionName: extra-http-two
-      name: gateway-xls/composite-gateway/gateway-xls/same-namespace-valid/extra-http-two
+        sectionName: cross-http-same
+      name: gateway-xls/composite-gateway/cross-allowed/cross-namespace-same/cross-http-same
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 8082
+      port: 8085
       routes:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: route-extra-http-two
-            namespace: default
-          name: httproute/default/route-extra-http-two/rule/0
+            name: route-same-namespace
+            namespace: cross-allowed
+          name: httproute/cross-allowed/route-same-namespace/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -464,42 +410,16 @@ xdsIR:
               name: service-1
               namespace: default
               sectionName: "8080"
-            name: httproute/default/route-extra-http-two/rule/0/backend/0
+            name: httproute/cross-allowed/route-same-namespace/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: route-extra-http-two
-          namespace: default
-        name: httproute/default/route-extra-http-two/rule/0/match/-1/*
-      - destination:
-          metadata:
-            kind: HTTPRoute
-            name: route-entire-xls
-            namespace: default
-          name: httproute/default/route-entire-xls/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/route-entire-xls/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
-        hostname: '*'
-        isHTTP2: false
-        metadata:
-          kind: HTTPRoute
-          name: route-entire-xls
-          namespace: default
-        name: httproute/default/route-entire-xls/rule/0/match/-1/*
+          name: route-same-namespace
+          namespace: cross-allowed
+        name: httproute/cross-allowed/route-same-namespace/rule/0/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
