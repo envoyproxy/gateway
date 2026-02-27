@@ -1,0 +1,81 @@
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-xls
+    labels:
+      allow-xls: "true"
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: gateway-xls
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            allow-xls: "true"
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8888
+      protocol: HTTP
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: gateway-xls
+    name: listener-from-same-xls
+  spec:
+    parentRef:
+      name: composite-gateway
+    listeners:
+    - name: listener-1
+      protocol: HTTP
+      port: 8089
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-core-listener
+  spec:
+    parentRefs:
+    - namespace: gateway-xls
+      name: composite-gateway
+      sectionName: core-http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-extra-http-one
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      namespace: gateway-xls
+      name: listener-from-same-xls
+      sectionName: non-existent-listener
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080

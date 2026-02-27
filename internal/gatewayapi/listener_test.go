@@ -61,7 +61,7 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 1.0,
+			expected: 100,
 		},
 		{
 			name: "fraction",
@@ -73,7 +73,7 @@ func TestProxySamplingRate(t *testing.T) {
 					},
 				},
 			},
-			expected: 0.1,
+			expected: 10,
 		},
 		{
 			name: "less than zero",
@@ -98,6 +98,18 @@ func TestProxySamplingRate(t *testing.T) {
 				},
 			},
 			expected: 100,
+		},
+		{
+			name: "less than 1",
+			tracing: &egv1a1.ProxyTracing{
+				Tracing: egv1a1.Tracing{
+					SamplingFraction: &gwapiv1.Fraction{
+						Numerator:   1,
+						Denominator: ptr.To[int32](1000),
+					},
+				},
+			},
+			expected: 0.1,
 		},
 	}
 

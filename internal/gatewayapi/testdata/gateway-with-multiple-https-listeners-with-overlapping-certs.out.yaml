@@ -16,9 +16,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-example-com
+        - name: tls-secret-example-com
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -29,9 +27,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-bar-example-com
+        - name: tls-secret-bar-example-com
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -42,9 +38,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-foo-bar-com
+        - name: tls-secret-foo-bar-com
         mode: Terminate
   status:
     listeners:

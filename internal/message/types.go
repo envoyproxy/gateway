@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -85,10 +84,10 @@ type GatewayAPIStatuses struct {
 	GatewayStatuses      watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
 	HTTPRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	GRPCRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
-	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1.TLSRouteStatus]
 	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
-	XListenerSetStatuses watchable.Map[types.NamespacedName, *gwapixv1a1.ListenerSetStatus]
+	ListenerSetStatuses  watchable.Map[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 }
 
 func (s *GatewayAPIStatuses) Close() {
@@ -99,7 +98,7 @@ func (s *GatewayAPIStatuses) Close() {
 	s.TLSRouteStatuses.Close()
 	s.TCPRouteStatuses.Close()
 	s.UDPRouteStatuses.Close()
-	s.XListenerSetStatuses.Close()
+	s.ListenerSetStatuses.Close()
 }
 
 type NamespacedNameAndGVK struct {
@@ -222,8 +221,8 @@ const (
 	HTTPRouteStatusMessageName MessageName = "httproute-status"
 	// GatewayStatusMessageName is a message containing updates to Gateway status
 	GatewayStatusMessageName MessageName = "gateway-status"
-	// XListenerSetStatusMessageName is a message containing updates to XListenerSet status
-	XListenerSetStatusMessageName MessageName = "xlistenerset-status"
+	// ListenerSetStatusMessageName is a message containing updates to ListenerSet status
+	ListenerSetStatusMessageName MessageName = "listenerset-status"
 	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
 	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
 )

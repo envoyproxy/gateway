@@ -15,12 +15,8 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-ecdsa-1
-        - group: null
-          kind: null
-          name: not-exist-secret
+        - name: tls-secret-ecdsa-1
+        - name: not-exist-secret
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -30,12 +26,8 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-ecdsa-2
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-ecdsa-2
+        - name: tls-secret-1
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -45,9 +37,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: not-exist-secret
+        - name: not-exist-secret
         mode: Terminate
   status:
     listeners:
