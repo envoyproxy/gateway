@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -35,6 +36,148 @@ const (
 	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
 	ResponseBodyConfigMapKey = "response.body"
 )
+
+// btpRoutingKey identifies a BTP routing type target
+type btpRoutingKey struct {
+	Kind, Namespace, Name, SectionName string
+}
+
+// BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
+// This avoids an O(BTPs) lookup for every iteration of processDestination.
+type BTPRoutingTypeIndex struct {
+	routeRuleLevel map[btpRoutingKey]*egv1a1.RoutingType
+	routeLevel     map[btpRoutingKey]*egv1a1.RoutingType
+	listenerLevel  map[btpRoutingKey]*egv1a1.RoutingType
+	gatewayLevel   map[btpRoutingKey]*egv1a1.RoutingType
+}
+
+// BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
+// from BackendTrafficPolicies, organized by priority-level.
+// BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
+func BuildBTPRoutingTypeIndex(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+) *BTPRoutingTypeIndex {
+	idx := &BTPRoutingTypeIndex{
+		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
+		routeLevel:     make(map[btpRoutingKey]*egv1a1.RoutingType),
+		listenerLevel:  make(map[btpRoutingKey]*egv1a1.RoutingType),
+		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.RoutingType),
+	}
+
+	// Combine routes and gateways into a single target slice for getPolicyTargetRefs.
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+
+	for _, btp := range btps {
+		if btp.Spec.RoutingType == nil {
+			continue
+		}
+
+		refs := getPolicyTargetRefs(btp.Spec.PolicyTargetReferences, allTargets, btp.Namespace)
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:        kind,
+				Namespace:   btp.Namespace,
+				Name:        string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
+
+			if kind == resource.KindGateway {
+				if ref.SectionName != nil {
+					if _, exists := idx.listenerLevel[key]; !exists {
+						idx.listenerLevel[key] = btp.Spec.RoutingType
+					}
+				} else {
+					if _, exists := idx.gatewayLevel[key]; !exists {
+						idx.gatewayLevel[key] = btp.Spec.RoutingType
+					}
+				}
+			} else {
+				if ref.SectionName != nil {
+					if _, exists := idx.routeRuleLevel[key]; !exists {
+						idx.routeRuleLevel[key] = btp.Spec.RoutingType
+					}
+				} else {
+					if _, exists := idx.routeLevel[key]; !exists {
+						idx.routeLevel[key] = btp.Spec.RoutingType
+					}
+				}
+			}
+		}
+	}
+
+	return idx
+}
+
+// LookupBTPRoutingType resolves the RoutingType for a specific route rule
+// and gateway/listener combination by checking the index in
+// priority order: routeRule > route > listener > gateway.
+// Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+
+	// 1. Route-rule level (most specific)
+	if routeRuleName != nil {
+		key := btpRoutingKey{
+			Kind:        string(routeKind),
+			Namespace:   routeNN.Namespace,
+			Name:        routeNN.Name,
+			SectionName: string(*routeRuleName),
+		}
+		if rt, ok := idx.routeRuleLevel[key]; ok {
+			return rt
+		}
+	}
+
+	// 2. Route level
+	routeKey := btpRoutingKey{
+		Kind:      string(routeKind),
+		Namespace: routeNN.Namespace,
+		Name:      routeNN.Name,
+	}
+	if rt, ok := idx.routeLevel[routeKey]; ok {
+		return rt
+	}
+
+	// 3. Listener level
+	if listenerName != nil {
+		listenerKey := btpRoutingKey{
+			Kind:        resource.KindGateway,
+			Namespace:   gatewayNN.Namespace,
+			Name:        gatewayNN.Name,
+			SectionName: string(*listenerName),
+		}
+		if rt, ok := idx.listenerLevel[listenerKey]; ok {
+			return rt
+		}
+	}
+
+	// 4. Gateway level (least specific)
+	gwKey := btpRoutingKey{
+		Kind:      resource.KindGateway,
+		Namespace: gatewayNN.Namespace,
+		Name:      gatewayNN.Name,
+	}
+	if rt, ok := idx.gatewayLevel[gwKey]; ok {
+		return rt
+	}
+
+	return nil
+}
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {

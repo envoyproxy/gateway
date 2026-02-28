@@ -1,0 +1,66 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    rules:
+    - name: rule-0
+      matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: rule-1
+      matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-2
+        port: 8080
+backendTrafficPolicies:
+# Route-level BTP: Service routing for the entire route
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    routingType: Service
+# Route-rule BTP: Endpoint routing for rule-0 only (overrides route-level)
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-rule-0
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: rule-0
+    routingType: Endpoint
