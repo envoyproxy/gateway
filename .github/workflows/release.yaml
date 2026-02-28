@@ -52,6 +52,7 @@ jobs:
     needs: [benchmark-test]
     permissions:
       contents: write
+      packages: write
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       - uses: ./tools/github-actions/reclaim-storage
@@ -71,9 +72,18 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef  # v3.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
       - name: Retag and push existing gateway-dev image
         run: |
           skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://docker.io/envoyproxy/gateway:${{ env.release_tag }}
+          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://ghcr.io/${{ github.repository }}:${{ env.release_tag }}
 
       - name: Generate Release Artifacts
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
