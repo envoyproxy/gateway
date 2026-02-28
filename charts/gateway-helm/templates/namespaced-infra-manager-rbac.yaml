@@ -25,7 +25,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ $.Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" $ }}'
 {{ if $kube.watch.namespaces }}
 {{ if gt (len $kube.watch.namespaces) 0 }}
 {{ $watchedNamespaces = $kube.watch.namespaces }}
@@ -60,7 +60,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ $.Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" $ }}'
 ---
 {{- end }}
 {{- end }}

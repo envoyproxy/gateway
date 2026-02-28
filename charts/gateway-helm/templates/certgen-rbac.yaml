@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" . }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -19,7 +19,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" . }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -45,7 +45,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" . }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -64,13 +64,13 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ include "eg.namespace" . }}'
 ---
 {{- if .Values.topologyInjector.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -96,7 +96,7 @@ rules:
     resources:
       - mutatingwebhookconfigurations
     resourceNames:
-      - 'envoy-gateway-topology-injector.{{ .Release.Namespace }}'
+      - 'envoy-gateway-topology-injector.{{ include "eg.namespace" . }}'
     verbs:
       - update
       - patch
@@ -104,7 +104,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
@@ -119,9 +119,9 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: '{{ include "eg.fullname" . }}-certgen:{{ .Release.Namespace }}'
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
 subjects:
   - kind: ServiceAccount
     name: '{{ include "eg.fullname" . }}-certgen'
-    namespace: '{{ .Release.Namespace }}'
+    namespace: '{{ include "eg.namespace" . }}'
 {{- end }}
