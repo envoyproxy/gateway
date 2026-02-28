@@ -1,0 +1,145 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.foo.com
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /foo1:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /foo1
+                  name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+                  route:
+                    cluster: httproute/default/httproute-1/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+                      users:
+                        inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+            /foo2:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /foo2
+                  name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
+                  route:
+                    cluster: httproute/default/httproute-2/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                      checkSettings: {}
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /foo1/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /foo1
+                      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+                      route:
+                        cluster: httproute/default/httproute-1/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.basic_auth/securitypolicy/default/policy-for-http-route-1:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.basic_auth.v3.BasicAuthPerRoute
+                          users:
+                            inlineBytes: dXNlcjE6e1NIQX10RVNzQm1FL3lOWTNsYjZhMEw2dlZRRVpOcXc9CnVzZXIyOntTSEF9RUo5TFBGRFhzTjl5blNtYnh2anA3NUJtbHg4PQo=
+                /foo2/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /foo2
+                      name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
+                      route:
+                        cluster: httproute/default/httproute-2/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                          checkSettings: {}
+    name: default/gateway-1/http/www_foo_com
+  - domains:
+    - www.bar.com
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /bar
+                  name: httproute/default/httproute-3/rule/0/match/0/www_bar_com
+                  route:
+                    cluster: httproute/default/httproute-3/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.oauth2/securitypolicy/default/policy-for-gateway-2:
+                      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                      config: {}
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /bar/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /bar
+                      name: httproute/default/httproute-3/rule/0/match/0/www_bar_com
+                      route:
+                        cluster: httproute/default/httproute-3/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.oauth2/securitypolicy/default/policy-for-gateway-2:
+                          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                          config: {}
+    name: default/gateway-2/http/www_bar_com

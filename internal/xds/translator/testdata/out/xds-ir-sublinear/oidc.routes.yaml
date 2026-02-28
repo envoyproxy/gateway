@@ -1,0 +1,47 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: bar
+                  name: second-route
+                  route:
+                    cluster: second-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.oauth2/securitypolicy/default/policy-for-second-route:
+                      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                      config: {}
+            foo:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: foo
+                  name: first-route
+                  route:
+                    cluster: first-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.oauth2/securitypolicy/default/policy-for-first-route:
+                      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                      config: {}
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+    name: first-listener/*

@@ -1,0 +1,6 @@
+# Helm values for e2e with SublinearRouteMatching runtime flag enabled.
+config:
+  envoyGateway:
+    runtimeFlags:
+      enabled:
+      - SublinearRouteMatching

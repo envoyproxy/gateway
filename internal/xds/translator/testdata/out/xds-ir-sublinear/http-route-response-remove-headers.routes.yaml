@@ -1,0 +1,17 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: response-header-route
+      responseHeadersToRemove:
+      - some-header5
+      - some-header6
+      route:
+        cluster: response-header-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

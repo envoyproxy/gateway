@@ -58,75 +58,79 @@ type rateLimitOutput struct {
 	CostSpecified bool                 `json:"costSpecified" yaml:"costSpecified"`
 }
 
-func TestTranslateXds(t *testing.T) {
-	testConfigs := map[string]testFileConfig{
-		"ratelimit-custom-domain": {
-			dnsDomain: "example-cluster.local",
+var testConfigs = map[string]testFileConfig{
+	"ratelimit-custom-domain": {
+		dnsDomain: "example-cluster.local",
+	},
+	"jsonpatch": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-with-jsonpath": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-with-jsonpath-invalid": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-add-op-empty-jsonpath": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-missing-resource": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-invalid-patch": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-add-op-without-value": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"jsonpatch-move-op-with-value": {
+		requireEnvoyPatchPolicies: true,
+	},
+	"http-route-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"tcp-route-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"tcp-route-invalid-endpoint": {
+		errMsg: "validation failed for xds resource",
+	},
+	"udp-route-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"jsonpatch-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"jsonpatch-invalid-listener": {
+		errMsg: "validation failed for xds resource",
+	},
+	"accesslog-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"accesslog-without-format": {
+		errMsg: "text.Format is nil",
+	},
+	"tracing-invalid": {
+		errMsg: "validation failed for xds resource",
+	},
+	"tracing-unknown-provider-type": {
+		errMsg: "unknown tracing provider type: AwesomeTelemetry",
+	},
+	"xds-name-scheme-v2": {
+		runtimeFlags: &egv1a1.RuntimeFlags{
+			Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
 		},
-		"jsonpatch": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-with-jsonpath": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-with-jsonpath-invalid": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-add-op-empty-jsonpath": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-missing-resource": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-invalid-patch": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-add-op-without-value": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"jsonpatch-move-op-with-value": {
-			requireEnvoyPatchPolicies: true,
-		},
-		"http-route-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"tcp-route-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"tcp-route-invalid-endpoint": {
-			errMsg: "validation failed for xds resource",
-		},
-		"udp-route-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"jsonpatch-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"jsonpatch-invalid-listener": {
-			errMsg: "validation failed for xds resource",
-		},
-		"accesslog-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"accesslog-without-format": {
-			errMsg: "text.Format is nil",
-		},
-		"tracing-invalid": {
-			errMsg: "validation failed for xds resource",
-		},
-		"tracing-unknown-provider-type": {
-			errMsg: "unknown tracing provider type: AwesomeTelemetry",
-		},
-		"xds-name-scheme-v2": {
-			runtimeFlags: &egv1a1.RuntimeFlags{
-				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
-			},
-		},
-	}
+	},
+}
 
+func TestTranslateXds(t *testing.T) {
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
 	require.NoError(t, err)
-	keep := make(sets.Set[string])
+	keepLinear := make(sets.Set[string])
+	keepSublinear := make(sets.Set[string])
+	if test.OverrideTestData() {
+		require.NoError(t, os.MkdirAll(filepath.Join("testdata", "out", "xds-ir-sublinear"), 0o755))
+	}
 
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
@@ -146,7 +150,11 @@ func TestTranslateXds(t *testing.T) {
 			}
 
 			x := requireXdsIRFromInputTestData(t, inputFile)
-			tr := &Translator{
+
+			partialInvalid := strings.HasSuffix(inputFileName, "partial-invalid")
+
+			// Linear mode (default)
+			trLinear := &Translator{
 				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
@@ -154,22 +162,20 @@ func TestTranslateXds(t *testing.T) {
 				FilterOrder:  x.FilterOrder,
 				RuntimeFlags: cfg.runtimeFlags,
 			}
-			tCtx, err := tr.Translate(x)
+			tCtxLinear, err := trLinear.Translate(x)
 
 			// Handle EnvoyPatchPolicy statuses first, even if there are errors
-			// because errors are captured in the policy status conditions
 			if cfg.requireEnvoyPatchPolicies {
-				got := tCtx.EnvoyPatchPolicyStatuses
+				got := tCtxLinear.EnvoyPatchPolicyStatuses
 				for _, e := range got {
 					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
 				}
 				if test.OverrideTestData() {
-					keep.Insert(inputFileName + ".envoypatchpolicies.yaml")
+					keepLinear.Insert(inputFileName + ".envoypatchpolicies.yaml")
 					out, err := yaml.Marshal(got)
 					require.NoError(t, err)
 					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
 				}
-
 				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
 				want := xtypes.EnvoyPatchPolicyStatuses{}
 				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
@@ -177,7 +183,7 @@ func TestTranslateXds(t *testing.T) {
 				require.Empty(t, cmp.Diff(want, got, opts))
 			}
 
-			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
+			if !partialInvalid && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)
 			} else if len(cfg.errMsg) > 0 {
@@ -186,29 +192,72 @@ func TestTranslateXds(t *testing.T) {
 				return
 			}
 
-			listeners := tCtx.XdsResources[resourcev3.ListenerType]
-			routes := tCtx.XdsResources[resourcev3.RouteType]
-			clusters := tCtx.XdsResources[resourcev3.ClusterType]
-			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
-			if test.OverrideTestData() {
-				keep.Insert(inputFileName + ".listeners.yaml")
-				keep.Insert(inputFileName + ".routes.yaml")
-				keep.Insert(inputFileName + ".clusters.yaml")
-				keep.Insert(inputFileName + ".endpoints.yaml")
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", inputFileName+".listeners.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "xds-ir", inputFileName+".endpoints.yaml")))
-			}
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
+			listenersLinear := tCtxLinear.XdsResources[resourcev3.ListenerType]
+			routesLinear := tCtxLinear.XdsResources[resourcev3.RouteType]
+			clustersLinear := tCtxLinear.XdsResources[resourcev3.ClusterType]
+			endpointsLinear := tCtxLinear.XdsResources[resourcev3.EndpointType]
 
-			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+			var routesSublinear []types.Resource
+			if !partialInvalid {
+				sublinearFlags := &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.SublinearRouteMatching}}
+				if cfg.runtimeFlags != nil && len(cfg.runtimeFlags.Enabled) > 0 {
+					sublinearFlags.Enabled = append([]egv1a1.RuntimeFlag{egv1a1.SublinearRouteMatching}, cfg.runtimeFlags.Enabled...)
+				}
+				trSublinear := &Translator{
+					ControllerNamespace: "envoy-gateway-system",
+					GlobalRateLimit: &GlobalRateLimitSettings{
+						ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+					},
+					FilterOrder:  x.FilterOrder,
+					RuntimeFlags: sublinearFlags,
+				}
+				tCtxSublinear, errSub := trSublinear.Translate(x)
+				require.NoError(t, errSub)
+
+				routesSublinear = tCtxSublinear.XdsResources[resourcev3.RouteType]
+				listenersSublinear := tCtxSublinear.XdsResources[resourcev3.ListenerType]
+				clustersSublinear := tCtxSublinear.XdsResources[resourcev3.ClusterType]
+				endpointsSublinear := tCtxSublinear.XdsResources[resourcev3.EndpointType]
+
+				// Listeners, clusters, endpoints must be identical between linear and sublinear (only routes differ).
+				// Skip for edge cases (e.g. no HTTP routes) where the translator may produce different non-route resources.
+				skipNonRouteEquality := strings.Contains(inputFileName, "with-no-routes")
+				if !skipNonRouteEquality {
+					require.Equal(t, requireResourcesToYAMLString(t, listenersLinear), requireResourcesToYAMLString(t, listenersSublinear),
+						"listeners must be identical between linear and sublinear mode")
+					require.Equal(t, requireResourcesToYAMLString(t, clustersLinear), requireResourcesToYAMLString(t, clustersSublinear),
+						"clusters must be identical between linear and sublinear mode")
+					require.Equal(t, requireResourcesToYAMLString(t, endpointsLinear), requireResourcesToYAMLString(t, endpointsSublinear),
+						"endpoints must be identical between linear and sublinear mode")
+				}
+			}
+
+			if test.OverrideTestData() {
+				keepLinear.Insert(inputFileName + ".listeners.yaml")
+				keepLinear.Insert(inputFileName + ".routes.yaml")
+				keepLinear.Insert(inputFileName + ".clusters.yaml")
+				keepLinear.Insert(inputFileName + ".endpoints.yaml")
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listenersLinear), filepath.Join("testdata", "out", "xds-ir", inputFileName+".listeners.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routesLinear), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clustersLinear), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpointsLinear), filepath.Join("testdata", "out", "xds-ir", inputFileName+".endpoints.yaml")))
+				if !partialInvalid {
+					keepSublinear.Insert(inputFileName + ".routes.yaml")
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, routesSublinear), filepath.Join("testdata", "out", "xds-ir-sublinear", inputFileName+".routes.yaml")))
+				}
+			}
+			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listenersLinear))
+			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routesLinear))
+			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clustersLinear))
+			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpointsLinear))
+			if !partialInvalid {
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir-sublinear", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routesSublinear))
+			}
+
+			secrets, ok := tCtxLinear.XdsResources[resourcev3.SecretType]
 			if ok && len(secrets) > 0 {
 				if test.OverrideTestData() {
-					keep.Insert(inputFileName + ".secrets.yaml")
+					keepLinear.Insert(inputFileName + ".secrets.yaml")
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
@@ -217,7 +266,8 @@ func TestTranslateXds(t *testing.T) {
 	}
 
 	if test.OverrideTestData() {
-		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir"), keep)
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir"), keepLinear)
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir-sublinear"), keepSublinear)
 	}
 }
 
@@ -313,6 +363,12 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
 	require.NoError(t, err)
 
+	keepLinear := make(sets.Set[string])
+	keepSublinear := make(sets.Set[string])
+	if test.OverrideTestData() {
+		require.NoError(t, os.MkdirAll(filepath.Join("testdata", "out", "extension-xds-ir-sublinear"), 0o755))
+	}
+
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
 		t.Run(inputFileName, func(t *testing.T) {
@@ -324,11 +380,6 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			// Testdata for the extension tests is similar to the ir test data
 			// New directory is just to keep them separate and easy to understand
 			x := requireXdsIRFromInputTestData(t, inputFile)
-			tr := &Translator{
-				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
-				},
-			}
 			ext := egv1a1.ExtensionManager{
 				FailOpen: true,
 				Resources: []egv1a1.GroupVersionKind{
@@ -388,37 +439,85 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
 			require.NoError(t, err)
 			defer closeFunc()
-			tr.ExtensionManager = &extMgr
 
-			tCtx, err := tr.Translate(x)
 			if len(cfg.errMsg) > 0 {
+				tr := &Translator{
+					GlobalRateLimit: &GlobalRateLimitSettings{
+						ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+					},
+					ExtensionManager: &extMgr,
+				}
+				_, err := tr.Translate(x)
 				require.EqualError(t, err, cfg.errMsg)
-			} else {
-				require.NoError(t, err)
+				return
 			}
-			listeners := tCtx.XdsResources[resourcev3.ListenerType]
-			routes := tCtx.XdsResources[resourcev3.RouteType]
-			clusters := tCtx.XdsResources[resourcev3.ClusterType]
-			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
-			if test.OverrideTestData() {
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".clusters.yaml")))
-				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".endpoints.yaml")))
-			}
-			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
-			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routes))
-			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
-			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+			// Success path: run linear then sublinear (sequential — Translate may mutate shared IR).
+			trLinear := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+				ExtensionManager: &extMgr,
+			}
+			tCtxLinear, err := trLinear.Translate(x)
+			require.NoError(t, err)
+			listenersLinear := tCtxLinear.XdsResources[resourcev3.ListenerType]
+			routesLinear := tCtxLinear.XdsResources[resourcev3.RouteType]
+			clustersLinear := tCtxLinear.XdsResources[resourcev3.ClusterType]
+			endpointsLinear := tCtxLinear.XdsResources[resourcev3.EndpointType]
+
+			trSublinear := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+				ExtensionManager: &extMgr,
+				RuntimeFlags:     &egv1a1.RuntimeFlags{Enabled: []egv1a1.RuntimeFlag{egv1a1.SublinearRouteMatching}},
+			}
+			tCtxSublinear, errSub := trSublinear.Translate(x)
+			require.NoError(t, errSub)
+			routesSublinear := tCtxSublinear.XdsResources[resourcev3.RouteType]
+			listenersSublinear := tCtxSublinear.XdsResources[resourcev3.ListenerType]
+			clustersSublinear := tCtxSublinear.XdsResources[resourcev3.ClusterType]
+			endpointsSublinear := tCtxSublinear.XdsResources[resourcev3.EndpointType]
+
+			require.Equal(t, requireResourcesToYAMLString(t, listenersLinear), requireResourcesToYAMLString(t, listenersSublinear),
+				"listeners must be identical between linear and sublinear mode")
+			require.Equal(t, requireResourcesToYAMLString(t, clustersLinear), requireResourcesToYAMLString(t, clustersSublinear),
+				"clusters must be identical between linear and sublinear mode")
+			require.Equal(t, requireResourcesToYAMLString(t, endpointsLinear), requireResourcesToYAMLString(t, endpointsSublinear),
+				"endpoints must be identical between linear and sublinear mode")
+
+			if test.OverrideTestData() {
+				keepLinear.Insert(inputFileName + ".listeners.yaml")
+				keepLinear.Insert(inputFileName + ".routes.yaml")
+				keepLinear.Insert(inputFileName + ".clusters.yaml")
+				keepLinear.Insert(inputFileName + ".endpoints.yaml")
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listenersLinear), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routesLinear), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clustersLinear), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".clusters.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpointsLinear), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".endpoints.yaml")))
+				keepSublinear.Insert(inputFileName + ".routes.yaml")
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routesSublinear), filepath.Join("testdata", "out", "extension-xds-ir-sublinear", inputFileName+".routes.yaml")))
+			}
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".listeners.yaml"), requireResourcesToYAMLString(t, listenersLinear))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routesLinear))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clustersLinear))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpointsLinear))
+			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir-sublinear", inputFileName+".routes.yaml"), requireResourcesToYAMLString(t, routesSublinear))
+
+			secrets, ok := tCtxLinear.XdsResources[resourcev3.SecretType]
 			if ok {
 				if test.OverrideTestData() {
+					keepLinear.Insert(inputFileName + ".secrets.yaml")
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 		})
+	}
+	if test.OverrideTestData() {
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "extension-xds-ir"), keepLinear)
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "extension-xds-ir-sublinear"), keepSublinear)
 	}
 }
 
@@ -580,13 +679,13 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	elems := append([]string{"testdata", "out"}, name...)
 	path := filepath.Join(elems...)
 
-	content, err := outFiles.ReadFile(path)
-	// read from FS if overriding, and file does not exist in go embed
-	if err != nil && test.OverrideTestData() && strings.Contains(err.Error(), "file does not exist") {
-		content, err := os.ReadFile(path)
-		require.NoError(t, err)
-		return string(content)
+	// When overriding, read from disk so we compare against what we just wrote
+	if test.OverrideTestData() {
+		if diskContent, diskErr := os.ReadFile(path); diskErr == nil {
+			return string(diskContent)
+		}
 	}
+	content, err := outFiles.ReadFile(path)
 	require.NoError(t, err)
 	return string(content)
 }

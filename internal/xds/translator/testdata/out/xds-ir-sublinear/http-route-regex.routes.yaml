@@ -1,0 +1,25 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        headers:
+        - name: re_header
+          stringMatch:
+            safeRegex:
+              regex: .*
+        queryParameters:
+        - name: re_query
+          stringMatch:
+            safeRegex:
+              regex: .*
+        safeRegex:
+          regex: /v1/.*
+      name: regex-route
+      route:
+        cluster: regex-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

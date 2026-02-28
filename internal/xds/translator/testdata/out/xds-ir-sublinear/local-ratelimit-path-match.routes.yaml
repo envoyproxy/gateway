@@ -1,0 +1,354 @@
+- ignorePortInHostMatching: true
+  name: path-match-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /admin:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: /admin
+                  name: route-path-exact-admin
+                  route:
+                    cluster: admin-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.local_ratelimit:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      alwaysConsumeDefaultTokenBucket: false
+                      descriptors:
+                      - entries:
+                        - key: rule-0-path
+                          value: rule-0-path
+                        tokenBucket:
+                          fillInterval: 60s
+                          maxTokens: 10
+                          tokensPerFill: 10
+                      enableXRatelimitHeaders: DRAFT_VERSION_03
+                      filterEnabled:
+                        defaultValue:
+                          numerator: 100
+                      filterEnforced:
+                        defaultValue:
+                          numerator: 100
+                      rateLimits:
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-0-path
+                            descriptorValue: rule-0-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                exact: /admin
+                      statPrefix: http_local_rate_limiter
+                      tokenBucket:
+                        fillInterval: 1s
+                        maxTokens: 100
+                        tokensPerFill: 100
+            /api:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /api
+                  name: route-path-prefix-api
+                  route:
+                    cluster: api-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.local_ratelimit:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      alwaysConsumeDefaultTokenBucket: false
+                      descriptors:
+                      - entries:
+                        - key: rule-0-path
+                          value: rule-0-path
+                        tokenBucket:
+                          fillInterval: 1s
+                          maxTokens: 50
+                          tokensPerFill: 50
+                      enableXRatelimitHeaders: DRAFT_VERSION_03
+                      filterEnabled:
+                        defaultValue:
+                          numerator: 100
+                      filterEnforced:
+                        defaultValue:
+                          numerator: 100
+                      rateLimits:
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-0-path
+                            descriptorValue: rule-0-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                prefix: /api/
+                      statPrefix: http_local_rate_limiter
+                      tokenBucket:
+                        fillInterval: 1s
+                        maxTokens: 100
+                        tokensPerFill: 100
+            /premium:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /premium
+                  name: route-path-and-header
+                  route:
+                    cluster: premium-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.local_ratelimit:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      alwaysConsumeDefaultTokenBucket: false
+                      descriptors:
+                      - entries:
+                        - key: rule-0-match-0
+                          value: rule-0-match-0
+                        - key: rule-0-path
+                          value: rule-0-path
+                        tokenBucket:
+                          fillInterval: 60s
+                          maxTokens: 500
+                          tokensPerFill: 500
+                      enableXRatelimitHeaders: DRAFT_VERSION_03
+                      filterEnabled:
+                        defaultValue:
+                          numerator: 100
+                      filterEnforced:
+                        defaultValue:
+                          numerator: 100
+                      rateLimits:
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-0-match-0
+                            descriptorValue: rule-0-match-0
+                            expectMatch: true
+                            headers:
+                            - name: x-api-key
+                              stringMatch:
+                                exact: premium
+                        - headerValueMatch:
+                            descriptorKey: rule-0-path
+                            descriptorValue: rule-0-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                prefix: /premium/
+                      statPrefix: http_local_rate_limiter
+                      tokenBucket:
+                        fillInterval: 1s
+                        maxTokens: 100
+                        tokensPerFill: 100
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /api/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /api
+                      name: route-path-prefix-api
+                      route:
+                        cluster: api-dest
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.local_ratelimit:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                          alwaysConsumeDefaultTokenBucket: false
+                          descriptors:
+                          - entries:
+                            - key: rule-0-path
+                              value: rule-0-path
+                            tokenBucket:
+                              fillInterval: 1s
+                              maxTokens: 50
+                              tokensPerFill: 50
+                          enableXRatelimitHeaders: DRAFT_VERSION_03
+                          filterEnabled:
+                            defaultValue:
+                              numerator: 100
+                          filterEnforced:
+                            defaultValue:
+                              numerator: 100
+                          rateLimits:
+                          - actions:
+                            - headerValueMatch:
+                                descriptorKey: rule-0-path
+                                descriptorValue: rule-0-path
+                                expectMatch: true
+                                headers:
+                                - name: :path
+                                  stringMatch:
+                                    prefix: /api/
+                          statPrefix: http_local_rate_limiter
+                          tokenBucket:
+                            fillInterval: 1s
+                            maxTokens: 100
+                            tokensPerFill: 100
+                /premium/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /premium
+                      name: route-path-and-header
+                      route:
+                        cluster: premium-dest
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.local_ratelimit:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                          alwaysConsumeDefaultTokenBucket: false
+                          descriptors:
+                          - entries:
+                            - key: rule-0-match-0
+                              value: rule-0-match-0
+                            - key: rule-0-path
+                              value: rule-0-path
+                            tokenBucket:
+                              fillInterval: 60s
+                              maxTokens: 500
+                              tokensPerFill: 500
+                          enableXRatelimitHeaders: DRAFT_VERSION_03
+                          filterEnabled:
+                            defaultValue:
+                              numerator: 100
+                          filterEnforced:
+                            defaultValue:
+                              numerator: 100
+                          rateLimits:
+                          - actions:
+                            - headerValueMatch:
+                                descriptorKey: rule-0-match-0
+                                descriptorValue: rule-0-match-0
+                                expectMatch: true
+                                headers:
+                                - name: x-api-key
+                                  stringMatch:
+                                    exact: premium
+                            - headerValueMatch:
+                                descriptorKey: rule-0-path
+                                descriptorValue: rule-0-path
+                                expectMatch: true
+                                headers:
+                                - name: :path
+                                  stringMatch:
+                                    prefix: /premium/
+                          statPrefix: http_local_rate_limiter
+                          tokenBucket:
+                            fillInterval: 1s
+                            maxTokens: 100
+                            tokensPerFill: 100
+          onNoMatch:
+            action:
+              name: route_list
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                routes:
+                - match:
+                    prefix: /
+                  name: route-multiple-path-rules
+                  route:
+                    cluster: versioned-api-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.local_ratelimit:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      alwaysConsumeDefaultTokenBucket: false
+                      descriptors:
+                      - entries:
+                        - key: rule-0-path
+                          value: rule-0-path
+                        tokenBucket:
+                          fillInterval: 1s
+                          maxTokens: 200
+                          tokensPerFill: 200
+                      - entries:
+                        - key: rule-1-path
+                          value: rule-1-path
+                        tokenBucket:
+                          fillInterval: 1s
+                          maxTokens: 150
+                          tokensPerFill: 150
+                      - entries:
+                        - key: rule-2-path
+                          value: rule-2-path
+                        tokenBucket:
+                          fillInterval: 1s
+                          maxTokens: 1000
+                          tokensPerFill: 1000
+                      enableXRatelimitHeaders: DRAFT_VERSION_03
+                      filterEnabled:
+                        defaultValue:
+                          numerator: 100
+                      filterEnforced:
+                        defaultValue:
+                          numerator: 100
+                      rateLimits:
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-0-path
+                            descriptorValue: rule-0-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                prefix: /v1/
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-1-path
+                            descriptorValue: rule-1-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                prefix: /v2/
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-2-path
+                            descriptorValue: rule-2-path
+                            expectMatch: true
+                            headers:
+                            - name: :path
+                              stringMatch:
+                                exact: /health
+                      statPrefix: http_local_rate_limiter
+                      tokenBucket:
+                        fillInterval: 1s
+                        maxTokens: 100
+                        tokensPerFill: 100
+    name: path-match-listener/*
