@@ -179,7 +179,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Resolved all the Object references for the Route",
 			)
 		}
-		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection, hasOverlap := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
@@ -189,6 +189,18 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+			)
+		}
+
+		if hasOverlap {
+			routeStatus := GetRouteStatus(httpRoute)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				httpRoute.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				status.RouteReasonOverlap,
+				"Overlapping match conditions with another HTTPRoute on the same listener and hostname",
 			)
 		}
 
@@ -908,7 +920,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
-		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection, hasOverlap := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
@@ -918,6 +930,18 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
+			)
+		}
+
+		if hasOverlap {
+			routeStatus := GetRouteStatus(grpcRoute)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				grpcRoute.GetGeneration(),
+				gwapiv1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				status.RouteReasonOverlap,
+				"Overlapping match conditions with another GRPCRoute on the same listener and hostname",
 			)
 		}
 
@@ -1245,9 +1269,11 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	}
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) (bool, bool) {
 	// need to check hostname intersection if there are listeners
 	hasHostnameIntersection := len(parentRef.listeners) == 0
+	var hasOverlap bool
+
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
@@ -1295,11 +1321,114 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			if route.GetRouteType() == resource.KindGRPCRoute {
 				irListener.IsHTTP2 = true
 			}
+
+			// Check for overlapping route matches before adding new routes.
+			// Two routes overlap when they are from different route resources
+			// but have identical match conditions on the same hostname.
+			routePrefix := irRoutePrefix(route)
+			for _, newRoute := range perHostRoutes {
+				for _, existingRoute := range irListener.Routes {
+					if strings.HasPrefix(existingRoute.Name, routePrefix) {
+						// Same route resource, skip.
+						continue
+					}
+					if routeMatchesOverlap(existingRoute, newRoute) {
+						hasOverlap = true
+						break
+					}
+				}
+				if hasOverlap {
+					break
+				}
+			}
+
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 	}
 
-	return hasHostnameIntersection
+	return hasHostnameIntersection, hasOverlap
+}
+
+// routeMatchesOverlap checks if two IR HTTP routes have identical match conditions,
+// indicating that they match the same set of requests.
+// This detects routes with the same hostname and identical exact path, header, query param,
+// and cookie match conditions. Only routes with explicit exact path matches are checked;
+// prefix path matches can intentionally overlap across HTTPRoute resources
+// and are resolved through precedence ordering.
+func routeMatchesOverlap(a, b *ir.HTTPRoute) bool {
+	if a.Hostname != b.Hostname {
+		return false
+	}
+	// Only detect overlap for routes with explicit exact path matches.
+	if a.PathMatch == nil || b.PathMatch == nil {
+		return false
+	}
+	if a.PathMatch.Exact == nil || b.PathMatch.Exact == nil {
+		return false
+	}
+	if !stringMatchEqual(a.PathMatch, b.PathMatch) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.HeaderMatches, b.HeaderMatches) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.QueryParamMatches, b.QueryParamMatches) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.CookieMatches, b.CookieMatches) {
+		return false
+	}
+	return true
+}
+
+func stringMatchEqual(a, b *ir.StringMatch) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if !ptrStringEqual(a.Exact, b.Exact) {
+		return false
+	}
+	if !ptrStringEqual(a.Prefix, b.Prefix) {
+		return false
+	}
+	if !ptrStringEqual(a.Suffix, b.Suffix) {
+		return false
+	}
+	if !ptrStringEqual(a.SafeRegex, b.SafeRegex) {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.Distinct != b.Distinct {
+		return false
+	}
+	return true
+}
+
+func stringMatchSliceEqual(a, b []*ir.StringMatch) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !stringMatchEqual(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func ptrStringEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
 }
 
 func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
