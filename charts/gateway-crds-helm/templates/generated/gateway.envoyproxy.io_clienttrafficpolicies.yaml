@@ -835,6 +835,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      connectionIdleInterval:
+                        description: ConnectionIdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
