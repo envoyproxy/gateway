@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -250,6 +250,13 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 
 	// Build IR maps.
 	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
+
+	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
+	t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
+		resources.BackendTrafficPolicies,
+		routesToObjects(resources),
+		acceptedGateways,
+	)
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
@@ -518,24 +525,55 @@ func (t *Translator) buildIR(gateway *GatewayContext) (string, *ir.Xds, *ir.Infr
 	return irKey, gwXdsIR, gwInfraIR
 }
 
-// IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
-// or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
-// otherwise, it returns false.
-func (t *Translator) IsEnvoyServiceRouting(r *egv1a1.EnvoyProxy) bool {
+// routesToObjects collects all route types from Resources into a single []client.Object slice.
+func routesToObjects(resources *resource.Resources) []client.Object {
+	out := make([]client.Object, 0,
+		len(resources.HTTPRoutes)+len(resources.GRPCRoutes)+
+			len(resources.TLSRoutes)+len(resources.TCPRoutes)+len(resources.UDPRoutes))
+	for _, r := range resources.HTTPRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.GRPCRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.TLSRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.TCPRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.UDPRoutes {
+		out = append(out, r)
+	}
+	return out
+}
+
+// IsServiceRouting determines if Service ClusterIP routing should be used.
+// It follows the priority hierarchy:
+//  1. Translator.EndpointRoutingDisabled (for tests) - if true, always use Service routing
+//  2. BTP RoutingType - per-route/gateway override
+//  3. EnvoyProxy RoutingType - cluster-wide setting
+//  4. Default: Endpoint routing
+func (t *Translator) IsServiceRouting(envoyProxy *egv1a1.EnvoyProxy, btpRoutingType *egv1a1.RoutingType) bool {
 	if t.EndpointRoutingDisabled {
 		return true
 	}
-	if r == nil {
-		return false
+
+	// BTP RoutingType has priority over EnvoyProxy
+	if btpRoutingType != nil {
+		switch *btpRoutingType {
+		case egv1a1.ServiceRoutingType:
+			return true
+		case egv1a1.EndpointRoutingType:
+			return false
+		}
 	}
-	switch ptr.Deref(r.Spec.RoutingType, egv1a1.EndpointRoutingType) {
-	case egv1a1.ServiceRoutingType:
+
+	// Fall back to EnvoyProxy RoutingType
+	if envoyProxy != nil && envoyProxy.Spec.RoutingType != nil && *envoyProxy.Spec.RoutingType == egv1a1.ServiceRoutingType {
 		return true
-	case egv1a1.EndpointRoutingType:
-		return false
-	default:
-		return false
 	}
+	return false
 }
 
 func infrastructureAnnotations(gtw *gwapiv1.Gateway) map[string]string {
