@@ -630,8 +630,8 @@ type LokiQueryResponse struct {
 
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
-func CollectAndDump(t *testing.T, rest *rest.Config) {
-	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
+func CollectAndDump(t *testing.T, rest *rest.Config, checkEnv bool, opts ...tb.CollectOption) {
+	if checkEnv && os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
 		return
 	}
@@ -641,11 +641,12 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	opts := []tb.CollectOption{
+	collectOpts := []tb.CollectOption{
 		tb.WithCollectedNamespaces(dumpedNamespaces),
 	}
+	collectOpts = append(collectOpts, opts...)
 
-	result, _ := tb.CollectResult(t.Context(), rest, opts...)
+	result, _ := tb.CollectResult(t.Context(), rest, collectOpts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
 		tlog.Logf(t, "\ndata: \n%s", data)

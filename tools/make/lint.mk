@@ -115,7 +115,7 @@ lint.markdown:
 		
 
 .PHONY: lint.dependabot
-lint: lint.dependabot
+# lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml

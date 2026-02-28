@@ -34,6 +34,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
 func init() {
@@ -142,6 +143,11 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	ret := compareFunc(trafficMap)
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
+		// Collect and dump the config dump and metrics
+		CollectAndDump(t, suite.RestConfig, false,
+			tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+			tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		)
 	}
 
 	return ret
