@@ -26,6 +26,10 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 
+# subchart settings
+crds:
+  enabled: true
+
 # -- Labels to apply to all resources
 commonLabels: {}
 
