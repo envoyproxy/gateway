@@ -1,0 +1,75 @@
+# Test: EnvoyProxy has routingType: Service, one route has BTP override to Endpoint
+# Expected:
+#   - httproute-1 (with BTP Endpoint): uses Endpoint routing (pod IP 7.7.7.7)
+#   - httproute-2 (no BTP): uses Service routing from EnvoyProxy (ClusterIP 1.1.1.1)
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    routingType: Service
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  # Route with BTP override to Endpoint
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/endpoint"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # Route without BTP - inherits EnvoyProxy Service routing
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/service"
+          backendRefs:
+            - name: service-2
+              port: 8080
+backendTrafficPolicies:
+  # Only applies to httproute-1, overrides to Endpoint
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: default
+      name: policy-endpoint-override
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      routingType: Endpoint

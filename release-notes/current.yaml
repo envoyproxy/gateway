@@ -15,6 +15,7 @@ new features: |
   Added support for shadow mode in local rate limiting.
   Added `egctl config envoy-gateway` commands to retrieve Envoy Gateway admin config dumps.
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators for more details.
+  Implement RoutingType field for BackendTrafficPolicy
   Support for configuring weights for locality zones.
   Added support for Envoy Dynamic Modules.
 

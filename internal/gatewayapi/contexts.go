@@ -137,6 +137,12 @@ func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	}
 }
 
+// IncrementAttachedRoutes increments the number of attached routes for the listener in the status.
+//
+// xref: https://github.com/kubernetes-sigs/gateway-api/issues/2402
+// Namely:
+// - AttachedRoutes should be set on Listeners that are valid or invalid
+// - The count of AttachedRoutes should include Routes that are valid or invalid
 func (l *ListenerContext) IncrementAttachedRoutes() {
 	if l.isFromListenerSet() {
 		l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].AttachedRoutes++
@@ -163,7 +169,8 @@ func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	}
 
 	for _, allowed := range supportedKinds {
-		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
+		// The default group is "gateway.networking.k8s.io"
+		if GroupDerefOr(allowed.Group, "gateway.networking.k8s.io") == GroupDerefOr(kind.Group, "gateway.networking.k8s.io") &&
 			allowed.Kind == kind.Kind {
 			return true
 		}
@@ -798,6 +805,7 @@ type TranslatorContext struct {
 	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
