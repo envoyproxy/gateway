@@ -1889,6 +1889,11 @@ func (in *HTTPListener) DeepCopyInto(out *HTTPListener) {
 		*out = new(TLSConfig)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.TLSOverlapsHostnames != nil {
+		in, out := &in.TLSOverlapsHostnames, &out.TLSOverlapsHostnames
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.Routes != nil {
 		in, out := &in.Routes, &out.Routes
 		*out = make([]*HTTPRoute, len(*in))

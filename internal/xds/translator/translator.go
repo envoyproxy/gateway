@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -671,6 +672,44 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	if httpListener.TLSOverlaps {
+		// add a route that matches all hosts and returns 421 to handle TLS overlapping scenario
+		domains := sets.NewString()
+		for _, h := range httpListener.TLSOverlapsHostnames {
+			domains.Insert(h)
+		}
+		out := domains.UnsortedList()
+		// sort the domains and make sure * is always at the end of the list since Envoy will match the domains in order and * should be the last one to be matched
+		sort.Slice(out, func(i, j int) bool {
+			if out[i] == "*" {
+				return false
+			}
+			if out[j] == "*" {
+				return true
+			}
+			return out[i] < out[j]
+		})
+		if len(out) != 0 {
+			xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, &routev3.VirtualHost{
+				Name:    virtualHostName(httpListener, "catch_all_tls_overlapping", t.xdsNameSchemeV2()),
+				Domains: out,
+				Routes: []*routev3.Route{
+					{
+						Match: &routev3.RouteMatch{
+							PathSpecifier: &routev3.RouteMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+						Action: &routev3.Route_DirectResponse{
+							DirectResponse: &routev3.DirectResponseAction{
+								Status: 421,
+							},
+						},
+					},
+				},
+			})
+		}
+	}
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.

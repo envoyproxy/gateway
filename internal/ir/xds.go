@@ -300,7 +300,8 @@ type HTTPListener struct {
 	// TLSOverlaps indicates if the listener has TLS configuration that overlaps with other listeners.
 	// HTTP2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
-	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
+	TLSOverlaps          bool     `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
+	TLSOverlapsHostnames []string `json:"tlsOverlapsHostnames,omitempty" yaml:"tlsOverlapsHostnames,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
