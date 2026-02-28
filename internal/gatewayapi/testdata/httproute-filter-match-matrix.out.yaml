@@ -266,6 +266,26 @@ xdsIR:
       - cookieMatches:
         - distinct: false
           exact: xxx
+          name: cookie-3
+        - distinct: false
+          exact: yyy
+          name: cookie-4
+        directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/1/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
           name: cookie-1
         - distinct: false
           name: cookie-2
@@ -300,6 +320,26 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
+          name: cookie-1
+        - distinct: false
+          name: cookie-2
+          safeRegex: foo.*
+        directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
       - cookieMatches:
         - distinct: false
           exact: xxx
@@ -340,6 +380,26 @@ xdsIR:
       - cookieMatches:
         - distinct: false
           exact: xxx
+          name: cookie-3
+        - distinct: false
+          exact: yyy
+          name: cookie-4
+        directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          exact: baz
+          name: header1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/3/*
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
           name: cookie-1
         - distinct: false
           name: cookie-2
@@ -366,6 +426,26 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: bar
+          name: header1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/2/*
+      - cookieMatches:
+        - distinct: false
+          exact: xxx
+          name: cookie-1
+        - distinct: false
+          name: cookie-2
+          safeRegex: foo.*
+        directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          exact: baz
           name: header1
         hostname: '*'
         isHTTP2: false

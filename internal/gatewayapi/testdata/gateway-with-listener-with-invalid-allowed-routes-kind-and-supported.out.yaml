@@ -19,7 +19,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: FooRoute is not supported, kind must be one of [HTTPRoute]
@@ -55,8 +55,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: No listeners included by this parent ref allowed this attachment.
-        reason: NotAllowedByListeners
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null
