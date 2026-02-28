@@ -592,42 +592,45 @@ spec:
                         description: GRPC defines success criteria for gRPC requests.
                         properties:
                           grpcSuccessStatus:
-                            description: GRPCSuccessStatus defines gRPC status codes
-                              that are considered successful.
+                            description: |-
+                              GRPCSuccessStatus defines gRPC status codes that are considered successful.
+                              Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
                             items:
-                              format: int32
-                              type: integer
+                              description: |-
+                                GRPCSuccessCode defines gRPC status codes as defined in
+                                https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                              enum:
+                              - OK
+                              - CANCELLED
+                              - UNKNOWN
+                              - INVALID_ARGUMENT
+                              - DEADLINE_EXCEEDED
+                              - NOT_FOUND
+                              - ALREADY_EXISTS
+                              - PERMISSION_DENIED
+                              - RESOURCE_EXHAUSTED
+                              - FAILED_PRECONDITION
+                              - ABORTED
+                              - OUT_OF_RANGE
+                              - UNIMPLEMENTED
+                              - INTERNAL
+                              - UNAVAILABLE
+                              - DATA_LOSS
+                              - UNAUTHENTICATED
+                              type: string
                             type: array
                         type: object
                       http:
                         description: HTTP defines success criteria for HTTP requests.
                         properties:
                           httpSuccessStatus:
-                            description: |-
-                              HTTPSuccessStatus defines ranges of HTTP status codes that are considered successful.
-                              Each range is inclusive on both ends.
+                            description: HTTPSuccessStatus defines HTTP status codes
+                              that are considered successful.
                             items:
-                              description: HTTPStatusRange defines a range of HTTP
-                                status codes.
-                              properties:
-                                end:
-                                  description: End is the inclusive end of the status
-                                    code range (100-600).
-                                  format: int32
-                                  maximum: 600
-                                  minimum: 100
-                                  type: integer
-                                start:
-                                  description: Start is the inclusive start of the
-                                    status code range (100-600).
-                                  format: int32
-                                  maximum: 600
-                                  minimum: 100
-                                  type: integer
-                              required:
-                              - end
-                              - start
-                              type: object
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
                             type: array
                         type: object
                     type: object
