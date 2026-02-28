@@ -179,12 +179,8 @@ securityPolicies:
   spec:
     oidc:
       clientIDRef:
-        group: null
-        kind: null
         name: client2-secret
       clientSecret:
-        group: null
-        kind: null
         name: client2-secret
       cookieDomain: example.com
       defaultRefreshTokenTTL: 48h
@@ -237,8 +233,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
-        group: null
-        kind: null
         name: client3-secret
       csrfTokenTTL: 35m
       defaultRefreshTokenTTL: 24h
@@ -284,8 +278,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       csrfTokenTTL: 35m
       defaultRefreshTokenTTL: 24h

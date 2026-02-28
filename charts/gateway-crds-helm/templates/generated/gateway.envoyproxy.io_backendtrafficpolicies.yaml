@@ -2172,8 +2172,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2246,8 +2252,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2367,7 +2379,7 @@ spec:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing.
-                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
               targetRef:

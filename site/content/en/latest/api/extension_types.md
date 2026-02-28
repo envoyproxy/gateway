@@ -588,6 +588,7 @@ _Appears in:_
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
+| `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing.<br />When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.<br />If not specified, the EnvoyProxy-level setting is used. |
 
 
 #### BackendType
@@ -1258,6 +1259,43 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
+#### DynamicModule
+
+
+
+DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
+The module must be registered in the EnvoyProxy resource's dynamicModules
+allowlist by the infrastructure operator.
+
+_Appears in:_
+- [EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
+| `filterName` | _string_ |  false  |  | FilterName identifies a specific filter implementation within the dynamic<br />module. A single shared library can contain multiple filter implementations.<br />This value is passed to the module's HTTP filter config init function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module filter.<br />This is serialized as JSON and passed to the module's initialization function. |
+| `terminalFilter` | _boolean_ |  false  | false | TerminalFilter indicates that this dynamic module handles requests without<br />requiring an upstream backend. The module is responsible for generating and<br />sending the response to downstream directly.<br />Defaults to false. |
+
+
+#### DynamicModuleEntry
+
+
+
+DynamicModuleEntry defines a dynamic module that is registered and allowed
+for use by EnvoyExtensionPolicy resources.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name. |
+| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of Name. |
+| `doNotClose` | _boolean_ |  false  | false | DoNotClose prevents the module from being unloaded with dlclose when no<br />more references exist. This is useful for modules that maintain global<br />state that should not be destroyed on configuration updates.<br />Defaults to false. |
+| `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
+
+
 #### EndpointOverride
 
 
@@ -1338,6 +1376,7 @@ _Appears in:_
 | `wasm` | _[Wasm](#wasm) array_ |  false  |  | Wasm is a list of Wasm extensions to be loaded by the Gateway.<br />Order matters, as the extensions will be loaded in the order they are<br />defined in this list. |
 | `extProc` | _[ExtProc](#extproc) array_ |  false  |  | ExtProc is an ordered list of external processing filters<br />that should be added to the envoy filter chain |
 | `lua` | _[Lua](#lua) array_ |  false  |  | Lua is an ordered list of Lua filters<br />that should be added to the envoy filter chain |
+| `dynamicModule` | _[DynamicModule](#dynamicmodule) array_ |  false  |  | DynamicModule is an ordered list of dynamic module HTTP filters<br />that should be added to the envoy filter chain.<br />Each module must be registered in the EnvoyProxy resource's dynamicModules<br />allowlist.<br />Order matters, as the filters will be loaded in the order they are<br />defined in this list. |
 
 
 #### EnvoyFilter
@@ -1367,6 +1406,7 @@ _Appears in:_
 | `envoy.filters.http.lua` | EnvoyFilterLua defines the Envoy HTTP Lua filter.<br /> | 
 | `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
 | `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
+| `envoy.filters.http.dynamic_modules` | EnvoyFilterDynamicModules defines the Envoy HTTP dynamic modules filter.<br /> | 
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
@@ -1912,11 +1952,12 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
+| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 
 
 #### EnvoyProxyStatus
@@ -2376,9 +2417,6 @@ GatewayAPI defines an experimental Gateway API resource that can be enabled.
 _Appears in:_
 - [GatewayAPISettings](#gatewayapisettings)
 
-| Value | Description |
-| ----- | ----------- |
-| `XListenerSet` | XListenerSet enables the Gateway API XListenerSet resource.<br /> | 
 
 
 #### GatewayAPISettings

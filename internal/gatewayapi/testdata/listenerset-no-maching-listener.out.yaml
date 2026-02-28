@@ -1,0 +1,337 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: composite-gateway
+    namespace: gateway-xls
+  spec:
+    allowedListeners:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            allow-xls: "true"
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: core-http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: conflict-listener
+      port: 8888
+      protocol: HTTP
+  status:
+    attachedListenerSets: 1
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: core-http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: conflict-listener
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: route-core-listener
+    namespace: default
+  spec:
+    parentRefs:
+    - name: composite-gateway
+      namespace: gateway-xls
+      sectionName: core-http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: core-http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: route-extra-http-one
+    namespace: default
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      name: listener-from-same-xls
+      namespace: gateway-xls
+      sectionName: non-existent-listener
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: No listeners match this parent ref
+        reason: NoMatchingParent
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: ListenerSet
+        name: listener-from-same-xls
+        namespace: gateway-xls
+        sectionName: non-existent-listener
+infraIR:
+  gateway-xls/composite-gateway:
+    proxy:
+      listeners:
+      - name: gateway-xls/composite-gateway/core-http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: gateway-xls/composite-gateway/conflict-listener
+        ports:
+        - containerPort: 8888
+          name: http-8888
+          protocol: HTTP
+          servicePort: 8888
+      - name: gateway-xls/composite-gateway/gateway-xls/listener-from-same-xls/listener-1
+        ports:
+        - containerPort: 8089
+          name: http-8089
+          protocol: HTTP
+          servicePort: 8089
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: composite-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: gateway-xls
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: gateway-xls/composite-gateway
+      namespace: envoy-gateway-system
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listener-from-same-xls
+    namespace: gateway-xls
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: listener-1
+      port: 8089
+      protocol: HTTP
+    parentRef:
+      name: composite-gateway
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: All listeners are valid
+      reason: Accepted
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: All listeners are valid
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: listener-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+xdsIR:
+  gateway-xls/composite-gateway:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-gateway-xls-composite-gateway-e1ee602f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: gateway-xls/composite-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-gateway-xls-composite-gateway-e1ee602f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: gateway-xls/composite-gateway
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: core-http
+      name: gateway-xls/composite-gateway/core-http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: route-core-listener
+            namespace: default
+          name: httproute/default/route-core-listener/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/route-core-listener/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: route-core-listener
+          namespace: default
+        name: httproute/default/route-core-listener/rule/0/match/-1/*
+    - address: 0.0.0.0
+      externalPort: 8888
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: conflict-listener
+      name: gateway-xls/composite-gateway/conflict-listener
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8888
+    - address: 0.0.0.0
+      externalPort: 8089
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway-xls
+        sectionName: listener-1
+      name: gateway-xls/composite-gateway/gateway-xls/listener-from-same-xls/listener-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8089
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

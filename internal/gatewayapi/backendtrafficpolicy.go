@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -35,6 +36,148 @@ const (
 	// ResponseBodyConfigMapKey is the key used in ConfigMaps to store custom response body data
 	ResponseBodyConfigMapKey = "response.body"
 )
+
+// btpRoutingKey identifies a BTP routing type target
+type btpRoutingKey struct {
+	Kind, Namespace, Name, SectionName string
+}
+
+// BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
+// This avoids an O(BTPs) lookup for every iteration of processDestination.
+type BTPRoutingTypeIndex struct {
+	routeRuleLevel map[btpRoutingKey]*egv1a1.RoutingType
+	routeLevel     map[btpRoutingKey]*egv1a1.RoutingType
+	listenerLevel  map[btpRoutingKey]*egv1a1.RoutingType
+	gatewayLevel   map[btpRoutingKey]*egv1a1.RoutingType
+}
+
+// BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
+// from BackendTrafficPolicies, organized by priority-level.
+// BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
+func BuildBTPRoutingTypeIndex(
+	btps []*egv1a1.BackendTrafficPolicy,
+	routes []client.Object,
+	gateways []*GatewayContext,
+) *BTPRoutingTypeIndex {
+	idx := &BTPRoutingTypeIndex{
+		routeRuleLevel: make(map[btpRoutingKey]*egv1a1.RoutingType),
+		routeLevel:     make(map[btpRoutingKey]*egv1a1.RoutingType),
+		listenerLevel:  make(map[btpRoutingKey]*egv1a1.RoutingType),
+		gatewayLevel:   make(map[btpRoutingKey]*egv1a1.RoutingType),
+	}
+
+	// Combine routes and gateways into a single target slice for getPolicyTargetRefs.
+	allTargets := make([]client.Object, 0, len(routes)+len(gateways))
+	allTargets = append(allTargets, routes...)
+	for _, gw := range gateways {
+		allTargets = append(allTargets, gw)
+	}
+
+	for _, btp := range btps {
+		if btp.Spec.RoutingType == nil {
+			continue
+		}
+
+		refs := getPolicyTargetRefs(btp.Spec.PolicyTargetReferences, allTargets, btp.Namespace)
+		for _, ref := range refs {
+			kind := string(ref.Kind)
+			key := btpRoutingKey{
+				Kind:        kind,
+				Namespace:   btp.Namespace,
+				Name:        string(ref.Name),
+				SectionName: string(ptr.Deref(ref.SectionName, "")),
+			}
+
+			if kind == resource.KindGateway {
+				if ref.SectionName != nil {
+					if _, exists := idx.listenerLevel[key]; !exists {
+						idx.listenerLevel[key] = btp.Spec.RoutingType
+					}
+				} else {
+					if _, exists := idx.gatewayLevel[key]; !exists {
+						idx.gatewayLevel[key] = btp.Spec.RoutingType
+					}
+				}
+			} else {
+				if ref.SectionName != nil {
+					if _, exists := idx.routeRuleLevel[key]; !exists {
+						idx.routeRuleLevel[key] = btp.Spec.RoutingType
+					}
+				} else {
+					if _, exists := idx.routeLevel[key]; !exists {
+						idx.routeLevel[key] = btp.Spec.RoutingType
+					}
+				}
+			}
+		}
+	}
+
+	return idx
+}
+
+// LookupBTPRoutingType resolves the RoutingType for a specific route rule
+// and gateway/listener combination by checking the index in
+// priority order: routeRule > route > listener > gateway.
+// Returns nil if no matching BTP RoutingType is found, or if the index is nil.
+func (idx *BTPRoutingTypeIndex) LookupBTPRoutingType(
+	routeKind gwapiv1.Kind,
+	routeNN types.NamespacedName,
+	gatewayNN types.NamespacedName,
+	listenerName *gwapiv1.SectionName,
+	routeRuleName *gwapiv1.SectionName,
+) *egv1a1.RoutingType {
+	if idx == nil {
+		return nil
+	}
+
+	// 1. Route-rule level (most specific)
+	if routeRuleName != nil {
+		key := btpRoutingKey{
+			Kind:        string(routeKind),
+			Namespace:   routeNN.Namespace,
+			Name:        routeNN.Name,
+			SectionName: string(*routeRuleName),
+		}
+		if rt, ok := idx.routeRuleLevel[key]; ok {
+			return rt
+		}
+	}
+
+	// 2. Route level
+	routeKey := btpRoutingKey{
+		Kind:      string(routeKind),
+		Namespace: routeNN.Namespace,
+		Name:      routeNN.Name,
+	}
+	if rt, ok := idx.routeLevel[routeKey]; ok {
+		return rt
+	}
+
+	// 3. Listener level
+	if listenerName != nil {
+		listenerKey := btpRoutingKey{
+			Kind:        resource.KindGateway,
+			Namespace:   gatewayNN.Namespace,
+			Name:        gatewayNN.Name,
+			SectionName: string(*listenerName),
+		}
+		if rt, ok := idx.listenerLevel[listenerKey]; ok {
+			return rt
+		}
+	}
+
+	// 4. Gateway level (least specific)
+	gwKey := btpRoutingKey{
+		Kind:      resource.KindGateway,
+		Namespace: gatewayNN.Namespace,
+		Name:      gatewayNN.Name,
+	}
+	if rt, ok := idx.gatewayLevel[gwKey]; ok {
+		return rt
+	}
+
+	return nil
+}
 
 // deprecatedFieldsUsedInBackendTrafficPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy) map[string]string {
@@ -263,7 +406,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	// Find the Gateway that the route belongs to and add it to the
 	// gatewayRouteMap and ancestor list, which will be used to check
 	// policy overrides and populate its ancestor status.
-	parentRefs := GetParentReferences(targetedRoute)
+	parentRefs := GetManagedParentReferences(targetedRoute)
 	ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
 	// parentRefCtxs holds parent gateway/listener contexts for using in policy merge logic.
 	parentRefCtxs := make([]*RouteParentContext, 0, len(parentRefs))
@@ -295,12 +438,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 			// Do need a section name since the policy is targeting to a route.
 			ancestorRef := getAncestorRefForPolicy(mapKey.NamespacedName, p.SectionName)
 			ancestorRefs = append(ancestorRefs, &ancestorRef)
-
-			// Only process parentRefs that were handled by this translator
-			// (skip those referencing Gateways with different GatewayClasses)
-			if parentRefCtx := targetedRoute.GetRouteParentContext(p); parentRefCtx != nil {
-				parentRefCtxs = append(parentRefCtxs, parentRefCtx)
-			}
+			parentRefCtxs = append(parentRefCtxs, targetedRoute.GetRouteParentContext(p))
 		}
 	}
 
@@ -671,7 +809,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
 ) error {
-	mergedPolicy, err := mergeBackendTrafficPolicy(policy, parentPolicy)
+	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
 	}
@@ -842,14 +980,24 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 	}
 }
 
-func mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
+// mergeBackendTrafficPolicy merges route policy into gateway policy.
+func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.BackendTrafficPolicy) (*egv1a1.BackendTrafficPolicy, error) {
 	if routePolicy.Spec.MergeType == nil || gwPolicy == nil {
 		return routePolicy, nil
 	}
 
-	return utils.Merge[*egv1a1.BackendTrafficPolicy](gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	// Resolve LocalObjectReferences to inline content in the policies before merge so the merge operates on concrete values.
+	if err := t.resolveLocalObjectRefsInPolicy(gwPolicy); err != nil {
+		return nil, err
+	}
+	if err := t.resolveLocalObjectRefsInPolicy(routePolicy); err != nil {
+		return nil, err
+	}
+
+	return utils.Merge(gwPolicy, routePolicy, *routePolicy.Spec.MergeType)
 }
 
+// buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy.
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
@@ -1741,10 +1889,10 @@ func (t *Translator) getCustomResponseBody(
 					return binData, nil
 				}
 			default:
-				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s", ResponseBodyConfigMapKey, body.ValueRef.Name)
+				return nil, fmt.Errorf("can't find the key %s in the referenced configmap %s/%s", ResponseBodyConfigMapKey, policyNs, body.ValueRef.Name)
 			}
 		} else {
-			return nil, fmt.Errorf("can't find the referenced configmap %s", body.ValueRef.Name)
+			return nil, fmt.Errorf("can't find the referenced configmap %s/%s", policyNs, body.ValueRef.Name)
 		}
 	} else if body.Inline != nil {
 		inlineValue := []byte(*body.Inline)
@@ -1752,6 +1900,47 @@ func (t *Translator) getCustomResponseBody(
 	}
 
 	return nil, nil
+}
+
+// resolveCustomResponseBodyRefToInline resolves a ValueRef in body to inline content using the given namespace.
+// It mutates body in place: replaces Type and ValueRef with Inline content. No-op if body is nil or already Inline.
+func (t *Translator) resolveCustomResponseBodyRefToInline(body *egv1a1.CustomResponseBody, policyNs string) error {
+	if body == nil {
+		return nil
+	}
+	if body.Type == nil || *body.Type != egv1a1.ResponseValueTypeValueRef || body.ValueRef == nil {
+		return nil
+	}
+	data, err := t.getCustomResponseBody(body, policyNs)
+	if err != nil {
+		return err
+	}
+	inlineStr := string(data)
+	t.Logger.Info("resolved custom response body ref to inline before merge",
+		"namespace", policyNs,
+		"ref", body.ValueRef.Name,
+	)
+	body.Type = ptr.To(egv1a1.ResponseValueTypeInline)
+	body.Inline = &inlineStr
+	body.ValueRef = nil
+	return nil
+}
+
+// resolveLocalObjectRefsInPolicy resolves LocalObjectReferences to inline content in the given policy (mutates in place).
+// Currently handles ResponseOverride body ValueRefs; may be extended for other refs BackendTrafficPolicy supports.
+func (t *Translator) resolveLocalObjectRefsInPolicy(policy *egv1a1.BackendTrafficPolicy) error {
+	if policy == nil || len(policy.Spec.ResponseOverride) == 0 {
+		return nil
+	}
+	policyNs := policy.Namespace
+	for _, ro := range policy.Spec.ResponseOverride {
+		if ro != nil && ro.Response != nil && ro.Response.Body != nil {
+			if err := t.resolveCustomResponseBodyRefToInline(ro.Response.Body, policyNs); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {

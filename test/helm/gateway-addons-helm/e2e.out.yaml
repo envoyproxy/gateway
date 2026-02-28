@@ -7,10 +7,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -22,10 +22,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/opentelemetry-collector/templates/serviceaccount.yaml
@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -52,7 +52,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -80,10 +80,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: config
@@ -192,10 +192,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 data:
   config.yaml: |
     
@@ -292,10 +292,10 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 data:
   runtime-config.yaml: |
     {}
@@ -307,10 +307,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -462,7 +462,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -502,6 +502,7 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
     - job_name: kubernetes-nodes-cadvisor
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
@@ -516,6 +517,7 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
     - job_name: kubernetes-pods
       honor_labels: true
       kubernetes_sd_configs:
@@ -10096,10 +10098,10 @@ kind: ClusterRole
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10223,10 +10225,10 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   name: loki-clusterrole
 rules:
 - apiGroups: [""] # "" indicates the core API group
@@ -10239,10 +10241,10 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10266,7 +10268,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10312,10 +10314,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -10334,10 +10336,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 subjects:
   - kind: ServiceAccount
     name: loki
@@ -10353,10 +10355,10 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10378,7 +10380,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10397,10 +10399,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: networking
@@ -10422,10 +10424,10 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   annotations:
 spec:
   type: ClusterIP
@@ -10447,10 +10449,10 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
     variant: headless
     prometheus.io/service-monitor: "false"
   annotations:
@@ -10472,10 +10474,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   annotations:
 spec:
   type: ClusterIP
@@ -10500,10 +10502,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10561,7 +10563,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10647,10 +10649,10 @@ metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-1.5.3
+    helm.sh/chart: alloy-1.6.0
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "v1.12.2"
+    app.kubernetes.io/version: "v1.13.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
@@ -10669,7 +10671,7 @@ spec:
       serviceAccountName: alloy
       containers:
         - name: alloy
-          image: docker.io/grafana/alloy:v1.12.2
+          image: docker.io/grafana/alloy:v1.13.0
           imagePullPolicy: IfNotPresent
           args:
             - run
@@ -10723,10 +10725,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.144.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.144.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10743,7 +10745,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: c77165e7a80ad52ad2348c14670653d38bc83f20882e00d7622fe7bfabbf0f1e
+        checksum/config: 6b82fb5a71749bbd891cff1fb0896b676f0dadeded2ec18bdc608fd0e15655e0
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10762,7 +10764,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.144.0"
+          image: "otel/opentelemetry-collector-contrib:0.146.1"
           imagePullPolicy: IfNotPresent
           ports:
             
@@ -10826,7 +10828,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10848,14 +10850,14 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.8.0
+        helm.sh/chart: prometheus-28.9.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.88.1"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -10942,10 +10944,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10985,7 +10987,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:3.6.3
+          image: docker.io/grafana/loki:3.6.5
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml

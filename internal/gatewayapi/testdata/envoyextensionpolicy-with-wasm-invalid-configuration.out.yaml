@@ -13,8 +13,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0
@@ -55,8 +53,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0
@@ -98,8 +94,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0
@@ -110,8 +104,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-2
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-2:v1.0.0
@@ -159,8 +151,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0
@@ -206,8 +196,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0
@@ -248,8 +236,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret-1
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-1:v1.0.0

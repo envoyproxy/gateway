@@ -17,9 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	apisxv1alpha1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -63,13 +61,13 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.XListenerSets != nil {
-		in, out := &in.XListenerSets, &out.XListenerSets
-		*out = make([]*apisxv1alpha1.XListenerSet, len(*in))
+	if in.ListenerSets != nil {
+		in, out := &in.ListenerSets, &out.ListenerSets
+		*out = make([]*v1.ListenerSet, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(apisxv1alpha1.XListenerSet)
+				*out = new(v1.ListenerSet)
 				(*in).DeepCopyInto(*out)
 			}
 		}
@@ -98,11 +96,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.TLSRoutes != nil {
 		in, out := &in.TLSRoutes, &out.TLSRoutes
-		*out = make([]*v1alpha3.TLSRoute, len(*in))
+		*out = make([]*v1.TLSRoute, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha3.TLSRoute)
+				*out = new(v1.TLSRoute)
 				(*in).DeepCopyInto(*out)
 			}
 		}

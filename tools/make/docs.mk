@@ -5,6 +5,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
 LINKINATOR_IGNORE := "opentelemetry.io \
+	gateway-api.sigs.k8s.io/reference/1.3 \
 	ntia.gov \
 	github.com \
 	jwt.io \
