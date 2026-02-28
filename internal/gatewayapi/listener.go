@@ -945,7 +945,7 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
 			if err != nil {
 				return nil, nil, err
 			}

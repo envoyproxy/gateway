@@ -805,6 +805,7 @@ type TranslatorContext struct {
 	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

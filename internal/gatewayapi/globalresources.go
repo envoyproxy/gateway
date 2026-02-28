@@ -85,7 +85,7 @@ func (t *Translator) processServiceClusterForGateway(gateway *GatewayContext, re
 		Namespace: NamespacePtr(svcCluster.Namespace),
 		Port:      PortNumPtr(svcCluster.Spec.Ports[0].Port),
 	}
-	dst, err := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources.EnvoyProxyForGatewayClass)
+	dst, err := t.processServiceDestinationSetting(irKey, bRef, svcCluster.Namespace, ir.AppProtocol(svcCluster.Spec.Ports[0].Protocol), resources.EnvoyProxyForGatewayClass, nil)
 	if err != nil {
 		return "", nil
 	}
