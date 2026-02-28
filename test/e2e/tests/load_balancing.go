@@ -144,7 +144,7 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
 		// Collect and dump the config dump and metrics
-		CollectAndDump(t, suite.RestConfig,
+		CollectAndDump(t, suite.RestConfig, false,
 			tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
 			tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
 		)
