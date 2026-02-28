@@ -179,12 +179,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Resolved all the Object references for the Route",
 			)
 		}
-
-		// Skip parent refs that did not accept the route
-		if parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-			continue
-		}
-
 		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(httpRoute)
@@ -196,6 +190,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -211,7 +210,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Route is accepted",
 			)
 		}
-
 	}
 }
 
@@ -1248,14 +1246,18 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 }
 
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
-	var hasHostnameIntersection bool
-
+	// need to check hostname intersection if there are listeners
+	hasHostnameIntersection := len(parentRef.listeners) == 0
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
 		hasHostnameIntersection = true
+		listener.IncrementAttachedRoutes()
+		if !listener.IsReady() {
+			continue
+		}
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -1412,19 +1414,18 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			)
 		}
 
-		// Skip parent refs that did not accept the route
-		if parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-			continue
-		}
-
-		var hasHostnameIntersection bool
+		// need to check hostname intersection if there are listeners
+		hasHostnameIntersection := len(parentRef.listeners) == 0
 		for _, listener := range parentRef.listeners {
 			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
-
 			hasHostnameIntersection = true
+			listener.IncrementAttachedRoutes()
+			if !listener.IsReady() {
+				continue
+			}
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 			gwXdsIR := xdsIR[irKey]
@@ -1462,7 +1463,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
 		}
 
@@ -1476,6 +1476,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1591,9 +1596,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a UDP listener
-			if listener.AttachedRoutes() > 1 {
+			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
@@ -1741,12 +1747,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a TCP listener
-			if listener.AttachedRoutes() > 1 {
+			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
 			if !listener.IsReady() {
 				continue
 			}
+			listener.IncrementAttachedRoutes()
+
 			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
@@ -1774,9 +1782,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				}
 
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
-
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -2252,16 +2258,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			)
 			continue
 		}
-
-		// Its safe to increment AttachedRoutes since we've found a valid parentRef
-		// and the listener allows this Route kind
-
-		// Theoretically there should only be one parent ref per
-		// Route that attaches to a given Listener, so fine to just increment here, but we
-		// might want to check to ensure we're not double-counting.
-		for _, listener := range allowedListeners {
-			listener.IncrementAttachedRoutes()
-		}
+		parentRefCtx.SetListeners(allowedListeners...)
 
 		if !HasReadyListener(selectedListeners) {
 			routeStatus := GetRouteStatus(routeContext)
@@ -2275,8 +2272,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			)
 			continue
 		}
-
-		parentRefCtx.SetListeners(allowedListeners...)
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
