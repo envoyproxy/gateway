@@ -264,7 +264,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.admission_control;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -276,6 +276,9 @@ const (
 
 	// EnvoyFilterFault defines the Envoy HTTP fault filter.
 	EnvoyFilterFault EnvoyFilter = "envoy.filters.http.fault"
+
+	// EnvoyFilterAdmissionControl defines the Envoy HTTP admission control filter.
+	EnvoyFilterAdmissionControl EnvoyFilter = "envoy.filters.http.admission_control"
 
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"

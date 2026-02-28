@@ -974,6 +974,8 @@ type TrafficFeatures struct {
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// FaultInjection defines the schema for injecting faults into HTTP requests.
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty" yaml:"faultInjection,omitempty"`
+	// AdmissionControl defines the schema for admission control based on success rate.
+	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty" yaml:"admissionControl,omitempty"`
 	// Circuit Breaker Settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
 	// Request and connection timeout settings
@@ -1577,6 +1579,52 @@ type FaultInjectionAbort struct {
 	GrpcStatus *int32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
 	// Percentage defines the percentage of requests to be aborted.
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+}
+
+// AdmissionControl defines the schema for admission control based on success rate.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControl struct {
+	// SamplingWindow defines the time window over which request success rates are calculated.
+	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty" yaml:"samplingWindow,omitempty"`
+	// SuccessRateThreshold defines the lowest request success rate at which the filter
+	// will not reject requests. The value should be in the range [0.0, 1.0].
+	SuccessRateThreshold *float64 `json:"successRateThreshold,omitempty" yaml:"successRateThreshold,omitempty"`
+	// Aggression controls the rejection probability curve.
+	Aggression *float64 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
+	// RPSThreshold defines the minimum requests per second below which requests will
+	// pass through the filter without rejection.
+	RPSThreshold *uint32 `json:"rpsThreshold,omitempty" yaml:"rpsThreshold,omitempty"`
+	// MaxRejectionProbability represents the upper limit of the rejection probability.
+	MaxRejectionProbability *float64 `json:"maxRejectionProbability,omitempty" yaml:"maxRejectionProbability,omitempty"`
+	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
+	SuccessCriteria *AdmissionControlSuccessCriteria `json:"successCriteria,omitempty" yaml:"successCriteria,omitempty"`
+}
+
+// AdmissionControlSuccessCriteria defines the criteria for determining successful requests.
+//
+// +k8s:deepcopy-gen=true
+type AdmissionControlSuccessCriteria struct {
+	// HTTP defines success criteria for HTTP requests.
+	HTTP *HTTPSuccessCriteria `json:"http,omitempty" yaml:"http,omitempty"`
+	// GRPC defines success criteria for gRPC requests.
+	GRPC *GRPCSuccessCriteria `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+}
+
+// HTTPSuccessCriteria defines success criteria for HTTP requests.
+//
+// +k8s:deepcopy-gen=true
+type HTTPSuccessCriteria struct {
+	// HTTPSuccessStatus defines HTTP status codes that are considered successful.
+	HTTPSuccessStatus []int32 `json:"httpSuccessStatus,omitempty" yaml:"httpSuccessStatus,omitempty"`
+}
+
+// GRPCSuccessCriteria defines success criteria for gRPC requests.
+//
+// +k8s:deepcopy-gen=true
+type GRPCSuccessCriteria struct {
+	// GRPCSuccessStatus defines gRPC status codes that are considered successful (string enum names).
+	GRPCSuccessStatus []string `json:"grpcSuccessStatus,omitempty" yaml:"grpcSuccessStatus,omitempty"`
 }
 
 // MirrorPolicy specifies a destination to mirror traffic in addition

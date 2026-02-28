@@ -10,10 +10,14 @@
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
         http2ProtocolOptions:
-          initialConnectionWindowSize: 33554432
+          initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
-          maxConcurrentStreams: 200
+          maxConcurrentStreams: 100
         httpFilters:
+        - name: envoy.filters.http.admission_control
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.admission_control.v3.AdmissionControl
+            successCriteria: {}
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

@@ -1006,6 +1006,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		hc          *ir.HealthCheck
 		cb          *ir.CircuitBreaker
 		fi          *ir.FaultInjection
+		ac          *ir.AdmissionControl
 		to          *ir.Timeout
 		ka          *ir.TCPKeepalive
 		rt          *ir.Retry
@@ -1037,6 +1038,9 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	}
 	if policy.Spec.FaultInjection != nil {
 		fi = t.buildFaultInjection(policy)
+	}
+	if policy.Spec.AdmissionControl != nil {
+		ac = t.buildAdmissionControl(policy)
 	}
 	if ka, err = buildTCPKeepAlive(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "TCPKeepalive")
@@ -1090,6 +1094,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		HealthCheck:       hc,
 		CircuitBreaker:    cb,
 		FaultInjection:    fi,
+		AdmissionControl:  ac,
 		TCPKeepalive:      ka,
 		Retry:             rt,
 		BackendConnection: bc,
@@ -1661,6 +1666,58 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 		}
 	}
 	return fi
+}
+
+func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) *ir.AdmissionControl {
+	if policy.Spec.AdmissionControl == nil {
+		return nil
+	}
+
+	ac := &ir.AdmissionControl{
+		SamplingWindow:          parseSamplingWindow(policy.Spec.AdmissionControl.SamplingWindow),
+		SuccessRateThreshold:    policy.Spec.AdmissionControl.SuccessRateThreshold,
+		Aggression:              policy.Spec.AdmissionControl.Aggression,
+		RPSThreshold:            policy.Spec.AdmissionControl.RPSThreshold,
+		MaxRejectionProbability: policy.Spec.AdmissionControl.MaxRejectionProbability,
+	}
+
+	if policy.Spec.AdmissionControl.SuccessCriteria != nil {
+		ac.SuccessCriteria = &ir.AdmissionControlSuccessCriteria{}
+
+		if policy.Spec.AdmissionControl.SuccessCriteria.HTTP != nil {
+			httpStatuses := make([]int32, len(policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
+				httpStatuses[i] = int32(s)
+			}
+			ac.SuccessCriteria.HTTP = &ir.HTTPSuccessCriteria{
+				HTTPSuccessStatus: httpStatuses,
+			}
+		}
+
+		if policy.Spec.AdmissionControl.SuccessCriteria.GRPC != nil {
+			grpcStatuses := make([]string, len(policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
+				grpcStatuses[i] = string(s)
+			}
+			ac.SuccessCriteria.GRPC = &ir.GRPCSuccessCriteria{
+				GRPCSuccessStatus: grpcStatuses,
+			}
+		}
+	}
+
+	return ac
+}
+
+// parseSamplingWindow converts a gwapiv1.Duration to a metav1.Duration for the IR.
+func parseSamplingWindow(d *gwapiv1.Duration) *metav1.Duration {
+	if d == nil {
+		return nil
+	}
+	duration, err := time.ParseDuration(string(*d))
+	if err != nil {
+		return nil
+	}
+	return &metav1.Duration{Duration: duration}
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {

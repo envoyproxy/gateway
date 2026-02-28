@@ -50,6 +50,99 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              admissionControl:
+                description: |-
+                  AdmissionControl defines the admission control policy to be applied. This configuration
+                  probabilistically rejects requests based on the success rate of previous requests in a
+                  configurable sliding time window.
+                properties:
+                  aggression:
+                    description: |-
+                      Aggression controls the rejection probability curve. A value of 1.0 means a linear
+                      increase in rejection probability as the success rate decreases. Higher values
+                      result in more aggressive rejection at higher success rates.
+                      Defaults to 1.0 if not specified.
+                    minimum: 0
+                    type: number
+                  maxRejectionProbability:
+                    description: |-
+                      MaxRejectionProbability represents the upper limit of the rejection probability.
+                      The value should be in the range [0.0, 1.0]. Defaults to 0.95 (95%) if not specified.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                  rpsThreshold:
+                    description: |-
+                      RPSThreshold defines the minimum requests per second below which requests will
+                      pass through the filter without rejection. Defaults to 1 if not specified.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  samplingWindow:
+                    description: |-
+                      SamplingWindow defines the time window over which request success rates are calculated.
+                      Defaults to 60s if not specified.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  successCriteria:
+                    description: SuccessCriteria defines what constitutes a successful
+                      request for both HTTP and gRPC.
+                    properties:
+                      grpc:
+                        description: GRPC defines success criteria for gRPC requests.
+                        properties:
+                          grpcSuccessStatus:
+                            description: |-
+                              GRPCSuccessStatus defines gRPC status codes that are considered successful.
+                              Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                            items:
+                              description: |-
+                                GRPCSuccessCode defines gRPC status codes as defined in
+                                https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                              enum:
+                              - OK
+                              - CANCELLED
+                              - UNKNOWN
+                              - INVALID_ARGUMENT
+                              - DEADLINE_EXCEEDED
+                              - NOT_FOUND
+                              - ALREADY_EXISTS
+                              - PERMISSION_DENIED
+                              - RESOURCE_EXHAUSTED
+                              - FAILED_PRECONDITION
+                              - ABORTED
+                              - OUT_OF_RANGE
+                              - UNIMPLEMENTED
+                              - INTERNAL
+                              - UNAVAILABLE
+                              - DATA_LOSS
+                              - UNAUTHENTICATED
+                              type: string
+                            type: array
+                        type: object
+                      http:
+                        description: HTTP defines success criteria for HTTP requests.
+                        properties:
+                          httpSuccessStatus:
+                            description: HTTPSuccessStatus defines HTTP status codes
+                              that are considered successful.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
+                        type: object
+                    type: object
+                  successRateThreshold:
+                    description: |-
+                      SuccessRateThreshold defines the lowest request success rate at which the filter
+                      will not reject requests. The value should be in the range [0.0, 1.0].
+                      Defaults to 0.95 (95%) if not specified.
+                    maximum: 1
+                    minimum: 0
+                    type: number
+                type: object
               circuitBreaker:
                 description: |-
                   Circuit Breaker settings for the upstream connections and requests.
