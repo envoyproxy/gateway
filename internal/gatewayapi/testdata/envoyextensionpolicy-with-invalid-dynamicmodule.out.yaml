@@ -128,8 +128,10 @@ infraIR:
           namespace: envoy-gateway
         spec:
           dynamicModules:
-          - libraryName: allowed
-            name: allowed-module
+          - name: allowed-module
+            source:
+              local:
+                libraryName: allowed
           logging: {}
         status: {}
       listeners:

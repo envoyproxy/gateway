@@ -7,9 +7,14 @@ envoyProxiesForGateways:
   spec:
     dynamicModules:
     - name: my-auth-module
-      libraryName: my_auth
+      source:
+        type: Local
+        local:
+          libraryName: my_auth
     - name: ai-gateway-filter
-      libraryName: ai_gateway
+      source:
+        local:
+          libraryName: ai_gateway
       doNotClose: true
       loadGlobally: true
 gateways:

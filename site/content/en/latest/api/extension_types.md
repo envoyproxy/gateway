@@ -1253,9 +1253,39 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name. |
-| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of Name. |
+| `source` | _[DynamicModuleSource](#dynamicmodulesource)_ |  true  |  | Source defines where the dynamic module code is loaded from. |
 | `doNotClose` | _boolean_ |  false  | false | DoNotClose prevents the module from being unloaded with dlclose when no<br />more references exist. This is useful for modules that maintain global<br />state that should not be destroyed on configuration updates.<br />Defaults to false. |
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
+
+
+#### DynamicModuleSource
+
+
+
+DynamicModuleSource defines the source of the dynamic module code.
+
+_Appears in:_
+- [DynamicModuleEntry](#dynamicmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
+| `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable. |
+
+
+#### DynamicModuleSourceType
+
+_Underlying type:_ _string_
+
+DynamicModuleSourceType specifies the types of sources for dynamic module code.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalDynamicModuleSourceType specifies a module loaded from the local filesystem.<br /> | 
+| `Remote` | RemoteDynamicModuleSourceType specifies a module fetched from a remote source.<br /> | 
 
 
 #### EndpointOverride
@@ -3482,6 +3512,20 @@ _Appears in:_
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
+#### LocalDynamicModuleSource
+
+
+
+LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of the DynamicModuleEntry's Name. |
+
+
 #### LocalJWKS
 
 
@@ -4782,6 +4826,17 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+
+
+#### RemoteDynamicModuleSource
+
+
+
+RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
 
 
 #### RemoteJWKS
