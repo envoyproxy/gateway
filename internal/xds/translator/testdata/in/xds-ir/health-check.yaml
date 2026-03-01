@@ -57,6 +57,9 @@ http:
             expectedStatuses:
             - 200
             - 201
+            retriableStatuses:
+            - 503
+            - 429
         passive:
           baseEjectionTime: 180s
           interval: 1s

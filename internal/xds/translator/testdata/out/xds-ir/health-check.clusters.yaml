@@ -66,6 +66,11 @@
       path: /healthz
       receive:
       - binary: cG9uZw==
+      retriableStatuses:
+      - end: "430"
+        start: "429"
+      - end: "504"
+        start: "503"
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3

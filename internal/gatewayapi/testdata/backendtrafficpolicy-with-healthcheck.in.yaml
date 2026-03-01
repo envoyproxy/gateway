@@ -225,6 +225,9 @@ backendTrafficPolicies:
           expectedStatuses:
           - 200
           - 201
+          retriableStatuses:
+          - 503
+          - 429
           expectedResponse:
             type: Text
             text: pong

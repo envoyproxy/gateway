@@ -2989,6 +2989,8 @@ type HTTPHealthChecker struct {
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
@@ -3021,6 +3023,11 @@ func (c *HTTPHealthChecker) Validate() error {
 		errs = errors.Join(errs, ErrHCHTTPExpectedStatusesInvalid)
 	}
 	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, r := range c.RetriableStatuses {
 		if err := r.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}

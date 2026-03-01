@@ -3633,6 +3633,11 @@ func (in *HTTPActiveHealthChecker) DeepCopyInto(out *HTTPActiveHealthChecker) {
 		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
+	if in.RetriableStatuses != nil {
+		in, out := &in.RetriableStatuses, &out.RetriableStatuses
+		*out = make([]HTTPStatus, len(*in))
+		copy(*out, *in)
+	}
 	if in.ExpectedResponse != nil {
 		in, out := &in.ExpectedResponse, &out.ExpectedResponse
 		*out = new(ActiveHealthCheckPayload)

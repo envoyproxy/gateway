@@ -110,6 +110,9 @@ type ActiveHealthCheck struct {
 	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
 
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+	// Without RetriableStatuses configured, any health check failure results in the host being immediately
+	// considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+	// up to this threshold before the host is marked unhealthy.
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=3
@@ -185,6 +188,12 @@ type HTTPActiveHealthChecker struct {
 	// Defaults to 200 only
 	// +optional
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	// Responses matching these statuses count towards the unhealthy threshold but
+	// do not result in the host being considered immediately unhealthy.
+	// The expected statuses take precedence for any range overlaps with this field.
+	// +optional
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *ActiveHealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
