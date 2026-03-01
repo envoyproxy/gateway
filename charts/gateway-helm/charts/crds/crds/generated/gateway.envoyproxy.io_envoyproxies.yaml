@@ -11622,6 +11622,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -11759,10 +11773,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -12929,6 +12944,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -13066,10 +13095,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -14411,6 +14441,19 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                    Responses matching these statuses count towards the unhealthy threshold but
+                                                    do not result in the host being considered immediately unhealthy.
+                                                    The expected statuses take precedence for any range overlaps with this field.
+                                                  items:
+                                                    description: HTTPStatus defines
+                                                      the http status code.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                  type: array
                                               required:
                                               - path
                                               type: object
@@ -14542,10 +14585,11 @@ spec:
                                               type: string
                                             unhealthyThreshold:
                                               default: 3
-                                              description: UnhealthyThreshold defines
-                                                the number of unhealthy health checks
-                                                required before a backend host is
-                                                marked unhealthy.
+                                              description: |-
+                                                UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                up to this threshold before the host is marked unhealthy.
                                               format: int32
                                               minimum: 1
                                               type: integer
@@ -15798,6 +15842,19 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                              Responses matching these statuses count towards the unhealthy threshold but
+                                              do not result in the host being considered immediately unhealthy.
+                                              The expected statuses take precedence for any range overlaps with this field.
+                                            items:
+                                              description: HTTPStatus defines the
+                                                http status code.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                            type: array
                                         required:
                                         - path
                                         type: object
@@ -15929,9 +15986,11 @@ spec:
                                         type: string
                                       unhealthyThreshold:
                                         default: 3
-                                        description: UnhealthyThreshold defines the
-                                          number of unhealthy health checks required
-                                          before a backend host is marked unhealthy.
+                                        description: |-
+                                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                          up to this threshold before the host is marked unhealthy.
                                         format: int32
                                         minimum: 1
                                         type: integer
