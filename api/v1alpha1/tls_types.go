@@ -157,8 +157,17 @@ const (
 type ClientValidationContext struct {
 	// Optional set to true accepts connections even when a client doesn't present a certificate.
 	// Defaults to false, which rejects connections without a valid client certificate.
+	//
+	// Deprecated: Use Mode instead.
 	// +optional
 	Optional bool `json:"optional,omitempty"`
+
+	// Mode defines how the Gateway or Listener validates client certificates.
+	// If not specified, defaults to RequireAndVerify.
+	//
+	// +kubebuilder:default=RequireAndVerify
+	// +optional
+	Mode *ClientValidationModeType `json:"mode,omitempty"`
 
 	// CACertificateRefs contains one or more references to
 	// Kubernetes objects that contain TLS certificates of
@@ -198,6 +207,31 @@ type ClientValidationContext struct {
 	// +optional
 	Crl *CrlContext `json:"crl,omitempty"`
 }
+
+// ClientValidationModeType defines how a Gateway or Listener validates client certificates.
+//
+// +kubebuilder:validation:Enum=Request;RequireAny;VerifyIfGiven;RequireAndVerify
+type ClientValidationModeType string
+
+const (
+	// Request indicates that a client certificate is requested
+	// during the TLS handshake but does not require one.
+	ClientValidationRequest ClientValidationModeType = "Request"
+
+	// RequireAny indicates that a client certificate is required during
+	// the handshake, but the connection is permitted even when the
+	// client certificate verification fails.
+	ClientValidationRequireAny ClientValidationModeType = "RequireAny"
+
+	// VerifyIfGiven indicates that a client certificate is requested
+	// but not required. If presented, the certificate must be valid.
+	ClientValidationVerifyIfGiven ClientValidationModeType = "VerifyIfGiven"
+
+	// RequireAndVerify indicates that a valid client certificate must be
+	// presented during the handshake and validated
+	// using CA certificates defined in CACertificateRefs.
+	ClientValidationRequireAndVerify ClientValidationModeType = "RequireAndVerify"
+)
 
 // CrlContext holds certificate revocation list configuration that can be used to validate the client initiating the TLS connection
 type CrlContext struct {

@@ -64,6 +64,42 @@ clientTrafficPolicies:
               kind: ClusterTrustBundle
               group: ""
               namespace: default
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    metadata:
+      namespace: default
+      name: target-gateway-4
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-4
+      headers:
+        xForwardedClientCert:
+          mode: Sanitize
+          certDetailsToAdd:
+            - Cert
+      tls:
+        clientValidation:
+          mode: VerifyIfGiven
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: ClientTrafficPolicy
+    metadata:
+      namespace: default
+      name: target-gateway-5
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: gateway-5
+      headers:
+        xForwardedClientCert:
+          mode: Sanitize
+          certDetailsToAdd:
+            - Cert
+      tls:
+        clientValidation:
+          optional: true
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
@@ -191,6 +227,44 @@ gateways:
           allowedRoutes:
             namespaces:
               from: Same
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-4
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+      - name: http-1
+        protocol: HTTPS
+        port: 443
+        allowedRoutes:
+          namespaces:
+            from: Same
+        tls:
+          mode: Terminate
+          certificateRefs:
+          - name: tls-secret-1
+            namespace: default
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-5
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+      - name: http-1
+        protocol: HTTPS
+        port: 443
+        allowedRoutes:
+          namespaces:
+            from: Same
+        tls:
+          mode: Terminate
+          certificateRefs:
+          - name: tls-secret-1
+            namespace: default
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute

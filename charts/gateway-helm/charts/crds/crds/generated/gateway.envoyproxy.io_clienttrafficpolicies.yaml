@@ -1359,10 +1359,23 @@ spec:
                         required:
                         - refs
                         type: object
+                      mode:
+                        default: RequireAndVerify
+                        description: |-
+                          Mode defines how the Gateway or Listener validates client certificates.
+                          If not specified, defaults to RequireAndVerify.
+                        enum:
+                        - Request
+                        - RequireAny
+                        - VerifyIfGiven
+                        - RequireAndVerify
+                        type: string
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
+
+                          Deprecated: Use Mode instead.
                         type: boolean
                       spkiHashes:
                         description: |-
