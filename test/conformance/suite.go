@@ -21,7 +21,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.ListenerSetProtocolConflict,
 		tests.TLSRouteHostnameIntersection,
 		tests.TLSRouteInvalidNoMatchingListener,
-		tests.TLSRouteInvalidNoMatchingListenerHostname,
 		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
 		tests.GatewayWithAttachedRoutes,
@@ -51,16 +50,12 @@ func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
 		return sets.New(
 			features.GatewayStaticAddressesFeature.Name,
-			// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
-			features.ListenerSetFeature.Name,
 		)
 	}
 
 	return sets.New(
 		features.GatewayStaticAddressesFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
-		// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
-		features.ListenerSetFeature.Name,
 	)
 }
 

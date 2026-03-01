@@ -12,10 +12,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -38,6 +38,7 @@ type GatewayContext struct {
 // ListenerContexts from the Gateway spec.
 func (g *GatewayContext) ResetListeners() {
 	numListeners := len(g.Spec.Listeners)
+	g.Status.AttachedListenerSets = nil
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
 	for i := range g.Spec.Listeners {
@@ -84,6 +85,14 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	return err
 }
 
+func (g *GatewayContext) IncreaseAttachedListenerSets() {
+	if g.Status.AttachedListenerSets == nil {
+		g.Status.AttachedListenerSets = ptr.To[int32](1)
+	} else {
+		*g.Status.AttachedListenerSets++
+	}
+}
+
 // ListenerContext wraps a Listener and provides helper methods for
 // setting conditions and other status information on the associated
 // Gateway, etc.
@@ -128,6 +137,12 @@ func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	}
 }
 
+// IncrementAttachedRoutes increments the number of attached routes for the listener in the status.
+//
+// xref: https://github.com/kubernetes-sigs/gateway-api/issues/2402
+// Namely:
+// - AttachedRoutes should be set on Listeners that are valid or invalid
+// - The count of AttachedRoutes should include Routes that are valid or invalid
 func (l *ListenerContext) IncrementAttachedRoutes() {
 	if l.isFromListenerSet() {
 		l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].AttachedRoutes++
@@ -154,7 +169,8 @@ func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	}
 
 	for _, allowed := range supportedKinds {
-		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
+		// The default group is "gateway.networking.k8s.io"
+		if GroupDerefOr(allowed.Group, "gateway.networking.k8s.io") == GroupDerefOr(kind.Group, "gateway.networking.k8s.io") &&
 			allowed.Kind == kind.Kind {
 			return true
 		}
@@ -219,12 +235,15 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 
 func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, conditionStatus metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
 	if l.isFromListenerSet() {
+		r := string(reason)
+		if reason == gwapiv1.ListenerReasonInvalid {
+			r = string(gwapiv1.ListenerSetReasonListenersNotValid)
+		}
 		// Convert Gateway API types to ListenerSet types
 		// Note: The string values are expected to match between the APIs
 		status.SetListenerSetListenerStatusCondition(l.listenerSet, l.listenerSetStatusIdx,
 			gwapiv1.ListenerEntryConditionType(conditionType),
-			conditionStatus,
-			gwapiv1.ListenerEntryConditionReason(reason),
+			conditionStatus, r,
 			message)
 	} else {
 		status.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,
@@ -365,7 +384,7 @@ func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
-	*gwapiv1a3.TLSRoute
+	*gwapiv1.TLSRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -701,7 +720,7 @@ type RouteParentContext struct {
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
-	TLSRoute  *gwapiv1a3.TLSRoute
+	TLSRoute  *gwapiv1.TLSRoute
 	TCPRoute  *gwapiv1a2.TCPRoute
 	UDPRoute  *gwapiv1a2.UDPRoute
 
@@ -786,6 +805,7 @@ type TranslatorContext struct {
 	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {
