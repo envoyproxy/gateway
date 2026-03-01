@@ -55,11 +55,15 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
-				}
-
-				gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
-					Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
-					Certificate: caCert,
+					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
+						Name:    irGatewayTLSCACertName(gtw.Gateway, "default"),
+						Invalid: ptr.To(true),
+					}
+				} else {
+					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
+						Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
+						Certificate: caCert,
+					}
 				}
 			}
 
@@ -70,21 +74,32 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
+
+					gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
+						Name:    irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
+						Invalid: ptr.To(true),
+					}
+				} else {
+					gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
+						Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
+						Certificate: caCert,
+					}
 				}
-				gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
-					Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
-					Certificate: caCert,
-				}
+
 			}
 
 			for _, listener := range gtw.listeners {
+				// HTTP listener doesn't have TLS validation, skip directly.
+				if listener.Protocol == gwapiv1.HTTPProtocolType {
+					continue
+				}
+
 				if perPortConfig, exits := gtwPerPortCaCertificate[listener.Port]; exits {
 					listener.tls.frontendTLSValidation = perPortConfig
 				} else {
 					listener.tls.frontendTLSValidation = gtwDefaultTLSCACertificate
 				}
 			}
-
 		}
 
 		if gtw.Spec.TLS.Backend != nil {

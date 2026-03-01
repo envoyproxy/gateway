@@ -485,6 +485,9 @@ type TLSCrl struct {
 // TLSCACertificate holds CA Certificate to validate clients
 // +k8s:deepcopy-gen=true
 type TLSCACertificate struct {
+	// Invalid indicates whether the CA certificate is invalid.
+	// If true, the certificate will be ignored and not used for validation.
+	Invalid *bool `json:"invalid,omitempty" yaml:"invalid,omitempty"`
 	// Name of the Secret object.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
