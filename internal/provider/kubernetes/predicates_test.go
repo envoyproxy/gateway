@@ -1350,16 +1350,15 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:    egv1a1.GatewayControllerName,
-		log:                logger,
-		mergeGateways:      sets.New("test-mg"),
-		resources:          &message.ProviderResources{},
-		grpcRouteCRDExists: true,
-		tcpRouteCRDExists:  true,
-		udpRouteCRDExists:  true,
-		spCRDExists:        true,
-		eepCRDExists:       true,
-		epCRDExists:        true,
+		classController:   egv1a1.GatewayControllerName,
+		log:               logger,
+		mergeGateways:     sets.New("test-mg"),
+		resources:         &message.ProviderResources{},
+		tcpRouteCRDExists: true,
+		udpRouteCRDExists: true,
+		spCRDExists:       true,
+		eepCRDExists:      true,
+		epCRDExists:       true,
 	}
 
 	for _, tc := range testCases {
@@ -1866,11 +1865,10 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:     egv1a1.GatewayControllerName,
-		log:                 logger,
-		backendCRDExists:    true,
-		bTLSPolicyCRDExists: true,
-		ctpCRDExists:        true,
+		classController:  egv1a1.GatewayControllerName,
+		log:              logger,
+		backendCRDExists: true,
+		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{

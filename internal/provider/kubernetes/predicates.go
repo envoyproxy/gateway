@@ -174,10 +174,8 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
-			return true
-		}
+	if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+		return true
 	}
 
 	if r.hrfCRDExists {
@@ -218,10 +216,8 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
-			return true
-		}
+	if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+		return true
 	}
 
 	if r.ctpCRDExists {
@@ -529,17 +525,15 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return true
 	}
 
-	if r.grpcRouteCRDExists {
-		grpcRouteList := &gwapiv1.GRPCRouteList{}
-		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-		}); err != nil && !kerrors.IsNotFound(err) {
-			r.log.Error(err, "failed to find associated GRPCRoutes")
-			return false
-		}
-		if len(grpcRouteList.Items) > 0 {
-			return true
-		}
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
+	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated GRPCRoutes")
+		return false
+	}
+	if len(grpcRouteList.Items) > 0 {
+		return true
 	}
 
 	tlsRouteList := &gwapiv1.TLSRouteList{}
@@ -841,18 +835,16 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		btlsList := &gwapiv1.BackendTLSPolicyList{}
-		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-		}); err != nil {
-			r.log.Error(err, "unable to find associated BackendTLSPolicy")
-			return false
-		}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
 
-		if len(btlsList.Items) > 0 {
-			return true
-		}
+	if len(btlsList.Items) > 0 {
+		return true
 	}
 
 	if r.btpCRDExists {
