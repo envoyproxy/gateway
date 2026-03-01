@@ -1905,6 +1905,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 				irCompression := ir.Compression{
 					Type:        c.Type,
 					ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+					Config:      c,
 				}
 				if c.MinContentLength != nil {
 					minContentLength, ok := c.MinContentLength.AsInt64()
@@ -1927,6 +1928,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		irCompression := ir.Compression{
 			Type:        c.Type,
 			ChooseFirst: i == 0, // only the first compressor is marked as ChooseFirst
+			Config:      c,
 		}
 		if c.MinContentLength != nil {
 			minContentLength, ok := c.MinContentLength.AsInt64()
