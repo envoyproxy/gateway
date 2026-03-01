@@ -1247,6 +1247,14 @@ spec:
                               Envoy HTTP filter namespaces
                             rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
+                    percentage:
+                      description: |-
+                        Percentage controls what percentage of requests are sent through this ExtProc extension.
+                        Expressed as a value from 0.0 to 100.0.
+                        When not specified, 100% of requests are sent through the extension.
+                      maximum: 100
+                      minimum: 0
+                      type: number
                     processingMode:
                       description: |-
                         ProcessingMode defines how request and response body is processed
@@ -1341,6 +1349,14 @@ spec:
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string
+                    percentage:
+                      description: |-
+                        Percentage controls what percentage of requests are sent through this Lua extension.
+                        Expressed as a value from 0.0 to 100.0.
+                        When not specified, 100% of requests are sent through the extension.
+                      maximum: 100
+                      minimum: 0
+                      type: number
                     type:
                       default: Inline
                       description: |-
@@ -1850,6 +1866,14 @@ spec:
                         It's also used for logging/debugging.
                         If not specified, EG will generate a unique name for the Wasm extension.
                       type: string
+                    percentage:
+                      description: |-
+                        Percentage controls what percentage of requests are sent through this Wasm extension.
+                        Expressed as a value from 0.0 to 100.0.
+                        When not specified, 100% of requests are sent through the extension.
+                      maximum: 100
+                      minimum: 0
+                      type: number
                     rootID:
                       description: |-
                         RootID is a unique ID for a set of extensions in a VM which will share a
