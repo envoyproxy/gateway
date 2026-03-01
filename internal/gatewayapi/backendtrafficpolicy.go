@@ -54,6 +54,16 @@ type BTPRoutingTypeIndex struct {
 // BuildBTPRoutingTypeIndex builds a pre-computed index of RoutingType values
 // from BackendTrafficPolicies, organized by priority-level.
 // BTPs are pre-sorted by the provider layer, so first-write-wins respects priority.
+func hasBTPRoutingType(btps []*egv1a1.BackendTrafficPolicy) bool {
+	for _, btp := range btps {
+		if btp.Spec.RoutingType != nil {
+			return true
+		}
+	}
+
+	return false
+}
+
 func BuildBTPRoutingTypeIndex(
 	btps []*egv1a1.BackendTrafficPolicy,
 	routes []client.Object,
