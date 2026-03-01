@@ -18,6 +18,7 @@ new features: |
   Implement RoutingType field for BackendTrafficPolicy
   Support for configuring weights for locality zones.
   Added support for Envoy Dynamic Modules.
+  Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

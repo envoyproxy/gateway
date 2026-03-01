@@ -1919,6 +1919,7 @@ _Appears in:_
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | If unset, no merging occurs, and only the most specific configuration takes effect. |
 
 
 #### EnvoyProxyStatus
@@ -3620,12 +3621,14 @@ MergeType defines the type of merge operation
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 
 | Value | Description |
 | ----- | ----------- |
 | `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
+| `Replace` | Replace type - ie no merging<br /> | 
 
 
 #### MethodMatch

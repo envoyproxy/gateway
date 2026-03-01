@@ -198,6 +198,11 @@ type EnvoyProxySpec struct {
 	// +listMapKey=name
 	// +optional
 	DynamicModules []DynamicModuleEntry `json:"dynamicModules,omitempty"`
+	
+	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=Strict;InsecureSyntax;Disabled
