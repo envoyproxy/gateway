@@ -65,11 +65,6 @@ type GeoIPDBSource struct {
 	// +optional
 	Local *LocalGeoIPDBSource `json:"local,omitempty"`
 
-	// Remote is a database source fetched from a remote URL.
-	// TODO: implement this in the future
-	// +notImplementedHide
-	// +optional
-	Remote *RemoteGeoIPDBSource `json:"remote,omitempty"`
 }
 
 // LocalGeoIPDBSource configures a GeoIP database from a local file path.
@@ -79,11 +74,6 @@ type LocalGeoIPDBSource struct {
 	// +kubebuilder:validation:Pattern=`^.*\\.mmdb$`
 	Path string `json:"path"`
 }
-
-// RemoteGeoIPDBSource configures a GeoIP database fetched from a remote URL.
-// TODO: implement this in the future
-// +notImplementedHide
-type RemoteGeoIPDBSource struct{}
 
 // GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
 // If multiple fields are specified, all specified fields must match.

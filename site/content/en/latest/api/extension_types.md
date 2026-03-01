@@ -4916,17 +4916,6 @@ _Appears in:_
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
 
 
-#### RemoteGeoIPDBSource
-
-
-
-RemoteGeoIPDBSource configures a GeoIP database fetched from a remote URL.
-
-_Appears in:_
-- [GeoIPDBSource](#geoipdbsource)
-
-
-
 #### RemoteJWKS
 
 

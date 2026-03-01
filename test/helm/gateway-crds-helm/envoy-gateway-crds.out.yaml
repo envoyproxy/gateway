@@ -8861,10 +8861,6 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
                             type: object
                             x-kubernetes-validations:
                             - message: at least one of local or remote must be specified
@@ -8883,10 +8879,6 @@ spec:
                                     type: string
                                 required:
                                 - path
-                                type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
                                 type: object
                             type: object
                             x-kubernetes-validations:
@@ -8908,10 +8900,6 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
                             type: object
                             x-kubernetes-validations:
                             - message: at least one of local or remote must be specified
@@ -8932,10 +8920,6 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
                             type: object
                             x-kubernetes-validations:
                             - message: at least one of local or remote must be specified
@@ -8954,10 +8938,6 @@ spec:
                                     type: string
                                 required:
                                 - path
-                                type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
                                 type: object
                             type: object
                             x-kubernetes-validations:
