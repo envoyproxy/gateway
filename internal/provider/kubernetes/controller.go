@@ -439,7 +439,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// Add all Gateways, their associated ListenerSets, Routes, and referenced resources to the resourceTree
-		if err = r.processGateways(ctx, managedGC, gwcResourceMapping, gwcResource); err != nil {
+		if err = r.processGateways(ctx, managedGC, gwcResource, gwcResourceMapping); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing gateways")
 				return reconcile.Result{}, err
@@ -741,27 +741,19 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 
 			if backend.Spec.TLS != nil && backend.Spec.TLS.CACertificateRefs != nil {
 				for _, caCertRef := range backend.Spec.TLS.CACertificateRefs {
-					var err error
-					caRefNew := gwapiv1.SecretObjectReference{
-						Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
-						Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+					ref := &gwapiv1.ObjectReference{
+						Group:     caCertRef.Group,
+						Kind:      caCertRef.Kind,
 						Name:      caCertRef.Name,
-						Namespace: gatewayapi.NamespacePtr(backend.Namespace),
+						Namespace: ptr.To(gwapiv1.Namespace(backend.Namespace)),
 					}
-					switch string(caCertRef.Kind) {
-					case resource.KindConfigMap:
-						err = r.processConfigMapRef(
-							ctx, resourceMappings, gwcResource,
-							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
-							caRefNew)
-					case resource.KindSecret:
-						err = r.processSecretRef(
-							ctx, resourceMappings, gwcResource,
-							resource.KindBackendTLSPolicy, backend.Namespace, backend.Name,
-							caRefNew)
-					case resource.KindClusterTrustBundle:
-						err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
-					}
+					err := r.processTLSCACertificateRefs(ctx, gwcResource, resourceMappings,
+						ref,
+						&resource.ResourceMetadata{
+							Kind:      resource.KindBackend,
+							Name:      backend.Name,
+							Namespace: backend.Namespace,
+						})
 					if err != nil {
 						// If the error is transient, we return it to allow Reconcile to retry.
 						if isTransientError(err) {
@@ -844,6 +836,35 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 		}
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processTLSCACertificateRefs(ctx context.Context, gwcResource *resource.Resources, resourceMappings *resourceMappings,
+	caCertRef *gwapiv1.ObjectReference, owner *resource.ResourceMetadata,
+) error {
+	var err error
+	ns := ptr.Deref(caCertRef.Namespace, gwapiv1.Namespace(owner.Namespace))
+	caRefNew := gwapiv1.SecretObjectReference{
+		Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
+		Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
+		Name:      caCertRef.Name,
+		Namespace: ptr.To(ns),
+	}
+	switch string(caCertRef.Kind) {
+	case resource.KindConfigMap:
+		err = r.processConfigMapRef(
+			ctx, resourceMappings, gwcResource,
+			owner.Kind, owner.Namespace, owner.Name,
+			caRefNew)
+	case resource.KindSecret:
+		err = r.processSecretRef(
+			ctx, resourceMappings, gwcResource,
+			owner.Kind, owner.Namespace, owner.Name,
+			caRefNew)
+	case resource.KindClusterTrustBundle:
+		err = r.processClusterTrustBundleRef(ctx, resourceMappings, gwcResource, caRefNew)
+	}
+
+	return err
 }
 
 // processSecurityPolicyObjectRefs adds the referenced resources in SecurityPolicies
@@ -1580,7 +1601,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *resource.Resources) error {
+func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *gwapiv1.GatewayClass, resourceTree *resource.Resources, resourceMap *resourceMappings) error {
 	// Find gateways for the managedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1.GatewayList{}
@@ -1624,6 +1645,49 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			}
 		}
 
+		if gtw.Spec.TLS != nil {
+			tls := gtw.Spec.TLS
+			if tls.Backend != nil {
+				certRef := tls.Backend.ClientCertificateRef
+				if refsSecret(certRef) {
+					if err := r.processSecretRef(ctx,
+						resourceMap, resourceTree,
+						resource.KindGateway, gtw.Namespace, gtw.Name,
+						*certRef); err != nil {
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS Backend ClientCertificateRef for gateway",
+							"gateway", gtw, "clientCertificateRef", certRef)
+					}
+				}
+			}
+
+			if tls.Frontend != nil {
+				if tls.Frontend.Default.Validation != nil {
+					validation := tls.Frontend.Default.Validation
+					for _, certRef := range validation.CACertificateRefs {
+						err := r.processTLSCACertificateRefs(ctx, resourceTree, resourceMap,
+							&gwapiv1.ObjectReference{
+								Group:     certRef.Group,
+								Kind:      certRef.Kind,
+								Name:      certRef.Name,
+								Namespace: certRef.Namespace,
+							},
+							&resource.ResourceMetadata{
+								Kind:      resource.KindGateway,
+								Name:      gtw.Name,
+								Namespace: gtw.Namespace,
+							})
+						if isTransientError(err) {
+							return err
+						}
+						r.log.Error(err, "failed to process TLS Frontend CACertificateRefs for gateway",
+							"gateway", gtw, "caCertificateRef", certRef)
+					}
+				}
+			}
+		}
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// ListenerSet Processing (must be done before route processing)

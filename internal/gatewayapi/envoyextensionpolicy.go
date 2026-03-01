@@ -516,7 +516,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
 		}
@@ -606,7 +606,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		errs                                                  error
 	)
 
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway.envoyProxy); extProcError != nil {
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
@@ -767,7 +767,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
 		errs     error
@@ -782,7 +782,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -806,7 +806,7 @@ func (t *Translator) buildExtProc(
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 ) (*ir.ExtProc, error) {
 	var (
 		rd        *ir.RouteDestination
@@ -814,7 +814,7 @@ func (t *Translator) buildExtProc(
 		err       error
 	)
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, "extproc", extProcIdx); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, gtwCtx, "extproc", extProcIdx); err != nil {
 		return nil, err
 	}
 
