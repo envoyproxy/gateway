@@ -67,6 +67,15 @@ type Wasm struct {
 	// Env configures the environment for the Wasm extension
 	// +optional
 	Env *WasmEnv `json:"env,omitempty"`
+
+	// Percentage controls what percentage of requests are sent through this Wasm extension.
+	// Expressed as a value from 0.0 to 100.0.
+	// When not specified, 100% of requests are sent through the extension.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	Percentage *float32 `json:"percentage,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.

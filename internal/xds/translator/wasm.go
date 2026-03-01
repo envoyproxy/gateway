@@ -194,6 +194,9 @@ func (*wasm) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		}); err != nil {
 			return err
 		}
+		if ep.Percentage != nil {
+			applyRuntimeFractionToRouteMatch(route, *ep.Percentage)
+		}
 	}
 	return nil
 }

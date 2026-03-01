@@ -106,6 +106,15 @@ type ExtProc struct {
 	//
 	// +optional
 	Metadata *ExtProcMetadata `json:"metadata,omitempty"`
+
+	// Percentage controls what percentage of requests are sent through this ExtProc extension.
+	// Expressed as a value from 0.0 to 100.0.
+	// When not specified, 100% of requests are sent through the extension.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	Percentage *float32 `json:"percentage,omitempty"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the

@@ -152,6 +152,22 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	return router, nil
 }
 
+// buildXdsRouteFallback builds a fallback route for non-sampled traffic when extension
+// filters use percentage-based sampling. The fallback route is identical to the original
+// but without extension filter per-route configs and without runtime_fraction on the match.
+func buildXdsRouteFallback(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+	noExtRoute := httpRoute.DeepCopy()
+	noExtRoute.EnvoyExtensions = nil
+	noExtRoute.Name = httpRoute.Name + "/fallback"
+
+	route, err := buildXdsRoute(noExtRoute, httpListener)
+	if err != nil {
+		return nil, err
+	}
+	route.Match.RuntimeFraction = nil
+	return route, nil
+}
+
 func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
 	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
 		return false

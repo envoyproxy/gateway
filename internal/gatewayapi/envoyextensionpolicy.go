@@ -717,8 +717,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:       name,
+		Code:       luaCode,
+		Percentage: lua.Percentage,
 	}, nil
 }
 
@@ -822,6 +823,7 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+		Percentage:  extProc.Percentage,
 	}
 
 	if extProc.MessageTimeout != nil {
@@ -1076,12 +1078,13 @@ func (t *Translator) buildWasm(
 		wasmName = *config.Name
 	}
 	wasmIR := &ir.Wasm{
-		Name:     name,
-		RootID:   config.RootID,
-		WasmName: wasmName,
-		Config:   config.Config,
-		FailOpen: failOpen,
-		Code:     code,
+		Name:       name,
+		RootID:     config.RootID,
+		WasmName:   wasmName,
+		Config:     config.Config,
+		FailOpen:   failOpen,
+		Code:       code,
+		Percentage: config.Percentage,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
