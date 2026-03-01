@@ -67,6 +67,12 @@ type Wasm struct {
 	// Env configures the environment for the Wasm extension
 	// +optional
 	Env *WasmEnv `json:"env,omitempty"`
+
+	// Percentage controls what percentage of requests are sent through this Wasm extension.
+	// When not specified, 100% of requests are sent through the extension.
+	//
+	// +optional
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty"`
 }
 
 // WasmCodeSource defines the source of the Wasm code.

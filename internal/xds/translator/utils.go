@@ -20,10 +20,12 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const (
@@ -124,6 +126,31 @@ func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto
 // perRouteFilterName generates a unique filter name for the provided filterType and configName.
 func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string {
 	return fmt.Sprintf("%s/%s", filterType, configName)
+}
+
+// applyRuntimeFractionToRouteMatch sets or tightens the runtime_fraction on a route's match.
+// If the route already has a runtime_fraction (from another filter), the minimum percentage is used.
+func applyRuntimeFractionToRouteMatch(route *routev3.Route, fraction *gwapiv1.Fraction) {
+	if route == nil || route.Match == nil || fraction == nil {
+		return
+	}
+
+	fp := fractionalpercent.FromFraction(fraction)
+	if fp == nil {
+		return
+	}
+
+	normalizedNumerator := fractionalpercent.NormalizeToMillion(fp)
+	if existing := route.Match.GetRuntimeFraction(); existing != nil {
+		existingNumerator := fractionalpercent.NormalizeToMillion(existing.DefaultValue)
+		if existingNumerator < normalizedNumerator {
+			return
+		}
+	}
+
+	route.Match.RuntimeFraction = &corev3.RuntimeFractionalPercent{
+		DefaultValue: fp,
+	}
 }
 
 func hcmContainsFilter(mgr *hcmv3.HttpConnectionManager, filterName string) bool {

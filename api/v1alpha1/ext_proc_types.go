@@ -106,6 +106,12 @@ type ExtProc struct {
 	//
 	// +optional
 	Metadata *ExtProcMetadata `json:"metadata,omitempty"`
+
+	// Percentage controls what percentage of requests are sent through this ExtProc extension.
+	// When not specified, 100% of requests are sent through the extension.
+	//
+	// +optional
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the

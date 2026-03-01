@@ -578,6 +578,24 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 		vHost.Routes = append(vHost.Routes, xdsRoute)
 
+		// When extension filters use runtime_fraction (percentage-based sampling),
+		// generate a fallback route without extension filters for non-sampled traffic.
+		if xdsRoute.Match != nil && xdsRoute.Match.RuntimeFraction != nil {
+			fallbackRoute, fbErr := buildXdsRouteFallback(httpRoute, httpListener)
+			if fbErr != nil {
+				errs = errors.Join(errs, fbErr)
+			} else {
+				if http3Settings != nil {
+					http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.ExternalPort))
+					if fallbackRoute.ResponseHeadersToAdd == nil {
+						fallbackRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
+					}
+					fallbackRoute.ResponseHeadersToAdd = append(fallbackRoute.ResponseHeadersToAdd, http3AltSvcHeader)
+				}
+				vHost.Routes = append(vHost.Routes, fallbackRoute)
+			}
+		}
+
 		if httpRoute.Destination != nil {
 			// Prepare extension resources for hook calls
 			var extensionResources []*unstructured.Unstructured
