@@ -39,6 +39,13 @@ gateways:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/tls
+        ports:
+        - containerPort: 10090
+          name: tls-90
+          protocol: TLS
+          servicePort: 90
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -110,3 +117,13 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 90
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls
+      name: envoy-gateway/gateway-1/tls
+      port: 10090

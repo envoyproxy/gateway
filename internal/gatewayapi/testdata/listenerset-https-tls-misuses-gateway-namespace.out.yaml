@@ -92,6 +92,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: gateway/composite-gateway/xls/https-xls/extra-https-same-ns
+        ports:
+        - containerPort: 8443
+          name: https-8443
+          protocol: HTTPS
+          servicePort: 8443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
@@ -199,6 +205,21 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    - address: 0.0.0.0
+      externalPort: 8443
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: composite-gateway
+        namespace: gateway
+        sectionName: extra-https-same-ns
+      name: gateway/composite-gateway/xls/https-xls/extra-https-same-ns
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8443
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

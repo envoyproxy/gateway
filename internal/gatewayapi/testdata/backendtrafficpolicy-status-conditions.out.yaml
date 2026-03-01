@@ -508,6 +508,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: envoy-gateway/gateway-2/https
+        ports:
+        - containerPort: 10443
+          name: https-443
+          protocol: HTTPS
+          servicePort: 443
       - name: envoy-gateway/gateway-2/tcp
         ports:
         - containerPort: 10053
@@ -729,6 +735,21 @@ xdsIR:
             namespace: envoy-gateway
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
         traffic: {}
+    - address: 0.0.0.0
+      externalPort: 443
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: https
+      name: envoy-gateway/gateway-2/https
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10443
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -103,10 +103,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			isReady := t.validateListenerConditions(listener)
-			if !isReady {
-				continue
-			}
+			t.validateListenerConditions(listener)
 
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
