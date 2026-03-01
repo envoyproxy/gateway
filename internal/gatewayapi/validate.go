@@ -559,11 +559,10 @@ func (t *Translator) validateTLSConfiguration(
 		secrets, certs := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
 
-		listener.certDNSNames = make([]string, 0)
+		listener.tls.certDNSNames = make([]string, 0)
 		for _, cert := range certs {
-			listener.certDNSNames = append(listener.certDNSNames, cert.DNSNames...)
+			listener.tls.certDNSNames = append(listener.tls.certDNSNames, cert.DNSNames...)
 		}
-
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
 			listener.SetCondition(

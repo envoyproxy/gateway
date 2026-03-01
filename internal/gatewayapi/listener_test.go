@@ -450,7 +450,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -459,7 +461,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"bar.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -474,7 +478,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -483,7 +489,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -513,7 +521,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -522,7 +532,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     8443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -537,7 +549,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"*.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"*.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -546,7 +560,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -576,7 +592,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com", "bar.example.org"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com", "bar.example.org"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -585,7 +603,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"bar.example.com", "*.example.org", "bar.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com", "*.example.org", "bar.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
