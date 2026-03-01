@@ -69,6 +69,17 @@ gateways:
                       group: ""
                       name: tls-validity-checks-per-port-ca-certificate
       listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
         - name: http
           port: 80
           protocol: HTTP
