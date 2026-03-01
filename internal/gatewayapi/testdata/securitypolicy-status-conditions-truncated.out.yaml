@@ -32,6 +32,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -71,6 +76,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -110,6 +120,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -149,6 +164,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -188,6 +208,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -227,6 +252,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -266,6 +296,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -305,6 +340,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -344,6 +384,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -383,6 +428,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -422,6 +472,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -461,6 +516,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -500,6 +560,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -539,6 +604,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -578,6 +648,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -617,6 +692,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -656,6 +736,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -695,6 +780,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io

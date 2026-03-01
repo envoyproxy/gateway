@@ -19,7 +19,7 @@ spec:
       port: 1234
     - name: udp
       protocol: UDP
-      port: 1234
+      port: 2345
     - name: tls-passthrough
       protocol: TLS
       port: 8443

@@ -283,10 +283,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
-		if listener.isFromListenerSet() {
-			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
-				"No conflicts detected")
-		}
+		listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+			"No conflicts detected")
 		return true
 	}
 
@@ -677,7 +675,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 type portListeners struct {
 	listeners []*ListenerContext
-	protocols sets.Set[string]
+	protocol  string
 	hostnames map[string]int
 }
 
@@ -704,6 +702,55 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	}
 }
 
+func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayContext) {
+	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
+	// and hostnames per port.
+	for _, gateway := range gateways {
+		portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
+		for _, listener := range gateway.listeners {
+			if portListenerInfo[listener.Port] == nil {
+				portListenerInfo[listener.Port] = &portListeners{
+					hostnames: map[string]int{},
+				}
+			}
+
+			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
+			// Determine the protocol for this listener.
+			// If there are multiple protocols on the same port,
+			// we'll mark them as conflicted later in this function.
+			if portListenerInfo[listener.Port].protocol == "" {
+				portListenerInfo[listener.Port].protocol = getProtocolForListener(listener)
+			}
+		}
+
+		// Set Conflicted conditions for any listeners with conflicting specs.
+		for _, info := range portListenerInfo {
+			for _, listener := range info.listeners {
+				if info.protocol != "" && info.protocol != getProtocolForListener(listener) {
+					listener.SetCondition(
+						gwapiv1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a compatible protocol",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+				}
+			}
+		}
+	}
+}
+
 func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
 	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
 	// and hostnames per port.
@@ -715,22 +762,17 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			}
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
-					protocols: sets.Set[string]{},
 					hostnames: map[string]int{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			var protocol string
-			switch listener.Protocol {
-			// HTTPS and TLS can co-exist on the same port
-			case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-				protocol = "https/tls"
-			default:
-				protocol = string(listener.Protocol)
+			// Determine the protocol for this listener.
+			// If there are multiple protocols on the same port,
+			// we'll mark them as conflicted later in this function.
+			if portListenerInfo[listener.Port].protocol == "" {
+				portListenerInfo[listener.Port].protocol = getProtocolForListener(listener)
 			}
-			portListenerInfo[listener.Port].protocols.Insert(protocol)
 
 			var hostname string
 			if listener.Hostname != nil {
@@ -742,8 +784,9 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
 		for _, info := range portListenerInfo {
+			perHostnameListenerFound := map[string]bool{}
 			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
+				if info.protocol != "" && info.protocol != getProtocolForListener(listener) {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
@@ -757,6 +800,12 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 					hostname = string(*listener.Hostname)
 				}
 
+				// the first listener with a given hostname on a given port is allowed to be non-conflicted,
+				// but any additional listener with the same hostname and port is a conflict
+				if found := perHostnameListenerFound[hostname]; !found {
+					perHostnameListenerFound[hostname] = true
+					continue
+				}
 				if info.hostnames[hostname] > 1 {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
@@ -764,10 +813,34 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 						gwapiv1.ListenerReasonHostnameConflict,
 						"All listeners for a given port must use a unique hostname",
 					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
 				}
 			}
 		}
 	}
+}
+
+func getProtocolForListener(listener *ListenerContext) string {
+	var protocol string
+	switch listener.Protocol {
+	// HTTPS and TLS can co-exist on the same port
+	case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
+		protocol = "https/tls"
+	default:
+		protocol = string(listener.Protocol)
+	}
+	return protocol
 }
 
 func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContext, protocols ...gwapiv1.ProtocolType) {
