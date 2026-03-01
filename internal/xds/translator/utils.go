@@ -17,12 +17,13 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -129,24 +130,26 @@ func perRouteFilterName(filterType egv1a1.EnvoyFilter, configName string) string
 
 // applyRuntimeFractionToRouteMatch sets or tightens the runtime_fraction on a route's match.
 // If the route already has a runtime_fraction (from another filter), the minimum percentage is used.
-// The percentage is expressed as 0.0-100.0.
-func applyRuntimeFractionToRouteMatch(route *routev3.Route, percentage float32) {
-	if route == nil || route.Match == nil {
+func applyRuntimeFractionToRouteMatch(route *routev3.Route, fraction *gwapiv1.Fraction) {
+	if route == nil || route.Match == nil || fraction == nil {
 		return
 	}
 
-	numerator := uint32(percentage * 10000)
+	fp := fractionalpercent.FromFraction(fraction)
+	if fp == nil {
+		return
+	}
+
+	normalizedNumerator := fractionalpercent.NormalizeToMillion(fp)
 	if existing := route.Match.GetRuntimeFraction(); existing != nil {
-		if existing.DefaultValue != nil && existing.DefaultValue.Numerator < numerator {
+		existingNumerator := fractionalpercent.NormalizeToMillion(existing.DefaultValue)
+		if existingNumerator < normalizedNumerator {
 			return
 		}
 	}
 
 	route.Match.RuntimeFraction = &corev3.RuntimeFractionalPercent{
-		DefaultValue: &typev3.FractionalPercent{
-			Numerator:   numerator,
-			Denominator: typev3.FractionalPercent_MILLION,
-		},
+		DefaultValue: fp,
 	}
 }
 

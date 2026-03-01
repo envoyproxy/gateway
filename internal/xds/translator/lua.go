@@ -126,7 +126,7 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 			return err
 		}
 		if ep.Percentage != nil {
-			applyRuntimeFractionToRouteMatch(route, *ep.Percentage)
+			applyRuntimeFractionToRouteMatch(route, ep.Percentage)
 		}
 	}
 	return nil

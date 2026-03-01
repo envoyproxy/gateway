@@ -3360,9 +3360,9 @@ type ExtProc struct {
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
 
-	// Percentage of requests to send through this extension (0.0-100.0).
+	// Percentage of requests to send through this extension.
 	// nil means 100%.
-	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions
@@ -3374,9 +3374,9 @@ type Lua struct {
 	// Code is the Lua source code
 	Code *string
 
-	// Percentage of requests to send through this extension (0.0-100.0).
+	// Percentage of requests to send through this extension.
 	// nil means 100%.
-	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }
 
 // Wasm holds the information associated with the Wasm extensions.
@@ -3410,9 +3410,9 @@ type Wasm struct {
 	// local HTTP server.
 	Code *HTTPWasmCode `json:"httpWasmCode,omitempty"`
 
-	// Percentage of requests to send through this extension (0.0-100.0).
+	// Percentage of requests to send through this extension.
 	// nil means 100%.
-	Percentage *float32 `json:"percentage,omitempty"`
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty"`
 
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.

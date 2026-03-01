@@ -37,6 +37,24 @@ const (
 	Million         = 1000000
 )
 
+// NormalizeToMillion converts a FractionalPercent to its equivalent numerator
+// with a MILLION denominator for consistent comparison.
+func NormalizeToMillion(fp *xdstype.FractionalPercent) uint32 {
+	if fp == nil {
+		return 0
+	}
+	switch fp.Denominator {
+	case xdstype.FractionalPercent_HUNDRED:
+		return fp.Numerator * 10000
+	case xdstype.FractionalPercent_TEN_THOUSAND:
+		return fp.Numerator * 100
+	case xdstype.FractionalPercent_MILLION:
+		return fp.Numerator
+	default:
+		return fp.Numerator
+	}
+}
+
 // FromFraction translates a gwapiv1.Fraction instance to envoy.type.FractionalPercent.
 func FromFraction(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
 	if fraction == nil {

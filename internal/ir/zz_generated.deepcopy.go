@@ -1441,8 +1441,8 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 	}
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
-		*out = new(float32)
-		**out = **in
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -2722,8 +2722,8 @@ func (in *Lua) DeepCopyInto(out *Lua) {
 	}
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
-		*out = new(float32)
-		**out = **in
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
 	}
 }
 
@@ -4756,8 +4756,8 @@ func (in *Wasm) DeepCopyInto(out *Wasm) {
 	}
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
-		*out = new(float32)
-		**out = **in
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.HostKeys != nil {
 		in, out := &in.HostKeys, &out.HostKeys
