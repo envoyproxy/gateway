@@ -109,6 +109,17 @@ gateways:
     listeners:
     - allowedRoutes:
         namespaces:
+          from: Same
+      name: https
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: ""
+          kind: Secret
+          name: tls-validity-checks-certificate
+    - allowedRoutes:
+        namespaces:
           from: All
       name: http
       port: 80
@@ -138,6 +149,29 @@ gateways:
       status: "False"
       type: ResolvedRefs
     listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Listener has invalid CA certificate for frontend TLS validation.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Listener has invalid CA certificate for frontend TLS validation.
+        reason: InvalidCACertificateRef
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has invalid CA certificate for frontend TLS validation.
+        reason: NoValidCACertificate
+        status: "False"
+        type: Accepted
+      name: https
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -338,11 +372,6 @@ xdsIR:
           name: gateway-tls-frontend-backend
           namespace: default
         name: httproute/default/gateway-tls-frontend-backend/rule/0/match/-1/example_org
-      tls:
-        alpnProtocols: null
-        caCertificate:
-          certificate: TFMwdExTMUNSVWRKVGlCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2sxSlNVUlZSRU5EUVdsVFowRjNTVUpCWjBsUlFVNUNRa04zVlVGTlFrMUJPRWRCTVZWRlFrSlJRME4zVlVGWlNVdDNXVUpDVVZWSVFYZEZSME5EYzBkQlVWVkdRbmROUWsxQk9FZEJNVlZGUTJkM1YycEJUa0puYTNGb2EybEhPWGN3UWtOUlIwTkRjMGRCVVZWR1FuZE5RazFCT0VkQk1WVkZRMmQzVjJwQlRrSm5hM0ZvYTJsSE9YY3dRa05SUjBORGMwZEJVVlZHUW5kTlFrMUJPRWRCTVZWRlEyZDNWMnBCVGtKbmEzRm9hMmxIT1hjd1FrTlJSME5EYzBkQlVWVkdRbmROUWsxQk9FZEJNVlZGUTJkM1YycEJUa0puYTNGb2EybEhPWGN3UWtOUlIwTkRjMGRCVVZWR1FuZE5RazFCT0VkQk1WVkZRMmQzVjJwQlRrSm5hM0ZvYTJsSE9YY3dRa05SUjBORGMwZEJVVlZHUW5kTlFrMUJPRWRCTVZWRlEyZDNWMnBCVGtKbmEzRm9hMmxIT1hjd1FsTlJSME5EYzBkQlVWVkdRVUZQYWtGVlRWRXdkME4zV1VSV1VWRkVSWGRGUWk5M1VVWk5RVTFDUVdZNGQwaFJXVTlDUWxsRlJrZEVRME5CVWpZd1RWRXdkMDU=
-          name: gateway/envoy-gateway/gateway-tls-frontend-backend/default/ca.crt
     - address: 0.0.0.0
       externalPort: 8443
       hostnames:
@@ -440,10 +469,6 @@ xdsIR:
           name: invalid-default-client-validation-config
           namespace: default
         name: httproute/default/invalid-default-client-validation-config/rule/0/match/-1/example_org
-      tls:
-        alpnProtocols: null
-        caCertificate:
-          name: gateway/envoy-gateway/invalid-default-client-validation-config/80/ca.crt
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
