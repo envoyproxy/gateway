@@ -596,6 +596,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 			httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*healthcheck.HTTP.Method])
 		}
 		httpChecker.ExpectedStatuses = buildHTTPStatusRange(healthcheck.HTTP.ExpectedStatuses)
+		httpChecker.RetriableStatuses = buildHTTPStatusRange(healthcheck.HTTP.RetriableStatuses)
 		if receive := buildHealthCheckPayload(healthcheck.HTTP.ExpectedResponse); receive != nil {
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
