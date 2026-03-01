@@ -1,0 +1,93 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            distinct:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: distinct
+                  name: fourth-route
+                  route:
+                    cluster: fourth-route-dest
+                    rateLimits:
+                    - actions:
+                      - genericKey:
+                          descriptorKey: fourth-route
+                          descriptorValue: fourth-route
+                      - maskedRemoteAddress:
+                          v4PrefixMaskLen: 16
+                      - remoteAddress: {}
+                    upgradeConfigs:
+                    - upgradeType: websocket
+            example:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: example
+                  name: second-route
+                  route:
+                    cluster: second-route-dest
+                    rateLimits:
+                    - actions:
+                      - genericKey:
+                          descriptorKey: second-route
+                          descriptorValue: second-route
+                      - maskedRemoteAddress:
+                          v4PrefixMaskLen: 24
+                    upgradeConfigs:
+                    - upgradeType: websocket
+            foo/bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: foo/bar
+                  name: first-route
+                  route:
+                    cluster: first-route-dest
+                    rateLimits:
+                    - actions:
+                      - genericKey:
+                          descriptorKey: first-route
+                          descriptorValue: first-route
+                      - maskedRemoteAddress:
+                          v4PrefixMaskLen: 16
+                    upgradeConfigs:
+                    - upgradeType: websocket
+            test:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: test
+                  name: third-route
+                  route:
+                    cluster: third-route-dest
+                    rateLimits:
+                    - actions:
+                      - genericKey:
+                          descriptorKey: third-route
+                          descriptorValue: third-route
+                      - genericKey:
+                          descriptorKey: rule-0-match--1
+                          descriptorValue: rule-0-match--1
+                    upgradeConfigs:
+                    - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+    name: first-listener/*

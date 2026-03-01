@@ -1,0 +1,14 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: extension-post-xdsroute-hook-error
+      route:
+        cluster: extension-post-xdsroute-hook-error-dest
+        upgradeConfigs:
+        - upgradeType: websocket

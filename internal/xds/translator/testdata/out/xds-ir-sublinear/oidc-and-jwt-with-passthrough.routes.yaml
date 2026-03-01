@@ -1,0 +1,21 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    name: envoy-gateway/gateway-1/http/www_example_com
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: httproute/default/httproute-1/rule/0/match/0/www_example_com
+        envoy.filters.http.oauth2/securitypolicy/envoy-gateway/security-policy-1:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

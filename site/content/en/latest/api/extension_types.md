@@ -5037,6 +5037,7 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `XDSNameSchemeV2` | XDSNameSchemeV2 indicates that the xds name scheme v2 is used.<br />* The listener name will be generated using the protocol and port of the listener.<br /> | 
+| `SublinearRouteMatching` | SublinearRouteMatching enables the Envoy Matching API (matcher_tree) for virtual host route<br />resolution instead of the linear route list, providing O(1) exact path and O(path length)<br />prefix matching when routes are path-only.<br /> | 
 
 
 #### RuntimeFlags

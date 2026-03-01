@@ -1,0 +1,59 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /origin:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    headers:
+                    - name: :authority
+                      stringMatch:
+                        exact: gateway.envoyproxy.io
+                    pathSeparatedPrefix: /origin
+                  name: rewrite-route
+                  route:
+                    cluster: rewrite-route-dest
+                    prefixRewrite: /rewrite
+                    upgradeConfigs:
+                    - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /origin/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        headers:
+                        - name: :authority
+                          stringMatch:
+                            exact: gateway.envoyproxy.io
+                        pathSeparatedPrefix: /origin
+                      name: rewrite-route
+                      route:
+                        cluster: rewrite-route-dest
+                        prefixRewrite: /rewrite
+                        upgradeConfigs:
+                        - upgradeType: websocket
+    name: first-listener/gateway_envoyproxy_io

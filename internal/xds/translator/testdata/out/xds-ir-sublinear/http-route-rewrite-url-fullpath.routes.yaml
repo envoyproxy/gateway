@@ -1,0 +1,85 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /origin:
+              action:
+                name: route_list
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                  routes:
+                  - match:
+                      pathSeparatedPrefix: /origin
+                    name: rewrite-route
+                    route:
+                      cluster: rewrite-route
+                      regexRewrite:
+                        pattern:
+                          regex: ^/.*$
+                        substitution: /rewrite
+                      upgradeConfigs:
+                      - upgradeType: websocket
+                  - match:
+                      pathSeparatedPrefix: /origin
+                    name: rewrite-route-timeout
+                    route:
+                      cluster: rewrite-route
+                      idleTimeout: 3600s
+                      regexRewrite:
+                        pattern:
+                          regex: ^/.*$
+                        substitution: /rewrite
+                      timeout: 5s
+                      upgradeConfigs:
+                      - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /origin/:
+                  action:
+                    name: route_list
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                      routes:
+                      - match:
+                          pathSeparatedPrefix: /origin
+                        name: rewrite-route
+                        route:
+                          cluster: rewrite-route
+                          regexRewrite:
+                            pattern:
+                              regex: ^/.*$
+                            substitution: /rewrite
+                          upgradeConfigs:
+                          - upgradeType: websocket
+                      - match:
+                          pathSeparatedPrefix: /origin
+                        name: rewrite-route-timeout
+                        route:
+                          cluster: rewrite-route
+                          idleTimeout: 3600s
+                          regexRewrite:
+                            pattern:
+                              regex: ^/.*$
+                            substitution: /rewrite
+                          timeout: 5s
+                          upgradeConfigs:
+                          - upgradeType: websocket
+    name: first-listener/gateway_envoyproxy_io

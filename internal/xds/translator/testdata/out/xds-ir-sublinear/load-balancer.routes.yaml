@@ -1,0 +1,137 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: third-route
+      route:
+        cluster: third-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        hashPolicy:
+        - connectionProperties:
+            sourceIp: true
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: sixth-route
+      route:
+        cluster: sixth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: seventh-route
+      route:
+        cluster: seventh-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eighth-route
+      route:
+        cluster: eighth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: ninth-route
+      route:
+        cluster: ninth-route-dest
+        hashPolicy:
+        - cookie:
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: tenth-route
+      route:
+        cluster: tenth-route-dest
+        hashPolicy:
+        - cookie:
+            attributes:
+            - name: foo
+              value: bar
+            name: test
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eleventh-route
+      route:
+        cluster: eleventh-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: twelfth-route
+      route:
+        cluster: twelfth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: thirteen-route
+      route:
+        cluster: thirteen-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fourteenth-route
+      route:
+        cluster: fourteenth-route-dest
+        hashPolicy:
+        - header:
+            headerName: name
+        - header:
+            headerName: bar
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: fifteenth-route
+      route:
+        cluster: fifteenth-route-dest
+        hashPolicy:
+        - queryParameter:
+            name: name
+        - queryParameter:
+            name: bar
+        upgradeConfigs:
+        - upgradeType: websocket

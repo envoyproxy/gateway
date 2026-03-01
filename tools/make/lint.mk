@@ -114,6 +114,9 @@ lint.markdown:
 		
 		
 
+# lint.dependabot disabled: @bugron/validate-dependabot-yaml fails with
+# "can't resolve reference https://json.schemastore.org/base.json#/definitions/timezone".
+# .github/dependabot.yml is still validated by lint.yamllint. Re-enable when the tool is fixed.
 .PHONY: lint.dependabot
 # lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid

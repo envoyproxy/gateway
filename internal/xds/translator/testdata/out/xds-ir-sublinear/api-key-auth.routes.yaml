@@ -1,0 +1,229 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.foo.com
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /foo1:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /foo1
+                  name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+                  route:
+                    cluster: httproute/default/httproute-1/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.api_key_auth:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                      credentials:
+                      - client: client-1
+                        key: key1
+                      forwarding:
+                        header: X-API-KEY-CLIENT-ID
+                        hideCredentials: true
+                      keySources:
+                      - header: X-API-KEY
+                      - header: X-API-KEY-2
+            /foo2:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /foo2
+                  name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+                  route:
+                    cluster: httproute/default/httproute-1/rule/1
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.api_key_auth:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                      credentials:
+                      - client: client-2
+                        key: key2
+                      keySources:
+                      - query: X-API-KEY
+                      - query: X-API-KEY-2
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /foo1/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /foo1
+                      name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
+                      route:
+                        cluster: httproute/default/httproute-1/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.api_key_auth:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                          credentials:
+                          - client: client-1
+                            key: key1
+                          forwarding:
+                            header: X-API-KEY-CLIENT-ID
+                            hideCredentials: true
+                          keySources:
+                          - header: X-API-KEY
+                          - header: X-API-KEY-2
+                /foo2/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /foo2
+                      name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
+                      route:
+                        cluster: httproute/default/httproute-1/rule/1
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.api_key_auth:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                          credentials:
+                          - client: client-2
+                            key: key2
+                          keySources:
+                          - query: X-API-KEY
+                          - query: X-API-KEY-2
+    name: default/gateway-1/http/www_foo_com
+  - domains:
+    - www.bar.com
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /bar
+                  name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+                  route:
+                    cluster: httproute/default/httproute-2/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.api_key_auth:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                      credentials:
+                      - client: client-3
+                        key: key3
+                      keySources:
+                      - cookie: X-API-KEY
+                      - cookie: X-API-KEY-2
+            /bar2:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /bar2
+                  name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+                  route:
+                    cluster: httproute/default/httproute-2/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.api_key_auth:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                      credentials:
+                      - client: client-3
+                        key: key3
+                      keySources:
+                      - cookie: X-API-KEY
+                      - cookie: X-API-KEY-2
+                      - header: X-API-KEY
+                      - header: X-API-KEY-2
+                      - query: X-API-KEY
+                      - query: X-API-KEY-2
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /bar/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /bar
+                      name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+                      route:
+                        cluster: httproute/default/httproute-2/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.api_key_auth:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                          credentials:
+                          - client: client-3
+                            key: key3
+                          keySources:
+                          - cookie: X-API-KEY
+                          - cookie: X-API-KEY-2
+                /bar2/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /bar2
+                      name: httproute/default/httproute-2/rule/0/match/0/www_bar_com
+                      route:
+                        cluster: httproute/default/httproute-2/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.api_key_auth:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.api_key_auth.v3.ApiKeyAuthPerRoute
+                          credentials:
+                          - client: client-3
+                            key: key3
+                          keySources:
+                          - cookie: X-API-KEY
+                          - cookie: X-API-KEY-2
+                          - header: X-API-KEY
+                          - header: X-API-KEY-2
+                          - query: X-API-KEY
+                          - query: X-API-KEY-2
+    name: default/gateway-1/http/www_bar_com
