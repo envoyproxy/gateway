@@ -2398,7 +2398,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  false  |  | Local is a database source from a local file. |
+| `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  true  |  | Local is a database source from a local file. |
 
 
 #### GeoIPMaxMind
@@ -4915,17 +4915,6 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
-
-
-#### RemoteGeoIPDBSource
-
-
-
-RemoteGeoIPDBSource configures a GeoIP database fetched from a remote URL.
-
-_Appears in:_
-- [GeoIPDBSource](#geoipdbsource)
-
 
 
 #### RemoteJWKS

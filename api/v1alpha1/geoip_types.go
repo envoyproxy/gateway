@@ -57,19 +57,9 @@ type GeoIPMaxMind struct {
 }
 
 // GeoIPDBSource defines where a GeoIP .mmdb database can be loaded from.
-// +union
-// +kubebuilder:validation:XValidation:rule="has(self.local) || has(self.remote)",message="at least one of local or remote must be specified"
 type GeoIPDBSource struct {
 	// Local is a database source from a local file.
-	//
-	// +optional
-	Local *LocalGeoIPDBSource `json:"local,omitempty"`
-
-	// Remote is a database source fetched from a remote URL.
-	// TODO: implement this in the future
-	// +notImplementedHide
-	// +optional
-	Remote *RemoteGeoIPDBSource `json:"remote,omitempty"`
+	Local LocalGeoIPDBSource `json:"local"`
 }
 
 // LocalGeoIPDBSource configures a GeoIP database from a local file path.
@@ -79,11 +69,6 @@ type LocalGeoIPDBSource struct {
 	// +kubebuilder:validation:Pattern=`^.*\\.mmdb$`
 	Path string `json:"path"`
 }
-
-// RemoteGeoIPDBSource configures a GeoIP database fetched from a remote URL.
-// TODO: implement this in the future
-// +notImplementedHide
-type RemoteGeoIPDBSource struct{}
 
 // GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
 // If multiple fields are specified, all specified fields must match.

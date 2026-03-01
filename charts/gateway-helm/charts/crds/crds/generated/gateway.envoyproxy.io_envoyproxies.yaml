@@ -541,14 +541,9 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
+                            required:
+                            - local
                             type: object
-                            x-kubernetes-validations:
-                            - message: at least one of local or remote must be specified
-                              rule: has(self.local) || has(self.remote)
                           asnDbSource:
                             description: ASNDBSource configures the ASN database source.
                             properties:
@@ -564,14 +559,9 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
+                            required:
+                            - local
                             type: object
-                            x-kubernetes-validations:
-                            - message: at least one of local or remote must be specified
-                              rule: has(self.local) || has(self.remote)
                           cityDbSource:
                             description: CityDBSource configures the City database
                               source.
@@ -588,14 +578,9 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
+                            required:
+                            - local
                             type: object
-                            x-kubernetes-validations:
-                            - message: at least one of local or remote must be specified
-                              rule: has(self.local) || has(self.remote)
                           countryDbSource:
                             description: CountryDBSource configures the Country database
                               source.
@@ -612,14 +597,9 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
+                            required:
+                            - local
                             type: object
-                            x-kubernetes-validations:
-                            - message: at least one of local or remote must be specified
-                              rule: has(self.local) || has(self.remote)
                           ispDbSource:
                             description: ISPDBSource configures the ISP database source.
                             properties:
@@ -635,14 +615,9 @@ spec:
                                 required:
                                 - path
                                 type: object
-                              remote:
-                                description: Remote is a database source fetched from
-                                  a remote URL.
-                                type: object
+                            required:
+                            - local
                             type: object
-                            x-kubernetes-validations:
-                            - message: at least one of local or remote must be specified
-                              rule: has(self.local) || has(self.remote)
                         type: object
                         x-kubernetes-validations:
                         - message: at least one MaxMind database source must be specified
