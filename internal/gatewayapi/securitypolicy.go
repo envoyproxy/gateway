@@ -450,7 +450,8 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
 	}
-	for i, rule := range p.Spec.Authorization.Rules {
+	for i := range p.Spec.Authorization.Rules {
+		rule := &p.Spec.Authorization.Rules[i]
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
 		}
@@ -2086,7 +2087,8 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 	}
 	irAuth.DefaultAction = defaultAction
 
-	for i, rule := range authorization.Rules {
+	for i := range authorization.Rules {
+		rule := &authorization.Rules[i]
 		irPrincipal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {

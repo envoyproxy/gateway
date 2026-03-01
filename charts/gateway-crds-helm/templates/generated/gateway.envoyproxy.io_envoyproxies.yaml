@@ -515,6 +515,135 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              geoIP:
+                description: GeoIP defines shared GeoIP provider configuration for
+                  this EnvoyProxy fleet.
+                properties:
+                  provider:
+                    description: Provider defines the GeoIP provider configuration
+                      used by GeoIP filter instances.
+                    properties:
+                      maxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbSource:
+                            description: AnonymousIPDBSource configures the Anonymous
+                              IP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          asnDbSource:
+                            description: ASNDBSource configures the ASN database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          cityDbSource:
+                            description: CityDBSource configures the City database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          countryDbSource:
+                            description: CountryDBSource configures the Country database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          ispDbSource:
+                            description: ISPDBSource configures the ISP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                        type: object
+                        x-kubernetes-validations:
+                        - message: at least one MaxMind database source must be specified
+                          rule: has(self.cityDbSource) || has(self.countryDbSource)
+                            || has(self.asnDbSource) || has(self.ispDbSource) || has(self.anonymousIpDbSource)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: maxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.maxMind) : true'
+                required:
+                - provider
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.

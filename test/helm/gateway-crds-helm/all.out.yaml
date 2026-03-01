@@ -30853,6 +30853,135 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              geoIP:
+                description: GeoIP defines shared GeoIP provider configuration for
+                  this EnvoyProxy fleet.
+                properties:
+                  provider:
+                    description: Provider defines the GeoIP provider configuration
+                      used by GeoIP filter instances.
+                    properties:
+                      maxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbSource:
+                            description: AnonymousIPDBSource configures the Anonymous
+                              IP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          asnDbSource:
+                            description: ASNDBSource configures the ASN database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          cityDbSource:
+                            description: CityDBSource configures the City database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          countryDbSource:
+                            description: CountryDBSource configures the Country database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                          ispDbSource:
+                            description: ISPDBSource configures the ISP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            type: object
+                            x-kubernetes-validations:
+                            - message: at least one of local or remote must be specified
+                              rule: has(self.local) || has(self.remote)
+                        type: object
+                        x-kubernetes-validations:
+                        - message: at least one MaxMind database source must be specified
+                          rule: has(self.cityDbSource) || has(self.countryDbSource)
+                            || has(self.asnDbSource) || has(self.ispDbSource) || has(self.anonymousIpDbSource)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: maxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.maxMind) : true'
+                required:
+                - provider
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.
@@ -48102,6 +48231,85 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
+                            geoLocations:
+                              description: |-
+                                GeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the GeoLocation entries must match for the rule to match.
+                              items:
+                                description: GeoLocation specifies geolocation-based
+                                  match criteria for authorization.
+                                properties:
+                                  anonymous:
+                                    description: Anonymous matches anonymous network
+                                      detection signals.
+                                    properties:
+                                      isAnonymous:
+                                        description: IsAnonymous matches whether the
+                                          client IP is considered anonymous.
+                                        type: boolean
+                                      isHosting:
+                                        description: IsHosting matches whether the
+                                          client IP belongs to a hosting provider.
+                                        type: boolean
+                                      isProxy:
+                                        description: IsProxy matches whether the client
+                                          IP belongs to a public proxy.
+                                        type: boolean
+                                      isTor:
+                                        description: IsTor matches whether the client
+                                          IP belongs to a Tor exit node.
+                                        type: boolean
+                                      isVPN:
+                                        description: IsVPN matches whether the client
+                                          IP is detected as VPN.
+                                        type: boolean
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of isAnonymous, isVPN,
+                                        isHosting, isTor, or isProxy must be specified
+                                      rule: has(self.isAnonymous) || has(self.isVPN)
+                                        || has(self.isHosting) || has(self.isTor)
+                                        || has(self.isProxy)
+                                  asn:
+                                    description: ASN is the autonomous system number
+                                      associated with the client IP.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  city:
+                                    description: City is the city associated with
+                                      the client IP.
+                                    maxLength: 128
+                                    minLength: 1
+                                    type: string
+                                  country:
+                                    description: Country is the country ISO code associated
+                                      with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
+                                    type: string
+                                  isp:
+                                    description: ISP is the internet service provider
+                                      associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
+                                    type: string
+                                  region:
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: at least one of country, region, city,
+                                    asn, isp, or anonymous must be specified
+                                  rule: has(self.country) || has(self.region) || has(self.city)
+                                    || has(self.asn) || has(self.isp) || has(self.anonymous)
+                              minItems: 1
+                              type: array
                             headers:
                               description: |-
                                 Headers authorize the request based on user identity extracted from custom headers.
@@ -48244,9 +48452,10 @@ spec:
                               type: array
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, or headers
-                              must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers))
+                          - message: at least one of clientCIDRs, jwt, headers, or
+                              geoLocations must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
+                              || has(self.geoLocations))
                       required:
                       - action
                       - principal
