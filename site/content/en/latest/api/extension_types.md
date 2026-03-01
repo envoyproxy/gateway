@@ -4626,6 +4626,7 @@ _Appears in:_
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 | `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
+| `xRateLimit` | _[XRateLimitHeadersOption](#xratelimitheadersoption)_ |  false  |  | XRateLimit controls whether X-RateLimit response headers are emitted for this rate limit rule.<br />When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.<br />If not set, the rule inherits the listener-level setting (default behavior).<br />Only supported for Global Rate Limits. |
 
 
 #### RateLimitSelectCondition
@@ -5927,6 +5928,23 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+
+
+#### XRateLimitHeadersOption
+
+_Underlying type:_ _string_
+
+XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+Valid values are "Off" and "DraftVersion03".
+This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Off` | XRateLimitHeadersOptionOff disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
+| `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
 #### ZipkinTracingProvider
