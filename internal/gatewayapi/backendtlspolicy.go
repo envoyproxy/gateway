@@ -489,7 +489,7 @@ func (t *Translator) getCaCertsFromCARefs(
 			foundSupportedRef = true
 			cm := t.GetConfigMap(namespace, string(caRef.Name))
 			if cm != nil {
-				if crt, dataOk := getOrFirstFromData(cm.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(cm.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
@@ -504,7 +504,7 @@ func (t *Translator) getCaCertsFromCARefs(
 			foundSupportedRef = true
 			secret := t.GetSecret(namespace, string(caRef.Name))
 			if secret != nil {
-				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
+				if crt, dataOk := getFirstMatchOrFirstFromData(secret.Data, CACertKey, TLSCertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}

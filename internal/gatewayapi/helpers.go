@@ -38,7 +38,8 @@ const (
 	L7Protocol = "L7"
 
 	// CACertKey is the key used in ConfigMaps and Secrets to store CA certificate data
-	CACertKey = "ca.crt"
+	CACertKey  = "ca.crt"
+	TLSCertKey = "tls.crt"
 	// CRLKey is the key used in ConfigMaps and Secrets to store certificate revocation list data
 	CRLKey = "ca.crl"
 )
@@ -794,12 +795,15 @@ func getRequestIDExtensionAction(envoyProxy *egv1a1.EnvoyProxy) *ir.RequestIDExt
 	return (*ir.RequestIDExtensionAction)(envoyProxy.Spec.Telemetry.RequestID.Tracing)
 }
 
-// getOrFirstFromData returns the value of the key in the data map
+// getFirstMatchFromData returns the value for the first key match in the data map
 // or the first value if the key is not found only if data map has exactly one entry
-func getOrFirstFromData[T any](data map[string]T, key string) (T, bool) {
-	if val, exists := data[key]; exists {
-		return val, true
-	} else if len(data) == 1 {
+func getFirstMatchOrFirstFromData[T any](data map[string]T, keys ...string) (T, bool) {
+	for _, k := range keys {
+		if v, ok := data[k]; ok {
+			return v, true
+		}
+	}
+	if len(data) == 1 {
 		for _, value := range data {
 			return value, true
 		}
