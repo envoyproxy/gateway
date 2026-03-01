@@ -213,14 +213,6 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "rejected-http-route",
-			from:         "gateway-api",
-			to:           "gateway-api",
-			output:       yamlOutput,
-			resourceType: string(RouteEnvoyConfigType),
-			expect:       true,
-		},
-		{
 			name:         "echo-gateway-api",
 			from:         "gateway-api",
 			to:           "gateway-api",

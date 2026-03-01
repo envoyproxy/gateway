@@ -160,8 +160,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       defaultRefreshTokenTTL: 24h
       defaultTokenTTL: 30m

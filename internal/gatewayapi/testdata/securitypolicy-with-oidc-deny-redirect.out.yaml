@@ -106,8 +106,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       cookieNames:
         accessToken: CustomAccessTokenCookie
