@@ -81,19 +81,16 @@ type gatewayAPIReconciler struct {
 	gatewayNamespaceMode bool
 
 	backendCRDExists       bool
-	bTLSPolicyCRDExists    bool
 	btpCRDExists           bool
 	ctpCRDExists           bool
 	eepCRDExists           bool
 	epCRDExists            bool
 	eppCRDExists           bool
 	hrfCRDExists           bool
-	grpcRouteCRDExists     bool
 	serviceImportCRDExists bool
 	spCRDExists            bool
 	tcpRouteCRDExists      bool
 	udpRouteCRDExists      bool
-	listenerSetEnabled     bool
 
 	clusterTrustBundleExits bool
 
@@ -494,15 +491,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			}
 		}
 
-		if r.bTLSPolicyCRDExists {
-			// Add all BackendTLSPolies to the resourceTree
-			if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
-				if isTransientError(err) {
-					gcLogger.Error(err, "transient error processing BackendTLSPolicies")
-					return reconcile.Result{}, err
-				}
-				gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
+		// Add all BackendTLSPolies to the resourceTree
+		if err = r.processBackendTLSPolicies(ctx, gwcResource, gwcResourceMapping); err != nil {
+			if isTransientError(err) {
+				gcLogger.Error(err, "transient error processing BackendTLSPolicies")
+				return reconcile.Result{}, err
 			}
+			gcLogger.Error(err, "failed to process BackendTLSPolicies for GatewayClass")
 		}
 
 		if r.eepCRDExists {
@@ -1632,13 +1627,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 		gtwNamespacedName := utils.NamespacedName(gtw).String()
 
 		// ListenerSet Processing (must be done before route processing)
-		if r.listenerSetEnabled {
-			if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-				if isTransientError(err) {
-					return err
-				}
-				r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		if err := r.processListenerSets(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+			if isTransientError(err) {
+				return err
 			}
+			r.log.Error(err, "failed to process ListenerSets for gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		}
 
 		// Route Processing
@@ -1653,11 +1646,9 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 			return err
 		}
 
-		if r.grpcRouteCRDExists {
-			// Get GRPCRoute objects and check if it exists.
-			if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
-				return err
-			}
+		// Get GRPCRoute objects and check if it exists.
+		if err := r.processGRPCRoutes(ctx, gtwNamespacedName, resourceMap, resourceTree); err != nil {
+			return err
 		}
 
 		if r.tcpRouteCRDExists {
@@ -2059,34 +2050,25 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch ListenerSet CRUDs when the experimental API is enabled and the CRD exists.
-	r.listenerSetEnabled, err = checkCRD(resource.KindListenerSet, gwapiv1.GroupVersion.String())
-	if err != nil {
+	xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
+		predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
+	}
+	if r.namespaceLabel != nil {
+		xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
+			return r.hasMatchingNamespaceLabels(obj)
+		}))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
+				return r.enqueueClass(ctx, obj)
+			}),
+			xlsPredicates...)); err != nil {
 		return err
 	}
-	if !r.listenerSetEnabled {
-		r.log.Info("ListenerSet API not enabled, skipping ListenerSet watch")
-	} else {
-		xlsPredicates := []predicate.TypedPredicate[*gwapiv1.ListenerSet]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1.ListenerSet]{},
-		}
-		if r.namespaceLabel != nil {
-			xlsPredicates = append(xlsPredicates, predicate.NewTypedPredicateFuncs(func(obj *gwapiv1.ListenerSet) bool {
-				return r.hasMatchingNamespaceLabels(obj)
-			}))
-		}
-
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1.ListenerSet{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, obj *gwapiv1.ListenerSet) []reconcile.Request {
-					return r.enqueueClass(ctx, obj)
-				}),
-				xlsPredicates...)); err != nil {
-			return err
-		}
-		if err := addListenerSetIndexers(ctx, mgr); err != nil {
-			return err
-		}
+	if err := addListenerSetIndexers(ctx, mgr); err != nil {
+		return err
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
@@ -2108,32 +2090,23 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// TODO: Remove this optional check once most cloud providers and service meshes support GRPCRoute v1
-	r.grpcRouteCRDExists, err = checkCRD(resource.KindGRPCRoute, gwapiv1.GroupVersion.String())
-	if err != nil {
+	// Watch GRPCRoute CRUDs and process affected Gateways.
+	grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
+	if r.namespaceLabel != nil {
+		grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
+			return r.hasMatchingNamespaceLabels(grpc)
+		}))
+	}
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
+				return r.enqueueClass(ctx, route)
+			}),
+			grpcrPredicates...)); err != nil {
 		return err
 	}
-	if !r.grpcRouteCRDExists {
-		r.log.Info("GRPCRoute CRD not found, skipping GRPCRoute watch")
-	} else {
-		// Watch GRPCRoute CRUDs and process affected Gateways.
-		grpcrPredicates := commonPredicates[*gwapiv1.GRPCRoute]()
-		if r.namespaceLabel != nil {
-			grpcrPredicates = append(grpcrPredicates, predicate.NewTypedPredicateFuncs(func(grpc *gwapiv1.GRPCRoute) bool {
-				return r.hasMatchingNamespaceLabels(grpc)
-			}))
-		}
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1.GRPCRoute{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, route *gwapiv1.GRPCRoute) []reconcile.Request {
-					return r.enqueueClass(ctx, route)
-				}),
-				grpcrPredicates...)); err != nil {
-			return err
-		}
-		if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
-			return err
-		}
+	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+		return err
 	}
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
@@ -2549,35 +2522,27 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		}
 	}
 
-	r.bTLSPolicyCRDExists, err = checkCRD(resource.KindBackendTLSPolicy, gwapiv1.GroupVersion.String())
-	if err != nil {
+	// Watch BackendTLSPolicy
+	btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
+		predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
+	}
+	if r.namespaceLabel != nil {
+		btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
+			return r.hasMatchingNamespaceLabels(btp)
+		}))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
+				return r.enqueueClass(ctx, btp)
+			}),
+			btlsPredicates...)); err != nil {
 		return err
 	}
-	if !r.bTLSPolicyCRDExists {
-		r.log.Info("BackendTLSPolicy CRD not found, skipping BackendTLSPolicy watch")
-	} else {
-		// Watch BackendTLSPolicy
-		btlsPredicates := []predicate.TypedPredicate[*gwapiv1.BackendTLSPolicy]{
-			predicate.TypedGenerationChangedPredicate[*gwapiv1.BackendTLSPolicy]{},
-		}
-		if r.namespaceLabel != nil {
-			btlsPredicates = append(btlsPredicates, predicate.NewTypedPredicateFuncs(func(btp *gwapiv1.BackendTLSPolicy) bool {
-				return r.hasMatchingNamespaceLabels(btp)
-			}))
-		}
 
-		if err := c.Watch(
-			source.Kind(mgr.GetCache(), &gwapiv1.BackendTLSPolicy{},
-				handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, btp *gwapiv1.BackendTLSPolicy) []reconcile.Request {
-					return r.enqueueClass(ctx, btp)
-				}),
-				btlsPredicates...)); err != nil {
-			return err
-		}
-
-		if err := addBtlsIndexers(ctx, mgr); err != nil {
-			return err
-		}
+	if err := addBtlsIndexers(ctx, mgr); err != nil {
+		return err
 	}
 
 	r.eepCRDExists, err = checkCRD(resource.KindEnvoyExtensionPolicy, egv1a1.GroupVersion.String())
