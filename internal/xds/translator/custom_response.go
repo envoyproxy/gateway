@@ -98,11 +98,7 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 				// local_reply_config only supports response, not redirect
 				continue
 			}
-			mapper, err := c.buildResponseMapper(rule)
-			if err != nil {
-				return err
-			}
-			mappers = append(mappers, mapper)
+			mappers = append(mappers, c.buildResponseMapper(rule))
 		}
 	}
 
@@ -115,7 +111,7 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 }
 
 // buildResponseMapper converts an IR ResponseOverrideRule to an HCM ResponseMapper.
-func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) (*hcmv3.ResponseMapper, error) {
+func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) *hcmv3.ResponseMapper {
 	mapper := &hcmv3.ResponseMapper{Filter: c.buildAccessLogFilter(rule.Match.StatusCodes)}
 
 	if rule.Response.StatusCode != nil {
@@ -144,7 +140,7 @@ func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) (*hcm
 		mapper.HeadersToAdd = append(mapper.HeadersToAdd, buildXdsAddedHeaders(rule.Response.AddResponseHeaders)...)
 	}
 
-	return mapper, nil
+	return mapper
 }
 
 // statusCodeComparisonFilter builds a leaf AccessLogFilter that compares the response status code.
