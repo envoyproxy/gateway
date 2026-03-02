@@ -4932,11 +4932,11 @@ _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Type | Required | Default | Description |
-| ---   | ---  |----------| ---     | ---         |
-| `match` | _[CustomResponseMatch](#customresponsematch)_ | true     |  | Match configuration. |
-| `response` | _[CustomResponse](#customresponse)_ | true     |  | Response configuration. |
-| `redirect` | _[CustomRedirect](#customredirect)_ | true     |  | Redirect configuration |
-| `source` | _[ResponseOverrideSource](#responseoverridesource)_ | false    | All | Source specifies which responses this rule applies to. Local overrides only Envoy-generated responses (e.g. auth failures). Backend overrides only upstream responses. All (default) overrides both. Note: redirect is not supported for Local source. |
+| ---   | ---  | ---      | ---     | ---         |
+| `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  |  | Match configuration. |
+| `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
+| `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
+| `source` | _[ResponseOverrideSource](#responseoverridesource)_ |  false  | All | Source specifies which responses this rule applies to.<br />Local overrides only Envoy-generated responses (e.g. auth failures).<br />Backend overrides only upstream responses.<br />All (default) overrides both. |
 
 
 #### ResponseOverrideSource
@@ -4950,9 +4950,9 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `All` | ResponseOverrideSourceAll overrides both Envoy-generated and upstream responses.<br /> |
-| `Local` | ResponseOverrideSourceLocal overrides only Envoy-generated responses (e.g. auth failures, rate limits).<br /> |
-| `Backend` | ResponseOverrideSourceBackend overrides only upstream/backend responses.<br /> |
+| `All` | ResponseOverrideSourceAll overrides both Envoy-generated and upstream responses.<br /> | 
+| `Local` | ResponseOverrideSourceLocal overrides only Envoy-generated responses (e.g. auth failures, rate limits).<br /> | 
+| `Backend` | ResponseOverrideSourceBackend overrides only upstream/backend responses.<br /> | 
 
 
 #### ResponseValueType
