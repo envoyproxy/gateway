@@ -39,7 +39,6 @@ func MergeEnvoyProxyConfigs(
 	gatewayClassProxy *egv1a1.EnvoyProxy,
 	gatewayProxy *egv1a1.EnvoyProxy,
 ) (*egv1a1.EnvoyProxy, error) {
-
 	var defaultProxy *egv1a1.EnvoyProxy
 	if defaultSpec != nil {
 		defaultProxy = &egv1a1.EnvoyProxy{Spec: *defaultSpec}
