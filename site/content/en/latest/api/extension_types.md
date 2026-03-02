@@ -203,11 +203,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 60s if not specified. |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 30s if not specified. |
 | `successRateThreshold` | _float_ |  false  |  | SuccessRateThreshold defines the lowest request success rate at which the filter<br />will not reject requests. The value should be in the range [0.0, 1.0].<br />Defaults to 0.95 (95%) if not specified. |
 | `aggression` | _float_ |  false  |  | Aggression controls the rejection probability curve. A value of 1.0 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Defaults to 1.0 if not specified. |
-| `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 1 if not specified. |
-| `maxRejectionProbability` | _float_ |  false  |  | MaxRejectionProbability represents the upper limit of the rejection probability.<br />The value should be in the range [0.0, 1.0]. Defaults to 0.95 (95%) if not specified. |
+| `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
+| `maxRejectionProbability` | _float_ |  false  |  | MaxRejectionProbability represents the upper limit of the rejection probability.<br />The value should be in the range [0.0, 1.0]. Defaults to 0.80 (80%) if not specified. |
 | `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC. |
 
 
@@ -2360,23 +2360,23 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `OK` |  | 
-| `CANCELLED` |  | 
-| `UNKNOWN` |  | 
-| `INVALID_ARGUMENT` |  | 
-| `DEADLINE_EXCEEDED` |  | 
-| `NOT_FOUND` |  | 
-| `ALREADY_EXISTS` |  | 
-| `PERMISSION_DENIED` |  | 
-| `RESOURCE_EXHAUSTED` |  | 
-| `FAILED_PRECONDITION` |  | 
-| `ABORTED` |  | 
-| `OUT_OF_RANGE` |  | 
-| `UNIMPLEMENTED` |  | 
-| `INTERNAL` |  | 
-| `UNAVAILABLE` |  | 
-| `DATA_LOSS` |  | 
-| `UNAUTHENTICATED` |  | 
+| `Ok` |  | 
+| `Cancelled` |  | 
+| `Unknown` |  | 
+| `InvalidArgument` |  | 
+| `DeadlineExceeded` |  | 
+| `NotFound` |  | 
+| `AlreadyExists` |  | 
+| `PermissionDenied` |  | 
+| `ResourceExhausted` |  | 
+| `FailedPrecondition` |  | 
+| `Aborted` |  | 
+| `OutOfRange` |  | 
+| `Unimplemented` |  | 
+| `Internal` |  | 
+| `Unavailable` |  | 
+| `DataLoss` |  | 
+| `Unauthenticated` |  | 
 
 
 #### GRPCSuccessCriteria
