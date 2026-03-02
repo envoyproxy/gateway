@@ -1769,6 +1769,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				Name:     defaultResponseOverrideRuleName(policy, index),
 				Match:    match,
 				Redirect: redirect,
+				Source:   sourceFromAPI(ro.Source),
 			})
 		} else {
 			response := &ir.CustomResponse{
@@ -1807,6 +1808,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				Name:     defaultResponseOverrideRuleName(policy, index),
 				Match:    match,
 				Response: response,
+				Source:   sourceFromAPI(ro.Source),
 			})
 		}
 	}
@@ -1894,6 +1896,13 @@ func (t *Translator) resolveLocalObjectRefsInPolicy(policy *egv1a1.BackendTraffi
 		}
 	}
 	return nil
+}
+
+func sourceFromAPI(s *egv1a1.ResponseOverrideSource) egv1a1.ResponseOverrideSource {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
