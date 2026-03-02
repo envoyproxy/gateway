@@ -48262,12 +48262,12 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
-                            geoLocations:
+                            clientIPGeoLocations:
                               description: |-
-                                GeoLocations authorizes the request based on geolocation metadata derived from the client IP.
-                                If multiple entries are specified,  one of the GeoLocation entries must match for the rule to match.
+                                ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
                               items:
-                                description: GeoLocation specifies geolocation-based
+                                description: ClientIPGeoLocation specifies geolocation-based
                                   match criteria for authorization.
                                 properties:
                                   anonymous:
@@ -48484,9 +48484,9 @@ spec:
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, headers, or
-                              geoLocations must be specified
+                              clientIPGeoLocations must be specified
                             rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
-                              || has(self.geoLocations))
+                              || has(self.clientIPGeoLocations))
                       required:
                       - action
                       - principal

@@ -72,7 +72,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.geoLocations))",message="at least one of clientCIDRs, jwt, headers, or geoLocations must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations))",message="at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -129,19 +129,19 @@ type Principal struct {
 	// +notImplementedHide
 	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
 
-	// GeoLocations authorizes the request based on geolocation metadata derived from the client IP.
-	// If multiple entries are specified,  one of the GeoLocation entries must match for the rule to match.
+	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +notImplementedHide
-	GeoLocations []GeoLocation `json:"geoLocations,omitempty"`
+	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
 }
 
-// GeoLocation specifies geolocation-based match criteria for authorization.
+// ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
 //
 // +kubebuilder:validation:XValidation:rule="has(self.country) || has(self.region) || has(self.city) || has(self.asn) || has(self.isp) || has(self.anonymous)",message="at least one of country, region, city, asn, isp, or anonymous must be specified"
-type GeoLocation struct {
+type ClientIPGeoLocation struct {
 	// Country is the country ISO code associated with the client IP.
 	//
 	// +optional

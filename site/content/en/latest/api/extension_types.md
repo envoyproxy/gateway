@@ -724,6 +724,25 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
+#### ClientIPGeoLocation
+
+
+
+ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `country` | _string_ |  false  |  | Country is the country ISO code associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region ISO code associated with the client IP. |
+| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
+| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
+| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
+| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
+
+
 #### ClientTLSSettings
 
 
@@ -2376,7 +2395,7 @@ flags at the same time (for example, a commercial VPN exit IP may also be
 classified as a public proxy, so both IsVPN and IsProxy can be true).
 
 _Appears in:_
-- [GeoLocation](#geolocation)
+- [ClientIPGeoLocation](#clientipgeolocation)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -2447,25 +2466,6 @@ _Appears in:_
 | Value | Description |
 | ----- | ----------- |
 | `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
-
-
-#### GeoLocation
-
-
-
-GeoLocation specifies geolocation-based match criteria for authorization.
-
-_Appears in:_
-- [Principal](#principal)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `country` | _string_ |  false  |  | Country is the country ISO code associated with the client IP. |
-| `region` | _string_ |  false  |  | Region is the region ISO code associated with the client IP. |
-| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
-| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
-| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
-| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
 
 
 #### GlobalRateLimit
