@@ -530,8 +530,12 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 		tlsListenerConfigs.Certificates[i] = cert
 	}
 
-	if config.frontendTLSValidation != nil {
+	if config.frontendTLSValidation != nil && !ptr.Deref(config.frontendTLSValidation.Invalid, false) {
 		tlsListenerConfigs.CACertificate = config.frontendTLSValidation
+		// TODO: setTLSClientValidationContext
+		if ptr.Deref(config.frontendTLSValidation.Mode, gwapiv1.AllowValidOnly) == gwapiv1.AllowValidOnly {
+			tlsListenerConfigs.RequireClientCertificate = true
+		}
 	}
 
 	return tlsListenerConfigs
