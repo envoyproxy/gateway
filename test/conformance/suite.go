@@ -49,7 +49,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.GatewayFrontendClientCertificateValidation,
 		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	}

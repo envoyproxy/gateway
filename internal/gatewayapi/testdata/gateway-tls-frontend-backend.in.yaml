@@ -139,6 +139,52 @@ gateways:
               - group: ""
                 kind: Secret
                 name: tls-validity-checks-certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-default
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              caCertificateRefs:
+              - kind: ConfigMap
+                group: ""
+                name: tls-validity-checks-ca-certificate
+          perPort:
+          - port: 8443
+            tls:
+              validation:
+                caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-per-port-ca-certificate
+      listeners:
+      - name: https
+        port: 443
+        protocol: HTTPS
+        allowedRoutes:
+          namespaces:
+            from: Same
+        tls:
+          certificateRefs:
+          - group: ""
+            kind: Secret
+            name: tls-validity-checks-certificate
+      - name: https-with-hostname
+        port: 8443
+        protocol: HTTPS
+        allowedRoutes:
+          namespaces:
+            from: Same
+        tls:
+          certificateRefs:
+          - group: ""
+            kind: Secret
+            name: tls-validity-checks-certificate
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
@@ -191,7 +237,7 @@ configmaps:
   - apiVersion: v1
     kind: ConfigMap
     metadata:
-      name: ls-validity-checks-per-port-ca-certificate
+      name: tls-validity-checks-per-port-ca-certificate
       namespace: envoy-gateway
     data:
-      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURVRENDQWlTZ0F3SUJBZ0lRQU5CQkN3VUFNQk1BOEdBMVVFQkJRQ0N3VUFZSUt3WUJCUVVIQXdFR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQlNRR0NDc0dBUVVGQUFPakFVTVEwd0N3WURWUVFERXdFQi93UUZNQU1CQWY4d0hRWU9CQllFRkdEQ0NBUjYwTVEwd05
+      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZekNDQWt1Z0F3SUJBZ0lDQitnd0RRWUpLb1pJaHZjTkFRRUxCUUF3UXpFTE1Ba0dBMVVFQmhNQ1ZWTXgKSHpBZEJnTlZCQW9URmt0MVltVnlibVYwWlhNZ1IyRjBaWGRoZVNCQlVFa3hFekFSQmdOVkJBTVRDbWRoZEdWMwpZWGxoY0drd0hoY05Nall3TXpBeU1ERXhPVEV3V2hjTk1qY3dNekF5TURFeE9URXdXakJETVFzd0NRWURWUVFHCkV3SlZVekVmTUIwR0ExVUVDaE1XUzNWaVpYSnVaWFJsY3lCSFlYUmxkMkY1SUVGUVNURVRNQkVHQTFVRUF4TUsKWjJGMFpYZGhlV0Z3YVRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVdMcG9hWAo0WXYvZU9UVVV0dXRDZm5zRkllRDdDbDZJUVl1a0IvbVpHMDU1ODhsY2ZwZ0xWSnpQdE9SSmZ3U2dFSncrZmh5ClJYUFY2RmU1blpNSVpUQXlGdTJnVTlFWVRKNFFpQTVrVGxOdGNlWEhOR3c5MGo4dXliQ2lzVUw0aWExbHVwN0kKaXlOSUpWblVQSkFscDJ3WkVITTR2QlVvYWxmcTVGWUplQ3NNZjdXdFE5b2ZjTWhkQXhXbUdidkZYTEU5eXBEVwo1MUg1L2dZWWNqeXBFUjI4ZkhVSENvTENGWERxeVBEZVJzRHVFVk1uOFhmMWdFd2hTV1l1TS9Kc1JvTGNNTWxWClJOSnVDMmFyeDhhUnE4OHVxQnRUeXphcnhxc0lGMG5TOGp4bmltVmovbC8wLzZrSUtBWG5zTk9SeVZBbmQ3K0EKZlJkL1Nyblc3VVhMZW5rQ0F3RUFBYU5oTUY4d0RnWURWUjBQQVFIL0JBUURBZ0tFTUIwR0ExVWRKUVFXTUJRRwpDQ3NHQVFVRkJ3TUNCZ2dyQmdFRkJRY0RBVEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQjBHQTFVZERnUVdCQlRVCmp0N1ZzQ2FMdU95UG1MT2RtZTUrUy82QWVUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFVZVVLMWhVY1d1a0UKYlBsTUVyKzhucTlmd045YS85WXFMS21seEN5ZUxpdGpLbElGb290NmN3ZEphQm1FZ25DSWNzSkFodnFxci9iZQpmMFNLZys2bTdjazhMdlVpRHBYZ0lJN2VpT2VWdkJXTnpzVEZxK01EWkNKLzhGek5IaS9tN3hSalZXZzFHQUhSClZCQVZjUjRDWFNVNFllQnUxTzdSQ0NKUDVRaktXaWhlMlpIcFVCRmRmKzFIZ202UUhoSDZyd2IxQmpsY0I0azUKMW9SNGxVenJOejRXak9SNjVBeXJyU2pDWlJoSXhRTlFtV3BCK1NVK3BkeEhqenFtclhtR3M5WSt6cFRXbE50eQpCSGQ1QzRJZkJCL0FVOXJSRjlIcVdQbU1qSW5GczhNYzlFRDRsWmRaSnI4WUNvSjl5dVUraWNZTlovNTJvcW1nCjYra05iZnMycUE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
