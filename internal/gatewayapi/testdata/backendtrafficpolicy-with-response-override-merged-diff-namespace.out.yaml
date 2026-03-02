@@ -1,0 +1,307 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: my-app-rate-limit
+    namespace: default
+  spec:
+    mergeType: StrategicMerge
+    rateLimit:
+      local:
+        rules:
+        - clientSelectors:
+          - sourceCIDR:
+              type: Distinct
+              value: 0.0.0.0/0
+          limit:
+            requests: 200
+            unit: Minute
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: my-app
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-gateway
+        namespace: envoy-gateway-system
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Merged with policy envoy-gateway-system/my-gateway-error-response
+        reason: Merged
+        status: "True"
+        type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-gateway
+        namespace: envoy-gateway-system
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: my-gateway-error-response
+    namespace: envoy-gateway-system
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - range:
+            end: 504
+            start: 502
+          type: Range
+      response:
+        body:
+          inline: |
+            error page contents here
+          type: Inline
+        contentType: text/html
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: my-gateway
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-gateway
+        namespace: envoy-gateway-system
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being merged by other backendTrafficPolicies for
+          these routes: [default/my-app]'
+        reason: Merged
+        status: "True"
+        type: Merged
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: my-gateway
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: my-app
+    namespace: default
+  spec:
+    hostnames:
+    - myapp.example.com
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: my-gateway
+      namespace: envoy-gateway-system
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: service-1
+        port: 8080
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: my-gateway
+        namespace: envoy-gateway-system
+infraIR:
+  envoy-gateway-system/my-gateway:
+    proxy:
+      listeners:
+      - name: envoy-gateway-system/my-gateway/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: my-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway-system/my-gateway
+      namespace: envoy-gateway-system
+xdsIR:
+  envoy-gateway-system/my-gateway:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-system-my-gateway-1d35c6f5
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway-system/my-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-system-my-gateway-1d35c6f5
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway-system/my-gateway
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: my-gateway
+        namespace: envoy-gateway-system
+        sectionName: http
+      name: envoy-gateway-system/my-gateway/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: my-app
+            namespace: default
+          name: httproute/default/my-app/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/my-app/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: myapp.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: my-app
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: my-app-rate-limit
+            namespace: default
+        name: httproute/default/my-app/rule/0/match/0/myapp_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          rateLimit:
+            local:
+              default:
+                requests: 4294967295
+                unit: Second
+              rules:
+              - cidrMatch:
+                  cidr: 0.0.0.0/0
+                  distinct: true
+                  ip: 0.0.0.0
+                  isIPv6: false
+                  maskLen: 0
+                headerMatches: []
+                limit:
+                  requests: 200
+                  unit: Minute
+                name: default/my-app-rate-limit/rule/0
+          responseOverride:
+            name: backendtrafficpolicy/default/my-app-rate-limit
+            rules:
+            - match:
+                statusCodes:
+                - range:
+                    end: 504
+                    start: 502
+              name: backendtrafficpolicy/default/my-app-rate-limit/responseoverride/rule/0
+              response:
+                body: ZXJyb3IgcGFnZSBjb250ZW50cyBoZXJlCg==
+                contentType: text/html
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

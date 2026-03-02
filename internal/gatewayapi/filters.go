@@ -893,9 +893,8 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
-						body := hrf.Spec.DirectResponse.Body
 						var err error
-						if dr.Body, err = t.getCustomResponseBody(body, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
 					}
@@ -1041,7 +1040,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
 	if err != nil {
 		return err
 	}

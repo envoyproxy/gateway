@@ -32,10 +32,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -47,7 +47,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -197,10 +197,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 data:
   config.yaml: |
     
@@ -297,10 +297,10 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 data:
   runtime-config.yaml: |
     {}
@@ -314,7 +314,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -354,6 +354,7 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
     - job_name: kubernetes-nodes-cadvisor
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
@@ -368,6 +369,7 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        insecure_skip_verify: true
     - job_name: kubernetes-pods
       honor_labels: true
       kubernetes_sd_configs:
@@ -9980,10 +9982,10 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   name: loki-clusterrole
 rules:
 - apiGroups: [""] # "" indicates the core API group
@@ -9999,7 +10001,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10084,10 +10086,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
 subjects:
   - kind: ServiceAccount
     name: loki
@@ -10106,7 +10108,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10203,10 +10205,10 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   annotations:
 spec:
   type: ClusterIP
@@ -10228,10 +10230,10 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
     variant: headless
     prometheus.io/service-monitor: "false"
   annotations:
@@ -10253,10 +10255,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
   annotations:
 spec:
   type: ClusterIP
@@ -10283,7 +10285,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10582,7 +10584,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.8.0
+    helm.sh/chart: prometheus-28.9.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10604,14 +10606,14 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.8.0
+        helm.sh/chart: prometheus-28.9.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.88.1"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -10698,10 +10700,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.51.0
+    helm.sh/chart: loki-6.53.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.3"
+    app.kubernetes.io/version: "3.6.5"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10741,7 +10743,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:3.6.3
+          image: docker.io/grafana/loki:3.6.5
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml

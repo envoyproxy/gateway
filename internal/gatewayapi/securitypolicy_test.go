@@ -884,6 +884,23 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 	return false
 }
 
+func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference) {
+	ctx := &RouteParentContext{ParentReference: &parentRef}
+	switch r := route.(type) {
+	case *HTTPRouteContext:
+		ctx.HTTPRoute = r.HTTPRoute
+	case *GRPCRouteContext:
+		ctx.GRPCRoute = r.GRPCRoute
+	case *TLSRouteContext:
+		ctx.TLSRoute = r.TLSRoute
+	case *TCPRouteContext:
+		ctx.TCPRoute = r.TCPRoute
+	case *UDPRouteContext:
+		ctx.UDPRoute = r.UDPRoute
+	}
+	route.SetRouteParentContext(parentRef, ctx)
+}
+
 // --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
@@ -923,6 +940,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 			},
 		},
 	}
+	SetRouteParentContext(tcpRoute, tcpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
 	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -1000,6 +1018,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 			},
 		},
 	}
+	SetRouteParentContext(httpRoute, httpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
 	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{

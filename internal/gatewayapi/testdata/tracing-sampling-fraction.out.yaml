@@ -382,5 +382,5 @@ xdsIR:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317
         type: OpenTelemetry
-      samplingRate: 0.01
+      samplingRate: 1
       serviceName: envoy-gateway-class

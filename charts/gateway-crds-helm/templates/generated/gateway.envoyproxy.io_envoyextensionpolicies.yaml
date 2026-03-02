@@ -47,6 +47,56 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
+              dynamicModule:
+                description: |-
+                  DynamicModule is an ordered list of dynamic module HTTP filters
+                  that should be added to the envoy filter chain.
+                  Each module must be registered in the EnvoyProxy resource's dynamicModules
+                  allowlist.
+                  Order matters, as the filters will be loaded in the order they are
+                  defined in this list.
+                items:
+                  description: |-
+                    DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
+                    The module must be registered in the EnvoyProxy resource's dynamicModules
+                    allowlist by the infrastructure operator.
+                  properties:
+                    config:
+                      description: |-
+                        Config is the configuration for the dynamic module filter.
+                        This is serialized as JSON and passed to the module's initialization function.
+                      x-kubernetes-preserve-unknown-fields: true
+                    filterName:
+                      description: |-
+                        FilterName identifies a specific filter implementation within the dynamic
+                        module. A single shared library can contain multiple filter implementations.
+                        This value is passed to the module's HTTP filter config init function to
+                        select the appropriate implementation.
+                        If not specified, defaults to an empty string.
+                      maxLength: 253
+                      type: string
+                    name:
+                      description: |-
+                        Name references a dynamic module registered in the EnvoyProxy resource's
+                        dynamicModules list. The referenced module must exist in the registry;
+                        otherwise, the policy will be rejected.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    terminalFilter:
+                      default: false
+                      description: |-
+                        TerminalFilter indicates that this dynamic module handles requests without
+                        requiring an upstream backend. The module is responsible for generating and
+                        sending the response to downstream directly.
+                        Defaults to false.
+                      type: boolean
+                  required:
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
               extProc:
                 description: |-
                   ExtProc is an ordered list of external processing filters
@@ -495,6 +545,19 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                        Responses matching these statuses count towards the unhealthy threshold but
+                                        do not result in the host being considered immediately unhealthy.
+                                        The expected statuses take precedence for any range overlaps with this field.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
                                   required:
                                   - path
                                   type: object
@@ -620,9 +683,11 @@ spec:
                                   type: string
                                 unhealthyThreshold:
                                   default: 3
-                                  description: UnhealthyThreshold defines the number
-                                    of unhealthy health checks required before a backend
-                                    host is marked unhealthy.
+                                  description: |-
+                                    UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                    Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                    considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                    up to this threshold before the host is marked unhealthy.
                                   format: int32
                                   minimum: 1
                                   type: integer

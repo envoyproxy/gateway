@@ -76,9 +76,10 @@ go.test.cel: manifests # Run the CEL validation tests
 	@$(LOG_TARGET)
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
-        go clean -testcache; \
+        pushd test; go clean -testcache;  \
         KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $$ver -p path)" \
-         go test ./test/cel-validation --tags celvalidation -race || exit 1; \
+          go test ./cel-validation --tags celvalidation -race || exit 1; \
+		popd; \
     done
 
 .PHONY: go.test.benchmark

@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
-	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 	"github.com/envoyproxy/gateway/test/e2e"
 	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
@@ -38,7 +37,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 	}
 
 	gatewayNamespaceMode := ege2etest.IsGatewayNamespaceMode()
-	internalSuite := internalconf.EnvoyGatewaySuite(gatewayNamespaceMode)
+	internalSuite := EnvoyGatewaySuite(gatewayNamespaceMode)
 
 	opts := conformance.DefaultOptions(t)
 	opts.SkipTests = internalSuite.SkipTests
@@ -46,6 +45,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
 	opts.RunTest = *flags.RunTest
 	opts.Hook = e2e.Hook
+	opts.FailFast = true
 
 	// I don't know why this happens, but the UDPRoute test failed on dual stack
 	// because on some VM(e.g. Ubuntu 22.04), the ipv4 address for UDP gateway is not
@@ -55,6 +55,11 @@ func TestGatewayAPIConformance(t *testing.T) {
 		opts.SkipTests = append(opts.SkipTests,
 			tests.UDPRouteTest.ShortName,
 		)
+	}
+
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if opts.RunTest != "" {
+		opts.SkipTests = nil
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(opts)
