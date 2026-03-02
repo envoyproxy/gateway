@@ -158,6 +158,12 @@ infraIR:
           name: https-8443
           protocol: HTTPS
           servicePort: 8443
+      - name: envoy-gateway/gateway-1/tls-all-invalid-cert
+        ports:
+        - containerPort: 8444
+          name: https-8444
+          protocol: HTTPS
+          servicePort: 8444
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -298,6 +304,21 @@ xdsIR:
         - certificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ2VENDQVVTZ0F3SUJBZ0lVU2l2SkdURHdva1M3aGVZLzJjc1JzejR2SkIwd0NnWUlLb1pJemowRUF3SXcKRmpFVU1CSUdBMVVFQXd3TFptOXZMbUpoY2k1amIyMHdIaGNOTWpRd01qSTVNRGt6TURFd1doY05NelF3TWpJMgpNRGt6TURFd1dqQVdNUlF3RWdZRFZRUUREQXRtYjI4dVltRnlMbU52YlRCMk1CQUdCeXFHU000OUFnRUdCU3VCCkJBQWlBMklBQkZ2cnZSZWJhYVd1UzZNQUVJZDZ3WmZPS3Z1Q1R5VU1PbFpKcUZDRjlUa3pNWWw4Q2lvZnluT3QKQ3JzMHZ2YTlrZC9QMkpNR0JKcWdZZXZid290clJpMTJxTG5IMDQvam9HSWpqVE9LbzNJb2ZyK0ZrOHdMdkFlMwpPMVpLdFI5c3pxTlRNRkV3SFFZRFZSME9CQllFRklLczFRRm5vRHQ5K3Fva1I0T0RXYk16MWYrUE1COEdBMVVkCkl3UVlNQmFBRklLczFRRm5vRHQ5K3Fva1I0T0RXYk16MWYrUE1BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0NnWUkKS29aSXpqMEVBd0lEWndBd1pBSXdIMzF0SHlmVVAwNFhIcGJXR2UxWjFJYUJaQndJdGg1NURVNGhqZlB1OG0rSgpXdjdiVzh6VFNnd0xpcW9yZmN1bkFqQTBnaE5KQkExWDJYdElLRG1sM3M3L1Z4OEZKY1MwNHZwQ2hoK2xBYkxTCnZlYWEyOFIzVExFWTNVK1FUWEkvd0lrPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
           name: envoy-gateway/tls-secret-ecdsa-2
           privateKey: '[redacted]'
+    - address: 0.0.0.0
+      externalPort: 8444
+      hostnames:
+      - '*'
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-all-invalid-cert
+      name: envoy-gateway/gateway-1/tls-all-invalid-cert
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8444
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

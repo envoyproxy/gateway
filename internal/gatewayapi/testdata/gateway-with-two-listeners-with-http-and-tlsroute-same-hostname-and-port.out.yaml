@@ -106,6 +106,13 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/http-1
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -172,8 +179,34 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - foo.com
+      isHTTP2: false
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-1
+      name: envoy-gateway/gateway-1/http-1
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 80
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: tls-1
+      name: envoy-gateway/gateway-1/tls-1
+      port: 10080
