@@ -40,7 +40,6 @@ type ListenersTranslator interface {
 
 func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *resource.Resources) {
 	for _, gtw := range gateways {
-		//
 		if gtw.Spec.TLS == nil {
 			continue
 		}
@@ -262,6 +261,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Process conditions and check if the listener is ready
 			t.validateListenerConditions(listener)
+
+			// Skip listeners with invalid frontend TLS validation as they are not functional.
+			if listener.frontendTLSValidationInvalid() {
+				continue
+			}
 
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)

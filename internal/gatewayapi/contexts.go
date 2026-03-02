@@ -145,6 +145,18 @@ type ListenerTLSConfig struct {
 	frontendTLSValidation *ir.TLSCACertificate
 }
 
+func (l *ListenerContext) frontendTLSValidationInvalid() bool {
+	if l.tls.frontendTLSValidation == nil {
+		return false
+	}
+
+	if l.tls.frontendTLSValidation.Invalid != nil && *l.tls.frontendTLSValidation.Invalid {
+		return true
+	}
+
+	return false
+}
+
 // isFromListenerSet returns true if the listener belongs to a ListenerSet instead of a Gateway.
 func (l *ListenerContext) isFromListenerSet() bool {
 	return l.listenerSet != nil
