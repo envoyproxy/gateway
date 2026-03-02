@@ -2710,6 +2710,18 @@ spec:
                             If unset, does not override the status of response.
                           type: integer
                       type: object
+                    source:
+                      default: All
+                      description: |-
+                        Source specifies which responses this rule applies to.
+                        Local overrides only Envoy-generated responses (e.g. auth failures).
+                        Backend overrides only upstream responses.
+                        All (default) overrides both.
+                      enum:
+                      - All
+                      - Local
+                      - Backend
+                      type: string
                   required:
                   - match
                   type: object
@@ -2717,6 +2729,8 @@ spec:
                   - message: exactly one of response or redirect must be specified
                     rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
                       && has(self.redirect))
+                  - message: redirect is not supported for Local response source
+                    rule: (!has(self.source) || self.source != 'Local') || !has(self.redirect)
                 type: array
               retry:
                 description: |-
