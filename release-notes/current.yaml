@@ -46,6 +46,7 @@ new features: |
   Added support for OpenTelemetry sampler configuration for tracing.
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
+  Added `source` field to `responseOverride` rules in BackendTrafficPolicy, allowing rules to target only Envoy-generated responses (`Local`), only upstream responses (`Backend`), or both (`All`, the default). This enables overriding auth/rate-limit failures without affecting legitimate upstream responses with the same status code.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
