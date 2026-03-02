@@ -91,8 +91,7 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 			continue
 		}
 		for _, rule := range route.Traffic.ResponseOverride.Rules {
-			// empty string means the default (All); Local means local-only
-			if rule.Source == egv1a1.ResponseOverrideSourceBackend {
+			if rule.Source != egv1a1.ResponseOverrideSourceLocal && rule.Source != egv1a1.ResponseOverrideSourceAll {
 				continue
 			}
 			if rule.Response == nil {

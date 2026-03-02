@@ -161,67 +161,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
-        localReplyConfig:
-          mappers:
-          - bodyFormatOverride:
-              textFormat: gateway-1 Not Found
-            filter:
-              statusCodeFilter:
-                comparison:
-                  value:
-                    defaultValue: 404
-                    runtimeKey: response_override_404
-            headersToAdd:
-            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-              header:
-                key: Content-Type
-                value: text/plain
-            - header:
-                key: X-Add-Header
-                value: added-404
-            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-              header:
-                key: X-Set-Header
-                value: set-404
-          - bodyFormatOverride:
-              textFormat: |
-                {
-                  "error": "Internal Server Error"
-                }
-            filter:
-              orFilter:
-                filters:
-                - statusCodeFilter:
-                    comparison:
-                      value:
-                        defaultValue: 500
-                        runtimeKey: response_override_500
-                - andFilter:
-                    filters:
-                    - statusCodeFilter:
-                        comparison:
-                          op: GE
-                          value:
-                            defaultValue: 501
-                            runtimeKey: response_override_501_start
-                    - statusCodeFilter:
-                        comparison:
-                          op: LE
-                          value:
-                            defaultValue: 511
-                            runtimeKey: response_override_511_end
-            headersToAdd:
-            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-              header:
-                key: Content-Type
-                value: application/json
-          - filter:
-              statusCodeFilter:
-                comparison:
-                  value:
-                    defaultValue: 403
-                    runtimeKey: response_override_403
-            statusCode: 404
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
