@@ -530,8 +530,8 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 		tlsListenerConfigs.Certificates[i] = cert
 	}
 
-	if config.frontendTLSValidation != nil && !ptr.Deref(config.frontendTLSValidation.Invalid, false) {
-		tlsListenerConfigs.CACertificate = config.frontendTLSValidation
+	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
+		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
 		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 

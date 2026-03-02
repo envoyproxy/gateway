@@ -33,6 +33,7 @@ const (
 )
 
 type ResourceMetadata struct {
+	Group     string
 	Kind      string
 	Name      string
 	Namespace string
