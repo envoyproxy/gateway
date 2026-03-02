@@ -75,15 +75,12 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	if err := c.patchLocalReplyConfig(mgr, irListener); err != nil {
-		errs = errors.Join(errs, err)
-	}
-
+	c.patchLocalReplyConfig(mgr, irListener)
 	return errs
 }
 
 // patchLocalReplyConfig collects all Local/All rules from all routes and builds mgr.LocalReplyConfig.
-func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) {
 	var mappers []*hcmv3.ResponseMapper
 
 	for _, route := range irListener.Routes {
@@ -102,12 +99,9 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 		}
 	}
 
-	if len(mappers) == 0 {
-		return nil
+	if len(mappers) > 0 {
+		mgr.LocalReplyConfig = &hcmv3.LocalReplyConfig{Mappers: mappers}
 	}
-
-	mgr.LocalReplyConfig = &hcmv3.LocalReplyConfig{Mappers: mappers}
-	return nil
 }
 
 // buildResponseMapper converts an IR ResponseOverrideRule to an HCM ResponseMapper.
