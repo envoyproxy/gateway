@@ -116,12 +116,7 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 
 // buildResponseMapper converts an IR ResponseOverrideRule to an HCM ResponseMapper.
 func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) (*hcmv3.ResponseMapper, error) {
-	filter, err := c.buildAccessLogFilter(rule.Match.StatusCodes)
-	if err != nil {
-		return nil, err
-	}
-
-	mapper := &hcmv3.ResponseMapper{Filter: filter}
+	mapper := &hcmv3.ResponseMapper{Filter: c.buildAccessLogFilter(rule.Match.StatusCodes)}
 
 	if rule.Response.StatusCode != nil {
 		mapper.StatusCode = &wrapperspb.UInt32Value{Value: *rule.Response.StatusCode}
@@ -152,82 +147,55 @@ func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) (*hcm
 	return mapper, nil
 }
 
-// buildAccessLogFilter builds an AccessLogFilter for matching the given status codes.
-func (c *customResponse) buildAccessLogFilter(statusCodes []ir.StatusCodeMatch) (*accesslogv3.AccessLogFilter, error) {
-	if len(statusCodes) == 0 {
-		return nil, fmt.Errorf("missing status code in response override rule")
+// statusCodeComparisonFilter builds a leaf AccessLogFilter that compares the response status code.
+func statusCodeComparisonFilter(op accesslogv3.ComparisonFilter_Op, code int, key string) *accesslogv3.AccessLogFilter {
+	return &accesslogv3.AccessLogFilter{
+		FilterSpecifier: &accesslogv3.AccessLogFilter_StatusCodeFilter{
+			StatusCodeFilter: &accesslogv3.StatusCodeFilter{
+				Comparison: &accesslogv3.ComparisonFilter{
+					Op: op,
+					Value: &corev3.RuntimeUInt32{
+						DefaultValue: uint32(code),
+						RuntimeKey:   key,
+					},
+				},
+			},
+		},
 	}
+}
 
+// buildAccessLogFilter builds an AccessLogFilter for matching the given status codes.
+func (c *customResponse) buildAccessLogFilter(statusCodes []ir.StatusCodeMatch) *accesslogv3.AccessLogFilter {
 	if len(statusCodes) == 1 {
 		return c.buildSingleAccessLogFilter(statusCodes[0])
 	}
 
 	filters := make([]*accesslogv3.AccessLogFilter, 0, len(statusCodes))
 	for _, code := range statusCodes {
-		f, err := c.buildSingleAccessLogFilter(code)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, f)
+		filters = append(filters, c.buildSingleAccessLogFilter(code))
 	}
 
 	return &accesslogv3.AccessLogFilter{
 		FilterSpecifier: &accesslogv3.AccessLogFilter_OrFilter{
 			OrFilter: &accesslogv3.OrFilter{Filters: filters},
 		},
-	}, nil
+	}
 }
 
-func (c *customResponse) buildSingleAccessLogFilter(codeMatch ir.StatusCodeMatch) (*accesslogv3.AccessLogFilter, error) {
+func (c *customResponse) buildSingleAccessLogFilter(codeMatch ir.StatusCodeMatch) *accesslogv3.AccessLogFilter {
 	if codeMatch.Range != nil {
 		// Range: GE start AND LE end
-		geFilter := &accesslogv3.AccessLogFilter{
-			FilterSpecifier: &accesslogv3.AccessLogFilter_StatusCodeFilter{
-				StatusCodeFilter: &accesslogv3.StatusCodeFilter{
-					Comparison: &accesslogv3.ComparisonFilter{
-						Op: accesslogv3.ComparisonFilter_GE,
-						Value: &corev3.RuntimeUInt32{
-							DefaultValue: uint32(codeMatch.Range.Start),
-							RuntimeKey:   fmt.Sprintf("response_override_%d_start", codeMatch.Range.Start),
-						},
-					},
-				},
-			},
-		}
-		leFilter := &accesslogv3.AccessLogFilter{
-			FilterSpecifier: &accesslogv3.AccessLogFilter_StatusCodeFilter{
-				StatusCodeFilter: &accesslogv3.StatusCodeFilter{
-					Comparison: &accesslogv3.ComparisonFilter{
-						Op: accesslogv3.ComparisonFilter_LE,
-						Value: &corev3.RuntimeUInt32{
-							DefaultValue: uint32(codeMatch.Range.End),
-							RuntimeKey:   fmt.Sprintf("response_override_%d_end", codeMatch.Range.End),
-						},
-					},
-				},
-			},
-		}
+		ge := statusCodeComparisonFilter(accesslogv3.ComparisonFilter_GE, codeMatch.Range.Start, fmt.Sprintf("response_override_%d_start", codeMatch.Range.Start))
+		le := statusCodeComparisonFilter(accesslogv3.ComparisonFilter_LE, codeMatch.Range.End, fmt.Sprintf("response_override_%d_end", codeMatch.Range.End))
 		return &accesslogv3.AccessLogFilter{
 			FilterSpecifier: &accesslogv3.AccessLogFilter_AndFilter{
-				AndFilter: &accesslogv3.AndFilter{Filters: []*accesslogv3.AccessLogFilter{geFilter, leFilter}},
+				AndFilter: &accesslogv3.AndFilter{Filters: []*accesslogv3.AccessLogFilter{ge, le}},
 			},
-		}, nil
+		}
 	}
 
 	// Single value: EQ
-	return &accesslogv3.AccessLogFilter{
-		FilterSpecifier: &accesslogv3.AccessLogFilter_StatusCodeFilter{
-			StatusCodeFilter: &accesslogv3.StatusCodeFilter{
-				Comparison: &accesslogv3.ComparisonFilter{
-					Op: accesslogv3.ComparisonFilter_EQ,
-					Value: &corev3.RuntimeUInt32{
-						DefaultValue: uint32(*codeMatch.Value),
-						RuntimeKey:   fmt.Sprintf("response_override_%d", *codeMatch.Value),
-					},
-				},
-			},
-		},
-	}, nil
+	return statusCodeComparisonFilter(accesslogv3.ComparisonFilter_EQ, *codeMatch.Value, fmt.Sprintf("response_override_%d", *codeMatch.Value))
 }
 
 // buildHCMCustomResponseFilter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
