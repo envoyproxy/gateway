@@ -175,3 +175,12 @@ xdsIR:
             protocol: UDP
             weight: 1
         name: udproute/default/udproute-1
+    - address: 0.0.0.0
+      externalPort: 162
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: udp2
+      name: envoy-gateway/gateway-1/udp2
+      port: 10162

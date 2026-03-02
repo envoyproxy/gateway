@@ -315,6 +315,13 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/gateway-tlsroute-tcproute-only:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-tlsroute-tcproute-only/tls-passthrough
+        ports:
+        - containerPort: 10443
+          name: tls-443
+          protocol: TLS
+          servicePort: 443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-tlsroute-tcproute-only
@@ -738,6 +745,16 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 443
+      metadata:
+        kind: Gateway
+        name: gateway-tlsroute-tcproute-only
+        namespace: envoy-gateway
+        sectionName: tls-passthrough
+      name: envoy-gateway/gateway-tlsroute-tcproute-only/tls-passthrough
+      port: 10443
   envoy-gateway/gateway-tlsroute-tls-passthrough-only:
     accessLog:
       json:
