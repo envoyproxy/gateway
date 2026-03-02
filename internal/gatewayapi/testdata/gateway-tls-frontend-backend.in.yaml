@@ -151,40 +151,40 @@ gateways:
           default:
             validation:
               caCertificateRefs:
-              - kind: ConfigMap
-                group: ""
-                name: tls-validity-checks-ca-certificate
-          perPort:
-          - port: 8443
-            tls:
-              validation:
-                caCertificateRefs:
                 - kind: ConfigMap
                   group: ""
-                  name: tls-validity-checks-per-port-ca-certificate
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls:
+                validation:
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
       listeners:
-      - name: https
-        port: 443
-        protocol: HTTPS
-        allowedRoutes:
-          namespaces:
-            from: Same
-        tls:
-          certificateRefs:
-          - group: ""
-            kind: Secret
-            name: tls-validity-checks-certificate
-      - name: https-with-hostname
-        port: 8443
-        protocol: HTTPS
-        allowedRoutes:
-          namespaces:
-            from: Same
-        tls:
-          certificateRefs:
-          - group: ""
-            kind: Secret
-            name: tls-validity-checks-certificate
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-with-hostname
+          port: 8443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
