@@ -49,6 +49,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 		if gtw.Spec.TLS.Frontend != nil {
 			var gtwDefaultTLSCACertificate *ir.TLSCACertificate
 			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
+			allowInsecureFallback := false
 			if gtwDefaultFrontendTLSValidation.Validation != nil {
 				caCert, err := t.getCaCertsFromCARefs(gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, gtw.Namespace)
 				if err != nil {
@@ -63,6 +64,10 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
 						Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
 						Certificate: caCert,
+						Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+					}
+					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
 					}
 				}
 			}
@@ -83,9 +88,17 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 					gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
 						Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
 						Certificate: caCert,
+						Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+					}
+					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
 					}
 				}
+			}
 
+			if allowInsecureFallback {
+				status.UpdateGatewayStatusCondition(gtw.Gateway, gwapiv1.GatewayConditionInsecureFrontendValidationMode, metav1.ConditionTrue, gwapiv1.GatewayReasonConfigurationChanged,
+					"Gateway is using AllowInsecureFallback frontend validation mode.")
 			}
 
 			for _, listener := range gtw.listeners {
