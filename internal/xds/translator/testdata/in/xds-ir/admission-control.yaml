@@ -44,8 +44,8 @@ http:
         successCriteria:
           grpc:
             grpcSuccessStatus:
-            - "OK"
-            - "CANCELLED"
+            - "Ok"
+            - "Cancelled"
     pathMatch:
       exact: "example"
     destination:

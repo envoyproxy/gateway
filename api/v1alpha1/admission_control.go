@@ -21,7 +21,7 @@ type AdmissionControl struct {
 	Enabled *bool `json:"enabled,omitempty"`
 
 	// SamplingWindow defines the time window over which request success rates are calculated.
-	// Defaults to 60s if not specified.
+	// Defaults to 30s if not specified.
 	//
 	// +optional
 	SamplingWindow *gwapiv1.Duration `json:"samplingWindow,omitempty"`
@@ -45,14 +45,14 @@ type AdmissionControl struct {
 	Aggression *float64 `json:"aggression,omitempty"`
 
 	// RPSThreshold defines the minimum requests per second below which requests will
-	// pass through the filter without rejection. Defaults to 1 if not specified.
+	// pass through the filter without rejection. Defaults to 0 if not specified.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	RPSThreshold *uint32 `json:"rpsThreshold,omitempty"`
 
 	// MaxRejectionProbability represents the upper limit of the rejection probability.
-	// The value should be in the range [0.0, 1.0]. Defaults to 0.95 (95%) if not specified.
+	// The value should be in the range [0.0, 1.0]. Defaults to 0.80 (80%) if not specified.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0.0
@@ -88,27 +88,27 @@ type HTTPSuccessCriteria struct {
 
 // GRPCSuccessCode defines gRPC status codes as defined in
 // https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
-// +kubebuilder:validation:Enum=OK;CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
+// +kubebuilder:validation:Enum=Ok;Cancelled;Unknown;InvalidArgument;DeadlineExceeded;NotFound;AlreadyExists;PermissionDenied;ResourceExhausted;FailedPrecondition;Aborted;OutOfRange;Unimplemented;Internal;Unavailable;DataLoss;Unauthenticated
 type GRPCSuccessCode string
 
 const (
-	GRPCSuccessCodeOK                 GRPCSuccessCode = "OK"
-	GRPCSuccessCodeCancelled          GRPCSuccessCode = "CANCELLED"
-	GRPCSuccessCodeUnknown            GRPCSuccessCode = "UNKNOWN"
-	GRPCSuccessCodeInvalidArgument    GRPCSuccessCode = "INVALID_ARGUMENT"
-	GRPCSuccessCodeDeadlineExceeded   GRPCSuccessCode = "DEADLINE_EXCEEDED"
-	GRPCSuccessCodeNotFound           GRPCSuccessCode = "NOT_FOUND"
-	GRPCSuccessCodeAlreadyExists      GRPCSuccessCode = "ALREADY_EXISTS"
-	GRPCSuccessCodePermissionDenied   GRPCSuccessCode = "PERMISSION_DENIED"
-	GRPCSuccessCodeResourceExhausted  GRPCSuccessCode = "RESOURCE_EXHAUSTED"
-	GRPCSuccessCodeFailedPrecondition GRPCSuccessCode = "FAILED_PRECONDITION"
-	GRPCSuccessCodeAborted            GRPCSuccessCode = "ABORTED"
-	GRPCSuccessCodeOutOfRange         GRPCSuccessCode = "OUT_OF_RANGE"
-	GRPCSuccessCodeUnimplemented      GRPCSuccessCode = "UNIMPLEMENTED"
-	GRPCSuccessCodeInternal           GRPCSuccessCode = "INTERNAL"
-	GRPCSuccessCodeUnavailable        GRPCSuccessCode = "UNAVAILABLE"
-	GRPCSuccessCodeDataLoss           GRPCSuccessCode = "DATA_LOSS"
-	GRPCSuccessCodeUnauthenticated    GRPCSuccessCode = "UNAUTHENTICATED"
+	GRPCSuccessCodeOk                 GRPCSuccessCode = "Ok"
+	GRPCSuccessCodeCancelled          GRPCSuccessCode = "Cancelled"
+	GRPCSuccessCodeUnknown            GRPCSuccessCode = "Unknown"
+	GRPCSuccessCodeInvalidArgument    GRPCSuccessCode = "InvalidArgument"
+	GRPCSuccessCodeDeadlineExceeded   GRPCSuccessCode = "DeadlineExceeded"
+	GRPCSuccessCodeNotFound           GRPCSuccessCode = "NotFound"
+	GRPCSuccessCodeAlreadyExists      GRPCSuccessCode = "AlreadyExists"
+	GRPCSuccessCodePermissionDenied   GRPCSuccessCode = "PermissionDenied"
+	GRPCSuccessCodeResourceExhausted  GRPCSuccessCode = "ResourceExhausted"
+	GRPCSuccessCodeFailedPrecondition GRPCSuccessCode = "FailedPrecondition"
+	GRPCSuccessCodeAborted            GRPCSuccessCode = "Aborted"
+	GRPCSuccessCodeOutOfRange         GRPCSuccessCode = "OutOfRange"
+	GRPCSuccessCodeUnimplemented      GRPCSuccessCode = "Unimplemented"
+	GRPCSuccessCodeInternal           GRPCSuccessCode = "Internal"
+	GRPCSuccessCodeUnavailable        GRPCSuccessCode = "Unavailable"
+	GRPCSuccessCodeDataLoss           GRPCSuccessCode = "DataLoss"
+	GRPCSuccessCodeUnauthenticated    GRPCSuccessCode = "Unauthenticated"
 )
 
 // GRPCSuccessCriteria defines success criteria for gRPC requests.
