@@ -532,10 +532,7 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 
 	if config.frontendTLSValidation != nil && !ptr.Deref(config.frontendTLSValidation.Invalid, false) {
 		tlsListenerConfigs.CACertificate = config.frontendTLSValidation
-		// TODO: setTLSClientValidationContext
-		if ptr.Deref(config.frontendTLSValidation.Mode, gwapiv1.AllowValidOnly) == gwapiv1.AllowValidOnly {
-			tlsListenerConfigs.RequireClientCertificate = true
-		}
+		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
