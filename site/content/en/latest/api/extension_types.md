@@ -3426,14 +3426,7 @@ _Appears in:_
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
 ||||||| parent of f5678de1d (feat: Support for merged EnvoyProxy settings)
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
-=======
-| `imagePullPolicy` | _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#pullpolicy-v1-core)_ |  false  |  | ImagePullPolicy specifies the pull policy for the container image.<br />If not specified, defaults to IfNotPresent. |
-||||||| parent of 3126bb437 (Remove proxy ImagePullPolicy)
-| `imagePullPolicy` | _[PullPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#pullpolicy-v1-core)_ |  false  |  | ImagePullPolicy specifies the pull policy for the container image.<br />If not specified, defaults to IfNotPresent. |
-=======
->>>>>>> 3126bb437 (Remove proxy ImagePullPolicy)
 | `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
->>>>>>> f5678de1d (feat: Support for merged EnvoyProxy settings)
 
 
 #### KubernetesDaemonSetSpec
