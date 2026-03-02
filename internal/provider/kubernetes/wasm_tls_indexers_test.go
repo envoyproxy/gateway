@@ -356,11 +356,17 @@ func TestWasmTLSIndexers(t *testing.T) {
 
 			clientBuilder := fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
-				WithIndex(&gwapiv1.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc).
 				WithIndex(&gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc).
-				WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+				WithIndex(&egv1a1.ClientTrafficPolicy{}, configMapCtpIndex, configMapCtpIndexFunc).
+				WithIndex(&egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc).
+				WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
+				WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
+				WithIndex(&egv1a1.HTTPRouteFilter{}, configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc).
 				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+				WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+				WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
+				WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex, clusterTrustBundleEepIndexFunc)
 
 			for _, obj := range objs {
