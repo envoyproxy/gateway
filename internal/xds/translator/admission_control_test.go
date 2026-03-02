@@ -131,7 +131,7 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 						HTTPSuccessStatus: []int32{200, 201, 300, 301},
 					},
 					GRPC: &ir.GRPCSuccessCriteria{
-						GRPCSuccessStatus: []string{"OK", "CANCELLED"},
+						GRPCSuccessStatus: []string{"Ok", "Cancelled"},
 					},
 				},
 			},
@@ -212,23 +212,6 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			require.NotNil(t, got.Enabled.DefaultValue)
 			assert.True(t, got.Enabled.DefaultValue.Value)
 
-			// Verify sampling window is set
-			require.NotNil(t, got.SamplingWindow)
-
-			// Verify sr threshold is set
-			require.NotNil(t, got.SrThreshold)
-			require.NotNil(t, got.SrThreshold.DefaultValue)
-
-			// Verify aggression is set
-			require.NotNil(t, got.Aggression)
-
-			// Verify RPS threshold is set
-			require.NotNil(t, got.RpsThreshold)
-
-			// Verify max rejection probability is set
-			require.NotNil(t, got.MaxRejectionProbability)
-			require.NotNil(t, got.MaxRejectionProbability.DefaultValue)
-
 			// Verify evaluation criteria is always set
 			require.NotNil(t, got.EvaluationCriteria)
 		})
@@ -250,7 +233,7 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 				HTTPSuccessStatus: []int32{200, 201, 202},
 			},
 			GRPC: &ir.GRPCSuccessCriteria{
-				GRPCSuccessStatus: []string{"OK", "CANCELLED", "UNKNOWN"},
+				GRPCSuccessStatus: []string{"Ok", "Cancelled", "Unknown"},
 			},
 		},
 	}
@@ -279,27 +262,23 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 }
 
 func TestBuildAdmissionControlConfigDefaults(t *testing.T) {
-	// Test that defaults are correctly applied when no values are set
+	// When no values are set, fields should be nil so Envoy applies its own defaults
+	// (sampling_window=30s, sr_threshold=95%, aggression=1.0, rps_threshold=0, max_rejection_probability=80%).
 	config := &ir.AdmissionControl{}
 
 	got, err := buildAdmissionControlConfig(config)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
-	// Default sampling window is 60s
-	assert.Equal(t, int64(60), got.SamplingWindow.Seconds)
+	assert.Nil(t, got.SamplingWindow)
+	assert.Nil(t, got.SrThreshold)
+	assert.Nil(t, got.Aggression)
+	assert.Nil(t, got.RpsThreshold)
+	assert.Nil(t, got.MaxRejectionProbability)
 
-	// Default success rate threshold is 0.95 * 100 = 95.0
-	assert.Equal(t, 95.0, got.SrThreshold.DefaultValue.Value)
-
-	// Default aggression is 1.0
-	assert.Equal(t, 1.0, got.Aggression.DefaultValue)
-
-	// Default RPS threshold is 1
-	assert.Equal(t, uint32(1), got.RpsThreshold.DefaultValue)
-
-	// Default max rejection probability is 0.95 * 100 = 95.0
-	assert.Equal(t, 95.0, got.MaxRejectionProbability.DefaultValue.Value)
+	// Enabled and EvaluationCriteria are always set
+	require.NotNil(t, got.Enabled)
+	require.NotNil(t, got.EvaluationCriteria)
 }
 
 func TestAdmissionControlPatchHCM(t *testing.T) {

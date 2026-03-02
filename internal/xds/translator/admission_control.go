@@ -134,53 +134,38 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		DefaultValue: &wrapperspb.BoolValue{Value: true},
 	}
 
-	// Set sampling window (defaults to 60s if not specified)
-	samplingWindow := "60s"
+	// Only set fields the user explicitly configured; Envoy applies its own defaults
+	// (sampling_window=30s, sr_threshold=95%, aggression=1.0, rps_threshold=0, max_rejection_probability=80%).
 	if admissionControl.SamplingWindow != nil {
-		samplingWindow = admissionControl.SamplingWindow.Duration.String()
+		duration, err := parseDuration(admissionControl.SamplingWindow.Duration.String())
+		if err != nil {
+			return nil, fmt.Errorf("invalid samplingWindow: %w", err)
+		}
+		config.SamplingWindow = durationpb.New(duration)
 	}
-	duration, err := parseDuration(samplingWindow)
-	if err != nil {
-		return nil, fmt.Errorf("invalid samplingWindow: %w", err)
-	}
-	config.SamplingWindow = durationpb.New(duration)
 
-	// Set success rate threshold (defaults to 0.95 if not specified)
-	// Note: srThreshold is in range [0.0, 1.0], but Percent expects [0.0, 100.0]
-	srThreshold := 0.95
 	if admissionControl.SuccessRateThreshold != nil {
-		srThreshold = *admissionControl.SuccessRateThreshold
-	}
-	config.SrThreshold = &corev3.RuntimePercent{
-		DefaultValue: &typev3.Percent{Value: srThreshold * 100.0},
+		config.SrThreshold = &corev3.RuntimePercent{
+			DefaultValue: &typev3.Percent{Value: *admissionControl.SuccessRateThreshold * 100.0},
+		}
 	}
 
-	// Set aggression (defaults to 1.0 if not specified)
-	aggression := 1.0
 	if admissionControl.Aggression != nil {
-		aggression = *admissionControl.Aggression
-	}
-	config.Aggression = &corev3.RuntimeDouble{
-		DefaultValue: aggression,
+		config.Aggression = &corev3.RuntimeDouble{
+			DefaultValue: *admissionControl.Aggression,
+		}
 	}
 
-	// Set RPS threshold (defaults to 1 if not specified)
-	rpsThreshold := uint32(1)
 	if admissionControl.RPSThreshold != nil {
-		rpsThreshold = *admissionControl.RPSThreshold
-	}
-	config.RpsThreshold = &corev3.RuntimeUInt32{
-		DefaultValue: rpsThreshold,
+		config.RpsThreshold = &corev3.RuntimeUInt32{
+			DefaultValue: *admissionControl.RPSThreshold,
+		}
 	}
 
-	// Set max rejection probability (defaults to 0.95 if not specified)
-	// Note: maxRejectionProbability is in range [0.0, 1.0], but Percent expects [0.0, 100.0]
-	maxRejectionProbability := 0.95
 	if admissionControl.MaxRejectionProbability != nil {
-		maxRejectionProbability = *admissionControl.MaxRejectionProbability
-	}
-	config.MaxRejectionProbability = &corev3.RuntimePercent{
-		DefaultValue: &typev3.Percent{Value: maxRejectionProbability * 100.0},
+		config.MaxRejectionProbability = &corev3.RuntimePercent{
+			DefaultValue: &typev3.Percent{Value: *admissionControl.MaxRejectionProbability * 100.0},
+		}
 	}
 
 	// EvaluationCriteria is a required oneof field, so we always set success criteria.
@@ -227,23 +212,23 @@ func parseDuration(s string) (time.Duration, error) {
 // See https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
 func grpcStatusCodeToUint32(name string) (uint32, bool) {
 	codes := map[string]uint32{
-		"OK":                  0,
-		"CANCELLED":           1,
-		"UNKNOWN":             2,
-		"INVALID_ARGUMENT":    3,
-		"DEADLINE_EXCEEDED":   4,
-		"NOT_FOUND":           5,
-		"ALREADY_EXISTS":      6,
-		"PERMISSION_DENIED":   7,
-		"RESOURCE_EXHAUSTED":  8,
-		"FAILED_PRECONDITION": 9,
-		"ABORTED":             10,
-		"OUT_OF_RANGE":        11,
-		"UNIMPLEMENTED":       12,
-		"INTERNAL":            13,
-		"UNAVAILABLE":         14,
-		"DATA_LOSS":           15,
-		"UNAUTHENTICATED":     16,
+		"Ok":                 0,
+		"Cancelled":          1,
+		"Unknown":            2,
+		"InvalidArgument":    3,
+		"DeadlineExceeded":   4,
+		"NotFound":           5,
+		"AlreadyExists":      6,
+		"PermissionDenied":   7,
+		"ResourceExhausted":  8,
+		"FailedPrecondition": 9,
+		"Aborted":            10,
+		"OutOfRange":         11,
+		"Unimplemented":      12,
+		"Internal":           13,
+		"Unavailable":        14,
+		"DataLoss":           15,
+		"Unauthenticated":    16,
 	}
 	code, ok := codes[name]
 	return code, ok
