@@ -2873,6 +2873,8 @@ type OutlierDetection struct {
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty" yaml:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
