@@ -1081,6 +1081,8 @@ type EnvoyExtensionFeatures struct {
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
 	// Lua extensions
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
+	// Dynamic Module extensions
+	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -2871,6 +2873,8 @@ type OutlierDetection struct {
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty" yaml:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -2987,6 +2991,8 @@ type HTTPHealthChecker struct {
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
@@ -3019,6 +3025,11 @@ func (c *HTTPHealthChecker) Validate() error {
 		errs = errors.Join(errs, ErrHCHTTPExpectedStatusesInvalid)
 	}
 	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, r := range c.RetriableStatuses {
 		if err := r.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -3418,6 +3429,33 @@ type HTTPWasmCode struct {
 	// OriginalURL is the original downloading URL of the Wasm code.
 	// Note: This field is just used for testing. It's not used to generate the Envoy configuration.
 	OriginalURL string `json:"originalDownloadingURL"`
+}
+
+// DynamicModule holds the information associated with a dynamic module HTTP filter.
+// +k8s:deepcopy-gen=true
+type DynamicModule struct {
+	// Name is a unique name for this dynamic module filter configuration.
+	// The xds translator generates one filter for each unique name.
+	Name string `json:"name"`
+
+	// ModuleName is the library name that Envoy will load (resolved from registry).
+	// Envoy searches for lib${ModuleName}.so
+	ModuleName string `json:"moduleName"`
+
+	// FilterName identifies the filter implementation within the module.
+	FilterName string `json:"filterName,omitempty"`
+
+	// Config is the JSON configuration for the filter.
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+
+	// DoNotClose prevents the module from being unloaded.
+	DoNotClose bool `json:"doNotClose"`
+
+	// LoadGlobally loads with RTLD_GLOBAL flag.
+	LoadGlobally bool `json:"loadGlobally"`
+
+	// TerminalFilter indicates the module handles requests without upstream.
+	TerminalFilter bool `json:"terminalFilter"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

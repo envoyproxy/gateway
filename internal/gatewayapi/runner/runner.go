@@ -175,7 +175,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			keysToDelete := r.keyCache.copy()
 
 			// Aggregate metric counters for batch publishing
-			var infraIRCount, xdsIRCount, gatewayStatusCount, xListenerSetStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
+			var infraIRCount, xdsIRCount, gatewayStatusCount, listenerSetStatusCount, httpRouteStatusCount, grpcRouteStatusCount int
 			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
@@ -333,12 +333,12 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.BackendStatus, key)
 					r.keyCache.BackendStatus[key] = true
 				}
-				for _, xListenerSet := range result.XListenerSets {
-					key := utils.NamespacedName(xListenerSet)
-					r.ProviderResources.XListenerSetStatuses.Store(key, &xListenerSet.Status)
-					xListenerSetStatusCount++
-					delete(keysToDelete.XListenerSetStatus, key)
-					r.keyCache.XListenerSetStatus[key] = true
+				for _, listenerSet := range result.ListenerSets {
+					key := utils.NamespacedName(listenerSet)
+					r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
+					listenerSetStatusCount++
+					delete(keysToDelete.ListenerSetStatus, key)
+					r.keyCache.ListenerSetStatus[key] = true
 				}
 				// 2. Resources which can belong to multiple GatewayClasses get their
 				//    status aggregated, then stored once after iterating over all GatewayClasses.
@@ -431,7 +431,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				r.keyCache.GRPCRouteStatus[key] = true
 			}
 			for key, status := range aggregatedStatuses.TLSRoutes {
-				s := gwapiv1a2.TLSRouteStatus{RouteStatus: *status}
+				s := gwapiv1.TLSRouteStatus{RouteStatus: *status}
 				r.ProviderResources.TLSRouteStatuses.Store(key, &s)
 				tlsRouteStatusCount++
 				delete(keysToDelete.TLSRouteStatus, key)
@@ -492,7 +492,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayClassStatusMessageName}, 1)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GatewayStatusMessageName}, gatewayStatusCount)
-			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XListenerSetStatusMessageName}, xListenerSetStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ListenerSetStatusMessageName}, listenerSetStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.HTTPRouteStatusMessageName}, httpRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.GRPCRouteStatusMessageName}, grpcRouteStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.TLSRouteStatusMessageName}, tlsRouteStatusCount)
@@ -575,8 +575,8 @@ func (r *Runner) deleteAllKeys() {
 	for key := range r.keyCache.GatewayStatus {
 		r.ProviderResources.GatewayStatuses.Delete(key)
 	}
-	for key := range r.keyCache.XListenerSetStatus {
-		r.ProviderResources.XListenerSetStatuses.Delete(key)
+	for key := range r.keyCache.ListenerSetStatus {
+		r.ProviderResources.ListenerSetStatuses.Delete(key)
 	}
 	for key := range r.keyCache.HTTPRouteStatus {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)
@@ -625,7 +625,7 @@ type KeyCache struct {
 
 	// Status keys
 	GatewayStatus          map[types.NamespacedName]bool
-	XListenerSetStatus     map[types.NamespacedName]bool
+	ListenerSetStatus      map[types.NamespacedName]bool
 	HTTPRouteStatus        map[types.NamespacedName]bool
 	GRPCRouteStatus        map[types.NamespacedName]bool
 	TLSRouteStatus         map[types.NamespacedName]bool
@@ -655,8 +655,8 @@ func (kc *KeyCache) copy() *KeyCache {
 	for key := range kc.GatewayStatus {
 		copied.GatewayStatus[key] = true
 	}
-	for key := range kc.XListenerSetStatus {
-		copied.XListenerSetStatus[key] = true
+	for key := range kc.ListenerSetStatus {
+		copied.ListenerSetStatus[key] = true
 	}
 	for key := range kc.HTTPRouteStatus {
 		copied.HTTPRouteStatus[key] = true
@@ -702,7 +702,7 @@ func newKeyCache() *KeyCache {
 	return &KeyCache{
 		IR:                          make(map[string]bool),
 		GatewayStatus:               make(map[types.NamespacedName]bool),
-		XListenerSetStatus:          make(map[types.NamespacedName]bool),
+		ListenerSetStatus:           make(map[types.NamespacedName]bool),
 		HTTPRouteStatus:             make(map[types.NamespacedName]bool),
 		GRPCRouteStatus:             make(map[types.NamespacedName]bool),
 		TLSRouteStatus:              make(map[types.NamespacedName]bool),
@@ -730,8 +730,8 @@ func (r *Runner) populateKeyCache() {
 	for key := range r.ProviderResources.GatewayStatuses.LoadAll() {
 		r.keyCache.GatewayStatus[key] = true
 	}
-	for key := range r.ProviderResources.XListenerSetStatuses.LoadAll() {
-		r.keyCache.XListenerSetStatus[key] = true
+	for key := range r.ProviderResources.ListenerSetStatuses.LoadAll() {
+		r.keyCache.ListenerSetStatus[key] = true
 	}
 	for key := range r.ProviderResources.HTTPRouteStatuses.LoadAll() {
 		r.keyCache.HTTPRouteStatus[key] = true
@@ -784,9 +784,9 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 		r.ProviderResources.GatewayStatuses.Delete(key)
 		delete(r.keyCache.GatewayStatus, key)
 	}
-	for key := range kc.XListenerSetStatus {
-		r.ProviderResources.XListenerSetStatuses.Delete(key)
-		delete(r.keyCache.XListenerSetStatus, key)
+	for key := range kc.ListenerSetStatus {
+		r.ProviderResources.ListenerSetStatuses.Delete(key)
+		delete(r.keyCache.ListenerSetStatus, key)
 	}
 	for key := range kc.HTTPRouteStatus {
 		r.ProviderResources.HTTPRouteStatuses.Delete(key)

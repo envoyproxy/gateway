@@ -381,6 +381,89 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
+          name: httproute-invalid-pattern
+          namespace: default
+        name: httproute/default/httproute-invalid-pattern/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /invalid-pattern
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-missing-pattern
+          namespace: default
+        name: httproute/default/httproute-missing-pattern/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /missing-pattern
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-multiple-path-rewrites-2
+          namespace: default
+        name: httproute/default/httproute-multiple-path-rewrites-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /inline-first
+        urlRewrite:
+          path:
+            fullReplace: null
+            prefixMatchReplace: /rewrite
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-multiple-path-rewrites-1
+          namespace: default
+        name: httproute/default/httproute-multiple-path-rewrites-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /ext-first
+        urlRewrite:
+          path:
+            fullReplace: null
+            prefixMatchReplace: null
+            regexMatchReplace:
+              pattern: .*
+              substitution: foo
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-multiple-regex-path-rewrites
+          namespace: default
+        name: httproute/default/httproute-multiple-regex-path-rewrites/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /two-regex
+        urlRewrite:
+          path:
+            fullReplace: null
+            prefixMatchReplace: null
+            regexMatchReplace:
+              pattern: .*
+              substitution: foo
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
           name: httproute-not-found
           namespace: default
         name: httproute/default/httproute-not-found/rule/0/match/0/gateway_envoyproxy_io
