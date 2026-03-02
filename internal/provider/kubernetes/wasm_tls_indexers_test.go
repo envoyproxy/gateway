@@ -358,7 +358,8 @@ func TestWasmTLSIndexers(t *testing.T) {
 				WithScheme(envoygateway.GetScheme()).
 				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
 				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
-				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex, clusterTrustBundleEepIndexFunc)
+				WithIndex(&egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex, clusterTrustBundleEepIndexFunc).
+				WithIndex(&gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc)
 
 			for _, obj := range objs {
 				clientBuilder = clientBuilder.WithObjects(obj)
