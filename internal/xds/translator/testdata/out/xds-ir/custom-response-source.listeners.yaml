@@ -87,19 +87,6 @@
               header:
                 key: Content-Type
                 value: application/json
-          - bodyFormatOverride:
-              textFormat: Not Found
-            filter:
-              statusCodeFilter:
-                comparison:
-                  value:
-                    defaultValue: 404
-                    runtimeKey: response_override_404
-            headersToAdd:
-            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-              header:
-                key: Content-Type
-                value: text/plain
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
