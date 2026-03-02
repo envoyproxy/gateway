@@ -731,7 +731,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
