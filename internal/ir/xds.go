@@ -492,6 +492,8 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	// Mode specifies the frontend validation mode for the CA certificate.
+	Mode *gwapiv1.FrontendValidationModeType `json:"mode,omitempty" yaml:"mode,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate

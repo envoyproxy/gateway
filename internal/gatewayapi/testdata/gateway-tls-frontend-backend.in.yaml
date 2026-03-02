@@ -28,6 +28,7 @@ gateways:
         frontend:
           default:
             validation:
+              mode: AllowValidOnly
               caCertificateRefs:
                 - kind: ConfigMap
                   group: ""
@@ -36,6 +37,7 @@ gateways:
             - port: 8443
               tls:
                 validation:
+                  mode: AllowValidOnly
                   caCertificateRefs:
                     - kind: ConfigMap
                       group: ""
@@ -56,6 +58,7 @@ gateways:
         frontend:
           default:
             validation:
+              mode: AllowValidOnly
               caCertificateRefs:
                 - kind: ConfigMap
                   group: ""
@@ -64,6 +67,7 @@ gateways:
             - port: 80
               tls:
                 validation:
+                  mode: AllowValidOnly
                   caCertificateRefs:
                     - kind: ConfigMap
                       group: ""
@@ -86,6 +90,55 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-insecure-fallback
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              mode: AllowInsecureFallback
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls:
+                validation:
+                  mode: AllowInsecureFallback
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-with-hostname
+          port: 8443
+          hostname: second-example.org
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
