@@ -189,7 +189,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	if !disableHeader {
 		okResponse.Response.Headers = map[string]string{
 			RatelimitLimitHeaderName:     "3",
-			RatelimitRemainingHeaderName: "1",
+			RatelimitRemainingHeaderName: "2",
 			RatelimitResetHeaderName:     "0",
 		}
 	} else {
@@ -293,7 +293,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	if !disableHeader {
 		okResponse.Response.Headers = map[string]string{
 			RatelimitLimitHeaderName:     "3",
-			RatelimitRemainingHeaderName: "1",
+			RatelimitRemainingHeaderName: "2",
 			RatelimitResetHeaderName:     "0",
 		}
 	} else {
@@ -353,7 +353,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 	if !disableHeader {
 		okResponse.Response.Headers = map[string]string{
 			RatelimitLimitHeaderName:     "3",
-			RatelimitRemainingHeaderName: "1",
+			RatelimitRemainingHeaderName: "2",
 			RatelimitResetHeaderName:     "0",
 		}
 	}
@@ -433,7 +433,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 	if !disableHeader {
 		okResponse.Response.Headers = map[string]string{
 			RatelimitLimitHeaderName:     "3",
-			RatelimitRemainingHeaderName: "1",
+			RatelimitRemainingHeaderName: "2",
 			RatelimitResetHeaderName:     "0",
 		}
 	} else {
@@ -500,7 +500,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 	if !disableHeader {
 		okResponse.Response.Headers = map[string]string{
 			RatelimitLimitHeaderName:     "3",
-			RatelimitRemainingHeaderName: "1",
+			RatelimitRemainingHeaderName: "2",
 			RatelimitResetHeaderName:     "0",
 		}
 	} else {
@@ -610,7 +610,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		if !disableHeader {
 			okResponse2.Response.Headers = map[string]string{
 				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "1",
+				RatelimitRemainingHeaderName: "2",
 				RatelimitResetHeaderName:     "0",
 			}
 		} else {
