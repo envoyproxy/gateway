@@ -20,7 +20,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
 		tests.TLSRouteHostnameIntersection,
-		tests.TLSRouteInvalidNoMatchingListener,
 		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
 		tests.GatewayWithAttachedRoutes,
