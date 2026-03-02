@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,6 +57,7 @@ type HTTPFetcher struct {
 	initialBackoff  time.Duration
 	requestMaxRetry int
 	logger          logging.Logger
+	requestTimeout  time.Duration
 }
 
 // NewHTTPFetcher create a new HTTP remote wasm module fetcher.
@@ -80,14 +82,32 @@ func NewHTTPFetcher(requestTimeout time.Duration, requestMaxRetry int, logger lo
 		initialBackoff:  time.Millisecond * 500,
 		requestMaxRetry: requestMaxRetry,
 		logger:          logger,
+		requestTimeout:  requestTimeout,
 	}
 }
 
 // Fetch downloads a wasm module with HTTP get.
-func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool) ([]byte, error) {
+func (f *HTTPFetcher) Fetch(ctx context.Context, url string, allowInsecure bool, caCert []byte) ([]byte, error) {
 	c := f.client
 	if allowInsecure {
 		c = f.insecureClient
+	} else if len(caCert) > 0 {
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		caCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			caCertPool = x509.NewCertPool()
+		}
+		if !caCertPool.AppendCertsFromPEM(caCert) {
+			return nil, fmt.Errorf("failed to append CA certificate to pool")
+		}
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12, // gosec requires TLS 1.2
+		}
+		c = &http.Client{
+			Timeout:   f.requestTimeout,
+			Transport: transport,
+		}
 	}
 	attempts := 0
 	b := backoff.NewExponentialBackOff()

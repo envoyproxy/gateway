@@ -1202,6 +1202,12 @@ spec:
                   passive:
                     description: Passive passive check configuration
                     properties:
+                      alwaysEjectOneEndpoint:
+                        default: false
+                        description: |-
+                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                          regardless of MaxEjectionPercent.
+                        type: boolean
                       baseEjectionTime:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
@@ -6333,6 +6339,12 @@ spec:
                             passive:
                               description: Passive passive check configuration
                               properties:
+                                alwaysEjectOneEndpoint:
+                                  default: false
+                                  description: |-
+                                    AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                    regardless of MaxEjectionPercent.
+                                  type: boolean
                                 baseEjectionTime:
                                   default: 30s
                                   description: BaseEjectionTime defines the base duration
@@ -7278,12 +7290,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -7403,12 +7415,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -20230,6 +20242,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -21552,6 +21570,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -23038,6 +23062,12 @@ spec:
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
+                                            alwaysEjectOneEndpoint:
+                                              default: false
+                                              description: |-
+                                                AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                regardless of MaxEjectionPercent.
+                                              type: boolean
                                             baseEjectionTime:
                                               default: 30s
                                               description: BaseEjectionTime defines
@@ -24439,6 +24469,12 @@ spec:
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
+                                      alwaysEjectOneEndpoint:
+                                        default: false
+                                        description: |-
+                                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                          regardless of MaxEjectionPercent.
+                                        type: boolean
                                       baseEjectionTime:
                                         default: 30s
                                         description: BaseEjectionTime defines the
@@ -27192,6 +27228,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -28399,6 +28441,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -29815,6 +29863,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -31291,6 +31345,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base

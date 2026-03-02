@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	httputils "github.com/envoyproxy/gateway/internal/utils/http"
 )
 
 const (
@@ -51,7 +52,7 @@ var (
 	ErrStringMatchInvertDistinctInvalid         = errors.New("only one of the Invert or Distinct fields can be set")
 	ErrStringMatchNameIsEmpty                   = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid              = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301, 302, 303, 307 and 308 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme                = errors.New("only http and https are supported for the scheme in redirect filters")
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
@@ -2053,7 +2054,7 @@ func (r Redirect) Validate() error {
 	}
 
 	if r.StatusCode != nil {
-		if *r.StatusCode != 301 && *r.StatusCode != 302 {
+		if !httputils.SupportedRedirectCodes.Has(*r.StatusCode) {
 			errs = errors.Join(errs, ErrRedirectUnsupportedStatus)
 		}
 	}
@@ -2921,6 +2922,8 @@ type OutlierDetection struct {
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty" yaml:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
