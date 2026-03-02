@@ -142,7 +142,12 @@ type ListenerContext struct {
 type ListenerTLSConfig struct {
 	secrets               []*corev1.Secret
 	certDNSNames          []string
-	frontendTLSValidation *ir.TLSCACertificate
+	frontendTLSValidation *ListenerFrontendTLSValidation
+}
+
+type ListenerFrontendTLSValidation struct {
+	ValidateError error
+	*ir.TLSCACertificate
 }
 
 func (l *ListenerContext) frontendTLSValidationInvalid() bool {
@@ -150,7 +155,7 @@ func (l *ListenerContext) frontendTLSValidationInvalid() bool {
 		return false
 	}
 
-	if l.tls.frontendTLSValidation.Invalid != nil && *l.tls.frontendTLSValidation.Invalid {
+	if l.tls.frontendTLSValidation.ValidateError != nil {
 		return true
 	}
 

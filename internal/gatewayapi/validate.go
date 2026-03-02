@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -603,17 +602,26 @@ func (t *Translator) validateTLSConfiguration(
 	}
 
 	if listener.tls.frontendTLSValidation != nil &&
-		ptr.Deref(listener.tls.frontendTLSValidation.Invalid, false) {
+		listener.tls.frontendTLSValidation.ValidateError != nil {
+		reason := gwapiv1.ListenerReasonInvalidCACertificateRef
+		switch {
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrInvalidCACertificateKind):
+			reason = gwapiv1.ListenerReasonInvalidCACertificateKind
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrNoValidCACertificate):
+			reason = gwapiv1.ListenerReasonNoValidCACertificate
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrRefNotPermitted):
+			reason = gwapiv1.ListenerReasonRefNotPermitted
+		}
 		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1.ListenerReasonInvalidCACertificateRef,
+			reason,
 			"Listener has invalid CA certificate for frontend TLS validation.",
 		)
 		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
 			metav1.ConditionFalse,
-			gwapiv1.ListenerReasonInvalidCACertificateRef,
+			reason,
 			"Listener has invalid CA certificate for frontend TLS validation.",
 		)
 		listener.SetCondition(
