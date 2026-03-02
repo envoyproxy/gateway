@@ -46,25 +46,31 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 
 		resolvedRefsSuccess := true
 		if gtw.Spec.TLS.Frontend != nil {
-			var gtwDefaultTLSCACertificate *ir.TLSCACertificate
+			var gtwDefaultTLSCACertificate *ListenerFrontendTLSValidation
 			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
 			allowInsecureFallback := false
 			if gtwDefaultFrontendTLSValidation.Validation != nil {
-				caCert, err := t.getCaCertsFromCARefs(gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, gtw.Namespace)
+				caCert, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
 				if err != nil {
 					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters,
 						fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
-					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
-						Name:    irGatewayTLSCACertName(gtw.Gateway, "default"),
-						Invalid: ptr.To(true),
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						ValidateError: err,
 					}
 				} else {
-					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
-						Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
-						Certificate: caCert,
-						Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
+							Certificate: caCert,
+							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+						},
 					}
 					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
 						allowInsecureFallback = true
@@ -72,23 +78,29 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 				}
 			}
 
-			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ir.TLSCACertificate)
+			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
-				caCert, err := t.getCaCertsFromCARefs(portValidation.TLS.Validation.CACertificateRefs, gtw.Namespace)
+				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
 				if err != nil {
 					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
 
-					gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
-						Name:    irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
-						Invalid: ptr.To(true),
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						ValidateError: err,
 					}
 				} else {
-					gtwPerPortCaCertificate[portValidation.Port] = &ir.TLSCACertificate{
-						Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
-						Certificate: caCert,
-						Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
+							Certificate: caCert,
+							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+						},
 					}
 					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
 						allowInsecureFallback = true
