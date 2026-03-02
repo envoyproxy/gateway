@@ -148,8 +148,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     targetRef:
       group: gateway.networking.k8s.io
@@ -186,8 +184,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret2
     targetRef:
       group: gateway.networking.k8s.io

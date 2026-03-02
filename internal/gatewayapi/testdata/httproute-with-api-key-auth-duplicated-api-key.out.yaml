@@ -105,9 +105,7 @@ securityPolicies:
   spec:
     apiKeyAuth:
       credentialRefs:
-      - group: null
-        kind: null
-        name: credential-1
+      - name: credential-1
       extractFrom:
       - headers:
         - X-API-KEY

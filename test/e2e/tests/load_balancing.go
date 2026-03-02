@@ -152,8 +152,6 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for source IP based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_source_ip.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 10
-
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -170,7 +168,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("all traffics route to the same backend with same source ip", func(t *testing.T) {
-			expectedResponse := http.ExpectedResponse{
+			expectedResponse := &http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/source",
 				},
@@ -179,18 +177,9 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 
-			compareFunc := func(trafficMap map[string]int) bool {
-				// All traffic should be routed to the same pod.
-				return len(trafficMap) == 1
-			}
-
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
-			}); err != nil {
-				tlog.Errorf(t, "failed to run source ip based consistent hash load balancing test: %v", err)
-			}
+			runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
 		})
 	},
 }
@@ -200,8 +189,6 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for header based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_header.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 10
-
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -217,7 +204,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-		expectedResponse := http.ExpectedResponse{
+		expectedResponse := &http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/header",
 			},
@@ -230,13 +217,9 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 
 		for _, header := range headers {
 			t.Run(header, func(t *testing.T) {
-				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 				req.Headers["Lb-Test-Header"] = []string{header}
-				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-					// All traffic should be routed to the same pod.
-					return len(trafficMap) == 1
-				})
-				require.True(t, got)
+				runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
 			})
 		}
 	},
@@ -247,8 +230,6 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for multiple header based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_multi_header.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 10
-
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -264,12 +245,12 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-		expectedResponse := http.ExpectedResponse{
+		expectedResponse := &http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/header",
 			},
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		}
@@ -289,20 +270,27 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 
 		for _, combo := range headerCombinations {
 			t.Run(combo.name, func(t *testing.T) {
-				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 				// Set both headers for the consistent hash
 				req.Headers["Lb-Test-1"] = []string{combo.header1}
 				req.Headers["Lb-Test-2"] = []string{combo.header2}
 
-				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-					// All traffic with the same header combination should route to the same pod
-					return len(trafficMap) == 1
-				})
-				require.True(t, got, "Expected all requests with headers %s=%s, %s=%s to route to the same pod",
-					"Lb-Test-1", combo.header1, "Lb-Test-2", combo.header2)
+				runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
 			})
 		}
 	},
+}
+
+func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTestSuite, req *roundtripper.Request, expectedResponse *http.ExpectedResponse) {
+	if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+		got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+			// All traffic with the same header combination should route to the same pod
+			return len(trafficMap) == 1
+		})
+		return got, nil
+	}); err != nil {
+		tlog.Errorf(t, "failed to run consistent hash load balancing test: %v", err)
+	}
 }
 
 var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
@@ -440,8 +428,6 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 	Description: "Test for multiple query parameter based consistent hash load balancing type",
 	Manifests:   []string{"testdata/load_balancing_consistent_hash_query_parameter.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		const sendRequests = 10
-
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "query-parameter-lb-route", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -470,7 +456,7 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 		}
 		for _, queryCombination := range queryCombinations {
 			t.Run(queryCombination.name, func(t *testing.T) {
-				expectedResponse := http.ExpectedResponse{
+				expectedResponse := &http.ExpectedResponse{
 					Request: http.Request{
 						Path: fmt.Sprintf("/query-parameter?lb-query-parameter-first=%s&lb-query-parameter-second=%s", queryCombination.query1, queryCombination.query2),
 					},
@@ -479,15 +465,9 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 					},
 					Namespace: ns,
 				}
+				req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
 
-				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-				got := runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-					// All traffic should be routed to the same pod.
-					return len(trafficMap) == 1
-				})
-
-				require.True(t, got, "Expected all requests with query parameter lb-query-parameter-first=%s&lb-query-parameter-second=%s route to the same pod",
-					queryCombination.query1, queryCombination.query2)
+				runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
 			})
 		}
 	},

@@ -16,9 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -48,10 +46,10 @@ type Resources struct {
 
 	GatewayClass            *gwapiv1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
 	Gateways                []*gwapiv1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
-	XListenerSets           []*gwapixv1a1.XListenerSet     `json:"xListenerSets,omitempty" yaml:"xListenerSets,omitempty"`
+	ListenerSets            []*gwapiv1.ListenerSet         `json:"listenerSets,omitempty" yaml:"listenerSets,omitempty"`
 	HTTPRoutes              []*gwapiv1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
 	GRPCRoutes              []*gwapiv1.GRPCRoute           `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
-	TLSRoutes               []*gwapiv1a3.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TLSRoutes               []*gwapiv1.TLSRoute            `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
 	TCPRoutes               []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes               []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
 	ReferenceGrants         []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
@@ -78,10 +76,10 @@ type Resources struct {
 func NewResources() *Resources {
 	return &Resources{
 		Gateways:                []*gwapiv1.Gateway{},
-		XListenerSets:           []*gwapixv1a1.XListenerSet{},
+		ListenerSets:            []*gwapiv1.ListenerSet{},
 		HTTPRoutes:              []*gwapiv1.HTTPRoute{},
 		GRPCRoutes:              []*gwapiv1.GRPCRoute{},
-		TLSRoutes:               []*gwapiv1a3.TLSRoute{},
+		TLSRoutes:               []*gwapiv1.TLSRoute{},
 		Services:                []*corev1.Service{},
 		EndpointSlices:          []*discoveryv1.EndpointSlice{},
 		Secrets:                 []*corev1.Secret{},
@@ -240,15 +238,15 @@ func (r *Resources) Sort() {
 		return r.Gateways[i].CreationTimestamp.Before(&(r.Gateways[j].CreationTimestamp))
 	})
 
-	// Sort XListenerSets by creation timestamp, then namespace/name
-	sort.Slice(r.XListenerSets, func(i, j int) bool {
-		if r.XListenerSets[i].CreationTimestamp.Equal(&(r.XListenerSets[j].CreationTimestamp)) {
-			if r.XListenerSets[i].Namespace != r.XListenerSets[j].Namespace {
-				return r.XListenerSets[i].Namespace < r.XListenerSets[j].Namespace
+	// Sort ListenerSets by creation timestamp, then namespace/name
+	sort.Slice(r.ListenerSets, func(i, j int) bool {
+		if r.ListenerSets[i].CreationTimestamp.Equal(&(r.ListenerSets[j].CreationTimestamp)) {
+			if r.ListenerSets[i].Namespace != r.ListenerSets[j].Namespace {
+				return r.ListenerSets[i].Namespace < r.ListenerSets[j].Namespace
 			}
-			return r.XListenerSets[i].Name < r.XListenerSets[j].Name
+			return r.ListenerSets[i].Name < r.ListenerSets[j].Name
 		}
-		return r.XListenerSets[i].CreationTimestamp.Before(&(r.XListenerSets[j].CreationTimestamp))
+		return r.ListenerSets[i].CreationTimestamp.Before(&(r.ListenerSets[j].CreationTimestamp))
 	})
 
 	// Sort HTTPRoutes by creation timestamp, then namespace/name

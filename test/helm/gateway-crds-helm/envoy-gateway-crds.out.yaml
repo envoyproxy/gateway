@@ -328,6 +328,9 @@ spec:
                     items:
                       description: TLSFingerprintType specifies the TLS client fingerprinting
                         mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   insecureSkipVerify:
@@ -387,8 +390,9 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
-                    enum:
-                    - System
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^(System|([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/([A-Za-z0-9][-A-Za-z0-9_.]{0,61})?[A-Za-z0-9]))$
                     type: string
                 type: object
                 x-kubernetes-validations:
@@ -939,6 +943,18 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          retriableStatuses:
+                            description: |-
+                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                              Responses matching these statuses count towards the unhealthy threshold but
+                              do not result in the host being considered immediately unhealthy.
+                              The expected statuses take precedence for any range overlaps with this field.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
                         required:
                         - path
                         type: object
@@ -1059,8 +1075,11 @@ spec:
                         type: string
                       unhealthyThreshold:
                         default: 3
-                        description: UnhealthyThreshold defines the number of unhealthy
-                          health checks required before a backend host is marked unhealthy.
+                        description: |-
+                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                          up to this threshold before the host is marked unhealthy.
                         format: int32
                         minimum: 1
                         type: integer
@@ -1090,6 +1109,12 @@ spec:
                   passive:
                     description: Passive passive check configuration
                     properties:
+                      alwaysEjectOneEndpoint:
+                        default: false
+                        description: |-
+                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                          regardless of MaxEjectionPercent.
+                        type: boolean
                       baseEjectionTime:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
@@ -2575,8 +2600,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2649,8 +2680,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2770,7 +2807,7 @@ spec:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing.
-                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
               targetRef:
@@ -3803,8 +3840,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -3855,8 +3898,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -3962,8 +4011,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4024,8 +4079,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4076,8 +4137,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4183,8 +4250,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -5051,6 +5124,9 @@ spec:
                     items:
                       description: TLSFingerprintType specifies the TLS client fingerprinting
                         mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   maxVersion:
@@ -5515,6 +5591,56 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
+              dynamicModule:
+                description: |-
+                  DynamicModule is an ordered list of dynamic module HTTP filters
+                  that should be added to the envoy filter chain.
+                  Each module must be registered in the EnvoyProxy resource's dynamicModules
+                  allowlist.
+                  Order matters, as the filters will be loaded in the order they are
+                  defined in this list.
+                items:
+                  description: |-
+                    DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
+                    The module must be registered in the EnvoyProxy resource's dynamicModules
+                    allowlist by the infrastructure operator.
+                  properties:
+                    config:
+                      description: |-
+                        Config is the configuration for the dynamic module filter.
+                        This is serialized as JSON and passed to the module's initialization function.
+                      x-kubernetes-preserve-unknown-fields: true
+                    filterName:
+                      description: |-
+                        FilterName identifies a specific filter implementation within the dynamic
+                        module. A single shared library can contain multiple filter implementations.
+                        This value is passed to the module's HTTP filter config init function to
+                        select the appropriate implementation.
+                        If not specified, defaults to an empty string.
+                      maxLength: 253
+                      type: string
+                    name:
+                      description: |-
+                        Name references a dynamic module registered in the EnvoyProxy resource's
+                        dynamicModules list. The referenced module must exist in the registry;
+                        otherwise, the policy will be rejected.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    terminalFilter:
+                      default: false
+                      description: |-
+                        TerminalFilter indicates that this dynamic module handles requests without
+                        requiring an upstream backend. The module is responsible for generating and
+                        sending the response to downstream directly.
+                        Defaults to false.
+                      type: boolean
+                  required:
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
               extProc:
                 description: |-
                   ExtProc is an ordered list of external processing filters
@@ -5963,6 +6089,19 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                        Responses matching these statuses count towards the unhealthy threshold but
+                                        do not result in the host being considered immediately unhealthy.
+                                        The expected statuses take precedence for any range overlaps with this field.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
                                   required:
                                   - path
                                   type: object
@@ -6088,9 +6227,11 @@ spec:
                                   type: string
                                 unhealthyThreshold:
                                   default: 3
-                                  description: UnhealthyThreshold defines the number
-                                    of unhealthy health checks required before a backend
-                                    host is marked unhealthy.
+                                  description: |-
+                                    UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                    Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                    considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                    up to this threshold before the host is marked unhealthy.
                                   format: int32
                                   minimum: 1
                                   type: integer
@@ -6120,6 +6261,12 @@ spec:
                             passive:
                               description: Passive passive check configuration
                               properties:
+                                alwaysEjectOneEndpoint:
+                                  default: false
+                                  description: |-
+                                    AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                    regardless of MaxEjectionPercent.
+                                  type: boolean
                                 baseEjectionTime:
                                   default: 30s
                                   description: BaseEjectionTime defines the base duration
@@ -7065,12 +7212,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -7190,12 +7337,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -8359,6 +8506,9 @@ spec:
                     items:
                       description: TLSFingerprintType specifies the TLS client fingerprinting
                         mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   maxVersion:
@@ -8487,6 +8637,62 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              dynamicModules:
+                description: |-
+                  DynamicModules defines the set of dynamic modules that are allowed to be
+                  used by EnvoyExtensionPolicy resources. Each entry registers a module by
+                  a logical name and specifies the shared library that Envoy will load.
+
+                  The EnvoyProxy owner is responsible for ensuring the module .so files are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes).
+                items:
+                  description: |-
+                    DynamicModuleEntry defines a dynamic module that is registered and allowed
+                    for use by EnvoyExtensionPolicy resources.
+                  properties:
+                    doNotClose:
+                      default: false
+                      description: |-
+                        DoNotClose prevents the module from being unloaded with dlclose when no
+                        more references exist. This is useful for modules that maintain global
+                        state that should not be destroyed on configuration updates.
+                        Defaults to false.
+                      type: boolean
+                    libraryName:
+                      description: |-
+                        LibraryName is the name of the shared library file that Envoy will load.
+                        Envoy searches for lib${libraryName}.so in the path specified by the
+                        ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+                        If not specified, defaults to the value of Name.
+                      maxLength: 253
+                      pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
+                      type: string
+                    loadGlobally:
+                      default: false
+                      description: |-
+                        LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.
+                        By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.
+                        Set this to true when the module needs to share symbols with other
+                        dynamic libraries it loads.
+                        Defaults to false.
+                      type: boolean
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -8532,6 +8738,8 @@ spec:
 
                   - envoy.filters.http.wasm
 
+                  - envoy.filters.http.dynamic_modules
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -8575,6 +8783,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -8604,6 +8813,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -8631,6 +8841,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -19758,6 +19969,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -19895,10 +20120,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -19935,6 +20161,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -21065,6 +21297,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -21202,10 +21448,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -21242,6 +21489,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -21861,8 +22114,14 @@ spec:
                                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                               type: string
                                             value:
-                                              description: Value is the value of HTTP
-                                                Header to be matched.
+                                              description: |-
+                                                Value is the value of HTTP Header to be matched.
+                                                <gateway:experimental:description>
+                                                Must consist of printable US-ASCII characters, optionally separated
+                                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                </gateway:experimental:description>
+
+                                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                               maxLength: 4096
                                               minLength: 1
                                               type: string
@@ -22541,6 +22800,19 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                    Responses matching these statuses count towards the unhealthy threshold but
+                                                    do not result in the host being considered immediately unhealthy.
+                                                    The expected statuses take precedence for any range overlaps with this field.
+                                                  items:
+                                                    description: HTTPStatus defines
+                                                      the http status code.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                  type: array
                                               required:
                                               - path
                                               type: object
@@ -22672,10 +22944,11 @@ spec:
                                               type: string
                                             unhealthyThreshold:
                                               default: 3
-                                              description: UnhealthyThreshold defines
-                                                the number of unhealthy health checks
-                                                required before a backend host is
-                                                marked unhealthy.
+                                              description: |-
+                                                UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                up to this threshold before the host is marked unhealthy.
                                               format: int32
                                               minimum: 1
                                               type: integer
@@ -22708,6 +22981,12 @@ spec:
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
+                                            alwaysEjectOneEndpoint:
+                                              default: false
+                                              description: |-
+                                                AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                regardless of MaxEjectionPercent.
+                                              type: boolean
                                             baseEjectionTime:
                                               default: 30s
                                               description: BaseEjectionTime defines
@@ -23304,8 +23583,14 @@ spec:
                                         pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                         type: string
                                       value:
-                                        description: Value is the value of HTTP Header
-                                          to be matched.
+                                        description: |-
+                                          Value is the value of HTTP Header to be matched.
+                                          <gateway:experimental:description>
+                                          Must consist of printable US-ASCII characters, optionally separated
+                                          by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                          </gateway:experimental:description>
+
+                                          <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                         maxLength: 4096
                                         minLength: 1
                                         type: string
@@ -23922,6 +24207,19 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                              Responses matching these statuses count towards the unhealthy threshold but
+                                              do not result in the host being considered immediately unhealthy.
+                                              The expected statuses take precedence for any range overlaps with this field.
+                                            items:
+                                              description: HTTPStatus defines the
+                                                http status code.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                            type: array
                                         required:
                                         - path
                                         type: object
@@ -24053,9 +24351,11 @@ spec:
                                         type: string
                                       unhealthyThreshold:
                                         default: 3
-                                        description: UnhealthyThreshold defines the
-                                          number of unhealthy health checks required
-                                          before a backend host is marked unhealthy.
+                                        description: |-
+                                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                          up to this threshold before the host is marked unhealthy.
                                         format: int32
                                         minimum: 1
                                         type: integer
@@ -24088,6 +24388,12 @@ spec:
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
+                                      alwaysEjectOneEndpoint:
+                                        default: false
+                                        description: |-
+                                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                          regardless of MaxEjectionPercent.
+                                        type: boolean
                                       baseEjectionTime:
                                         default: 30s
                                         description: BaseEjectionTime defines the
@@ -24683,8 +24989,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                       maxLength: 4096
                                       minLength: 1
                                       type: string
@@ -25300,8 +25612,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -25374,8 +25692,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -26649,6 +26973,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -26774,9 +27111,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -26808,6 +27147,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -27841,6 +28186,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -27966,9 +28324,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -28000,6 +28360,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -29235,6 +29601,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -29366,10 +29745,11 @@ spec:
                                           type: string
                                         unhealthyThreshold:
                                           default: 3
-                                          description: UnhealthyThreshold defines
-                                            the number of unhealthy health checks
-                                            required before a backend host is marked
-                                            unhealthy.
+                                          description: |-
+                                            UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                            Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                            considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                            up to this threshold before the host is marked unhealthy.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -29402,6 +29782,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -30704,6 +31090,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -30829,9 +31228,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -30863,6 +31264,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
