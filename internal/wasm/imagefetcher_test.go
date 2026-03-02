@@ -23,6 +23,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -30,6 +31,7 @@ import (
 	"io"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -45,6 +47,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestImageFetcherOption_useAnonymous(t *testing.T) {
@@ -267,6 +273,64 @@ func TestImageFetcher_Fetch(t *testing.T) {
 		if got := strings.TrimSpace(err.Error()); !strings.HasPrefix(got, expErr) {
 			t.Errorf("ImageFetcher.binaryFetcher get unexpected error '%v', but want '%v'", actual, expErr)
 		}
+	})
+}
+
+func TestImageFetcher_FetchWithCACert(t *testing.T) {
+	ctx := context.Background()
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
+
+	t.Run("invalid CA certificate returns error", func(t *testing.T) {
+		opt := ImageFetcherOption{
+			CACert: []byte("fake-ca"),
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.Error(t, err)
+		require.Nil(t, fetcher)
+		require.Contains(t, err.Error(), "failed to append CA certificate to pool")
+	})
+
+	t.Run("insecure mode ignores CA cert", func(t *testing.T) {
+		// When Insecure is true, the CA cert path is not considered,
+		// so NewImageFetcher should succeed even with a fake CA cert.
+		opt := ImageFetcherOption{
+			Insecure: true,
+			CACert:   []byte("fake-ca"),
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.NoError(t, err)
+		require.NotNil(t, fetcher)
+	})
+
+	t.Run("valid PEM CA certificate succeeds", func(t *testing.T) {
+		// Using the certificate in test/e2e/testdata/jwt-local-jwks-inline.yaml.
+		validCACert := []byte(`-----BEGIN CERTIFICATE-----
+MIIDOzCCAiOgAwIBAgIUYozfdHNlpdxcE7TCuF+wDOrxi9kwDQYJKoZIhvcNAQEL
+BQAwLTEVMBMGA1UECgwMZXhhbXBsZSBJbmMuMRQwEgYDVQQDDAtleGFtcGxlLmNv
+bTAeFw0yNTAxMDcxMzEwMjJaFw0zNTAxMDUxMzEwMjJaMC0xFTATBgNVBAoMDGV4
+YW1wbGUgSW5jLjEUMBIGA1UEAwwLZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEB
+AQUAA4IBDwAwggEKAoIBAQDm+2qqe20PGAVzGU4cuOp5K74tdtRiEVj8Jps9tVZx
+I9UIYbVHvJgDnX2yNyHgPs8s0hQ2q8Q2HAbqeUCRhmcuWhHkag+3rpKWjdGZWLHy
+9lAYv2RSybeTwQAGVDwSz8SrKog6aE6XvvJvUEpfStsJep2blACX2MOpERXiHs6w
+avIu1FTF6a31GyICqNYG07o533X5gfJDRYV3N6ari08Nd+iAaP8HVepc8wziBgFj
+3pdvCvkB1FPHKIbClQdIFgViDwLQYiagaR7esFYcPg6gdwvDJOoAh3GV66HNo7ev
+slY6KHQlRdlorjwxPt5dkGrkN7hiXRbItKqhQCy5GlmLAgMBAAGjUzBRMB0GA1Ud
+DgQWBBQz18iiu8P3gYwOwsuRG4YyDVQuxzAfBgNVHSMEGDAWgBQz18iiu8P3gYwO
+wsuRG4YyDVQuxzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAg
+C4yDPACAHUjE09m3jmuJUtSSEr+FdXRZ9fkpTezYed6ebefz+4qbTb8HohsEC0K8
+52hg81Knh6n26FN/5S73/6k4LGcX4sN3WslKnRGdVuoXR3o1UGB4Rb0wtdNwOjZF
+5eI7Yxfg8nbsNS+6L+t/xgUj09wR34+fdv43XxxNjFPkWIagOItfG4jyyy+2ap/j
+kyzLypQx9SXeh6ELL4+I5AbNYwaLdoXUyPJHZfyqAABOZ+PVTUabBPiEJsCNmcbo
+toXi8O3UIo+oldyE771XJCGwMLLq75SJ79UZgy0yj3AGLVpirpgqEJT3Nd3VSWGF
+vjYDV/+uv3wEkMby25WT
+-----END CERTIFICATE-----`)
+
+		opt := ImageFetcherOption{
+			CACert: validCACert,
+		}
+		fetcher, err := NewImageFetcher(ctx, opt, logger)
+		require.NoError(t, err)
+		require.NotNil(t, fetcher)
 	})
 }
 

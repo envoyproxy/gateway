@@ -105,4 +105,5 @@ type GetOptions struct {
 	RequestTimeout  time.Duration
 	PullSecret      []byte
 	PullPolicy      PullPolicy
+	CACert          []byte
 }

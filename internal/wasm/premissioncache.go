@@ -130,8 +130,12 @@ func newPermissionCache(options permissionCacheOptions, logger logging.Logger) *
 
 // checkAndUpdatePermission checks the permission of the image against the pull secret and updates the cache entry.
 func (p *permissionCache) checkAndUpdatePermission(ctx context.Context, e *permissionCacheEntry) error {
-	fetcher := NewImageFetcher(ctx, *e.fetcherOption, p.logger)
-	_, _, err := fetcher.PrepareFetch(e.image.Host + e.image.Path)
+	fetcher, err := NewImageFetcher(ctx, *e.fetcherOption, p.logger)
+	if err != nil {
+		// Return a more descriptive error as messages downstream do not indicate the source very well.
+		return fmt.Errorf("failed to create image fetcher: %w", err)
+	}
+	_, _, err = fetcher.PrepareFetch(e.image.Host + e.image.Path)
 	e.checkError = err
 	e.lastCheck = time.Now()
 	return err

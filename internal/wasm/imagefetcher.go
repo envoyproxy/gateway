@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -50,6 +51,7 @@ import (
 type ImageFetcherOption struct {
 	PullSecret []byte
 	Insecure   bool
+	CACert     []byte
 }
 
 func (o *ImageFetcherOption) useAnonymous() bool {
@@ -68,7 +70,7 @@ type ImageFetcher struct {
 	logger    logging.Logger
 }
 
-func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) *ImageFetcher {
+func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) (*ImageFetcher, error) {
 	fetchOpts := make([]remote.Option, 0, 2)
 	if opt.useAnonymous() {
 		// Use anonymous auth if no pull secret is provided.
@@ -85,12 +87,23 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 			InsecureSkipVerify: opt.Insecure,
 		}
 		fetchOpts = append(fetchOpts, remote.WithTransport(t))
+	} else if len(opt.CACert) > 0 {
+		t := remote.DefaultTransport.(*http.Transport).Clone()
+		caCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			caCertPool = x509.NewCertPool()
+		}
+		if !caCertPool.AppendCertsFromPEM(opt.CACert) {
+			return nil, fmt.Errorf("failed to append CA certificate to pool")
+		}
+		t.TLSClientConfig.RootCAs = caCertPool
+		fetchOpts = append(fetchOpts, remote.WithTransport(t))
 	}
 
 	return &ImageFetcher{
 		fetchOpts: append(fetchOpts, remote.WithContext(ctx)),
 		logger:    logger,
-	}
+	}, nil
 }
 
 // PrepareFetch is the entrypoint for fetching Wasm binary from Wasm Image Specification compatible images.
