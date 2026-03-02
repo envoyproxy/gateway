@@ -264,7 +264,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
 
-	t.ProcessGatewayTLS(acceptedGateways, xdsIR, infraIR, resources)
+	t.ProcessGatewayTLS(acceptedGateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)

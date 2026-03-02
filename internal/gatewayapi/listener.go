@@ -38,7 +38,7 @@ type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
 }
 
-func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
+func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *resource.Resources) {
 	for _, gtw := range gateways {
 		//
 		if gtw.Spec.TLS == nil {
@@ -153,17 +153,18 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 				}
 				if resolvedRefsSuccess {
 					secret := t.GetSecret(ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
-					if secret == nil {
+					switch {
+					case secret == nil:
 						err := fmt.Errorf("failed to get backend client certs for gateway")
 						t.Logger.Error(err, "Failed to get backend client certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
 						resolvedRefsSuccess = false
-					} else if !isValidClientCertificateRef(secret) {
+					case !isValidClientCertificateRef(secret):
 						err := fmt.Errorf("invalid backend client cert secret for gateway: secret %s/%s must contain 'tls.crt' and 'tls.key' fields", ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
 						t.Logger.Error(err, "Invalid backend client cert secret for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
 						resolvedRefsSuccess = false
-					} else {
+					default:
 						gtw.backendTLS = &egv1a1.BackendTLSConfig{
 							ClientCertificateRef: gtw.Spec.TLS.Backend.ClientCertificateRef,
 						}
