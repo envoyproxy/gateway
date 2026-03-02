@@ -162,7 +162,7 @@ func (c *customResponse) buildAccessLogFilter(statusCodes []ir.StatusCodeMatch) 
 		return c.buildSingleAccessLogFilter(statusCodes[0])
 	}
 
-	var filters []*accesslogv3.AccessLogFilter
+	filters := make([]*accesslogv3.AccessLogFilter, 0, len(statusCodes))
 	for _, code := range statusCodes {
 		f, err := c.buildSingleAccessLogFilter(code)
 		if err != nil {
