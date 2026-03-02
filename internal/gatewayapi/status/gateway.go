@@ -35,6 +35,11 @@ func UpdateGatewayStatusResolvedRefsCondition(gw *gwapiv1.Gateway, status metav1
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
 }
 
+func UpdateGatewayStatusCondition(gw *gwapiv1.Gateway, conditionType gwapiv1.GatewayConditionType, status metav1.ConditionStatus, reason gwapiv1.GatewayConditionReason, msg string) {
+	cond := newCondition(string(conditionType), status, string(reason), msg, gw.Generation)
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, cond)
+}
+
 func GatewayNotAccepted(gw *gwapiv1.Gateway) bool {
 	for _, c := range gw.Status.Conditions {
 		if c.Type == string(gwapiv1.GatewayConditionAccepted) && c.Status == metav1.ConditionFalse {
