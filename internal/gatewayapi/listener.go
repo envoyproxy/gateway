@@ -54,7 +54,8 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 				caCert, err := t.getCaCertsFromCARefs(gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, gtw.Namespace)
 				if err != nil {
 					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
-					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
+					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters,
+						fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
 					gtwDefaultTLSCACertificate = &ir.TLSCACertificate{
 						Name:    irGatewayTLSCACertName(gtw.Gateway, "default"),
@@ -74,7 +75,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, xdsIR resourc
 
 			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ir.TLSCACertificate)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
-				caCert, err := t.getCaCertsFromCARefs(gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, gtw.Namespace)
+				caCert, err := t.getCaCertsFromCARefs(portValidation.TLS.Validation.CACertificateRefs, gtw.Namespace)
 				if err != nil {
 					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
