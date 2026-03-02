@@ -95,7 +95,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle text file access logs
 	for _, text := range al.Text {
 		// Filter out logs that are not Global or match the desired access log type
-		if text.LogType != nil && *text.LogType != accessLogType {
+		if !accessLogTypeMatch(text.LogType, accessLogType) {
 			continue
 		}
 
@@ -148,7 +148,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle json file access logs
 	for _, json := range al.JSON {
 		// Filter out logs that are not Global or match the desired access log type
-		if json.LogType != nil && *json.LogType != accessLogType {
+		if !accessLogTypeMatch(json.LogType, accessLogType) {
 			continue
 		}
 
@@ -209,7 +209,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle ALS access logs
 	for _, als := range al.ALS {
 		// Filter out logs that are not Global or match the desired access log type
-		if als.LogType != nil && *als.LogType != accessLogType {
+		if !accessLogTypeMatch(als.LogType, accessLogType) {
 			continue
 		}
 
@@ -280,7 +280,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		// Filter out logs that are not Global or match the desired access log type
-		if otel.LogType != nil && *otel.LogType != accessLogType {
+		if !accessLogTypeMatch(otel.LogType, accessLogType) {
 			continue
 		}
 
@@ -350,6 +350,22 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	}
 
 	return accessLogs, nil
+}
+
+// accessLogTypeMatch checks if the access log type from the IR matches the desired access log type for the proxy (listener, route or Upstream).
+// nil ProxyAccessLogType doesn't match Upstream for compatibility.
+func accessLogTypeMatch(left *ir.ProxyAccessLogType, right ir.ProxyAccessLogType) bool {
+	// Filter out logs that are not Global or match the desired access log type
+	if left != nil && *left != right {
+		return false
+	}
+
+	// nil LogType didn't match upstream
+	if left == nil && right == ir.ProxyAccessLogTypeUpstream {
+		return false
+	}
+
+	return true
 }
 
 func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
