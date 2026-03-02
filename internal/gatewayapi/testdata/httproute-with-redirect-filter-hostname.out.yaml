@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -43,7 +43,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: httproute-301
     namespace: default
   spec:
     hostnames:
@@ -61,7 +61,167 @@ httpRoutes:
         type: RequestRedirect
       matches:
       - path:
-          value: /
+          value: /status/301
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-302
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - requestRedirect:
+          hostname: redirected.com
+          scheme: https
+          statusCode: 302
+        type: RequestRedirect
+      matches:
+      - path:
+          value: /status/302
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-303
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - requestRedirect:
+          hostname: redirected.com
+          scheme: https
+          statusCode: 303
+        type: RequestRedirect
+      matches:
+      - path:
+          value: /status/303
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-307
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - requestRedirect:
+          hostname: redirected.com
+          scheme: https
+          statusCode: 307
+        type: RequestRedirect
+      matches:
+      - path:
+          value: /status/307
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-308
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - filters:
+      - requestRedirect:
+          hostname: redirected.com
+          scheme: https
+          statusCode: 308
+        type: RequestRedirect
+      matches:
+      - path:
+          value: /status/308
   status:
     parents:
     - conditions:
@@ -146,18 +306,82 @@ xdsIR:
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: httproute-301
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-301/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /
+          prefix: /status/301
         redirect:
           hostname: redirected.com
           port: 443
           scheme: https
           statusCode: 301
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-302
+          namespace: default
+        name: httproute/default/httproute-302/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/302
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 302
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-303
+          namespace: default
+        name: httproute/default/httproute-303/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/303
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 303
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-307
+          namespace: default
+        name: httproute/default/httproute-307/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/307
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 307
+      - hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-308
+          namespace: default
+        name: httproute/default/httproute-308/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /status/308
+        redirect:
+          hostname: redirected.com
+          port: 443
+          scheme: https
+          statusCode: 308
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -1,0 +1,84 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
+    routes:
+    - match:
+        pathSeparatedPrefix: /status/301
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-301
+              namespace: default
+      name: httproute/default/httproute-301/rule/0/match/0/gateway_envoyproxy_io
+      redirect:
+        hostRedirect: redirected.com
+        schemeRedirect: https
+    - match:
+        pathSeparatedPrefix: /status/302
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-302
+              namespace: default
+      name: httproute/default/httproute-302/rule/0/match/0/gateway_envoyproxy_io
+      redirect:
+        hostRedirect: redirected.com
+        responseCode: FOUND
+        schemeRedirect: https
+    - match:
+        pathSeparatedPrefix: /status/303
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-303
+              namespace: default
+      name: httproute/default/httproute-303/rule/0/match/0/gateway_envoyproxy_io
+      redirect:
+        hostRedirect: redirected.com
+        responseCode: SEE_OTHER
+        schemeRedirect: https
+    - match:
+        pathSeparatedPrefix: /status/307
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-307
+              namespace: default
+      name: httproute/default/httproute-307/rule/0/match/0/gateway_envoyproxy_io
+      redirect:
+        hostRedirect: redirected.com
+        responseCode: TEMPORARY_REDIRECT
+        schemeRedirect: https
+    - match:
+        pathSeparatedPrefix: /status/308
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-308
+              namespace: default
+      name: httproute/default/httproute-308/rule/0/match/0/gateway_envoyproxy_io
+      redirect:
+        hostRedirect: redirected.com
+        responseCode: PERMANENT_REDIRECT
+        schemeRedirect: https

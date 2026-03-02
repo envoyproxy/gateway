@@ -474,9 +474,18 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 		routeAction.PortRedirect = *redirection.Port
 	}
 	if redirection.StatusCode != nil {
-		if *redirection.StatusCode == 302 {
+		switch *redirection.StatusCode {
+		case 302:
 			routeAction.ResponseCode = routev3.RedirectAction_FOUND
-		} // no need to check for 301 since Envoy will use 301 as the default if the field is not configured
+		case 303:
+			routeAction.ResponseCode = routev3.RedirectAction_SEE_OTHER
+		case 307:
+			routeAction.ResponseCode = routev3.RedirectAction_TEMPORARY_REDIRECT
+		case 308:
+			routeAction.ResponseCode = routev3.RedirectAction_PERMANENT_REDIRECT
+		default:
+			// Envoy will use 301 as the default if the field is not configured
+		}
 	}
 
 	return routeAction
