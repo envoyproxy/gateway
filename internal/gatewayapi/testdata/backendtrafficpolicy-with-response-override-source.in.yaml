@@ -80,8 +80,8 @@ backendTrafficPolicies:
     spec:
       targetRef:
         group: gateway.networking.k8s.io
-        kind: HTTPRoute
-        name: httproute-local
+        kind: Gateway
+        name: gateway-1
       responseOverride:
         - match:
             statusCodes:
