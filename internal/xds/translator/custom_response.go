@@ -79,7 +79,7 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 	return errs
 }
 
-// patchLocalReplyConfig collects all Local/All rules from all routes and builds mgr.LocalReplyConfig.
+// patchLocalReplyConfig collects all Local rules from all routes and builds mgr.LocalReplyConfig.
 func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) {
 	var mappers []*hcmv3.ResponseMapper
 
@@ -88,7 +88,7 @@ func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager,
 			continue
 		}
 		for _, rule := range route.Traffic.ResponseOverride.Rules {
-			if rule.Source != egv1a1.ResponseOverrideSourceLocal && rule.Source != egv1a1.ResponseOverrideSourceAll {
+			if rule.Source != egv1a1.ResponseOverrideSourceLocal {
 				continue
 			}
 			if rule.Response == nil {
