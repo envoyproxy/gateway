@@ -121,6 +121,8 @@ var HTTPRouteStatusAggregatesAcrossGatewayClassesTest = suite.ConformanceTest{
 func createGatewayParent(controllerName, gatewayName, sectionName string) gwapiv1.RouteParentStatus {
 	return gwapiv1.RouteParentStatus{
 		ParentRef: gwapiv1.ParentReference{
+			Group:       gatewayapi.GroupPtr(gwapiv1.GroupVersion.Group),
+			Kind:        gatewayapi.KindPtr("Gateway"),
 			Name:        gwapiv1.ObjectName(gatewayName),
 			Namespace:   gatewayapi.NamespacePtr("gateway-conformance-infra"),
 			SectionName: gatewayapi.SectionNamePtr(sectionName),
