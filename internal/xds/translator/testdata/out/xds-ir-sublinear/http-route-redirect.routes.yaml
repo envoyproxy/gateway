@@ -1,0 +1,100 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /redirect:
+              action:
+                name: route_list
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                  routes:
+                  - match:
+                      pathSeparatedPrefix: /redirect
+                    name: redirect-route-2
+                    redirect:
+                      regexRewrite:
+                        pattern:
+                          regex: ^/redirect\/*
+                        substitution: /
+                  - match:
+                      pathSeparatedPrefix: /redirect
+                    name: redirect-route-3
+                    redirect:
+                      regexRewrite:
+                        pattern:
+                          regex: ^/redirect/\/*
+                        substitution: /
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /redirect/:
+                  action:
+                    name: route_list
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                      routes:
+                      - match:
+                          pathSeparatedPrefix: /redirect
+                        name: redirect-route-2
+                        redirect:
+                          regexRewrite:
+                            pattern:
+                              regex: ^/redirect\/*
+                            substitution: /
+                      - match:
+                          pathSeparatedPrefix: /redirect
+                        name: redirect-route-3
+                        redirect:
+                          regexRewrite:
+                            pattern:
+                              regex: ^/redirect/\/*
+                            substitution: /
+          onNoMatch:
+            action:
+              name: route_list
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                routes:
+                - match:
+                    prefix: /
+                  name: redirect-route-1
+                  redirect:
+                    hostRedirect: redirected.com
+                    portRedirect: 8443
+                    prefixRewrite: /redirected
+                    responseCode: FOUND
+                    schemeRedirect: https
+                - match:
+                    prefix: /
+                  name: redirect-route-4
+                  redirect:
+                    hostRedirect: redirected.com
+                    prefixRewrite: /redirected
+                    responseCode: FOUND
+                    schemeRedirect: https
+                - match:
+                    prefix: /
+                  name: redirect-route-5
+                  redirect:
+                    hostRedirect: redirected.com
+                    prefixRewrite: /redirected
+                    responseCode: FOUND
+                    schemeRedirect: https
+    name: first-listener/*

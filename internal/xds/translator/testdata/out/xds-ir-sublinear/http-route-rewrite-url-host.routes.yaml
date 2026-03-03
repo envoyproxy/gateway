@@ -1,0 +1,173 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /host-backend:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    headers:
+                    - name: :authority
+                      stringMatch:
+                        exact: gateway.envoyproxy.io
+                    pathSeparatedPrefix: /host-backend
+                  name: rewrite-host-backend
+                  route:
+                    appendXForwardedHost: true
+                    autoHostRewrite: true
+                    cluster: rewrite-route-dest
+                    prefixRewrite: /rewrite
+                    upgradeConfigs:
+                    - upgradeType: websocket
+            /host-header:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    headers:
+                    - name: :authority
+                      stringMatch:
+                        exact: gateway.envoyproxy.io
+                    pathSeparatedPrefix: /host-header
+                  name: rewrite-host-header
+                  route:
+                    appendXForwardedHost: true
+                    cluster: rewrite-route-dest
+                    hostRewriteHeader: foo
+                    prefixRewrite: /rewrite
+                    upgradeConfigs:
+                    - upgradeType: websocket
+            /origin:
+              action:
+                name: route_list
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                  routes:
+                  - match:
+                      headers:
+                      - name: :authority
+                        stringMatch:
+                          exact: gateway.envoyproxy.io
+                      pathSeparatedPrefix: /origin
+                    name: rewrite-route
+                    route:
+                      appendXForwardedHost: true
+                      cluster: rewrite-route-dest
+                      hostRewriteLiteral: 3.3.3.3
+                      prefixRewrite: /rewrite
+                      upgradeConfigs:
+                      - upgradeType: websocket
+                  - match:
+                      headers:
+                      - name: :authority
+                        stringMatch:
+                          exact: gateway.envoyproxy.io
+                      pathSeparatedPrefix: /origin
+                    name: rewrite-route-timeout
+                    route:
+                      appendXForwardedHost: true
+                      cluster: rewrite-route-dest
+                      hostRewriteLiteral: 3.3.3.3
+                      idleTimeout: 3600s
+                      prefixRewrite: /rewrite
+                      timeout: 5s
+                      upgradeConfigs:
+                      - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /host-backend/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        headers:
+                        - name: :authority
+                          stringMatch:
+                            exact: gateway.envoyproxy.io
+                        pathSeparatedPrefix: /host-backend
+                      name: rewrite-host-backend
+                      route:
+                        appendXForwardedHost: true
+                        autoHostRewrite: true
+                        cluster: rewrite-route-dest
+                        prefixRewrite: /rewrite
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                /host-header/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        headers:
+                        - name: :authority
+                          stringMatch:
+                            exact: gateway.envoyproxy.io
+                        pathSeparatedPrefix: /host-header
+                      name: rewrite-host-header
+                      route:
+                        appendXForwardedHost: true
+                        cluster: rewrite-route-dest
+                        hostRewriteHeader: foo
+                        prefixRewrite: /rewrite
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                /origin/:
+                  action:
+                    name: route_list
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                      routes:
+                      - match:
+                          headers:
+                          - name: :authority
+                            stringMatch:
+                              exact: gateway.envoyproxy.io
+                          pathSeparatedPrefix: /origin
+                        name: rewrite-route
+                        route:
+                          appendXForwardedHost: true
+                          cluster: rewrite-route-dest
+                          hostRewriteLiteral: 3.3.3.3
+                          prefixRewrite: /rewrite
+                          upgradeConfigs:
+                          - upgradeType: websocket
+                      - match:
+                          headers:
+                          - name: :authority
+                            stringMatch:
+                              exact: gateway.envoyproxy.io
+                          pathSeparatedPrefix: /origin
+                        name: rewrite-route-timeout
+                        route:
+                          appendXForwardedHost: true
+                          cluster: rewrite-route-dest
+                          hostRewriteLiteral: 3.3.3.3
+                          idleTimeout: 3600s
+                          prefixRewrite: /rewrite
+                          timeout: 5s
+                          upgradeConfigs:
+                          - upgradeType: websocket
+    name: first-listener/gateway_envoyproxy_io

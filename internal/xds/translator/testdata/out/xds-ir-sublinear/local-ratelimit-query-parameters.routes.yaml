@@ -1,0 +1,71 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            foo/bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: foo/bar
+                  name: first-route-ratelimit-query-parameters
+                  route:
+                    cluster: first-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.local_ratelimit:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      alwaysConsumeDefaultTokenBucket: false
+                      descriptors:
+                      - entries:
+                        - key: rule-0-match-0
+                          value: rule-0-match-0
+                        - key: rule-0-match-1
+                          value: rule-0-match-1
+                        tokenBucket:
+                          fillInterval: 3600s
+                          maxTokens: 10
+                          tokensPerFill: 10
+                      enableXRatelimitHeaders: DRAFT_VERSION_03
+                      filterEnabled:
+                        defaultValue:
+                          numerator: 100
+                      filterEnforced:
+                        defaultValue:
+                          numerator: 100
+                      rateLimits:
+                      - actions:
+                        - headerValueMatch:
+                            descriptorKey: rule-0-match-0
+                            descriptorValue: rule-0-match-0
+                            expectMatch: true
+                            headers:
+                            - name: x-user-id
+                              stringMatch:
+                                exact: one
+                        - queryParameterValueMatch:
+                            descriptorKey: rule-0-match-1
+                            descriptorValue: rule-0-match-1
+                            expectMatch: true
+                            queryParameters:
+                            - name: user
+                              stringMatch:
+                                exact: alice
+                      statPrefix: http_local_rate_limiter
+                      tokenBucket:
+                        fillInterval: 60s
+                        maxTokens: 10
+                        tokensPerFill: 10
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+    name: first-listener/*

@@ -1,0 +1,138 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /v2:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /v2
+                  name: cookie-based-session-persistence-route-prefix
+                  route:
+                    cluster: regex-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.stateful_session:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute
+                      statefulSession:
+                        sessionState:
+                          name: envoy.http.stateful_session.cookie
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                            cookie:
+                              name: session-header
+                              path: /v2/
+            /v3/user:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: /v3/user
+                  name: cookie-based-session-persistence-route-exact
+                  route:
+                    cluster: regex-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.stateful_session:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute
+                      statefulSession:
+                        sessionState:
+                          name: envoy.http.stateful_session.cookie
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                            cookie:
+                              name: session-cookie
+                              path: /v3/user
+                              ttl: 3600s
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /v2/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /v2
+                      name: cookie-based-session-persistence-route-prefix
+                      route:
+                        cluster: regex-route-dest
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.stateful_session:
+                          '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute
+                          statefulSession:
+                            sessionState:
+                              name: envoy.http.stateful_session.cookie
+                              typedConfig:
+                                '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                                cookie:
+                                  name: session-header
+                                  path: /v2/
+          onNoMatch:
+            action:
+              name: route_list
+              typedConfig:
+                '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                routes:
+                - match:
+                    safeRegex:
+                      regex: /v1/.*
+                  name: header-based-session-persistence-route
+                  route:
+                    cluster: regex-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.stateful_session:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute
+                      statefulSession:
+                        sessionState:
+                          name: envoy.http.stateful_session.header
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.header.v3.HeaderBasedSessionState
+                            name: session-header
+                - match:
+                    safeRegex:
+                      regex: /v1/.*/hoge
+                  name: cookie-based-session-persistence-route-regex
+                  route:
+                    cluster: regex-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.stateful_session:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.stateful_session.v3.StatefulSessionPerRoute
+                      statefulSession:
+                        sessionState:
+                          name: envoy.http.stateful_session.cookie
+                          typedConfig:
+                            '@type': type.googleapis.com/envoy.extensions.http.stateful_session.cookie.v3.CookieBasedSessionState
+                            cookie:
+                              name: session-header
+                              path: /v1
+                              ttl: 3600s
+    name: first-listener/*

@@ -1,0 +1,107 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            example:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: example
+                  name: second-route
+                  route:
+                    cluster: second-route-dest
+                    rateLimits:
+                    - actions:
+                      - genericKey:
+                          descriptorKey: second-route
+                          descriptorValue: second-route
+                      - requestHeaders:
+                          descriptorKey: rule-0-match-0
+                          headerName: x-user-id
+                      - requestHeaders:
+                          descriptorKey: rule-0-match-1
+                          headerName: foobar
+                      - maskedRemoteAddress:
+                          v4PrefixMaskLen: 16
+                    upgradeConfigs:
+                    - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        action:
+          name: route_list
+          typedConfig:
+            '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+            routes:
+            - match:
+                prefix: /
+              name: first-route
+              route:
+                cluster: first-route-dest
+                rateLimits:
+                - actions:
+                  - genericKey:
+                      descriptorKey: first-route
+                      descriptorValue: first-route
+                  - headerValueMatch:
+                      descriptorKey: rule-0-match-0
+                      descriptorValue: rule-0-match-0
+                      expectMatch: true
+                      headers:
+                      - name: x-user-id
+                        stringMatch:
+                          exact: one
+                  - maskedRemoteAddress:
+                      v4PrefixMaskLen: 16
+                upgradeConfigs:
+                - upgradeType: websocket
+            - match:
+                prefix: /
+              name: third-route
+              route:
+                cluster: third-route-dest
+                rateLimits:
+                - actions:
+                  - genericKey:
+                      descriptorKey: third-route
+                      descriptorValue: third-route
+                  - headerValueMatch:
+                      descriptorKey: rule-0-match-0
+                      descriptorValue: rule-0-match-0
+                      expectMatch: true
+                      headers:
+                      - name: x-user-id
+                        stringMatch:
+                          exact: one
+                  - maskedRemoteAddress:
+                      v4PrefixMaskLen: 16
+                - actions:
+                  - genericKey:
+                      descriptorKey: third-route
+                      descriptorValue: third-route
+                  - headerValueMatch:
+                      descriptorKey: rule-1-match-0
+                      descriptorValue: rule-1-match-0
+                      expectMatch: true
+                      headers:
+                      - name: x-user-id
+                        stringMatch:
+                          exact: two
+                  - requestHeaders:
+                      descriptorKey: rule-1-match-1
+                      headerName: foobar
+                  - maskedRemoteAddress:
+                      v4PrefixMaskLen: 16
+                upgradeConfigs:
+                - upgradeType: websocket
+    name: first-listener/*

@@ -1,0 +1,108 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            example:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: example
+                  name: second-route
+                  route:
+                    cluster: second-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.fault:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                      delay:
+                        fixedDelay: 5.400s
+                        percentage:
+                          denominator: MILLION
+                          numerator: 800000
+            foo/bar:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    path: foo/bar
+                  name: first-route
+                  route:
+                    cluster: first-route-dest
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.fault:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                      abort:
+                        httpStatus: 500
+                        percentage:
+                          denominator: MILLION
+                          numerator: 100
+            test:
+              action:
+                name: route_list
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.RouteList
+                  routes:
+                  - match:
+                      path: test
+                    name: third-route
+                    route:
+                      cluster: third-route-dest
+                      upgradeConfigs:
+                      - upgradeType: websocket
+                    typedPerFilterConfig:
+                      envoy.filters.http.fault:
+                        '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                        abort:
+                          httpStatus: 500
+                          percentage:
+                            denominator: MILLION
+                            numerator: 1000000
+                        delay:
+                          fixedDelay: 5.005s
+                          percentage:
+                            denominator: MILLION
+                            numerator: 1000000
+                  - match:
+                      path: test
+                    name: fourth-route
+                    route:
+                      cluster: fourth-route-dest
+                      upgradeConfigs:
+                      - upgradeType: websocket
+                    typedPerFilterConfig:
+                      envoy.filters.http.fault:
+                        '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
+                        abort:
+                          grpcStatus: 14
+                          percentage:
+                            denominator: MILLION
+                            numerator: 1000000
+                        delay:
+                          fixedDelay: 5.005s
+                          percentage:
+                            denominator: MILLION
+                            numerator: 1000000
+                  - match:
+                      path: test
+                    name: fifth-route
+                    route:
+                      cluster: fifth-route-dest
+                      upgradeConfigs:
+                      - upgradeType: websocket
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+    name: first-listener/*

@@ -79,6 +79,13 @@ func (t *Translator) xdsNameSchemeV2() bool {
 	return t.RuntimeFlags.IsEnabled(egv1a1.XDSNameSchemeV2)
 }
 
+func (t *Translator) sublinearRouteMatchingEnabled() bool {
+	if t.RuntimeFlags == nil {
+		return false
+	}
+	return t.RuntimeFlags.IsEnabled(egv1a1.SublinearRouteMatching)
+}
+
 type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
@@ -505,6 +512,13 @@ func (t *Translator) addRouteToRouteConfig(
 
 		maxDirectResponseBodySize uint32 = DefaultMaxDirectResponseBodySize
 	)
+	useSublinearMatching := t.sublinearRouteMatchingEnabled()
+	// When using sublinear matching, accumulate (ir, xds) routes per hostname and set vHost.Matcher after the loop.
+	type routeAccum struct {
+		irRoutes  []*ir.HTTPRoute
+		xdsRoutes []*routev3.Route
+	}
+	vHostAccum := map[string]*routeAccum{}
 
 	// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 	for _, httpRoute := range httpListener.Routes {
@@ -576,7 +590,15 @@ func (t *Translator) addRouteToRouteConfig(
 			}
 			xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
 		}
-		vHost.Routes = append(vHost.Routes, xdsRoute)
+		if useSublinearMatching {
+			if vHostAccum[httpRoute.Hostname] == nil {
+				vHostAccum[httpRoute.Hostname] = &routeAccum{}
+			}
+			vHostAccum[httpRoute.Hostname].irRoutes = append(vHostAccum[httpRoute.Hostname].irRoutes, httpRoute)
+			vHostAccum[httpRoute.Hostname].xdsRoutes = append(vHostAccum[httpRoute.Hostname].xdsRoutes, xdsRoute)
+		} else {
+			vHost.Routes = append(vHost.Routes, xdsRoute)
+		}
 
 		if httpRoute.Destination != nil {
 			// Prepare extension resources for hook calls
@@ -654,6 +676,38 @@ func (t *Translator) addRouteToRouteConfig(
 					}
 				}
 			}
+		}
+	}
+
+	// When sublinear matching is enabled, set vHost.Matcher from accumulated routes; otherwise Routes was set in the loop.
+	if useSublinearMatching {
+		for _, vHost := range vHostList {
+			acc := vHostAccum[vHost.Domains[0]]
+			if acc == nil || len(acc.xdsRoutes) == 0 {
+				continue
+			}
+			exactGroups, prefixGroups, fallbackRoutes := groupRoutesByPath(acc.irRoutes, acc.xdsRoutes)
+			// Fallback: Envoy rejects a matcher with empty exact_match_map/prefix_match_map. When all routes
+			// are fallback (default "/", regex, or no path), we have no path-based groups and use linear routes.
+			if len(exactGroups) == 0 && len(prefixGroups) == 0 {
+				vHost.Routes = acc.xdsRoutes
+				continue
+			}
+			matcher, matcherErr := buildVirtualHostMatcher(exactGroups, prefixGroups, fallbackRoutes)
+			if matcherErr != nil {
+				errs = errors.Join(errs, matcherErr)
+				// Fallback to linear routes on matcher build error.
+				vHost.Routes = acc.xdsRoutes
+				continue
+			}
+			if matcher == nil {
+				// Fallback: no path-based groups (buildVirtualHostMatcher returns nil).
+				vHost.Routes = acc.xdsRoutes
+				continue
+			}
+			// Envoy allows only one of matcher or routes; use matcher and leave routes unset.
+			vHost.Routes = nil
+			vHost.Matcher = matcher
 		}
 	}
 

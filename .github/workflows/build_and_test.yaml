@@ -153,6 +153,9 @@ jobs:
         - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: sublinear-route-matching
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -206,6 +209,9 @@ jobs:
         - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: sublinear-route-matching
 
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1

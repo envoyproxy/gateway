@@ -1,0 +1,109 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            policies:
+            - kind: BackendTrafficPolicy
+              name: policy-for-gateway
+              namespace: envoy-gateway
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
+          descriptors:
+          - entries:
+            - key: rule-0-match-0
+              value: rule-0-match-0
+            - key: rule-0-match-1
+              value: rule-0-match-1
+            shadowMode: true
+            tokenBucket:
+              fillInterval: 3600s
+              maxTokens: 10
+              tokensPerFill: 10
+          - entries:
+            - key: rule-1-match-0
+              value: rule-1-match-0
+            - key: rule-1-match-1
+              value: rule-1-match-1
+            - key: masked_remote_address
+              value: 192.168.0.0/16
+            shadowMode: true
+            tokenBucket:
+              fillInterval: 60s
+              maxTokens: 10
+              tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+          filterEnforced:
+            defaultValue:
+              numerator: 100
+          rateLimits:
+          - actions:
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
+            - headerValueMatch:
+                descriptorKey: rule-0-match-1
+                descriptorValue: rule-0-match-1
+                expectMatch: true
+                headers:
+                - name: x-org-id
+                  stringMatch:
+                    exact: foo
+          - actions:
+            - headerValueMatch:
+                descriptorKey: rule-1-match-0
+                descriptorValue: rule-1-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+            - headerValueMatch:
+                descriptorKey: rule-1-match-1
+                descriptorValue: rule-1-match-1
+                expectMatch: true
+                headers:
+                - name: x-org-id
+                  stringMatch:
+                    exact: bar
+            - maskedRemoteAddress:
+                v4PrefixMaskLen: 16
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            fillInterval: 60s
+            maxTokens: 10
+            tokensPerFill: 10

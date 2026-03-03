@@ -1,0 +1,79 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http
+  virtualHosts:
+  - domains:
+    - www.example.com
+    matcher:
+      matcherTree:
+        exactMatchMap:
+          map:
+            /foo:
+              action:
+                name: route
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.config.route.v3.Route
+                  match:
+                    pathSeparatedPrefix: /foo
+                  metadata:
+                    filterMetadata:
+                      envoy-gateway:
+                        resources:
+                        - kind: HTTPRoute
+                          name: httproute-1
+                          namespace: default
+                  name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+                  route:
+                    cluster: httproute/default/httproute-1/rule/0
+                    upgradeConfigs:
+                    - upgradeType: websocket
+                  typedPerFilterConfig:
+                    envoy.filters.http.oauth2/securitypolicy/envoy-gateway/policy-for-gateway:
+                      '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                      config: {}
+        input:
+          name: request-headers
+          typedConfig:
+            '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+            headerName: :path
+      onNoMatch:
+        matcher:
+          matcherTree:
+            input:
+              name: request-headers
+              typedConfig:
+                '@type': type.googleapis.com/envoy.type.matcher.v3.HttpRequestHeaderMatchInput
+                headerName: :path
+            prefixMatchMap:
+              map:
+                /foo/:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.config.route.v3.Route
+                      match:
+                        pathSeparatedPrefix: /foo
+                      metadata:
+                        filterMetadata:
+                          envoy-gateway:
+                            resources:
+                            - kind: HTTPRoute
+                              name: httproute-1
+                              namespace: default
+                      name: httproute/default/httproute-1/rule/0/match/0/www_example_com
+                      route:
+                        cluster: httproute/default/httproute-1/rule/0
+                        upgradeConfigs:
+                        - upgradeType: websocket
+                      typedPerFilterConfig:
+                        envoy.filters.http.oauth2/securitypolicy/envoy-gateway/policy-for-gateway:
+                          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+                          config: {}
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: http
+    name: envoy-gateway/gateway-1/http/www_example_com

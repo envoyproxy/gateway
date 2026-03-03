@@ -146,13 +146,18 @@ type GatewayAPISettings struct {
 // RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
 // A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
 // +enum
-// +kubebuilder:validation:Enum=XDSNameSchemeV2
+// +kubebuilder:validation:Enum=XDSNameSchemeV2;SublinearRouteMatching
 type RuntimeFlag string
 
 const (
 	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
 	// * The listener name will be generated using the protocol and port of the listener.
 	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+
+	// SublinearRouteMatching enables the Envoy Matching API (matcher_tree) for virtual host route
+	// resolution instead of the linear route list, providing O(1) exact path and O(path length)
+	// prefix matching when routes are path-only.
+	SublinearRouteMatching RuntimeFlag = "SublinearRouteMatching"
 )
 
 // RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.

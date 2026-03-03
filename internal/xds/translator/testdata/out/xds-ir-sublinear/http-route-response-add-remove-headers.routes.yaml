@@ -1,0 +1,36 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: response-header-route
+      responseHeadersToAdd:
+      - header:
+          key: some-header
+          value: some-value
+      - header:
+          key: some-header-2
+          value: some-value
+      - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+        header:
+          key: some-header3
+          value: some-value
+      - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+        header:
+          key: some-header4
+          value: some-value
+      - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+        header:
+          key: empty-header
+        keepEmptyValue: true
+      responseHeadersToRemove:
+      - some-header5
+      - some-header6
+      route:
+        cluster: response-header-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

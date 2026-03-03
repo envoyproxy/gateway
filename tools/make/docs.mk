@@ -23,6 +23,7 @@ LINKINATOR_IGNORE := "opentelemetry.io \
 	verve.com \
 	goteleport.com \
 	developer.hashicorp.com \
+	gateway-api.sigs.k8s.io/reference/1.3/spec \
 	v0.1 \
 	v0.2 \
 	v0.3 \
