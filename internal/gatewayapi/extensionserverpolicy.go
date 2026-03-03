@@ -188,11 +188,3 @@ func (t *Translator) translateExtServerPolicyForGateway(
 	}
 	return found
 }
-
-// Appends status ancestors from newPolicy into aggregatedPolicy's list of ancestors.
-func MergeAncestorsForExtensionServerPolicies(aggregatedPolicy, newPolicy *unstructured.Unstructured) {
-	aggStatus := ExtServerPolicyStatusAsPolicyStatus(aggregatedPolicy)
-	newStatus := ExtServerPolicyStatusAsPolicyStatus(newPolicy)
-	aggStatus.Ancestors = append(aggStatus.Ancestors, newStatus.Ancestors...)
-	aggregatedPolicy.Object["status"] = PolicyStatusToUnstructured(aggStatus)
-}

@@ -225,7 +225,7 @@ func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
 			desiredMergedStatus.Ancestors = append(desiredMergedStatus.Ancestors, test.newStatus.Ancestors...)
 		}
 
-		MergeAncestorsForExtensionServerPolicies(&aggPolicy, &newPolicy)
+		mergeAncestorsForExtensionServerPolicies(&aggPolicy, &newPolicy)
 
 		// The product object will always have an existing `status`, even if with 0 ancestors.
 		newAggPolicy := ExtServerPolicyStatusAsPolicyStatus(&aggPolicy)
@@ -234,4 +234,12 @@ func TestMergeAncestorsForExtensionServerPolicies(t *testing.T) {
 			require.Equal(t, desiredMergedStatus.Ancestors[i].AncestorRef.Name, newAggPolicy.Ancestors[i].AncestorRef.Name)
 		}
 	}
+}
+
+// Appends status ancestors from newPolicy into aggregatedPolicy's list of ancestors.
+func mergeAncestorsForExtensionServerPolicies(aggregatedPolicy, newPolicy *unstructured.Unstructured) {
+	aggStatus := ExtServerPolicyStatusAsPolicyStatus(aggregatedPolicy)
+	newStatus := ExtServerPolicyStatusAsPolicyStatus(newPolicy)
+	aggStatus.Ancestors = append(aggStatus.Ancestors, newStatus.Ancestors...)
+	aggregatedPolicy.Object["status"] = PolicyStatusToUnstructured(aggStatus)
 }

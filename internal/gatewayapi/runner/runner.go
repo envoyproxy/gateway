@@ -316,7 +316,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					r.ProviderResources.GatewayClassStatuses.Store(key, &result.GatewayClass.Status)
 				}
 
-				// 1. Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
+				// Resources which can only belong to 1 GatewayClass (at most) get their statuses stored right away.
 				for _, gateway := range result.Gateways {
 					key := utils.NamespacedName(gateway)
 					r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
@@ -324,6 +324,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.GatewayStatus, key)
 					r.keyCache.GatewayStatus[key] = true
 				}
+				for _, listenerSet := range result.ListenerSets {
+					key := utils.NamespacedName(listenerSet)
+					r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
+					listenerSetStatusCount++
+					delete(keysToDelete.ListenerSetStatus, key)
+					r.keyCache.ListenerSetStatus[key] = true
+				}
+
+				// Backend statuses have no parents, so they are not aggregated.
 				for _, backend := range result.Backends {
 					key := utils.NamespacedName(backend)
 					if len(backend.Status.Conditions) > 0 {
@@ -333,15 +342,9 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					delete(keysToDelete.BackendStatus, key)
 					r.keyCache.BackendStatus[key] = true
 				}
-				for _, listenerSet := range result.ListenerSets {
-					key := utils.NamespacedName(listenerSet)
-					r.ProviderResources.ListenerSetStatuses.Store(key, &listenerSet.Status)
-					listenerSetStatusCount++
-					delete(keysToDelete.ListenerSetStatus, key)
-					r.keyCache.ListenerSetStatus[key] = true
-				}
-				// 2. Resources which can belong to multiple GatewayClasses get their
-				//    status aggregated, then stored once after iterating over all GatewayClasses.
+
+				// Resources which can belong to multiple GatewayClasses get their statuses aggregated,
+				// then stored once after iterating over all GatewayClasses.
 				for _, httpRoute := range result.HTTPRoutes {
 					if len(httpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(httpRoute)
