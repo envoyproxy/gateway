@@ -125,11 +125,10 @@ type BackendTrafficPolicySpec struct {
 
 	// RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
 	// or it can be set to "Endpoint" to use Endpoint routing.
-	// When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+	// When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
 	// If not specified, the EnvoyProxy-level setting is used.
 	//
 	// +optional
-	// +notImplementedHide
 	RoutingType *RoutingType `json:"routingType,omitempty"`
 }
 

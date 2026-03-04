@@ -134,13 +134,8 @@ type EnvoyGatewaySpec struct {
 
 // GatewayAPI defines an experimental Gateway API resource that can be enabled.
 // +enum
-// +kubebuilder:validation:Enum=XListenerSet;XBackendTrafficPolicy
+// +kubebuilder:validation:Enum=XBackendTrafficPolicy
 type GatewayAPI string
-
-const (
-	// XListenerSet enables the Gateway API XListenerSet resource.
-	XListenerSet GatewayAPI = "XListenerSet"
-)
 
 // GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
 // These APIs are experimental today and are subject to change or removal as they mature.

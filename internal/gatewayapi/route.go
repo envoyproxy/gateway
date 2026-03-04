@@ -16,12 +16,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -49,7 +49,7 @@ var (
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext
-	ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
+	ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*UDPRouteContext
 }
@@ -179,12 +179,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Resolved all the Object references for the Route",
 			)
 		}
-
-		// Skip parent refs that did not accept the route
-		if parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-			continue
-		}
-
 		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(httpRoute)
@@ -196,6 +190,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(httpRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -211,7 +210,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Route is accepted",
 			)
 		}
-
 	}
 }
 
@@ -273,7 +271,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources)
+			ds, unstructuredRef, err := t.processDestination(settingName, backendRefCtx, parentRef, httpRoute, resources, rule.Name)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -993,7 +991,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 				Filters:    rule.BackendRefs[i].Filters,
 			}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources)
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, grpcRoute, resources, rule.Name)
 			if err != nil {
 				// Gateway API conformance: When backendRef Service exists but has no endpoints,
 				// the ResolvedRefs condition should NOT be set to False.
@@ -1248,14 +1246,18 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 }
 
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
-	var hasHostnameIntersection bool
-
+	// need to check hostname intersection if there are listeners
+	hasHostnameIntersection := len(parentRef.listeners) == 0
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
 			continue
 		}
 		hasHostnameIntersection = true
+		listener.IncrementAttachedRoutes()
+		if !listener.IsReady() {
+			continue
+		}
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -1330,7 +1332,7 @@ func filterEGPrefix(in map[string]string) map[string]string {
 	return out
 }
 
-func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
+func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
 	// TLSRoutes are already sorted by the provider layer
 
@@ -1374,7 +1376,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				settingName := irDestinationSettingName(destName, i)
 				backendRefCtx := DirectBackendRef{BackendRef: &rule.BackendRefs[i]}
 				// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources)
+				ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tlsRoute, resources, rule.Name)
 				if err != nil {
 					resolveErrs.Add(err)
 					continue
@@ -1412,19 +1414,18 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			)
 		}
 
-		// Skip parent refs that did not accept the route
-		if parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
-			continue
-		}
-
-		var hasHostnameIntersection bool
+		// need to check hostname intersection if there are listeners
+		hasHostnameIntersection := len(parentRef.listeners) == 0
 		for _, listener := range parentRef.listeners {
 			hosts := computeHosts(GetHostnames(tlsRoute), listener)
 			if len(hosts) == 0 {
 				continue
 			}
-
 			hasHostnameIntersection = true
+			listener.IncrementAttachedRoutes()
+			if !listener.IsReady() {
+				continue
+			}
 
 			irKey := t.getIRKey(listener.gateway.Gateway)
 			gwXdsIR := xdsIR[irKey]
@@ -1462,7 +1463,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					Metadata: buildResourceMetadata(tlsRoute, nil),
 				}
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
 		}
 
@@ -1476,6 +1476,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
 			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(tlsRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1551,7 +1556,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &udpRoute.Spec.Rules[0].BackendRefs[i]}
 			// ds will never be nil here because processDestination returns an empty DestinationSetting for invalid backendRefs.
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources)
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, udpRoute, resources, udpRoute.Spec.Rules[0].Name)
 			if err != nil {
 				resolveErrs.Add(err)
 				continue
@@ -1591,9 +1596,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a UDP listener
-			if listener.AttachedRoutes() > 1 {
+			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
+			listener.IncrementAttachedRoutes()
 			if !listener.IsReady() {
 				continue
 			}
@@ -1701,7 +1707,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
 			backendRefCtx := DirectBackendRef{BackendRef: &tcpRoute.Spec.Rules[0].BackendRefs[i]}
-			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tcpRoute, resources)
+			ds, _, err := t.processDestination(settingName, backendRefCtx, parentRef, tcpRoute, resources, tcpRoute.Spec.Rules[0].Name)
 			// skip adding the route and provide the reason via route status.
 			if err != nil {
 				resolveErrs.Add(err)
@@ -1741,12 +1747,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a TCP listener
-			if listener.AttachedRoutes() > 1 {
+			if listener.AttachedRoutes() >= 1 {
 				continue
 			}
 			if !listener.IsReady() {
 				continue
 			}
+			listener.IncrementAttachedRoutes()
+
 			accepted = true
 			irKey := t.getIRKey(listener.gateway.Gateway)
 
@@ -1774,9 +1782,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				}
 
 				irListener.Routes = append(irListener.Routes, irRoute)
-
 			}
-
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1812,6 +1818,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // This will result in a direct 500 response for HTTP-based requests.
 func (t *Translator) processDestination(name string, backendRefContext BackendRefContext,
 	parentRef *RouteParentContext, route RouteContext, resources *resource.Resources,
+	routeRuleName *gwapiv1.SectionName,
 ) (ds *ir.DestinationSetting, unstructuredRef *ir.UnstructuredRef, err status.Error) {
 	var (
 		routeType  = route.GetRouteType()
@@ -1848,6 +1855,18 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		envoyProxy = gatewayCtx.envoyProxy
 	}
 
+	// Resolve BTP RoutingType for this route/gateway combination
+	var btpRoutingType *egv1a1.RoutingType
+	if gatewayCtx != nil {
+		btpRoutingType = t.BTPRoutingTypeIndex.LookupBTPRoutingType(
+			route.GetRouteType(),
+			types.NamespacedName{Namespace: route.GetNamespace(), Name: route.GetName()},
+			types.NamespacedName{Namespace: gatewayCtx.GetNamespace(), Name: gatewayCtx.GetName()},
+			parentRef.SectionName,
+			routeRuleName,
+		)
+	}
+
 	protocol := inspectAppProtocolByRouteKind(routeType)
 
 	// Process BackendTLSPolicy first to ensure status is set.
@@ -1871,12 +1890,12 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, btpRoutingType)
 		if err != nil {
 			return emptyDS, nil, err
 		}
@@ -1918,7 +1937,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
 
-	if err := validateDestinationSettings(ds, t.IsEnvoyServiceRouting(envoyProxy), backendRef.Kind); err != nil {
+	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
 	}
 
@@ -1926,7 +1945,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	return ds, nil, nil
 }
 
-func validateDestinationSettings(destinationSettings *ir.DestinationSetting, endpointRoutingDisabled bool, kind *gwapiv1.Kind) status.Error {
+func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isServiceRouting bool, kind *gwapiv1.Kind) status.Error {
 	// TODO: support mixed endpointslice address type for the same backendRef
 	switch KindDerefOr(kind, resource.KindService) {
 	case egv1a1.KindBackend:
@@ -1936,7 +1955,7 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, end
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
-		if !endpointRoutingDisabled && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
+		if !isServiceRouting && destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
 				fmt.Errorf("mixed endpointslice address type for the same backendRef is not supported"),
 				status.RouteReasonUnsupportedAddressType)
@@ -1963,6 +1982,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	backendNamespace string,
 	protocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -1986,7 +2006,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 	isHeadless := len(backendIps) == 0
 
 	// Route to endpoints by default, or if service routing is enabled but ServiceImport is headless
-	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
@@ -2019,6 +2039,7 @@ func (t *Translator) processServiceDestinationSetting(
 	backendNamespace string,
 	protocol ir.AppProtocol,
 	envoyProxy *egv1a1.EnvoyProxy,
+	btpRoutingType *egv1a1.RoutingType,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
 		endpoints []*ir.DestinationEndpoint
@@ -2042,7 +2063,7 @@ func (t *Translator) processServiceDestinationSetting(
 	isHeadless := isServiceHeadless(service)
 
 	// Route to endpoints by default, or if service routing is enabled but service is headless
-	useEndpointRouting := !t.IsEnvoyServiceRouting(envoyProxy) || isHeadless
+	useEndpointRouting := !t.IsServiceRouting(envoyProxy, btpRoutingType) || isHeadless
 	if useEndpointRouting {
 		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
@@ -2237,16 +2258,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			)
 			continue
 		}
-
-		// Its safe to increment AttachedRoutes since we've found a valid parentRef
-		// and the listener allows this Route kind
-
-		// Theoretically there should only be one parent ref per
-		// Route that attaches to a given Listener, so fine to just increment here, but we
-		// might want to check to ensure we're not double-counting.
-		for _, listener := range allowedListeners {
-			listener.IncrementAttachedRoutes()
-		}
+		parentRefCtx.SetListeners(allowedListeners...)
 
 		if !HasReadyListener(selectedListeners) {
 			routeStatus := GetRouteStatus(routeContext)
@@ -2260,8 +2272,6 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			)
 			continue
 		}
-
-		parentRefCtx.SetListeners(allowedListeners...)
 
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,

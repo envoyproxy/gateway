@@ -148,6 +148,26 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - addRequestHeaders:
+        - addIfAbsent: false
+          append: false
+          name: example-header-1
+          value:
+          - dummy
+        directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
