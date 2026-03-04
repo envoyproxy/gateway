@@ -208,6 +208,7 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.0.0.0/24
                   distinct: false
+                  invert: false
                   ip: 10.0.0.0
                   isIPv6: false
                   maskLen: 24
