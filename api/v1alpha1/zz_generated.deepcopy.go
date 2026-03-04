@@ -3633,6 +3633,11 @@ func (in *HTTPActiveHealthChecker) DeepCopyInto(out *HTTPActiveHealthChecker) {
 		*out = make([]HTTPStatus, len(*in))
 		copy(*out, *in)
 	}
+	if in.RetriableStatuses != nil {
+		in, out := &in.RetriableStatuses, &out.RetriableStatuses
+		*out = make([]HTTPStatus, len(*in))
+		copy(*out, *in)
+	}
 	if in.ExpectedResponse != nil {
 		in, out := &in.ExpectedResponse, &out.ExpectedResponse
 		*out = new(ActiveHealthCheckPayload)
@@ -5581,6 +5586,11 @@ func (in *PassiveHealthCheck) DeepCopyInto(out *PassiveHealthCheck) {
 	if in.FailurePercentageThreshold != nil {
 		in, out := &in.FailurePercentageThreshold, &out.FailurePercentageThreshold
 		*out = new(uint32)
+		**out = **in
+	}
+	if in.AlwaysEjectOneEndpoint != nil {
+		in, out := &in.AlwaysEjectOneEndpoint, &out.AlwaysEjectOneEndpoint
+		*out = new(bool)
 		**out = **in
 	}
 }

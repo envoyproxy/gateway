@@ -943,6 +943,18 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          retriableStatuses:
+                            description: |-
+                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                              Responses matching these statuses count towards the unhealthy threshold but
+                              do not result in the host being considered immediately unhealthy.
+                              The expected statuses take precedence for any range overlaps with this field.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
                         required:
                         - path
                         type: object
@@ -1063,8 +1075,11 @@ spec:
                         type: string
                       unhealthyThreshold:
                         default: 3
-                        description: UnhealthyThreshold defines the number of unhealthy
-                          health checks required before a backend host is marked unhealthy.
+                        description: |-
+                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                          up to this threshold before the host is marked unhealthy.
                         format: int32
                         minimum: 1
                         type: integer
@@ -1094,6 +1109,12 @@ spec:
                   passive:
                     description: Passive passive check configuration
                     properties:
+                      alwaysEjectOneEndpoint:
+                        default: false
+                        description: |-
+                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                          regardless of MaxEjectionPercent.
+                        type: boolean
                       baseEjectionTime:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
@@ -2786,7 +2807,7 @@ spec:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing.
-                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
               targetRef:
@@ -6053,6 +6074,19 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                        Responses matching these statuses count towards the unhealthy threshold but
+                                        do not result in the host being considered immediately unhealthy.
+                                        The expected statuses take precedence for any range overlaps with this field.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
                                   required:
                                   - path
                                   type: object
@@ -6178,9 +6212,11 @@ spec:
                                   type: string
                                 unhealthyThreshold:
                                   default: 3
-                                  description: UnhealthyThreshold defines the number
-                                    of unhealthy health checks required before a backend
-                                    host is marked unhealthy.
+                                  description: |-
+                                    UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                    Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                    considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                    up to this threshold before the host is marked unhealthy.
                                   format: int32
                                   minimum: 1
                                   type: integer
@@ -6210,6 +6246,12 @@ spec:
                             passive:
                               description: Passive passive check configuration
                               properties:
+                                alwaysEjectOneEndpoint:
+                                  default: false
+                                  description: |-
+                                    AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                    regardless of MaxEjectionPercent.
+                                  type: boolean
                                 baseEjectionTime:
                                   default: 30s
                                   description: BaseEjectionTime defines the base duration
@@ -7155,12 +7197,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -7280,12 +7322,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                     Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
@@ -19912,6 +19954,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -20049,10 +20105,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -20089,6 +20146,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -21219,6 +21282,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -21356,10 +21433,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -21396,6 +21474,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -22701,6 +22785,19 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                    Responses matching these statuses count towards the unhealthy threshold but
+                                                    do not result in the host being considered immediately unhealthy.
+                                                    The expected statuses take precedence for any range overlaps with this field.
+                                                  items:
+                                                    description: HTTPStatus defines
+                                                      the http status code.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                  type: array
                                               required:
                                               - path
                                               type: object
@@ -22832,10 +22929,11 @@ spec:
                                               type: string
                                             unhealthyThreshold:
                                               default: 3
-                                              description: UnhealthyThreshold defines
-                                                the number of unhealthy health checks
-                                                required before a backend host is
-                                                marked unhealthy.
+                                              description: |-
+                                                UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                up to this threshold before the host is marked unhealthy.
                                               format: int32
                                               minimum: 1
                                               type: integer
@@ -22868,6 +22966,12 @@ spec:
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
+                                            alwaysEjectOneEndpoint:
+                                              default: false
+                                              description: |-
+                                                AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                regardless of MaxEjectionPercent.
+                                              type: boolean
                                             baseEjectionTime:
                                               default: 30s
                                               description: BaseEjectionTime defines
@@ -24088,6 +24192,19 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                              Responses matching these statuses count towards the unhealthy threshold but
+                                              do not result in the host being considered immediately unhealthy.
+                                              The expected statuses take precedence for any range overlaps with this field.
+                                            items:
+                                              description: HTTPStatus defines the
+                                                http status code.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                            type: array
                                         required:
                                         - path
                                         type: object
@@ -24219,9 +24336,11 @@ spec:
                                         type: string
                                       unhealthyThreshold:
                                         default: 3
-                                        description: UnhealthyThreshold defines the
-                                          number of unhealthy health checks required
-                                          before a backend host is marked unhealthy.
+                                        description: |-
+                                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                          up to this threshold before the host is marked unhealthy.
                                         format: int32
                                         minimum: 1
                                         type: integer
@@ -24254,6 +24373,12 @@ spec:
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
+                                      alwaysEjectOneEndpoint:
+                                        default: false
+                                        description: |-
+                                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                          regardless of MaxEjectionPercent.
+                                        type: boolean
                                       baseEjectionTime:
                                         default: 30s
                                         description: BaseEjectionTime defines the
@@ -26833,6 +26958,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -26958,9 +27096,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -26992,6 +27132,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -28025,6 +28171,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -28150,9 +28309,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -28184,6 +28345,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -29419,6 +29586,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -29550,10 +29730,11 @@ spec:
                                           type: string
                                         unhealthyThreshold:
                                           default: 3
-                                          description: UnhealthyThreshold defines
-                                            the number of unhealthy health checks
-                                            required before a backend host is marked
-                                            unhealthy.
+                                          description: |-
+                                            UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                            Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                            considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                            up to this threshold before the host is marked unhealthy.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -29586,6 +29767,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -30888,6 +31075,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -31013,9 +31213,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -31047,6 +31249,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base

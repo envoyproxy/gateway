@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	httputils "github.com/envoyproxy/gateway/internal/utils/http"
 )
 
 const (
@@ -51,7 +52,7 @@ var (
 	ErrStringMatchInvertDistinctInvalid         = errors.New("only one of the Invert or Distinct fields can be set")
 	ErrStringMatchNameIsEmpty                   = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid              = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301, 302, 303, 307 and 308 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme                = errors.New("only http and https are supported for the scheme in redirect filters")
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
@@ -2005,7 +2006,7 @@ func (r Redirect) Validate() error {
 	}
 
 	if r.StatusCode != nil {
-		if *r.StatusCode != 301 && *r.StatusCode != 302 {
+		if !httputils.SupportedRedirectCodes.Has(*r.StatusCode) {
 			errs = errors.Join(errs, ErrRedirectUnsupportedStatus)
 		}
 	}
@@ -2873,6 +2874,8 @@ type OutlierDetection struct {
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty" yaml:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -2989,6 +2992,8 @@ type HTTPHealthChecker struct {
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
@@ -3021,6 +3026,11 @@ func (c *HTTPHealthChecker) Validate() error {
 		errs = errors.Join(errs, ErrHCHTTPExpectedStatusesInvalid)
 	}
 	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, r := range c.RetriableStatuses {
 		if err := r.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}

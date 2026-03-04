@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/http"
 )
 
 type FiltersTranslator interface {
@@ -417,7 +418,7 @@ func (t *Translator) processRedirectFilter(
 	if redirect.StatusCode != nil {
 		redirectCode := int32(*redirect.StatusCode)
 		// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
-		if redirectCode == 301 || redirectCode == 302 {
+		if http.SupportedRedirectCodes.Has(redirectCode) {
 			redir.StatusCode = &redirectCode
 		} else {
 			return status.NewRouteStatusError(
@@ -1040,7 +1041,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
 	if err != nil {
 		return err
 	}
