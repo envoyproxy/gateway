@@ -332,7 +332,12 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		case listenerHostnameVal == routeHostname:
 			hostnamesSet.Insert(routeHostname)
 
-		// Both listener and route hostname have wildcards:
+		// Both listener and route hostnames are wildcards. If one pattern contains
+		// the other, their intersection is the more specific hostname.
+		// Examples:
+		// - listener "*.example.com" and route "*.com" intersect as "*.example.com"
+		// - listener "*.com" and route "*.example.com" intersect as "*.example.com"
+
 		case strings.HasPrefix(listenerHostnameVal, "*") && strings.HasPrefix(routeHostname, "*"):
 			// the route hostname must be more wildcard than the listener hostname to match
 			// e.g. listener hostname *.example.com would match route hostname *.com.
