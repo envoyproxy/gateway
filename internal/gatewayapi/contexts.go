@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"math"
+
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -85,12 +87,18 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	}
 }
 
-func (g *GatewayContext) IncreaseAttachedListenerSets(count int32) {
-	if g.Status.AttachedListenerSets == nil && count > 0 {
-		g.Status.AttachedListenerSets = ptr.To(count)
-	} else if g.Status.AttachedListenerSets != nil {
-		*g.Status.AttachedListenerSets += count
+func (g *GatewayContext) IncreaseAttachedListenerSets(count uint32) {
+	countInt32 := int32(count)
+	if g.Status.AttachedListenerSets == nil {
+		if countInt32 > 0 {
+			g.Status.AttachedListenerSets = ptr.To(countInt32)
+		}
+		return
 	}
+
+	// Check for potential overflow before adding
+	newValue := int64(*g.Status.AttachedListenerSets) + int64(countInt32)
+	*g.Status.AttachedListenerSets = int32(min(newValue, math.MaxInt32))
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
