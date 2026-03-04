@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/conformance"
+	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -82,28 +82,33 @@ func TestE2E(t *testing.T) {
 	if *flags.RunTest != "" {
 		skipTests = nil
 	}
-	opts := conformance.DefaultOptions(t)
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
 
-	opts.Client = c
-	opts.RestConfig = cfg
-	opts.GatewayClassName = *flags.GatewayClassName
-	opts.Debug = *flags.ShowDebug
-	opts.CleanupBaseResources = *flags.CleanupBaseResources
-	opts.ManifestFS = []fs.FS{Manifests}
-	opts.RunTest = *flags.RunTest
-	// SupportedFeatures cannot be empty, so we set it to SupportGateway
-	// All e2e tests should leave Features empty.
-	opts.SupportedFeatures = enabledFeatures
-	opts.SkipTests = skipTests
-	opts.AllowCRDsMismatch = *flags.AllowCRDsMismatch
-	opts.Hook = Hook
-	opts.FailFast = true
-
-	cSuite, err := suite.NewConformanceTestSuite(opts)
+	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
+		Client:               c,
+		RestConfig:           cfg,
+		GatewayClassName:     *flags.GatewayClassName,
+		Debug:                *flags.ShowDebug,
+		CleanupBaseResources: *flags.CleanupBaseResources,
+		ManifestFS:           []fs.FS{Manifests},
+		RunTest:              *flags.RunTest,
+		TimeoutConfig:        timeout,
+		// SupportedFeatures cannot be empty, so we set it to SupportGateway
+		// All e2e tests should leave Features empty.
+		SupportedFeatures: enabledFeatures,
+		SkipTests:         skipTests,
+		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
+		Hook:              Hook,
+		FailFast:          true,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 	}
-	tlog.Logf(t, "DefaultPollInterval: %v", cSuite.TimeoutConfig.DefaultPollInterval)
+
 	recorder := NewTimingRecorder()
 	t.Cleanup(func() {
 		recorder.Report(t)
