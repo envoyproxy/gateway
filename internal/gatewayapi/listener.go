@@ -374,7 +374,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			}
 
 		}
-		gateway.IncreaseAttachedListenerSets(int32(len(gatewayAttachedListenerSets)))
+		gateway.IncreaseAttachedListenerSets(uint32(len(gatewayAttachedListenerSets)))
 	}
 
 	t.checkOverlappingTLSConfig(gateways)
