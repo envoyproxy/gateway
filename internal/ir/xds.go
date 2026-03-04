@@ -2441,14 +2441,22 @@ type RateLimitCost struct {
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
+// CIDRMatch defines the match conditions on the source IP's CIDR for rate limiting.
+// +k8s:deepcopy-gen=true
 type CIDRMatch struct {
-	CIDR    string `json:"cidr" yaml:"cidr"`
-	IP      string `json:"ip" yaml:"ip"`
+	// CIDR is the full CIDR string (e.g. "192.168.0.0/24") from the API source match.
+	CIDR string `json:"cidr" yaml:"cidr"`
+	// IP is the network (base) address of the CIDR range (e.g. "192.168.0.0"), used as AddressPrefix in Envoy's CidrRange.
+	IP string `json:"ip" yaml:"ip"`
+	// MaskLen is the prefix length in bits (e.g. 24 for /24).
 	MaskLen uint32 `json:"maskLen" yaml:"maskLen"`
-	IsIPv6  bool   `json:"isIPv6" yaml:"isIPv6"`
+	// IsIPv6 is true when the CIDR is an IPv6 range.
+	IsIPv6 bool `json:"isIPv6" yaml:"isIPv6"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert when true matches when the client IP is not in the specified range(s).
+	Invert bool `json:"invert" yaml:"invert"`
 }
 
 // QueryParamMatch defines the match attributes within the query parameters of the request.

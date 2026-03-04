@@ -358,42 +358,17 @@ func buildCIDRMatchLocalRateLimitActions(
 		return
 	}
 
-	// For CIDR matches, we first need to check if the source IP matches the CIDR range using
-	// the MaskedRemoteAddress action.
-	mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-	maskLen := &wrapperspb.UInt32Value{Value: cidrMatch.MaskLen}
-	if cidrMatch.IsIPv6 {
-		mra.V6PrefixMaskLen = maskLen
-	} else {
-		mra.V4PrefixMaskLen = maskLen
-	}
-	action := &routev3.RateLimit_Action{
-		ActionSpecifier: &routev3.RateLimit_Action_MaskedRemoteAddress_{
-			MaskedRemoteAddress: mra,
-		},
-	}
-	entry := &rlv3.RateLimitDescriptor_Entry{
+	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, descriptorMaskedRemoteAddress))
+	*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
 		Key:   descriptorMaskedRemoteAddress,
 		Value: cidrMatch.CIDR,
-	}
-	*descriptorEntries = append(*descriptorEntries, entry)
-	*rlActions = append(*rlActions, action)
+	})
 
 	if cidrMatch.Distinct {
-		// If the CIDRMatch is distinct, we also need to use the RemoteAddress action to get the client IP.
-		action = &routev3.RateLimit_Action{
-			ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
-				RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
-			},
-		}
-
-		// If the CIDRMatch is distinct, we use the built-in remote address descriptor key without a value.
-		// This means that each distinct client IP will be counted separately.
-		entry = &rlv3.RateLimitDescriptor_Entry{
+		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, descriptorRemoteAddress))
+		*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
 			Key: descriptorRemoteAddress,
-		}
-		*descriptorEntries = append(*descriptorEntries, entry)
-		*rlActions = append(*rlActions, action)
+		})
 	}
 }
 

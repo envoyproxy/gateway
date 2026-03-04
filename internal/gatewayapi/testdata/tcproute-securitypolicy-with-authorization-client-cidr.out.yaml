@@ -611,6 +611,7 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.10.5.0/24
                   distinct: false
+                  invert: false
                   ip: 10.10.5.0
                   isIPv6: false
                   maskLen: 24
@@ -647,6 +648,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.5.0/24
                 distinct: false
+                invert: false
                 ip: 10.10.5.0
                 isIPv6: false
                 maskLen: 24
@@ -724,6 +726,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.1.0/24
                 distinct: false
+                invert: false
                 ip: 10.10.1.0
                 isIPv6: false
                 maskLen: 24
@@ -770,6 +773,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.2.0/24
                 distinct: false
+                invert: false
                 ip: 10.10.2.0
                 isIPv6: false
                 maskLen: 24
