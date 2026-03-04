@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
@@ -43,6 +44,10 @@ func TestGatewayAPIConformance(t *testing.T) {
 	cSuite, err := suite.NewConformanceTestSuite(opts)
 	if err != nil {
 		t.Fatalf("Error creating conformance test suite: %v", err)
+	}
+	if cSuite.SupportedFeatures.Has(features.TLSRouteModeMixedFeature.Name) {
+		t.Fatalf("Envoy Gateway does not support TLSRouteModeMixedFeature," +
+			" but it is listed as a supported feature. Please remove it from the supported features list.")
 	}
 	cSuite.Setup(t, tests.ConformanceTests)
 	if err := cSuite.Run(t, tests.ConformanceTests); err != nil {
