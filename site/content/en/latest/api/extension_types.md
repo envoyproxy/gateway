@@ -2333,6 +2333,9 @@ GatewayAPI defines an experimental Gateway API resource that can be enabled.
 _Appears in:_
 - [GatewayAPISettings](#gatewayapisettings)
 
+| Value | Description |
+| ----- | ----------- |
+| `XGatewayBackendClientCert` | XGatewayBackendClientCert enables Gateway spec.tls.backend.clientCertificateRef for backend mTLS.<br /> | 
 
 
 #### GatewayAPISettings

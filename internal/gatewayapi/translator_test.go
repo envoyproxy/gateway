@@ -56,6 +56,7 @@ func TestTranslate(t *testing.T) {
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
+		GatewayBackendClientCertEnabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -107,14 +108,17 @@ func TestTranslate(t *testing.T) {
 			gatewayNamespaceMode := false
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
+			testFileName := strings.Split(filepath.Base(inputFile), ".")[0]
+			gatewayBackendClientCertEnabled := strings.HasPrefix(testFileName, "gateway-backend-tls")
 
 			for _, config := range testCasesConfig {
-				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
+				if config.name == testFileName {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
+					gatewayBackendClientCertEnabled = config.GatewayBackendClientCertEnabled
 				}
 			}
 
@@ -130,6 +134,7 @@ func TestTranslate(t *testing.T) {
 				WasmCache:                       &mockWasmCache{},
 				RunningOnHost:                   runningOnHost,
 				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				GatewayBackendClientCertEnabled: gatewayBackendClientCertEnabled,
 				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
