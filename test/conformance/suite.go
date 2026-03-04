@@ -30,6 +30,10 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 	case "ipv6":
 		opts.SkipTests = append(opts.SkipTests,
 			// https://github.com/kubernetes-sigs/gateway-api/pull/4629
+			// TODO: remove this after v1.5.1 released
+			tests.GatewayFrontendInvalidDefaultClientCertificateValidation.ShortName,
+			tests.GatewayFrontendClientCertificateValidationInsecureFallback.ShortName,
+			tests.GatewayFrontendClientCertificateValidation.ShortName,
 			tests.GatewayFrontendInvalidDefaultClientCertificateValidation.ShortName,
 		)
 	case "dual":
