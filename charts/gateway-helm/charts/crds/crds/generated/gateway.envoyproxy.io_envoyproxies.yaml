@@ -568,6 +568,14 @@ spec:
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
                 type: boolean
+              mergeType:
+                description: If unset, no merging occurs, and only the most specific
+                  configuration takes effect.
+                enum:
+                - Replace
+                - StrategicMerge
+                - JSONMerge
+                type: string
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
