@@ -365,7 +365,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, nil); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, nil, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -395,7 +395,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if gwPolicy == nil && listenerPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, &listener.Name); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -440,7 +440,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, targetedRoute, currTarget, resources, xdsIR, &listener.Name); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
@@ -820,6 +820,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	resources *resource.Resources,
 	xdsIR resource.XdsIRMap,
+	policyTargetGateway *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) error {
 	// Build IR
@@ -877,6 +878,17 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		gtwCtx := parentRefCtx.GetGateway()
 		if gtwCtx == nil {
 			continue
+		}
+
+		// If policyTargetGateway is set, only apply to the specific gateway
+		if policyTargetGateway != nil {
+			gtwNN := types.NamespacedName{
+				Namespace: gtwCtx.Gateway.Namespace,
+				Name:      gtwCtx.Gateway.Name,
+			}
+			if gtwNN != *policyTargetGateway {
+				continue
+			}
 		}
 
 		var extAuth *ir.ExtAuth
