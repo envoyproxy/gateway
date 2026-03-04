@@ -55,7 +55,7 @@ gateways:
         namespaces:
           from: Same
       name: udp
-      port: 1234
+      port: 2345
       protocol: UDP
     - allowedRoutes:
         namespaces:

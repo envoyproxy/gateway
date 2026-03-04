@@ -45,6 +45,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	t.validateConflictedProtocolsListeners(gateways)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
 	}
@@ -104,15 +105,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			isReady := t.validateListenerConditions(listener)
-
-			if listener.isFromListenerSet() && isReady {
-				lsKey := types.NamespacedName{
-					Namespace: listener.listenerSet.Namespace,
-					Name:      listener.listenerSet.Name,
-				}.String()
-				gatewayAttachedListenerSets.Insert(lsKey)
-			}
+			// TODO: this's skipped in https://github.com/envoyproxy/gateway/pull/8194
+			// for TLSRouteInvalidNoMatchingListener conformance test, but looks like it's
+			// a must, consider to skip invalid listener again?
+			listenerValid := t.validateListenerConditions(listener)
 
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
@@ -122,7 +118,30 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Add the listener to the Xds IR
 			servicePort := &protocolPort{protocol: listener.Protocol, port: listener.Port}
+			// Add the listener to the Infra IR.
+			// Infra IR ports must have a unique port number per layer protocol.
+			gatewayPortProtocols := foundPorts[irKey]
+			portExists, protocolValid := checkPortProtocol(gatewayPortProtocols, servicePort)
+			if !protocolValid {
+				continue
+			}
+
+			if listener.isFromListenerSet() && listenerValid {
+				lsKey := types.NamespacedName{
+					Namespace: listener.listenerSet.Namespace,
+					Name:      listener.listenerSet.Name,
+				}.String()
+				gatewayAttachedListenerSets.Insert(lsKey)
+			}
+			foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
+			if !portExists {
+				// Only add to Infra IR if the port number is unique for the layer protocol.
+				// If the same port number is used in another listener with a different protocol,
+				// it will be skipped when checking port protocol.
+				t.processInfraIRListener(listener, infraIR, irKey, servicePort, containerPort)
+			}
+
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
@@ -184,14 +203,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
 			}
-
-			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
-			// (TCP or UDP).
-			if !containsPort(foundPorts[irKey], servicePort) {
-				t.processInfraIRListener(listener, infraIR, irKey, servicePort, containerPort)
-				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
-			}
-
 		}
 		gateway.IncreaseAttachedListenerSets(uint32(len(gatewayAttachedListenerSets)))
 	}
