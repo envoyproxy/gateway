@@ -750,6 +750,10 @@ func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
 }
 
+func UseStandardChannel() bool {
+	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
+}
+
 // TODO(zhaohuabing) remove this after the feature flag is removed.
 func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
