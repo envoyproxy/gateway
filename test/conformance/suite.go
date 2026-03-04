@@ -122,6 +122,9 @@ func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.F
 
 		result.Insert(feature.Name)
 	}
+
+	// this's used to skip TLSRouteListenerMixedTerminationNotSupported
+	result.Insert(features.TLSRouteModeMixedFeature.Name)
 	return result
 }
 
