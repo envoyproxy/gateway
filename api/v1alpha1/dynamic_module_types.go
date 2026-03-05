@@ -50,6 +50,8 @@ type DynamicModuleSource struct {
 }
 
 // LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.libraryName) && has(self.path))",message="libraryName and path are mutually exclusive"
 type LocalDynamicModuleSource struct {
 	// LibraryName is the name of the shared library file that Envoy will load.
 	// Envoy searches for lib${libraryName}.so in the path specified by the
@@ -60,6 +62,15 @@ type LocalDynamicModuleSource struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$`
 	LibraryName *string `json:"libraryName,omitempty"`
+
+	// Path is the absolute filesystem path to the dynamic module shared library.
+	// When specified, Envoy loads the module directly from this path instead
+	// of searching by library name.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	Path *string `json:"path,omitempty"`
 }
 
 // RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.

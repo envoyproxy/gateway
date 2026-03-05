@@ -2163,6 +2163,45 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"If type is Remote, remote field needs to be set"},
 		},
 		{
+			desc: "valid: dynamicModules with path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: ptr.To("/opt/modules/my_module.so"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid: dynamicModules with both libraryName and path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									LibraryName: ptr.To("my_module"),
+									Path:        ptr.To("/opt/modules/my_module.so"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"libraryName and path are mutually exclusive"},
+		},
+		{
 			desc: "invalid: dynamicModules source type Local with remote field",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{

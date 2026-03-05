@@ -3441,7 +3441,11 @@ type DynamicModule struct {
 
 	// ModuleName is the library name that Envoy will load (resolved from registry).
 	// Envoy searches for lib${ModuleName}.so
-	ModuleName string `json:"moduleName"`
+	ModuleName string `json:"moduleName,omitempty"`
+
+	// ModulePath is the absolute filesystem path to the dynamic module shared library.
+	// When set, Envoy loads via DynamicModuleConfig.Module (AsyncDataSource) instead of Name.
+	ModulePath string `json:"modulePath,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`

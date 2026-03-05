@@ -349,7 +349,18 @@ spec:
                               maxLength: 253
                               pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
                               type: string
+                            path:
+                              description: |-
+                                Path is the absolute filesystem path to the dynamic module shared library.
+                                When specified, Envoy loads the module directly from this path instead
+                                of searching by library name.
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
                           type: object
+                          x-kubernetes-validations:
+                          - message: libraryName and path are mutually exclusive
+                            rule: '!(has(self.libraryName) && has(self.path))'
                         remote:
                           description: |-
                             Remote specifies a module fetched from a remote source.

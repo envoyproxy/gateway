@@ -10,6 +10,8 @@ envoyExtensionPolicies:
         maxTokensPerMinute: 10000
       filterName: token-ratelimit
       name: ai-gateway-filter
+    - filterName: path-filter
+      name: path-loaded-module
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -216,6 +218,11 @@ infraIR:
             source:
               local:
                 libraryName: ai_gateway
+          - name: path-loaded-module
+            source:
+              local:
+                path: /opt/modules/my_module.so
+              type: Local
           logging: {}
         status: {}
       listeners:
@@ -305,6 +312,12 @@ xdsIR:
             loadGlobally: true
             moduleName: ai_gateway
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
+            terminalFilter: false
+          - doNotClose: false
+            filterName: path-filter
+            loadGlobally: false
+            modulePath: /opt/modules/my_module.so
+            name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/1
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false

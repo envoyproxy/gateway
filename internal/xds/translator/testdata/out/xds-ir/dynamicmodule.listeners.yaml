@@ -27,6 +27,15 @@
               value: '{"maxTokensPerMinute":10000}'
             filterName: token-ratelimit
         - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-path/dynamic-module/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                local:
+                  filename: /opt/modules/my_module.so
+            filterName: path-filter
+        - disabled: true
           name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamic-module/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
