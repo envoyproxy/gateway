@@ -895,3 +895,56 @@ func TestIrStringMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestWildcardHostnameMatchesHostname(t *testing.T) {
+	testCases := []struct {
+		name     string
+		wildcard string
+		hostname string
+		expected bool
+	}{
+		{
+			name:     "*.com matches *.example.com",
+			wildcard: "*.com",
+			hostname: "*.example.com",
+			expected: true,
+		},
+		{
+			name:     "*.example.com matches *.foo.example.com",
+			wildcard: "*.example.com",
+			hostname: "*.foo.example.com",
+			expected: true,
+		},
+		{
+			name:     "*.com does not match *.net",
+			wildcard: "*.com",
+			hostname: "*.net",
+			expected: false,
+		},
+		{
+			name:     "*.example.com does not match *.other.com",
+			wildcard: "*.example.com",
+			hostname: "*.other.com",
+			expected: false,
+		},
+		{
+			name:     "*.foo.example.com does not match *.example.com",
+			wildcard: "*.foo.example.com",
+			hostname: "*.example.com",
+			expected: false,
+		},
+		{
+			name:     "*.example.com match foo.example.com",
+			wildcard: "*.example.com",
+			hostname: "foo.example.com",
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := wildcardHostnameMatchesHostname(tc.wildcard, tc.hostname)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}

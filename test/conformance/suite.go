@@ -19,17 +19,13 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.TLSRouteHostnameIntersection,
-		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
-		tests.GatewayWithAttachedRoutes,
 		tests.GatewayTLSBackendClientCertificate,
 		tests.GatewayFrontendClientCertificateValidation,
 		tests.GatewayInvalidFrontendClientCertificateValidation,
 		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
 		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
-		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
