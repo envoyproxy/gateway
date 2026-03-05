@@ -29222,7 +29222,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -29280,9 +29279,8 @@ spec:
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
                             pullSecretRef:
-                              description: |-
-                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
-                                Only support Kubernetes Secret resource from the same namespace.
+                              description: PullSecretRef is a reference to the secret
+                                containing the credentials to pull the image.
                               properties:
                                 group:
                                   default: ""
@@ -29347,7 +29345,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -30663,15 +30660,6 @@ spec:
                         state that should not be destroyed on configuration updates.
                         Defaults to false.
                       type: boolean
-                    libraryName:
-                      description: |-
-                        LibraryName is the name of the shared library file that Envoy will load.
-                        Envoy searches for lib${libraryName}.so in the path specified by the
-                        ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-                        If not specified, defaults to the value of Name.
-                      maxLength: 253
-                      pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
-                      type: string
                     loadGlobally:
                       default: false
                       description: |-
@@ -30689,8 +30677,47 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                       type: string
+                    source:
+                      description: Source defines where the dynamic module code is
+                        loaded from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
+                          properties:
+                            path:
+                              description: Path is the absolute filesystem path to
+                                the dynamic module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          type: object
+                        remote:
+                          description: |-
+                            Remote specifies a module fetched from a remote source.
+                            The module binary is downloaded and cached by Envoy.
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the dynamic module code.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          - Remote
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Remote, remote field needs to be set.
+                        rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
                   required:
                   - name
+                  - source
                   type: object
                 maxItems: 16
                 type: array
@@ -47444,7 +47471,6 @@ spec:
                           "credential", and the value should be the credential to be injected.
                           For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
                           for bearer token, the value should be "Bearer <token>".
-                          Note: The secret must be in the same namespace as the HTTPRouteFilter.
                         properties:
                           group:
                             default: ""
@@ -48312,8 +48338,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
