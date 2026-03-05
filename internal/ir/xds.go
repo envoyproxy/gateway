@@ -3439,9 +3439,8 @@ type DynamicModule struct {
 	// The xds translator generates one filter for each unique name.
 	Name string `json:"name"`
 
-	// ModuleName is the library name that Envoy will load (resolved from registry).
-	// Envoy searches for lib${ModuleName}.so
-	ModuleName string `json:"moduleName"`
+	// Path is the absolute filesystem path to the dynamic module shared library.
+	Path string `json:"path"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`

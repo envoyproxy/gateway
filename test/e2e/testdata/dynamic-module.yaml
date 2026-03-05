@@ -13,13 +13,13 @@ spec:
         container:
           image: envoyproxy/gateway-dynamic-module-test:latest
           env:
-            - name: ENVOY_DYNAMIC_MODULES_SEARCH_PATH
-              value: /usr/local/lib
             - name: GODEBUG
               value: cgocheck=0
   dynamicModules:
     - name: header-mutation
-      libraryName: header_mutation
+      source:
+        local:
+          path: /usr/local/lib/libheader_mutation.so
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

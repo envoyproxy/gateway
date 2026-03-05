@@ -14,7 +14,7 @@ require (
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260217184816-6318b674fe2f
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
 	github.com/evanphx/json-patch v5.9.11+incompatible
@@ -124,7 +124,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

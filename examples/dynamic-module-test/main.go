@@ -33,6 +33,8 @@ func (f *headerMutationFilterFactory) Create(handle shared.HttpFilterHandle) sha
 	return &headerMutationFilter{shared.EmptyHttpFilter{}}
 }
 
+func (f *headerMutationFilterFactory) OnDestroy() {}
+
 type headerMutationFilter struct {
 	shared.EmptyHttpFilter
 }

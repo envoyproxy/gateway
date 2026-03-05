@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	dmconfigv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/dynamic_modules/v3"
 	dmfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/dynamic_modules/v3"
@@ -90,14 +91,24 @@ func dynamicModuleFilterName(dm *ir.DynamicModule) string {
 }
 
 func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter, error) {
-	filterConfig := &dmfilterv3.DynamicModuleFilter{
-		DynamicModuleConfig: &dmconfigv3.DynamicModuleConfig{
-			Name:         dm.ModuleName,
-			DoNotClose:   dm.DoNotClose,
-			LoadGlobally: dm.LoadGlobally,
+	dmConfig := &dmconfigv3.DynamicModuleConfig{
+		DoNotClose:   dm.DoNotClose,
+		LoadGlobally: dm.LoadGlobally,
+		Module: &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Local{
+				Local: &corev3.DataSource{
+					Specifier: &corev3.DataSource_Filename{
+						Filename: dm.Path,
+					},
+				},
+			},
 		},
-		FilterName:     dm.FilterName,
-		TerminalFilter: dm.TerminalFilter,
+	}
+
+	filterConfig := &dmfilterv3.DynamicModuleFilter{
+		DynamicModuleConfig: dmConfig,
+		FilterName:          dm.FilterName,
+		TerminalFilter:      dm.TerminalFilter,
 	}
 
 	if dm.Config != nil && dm.Config.Raw != nil {
