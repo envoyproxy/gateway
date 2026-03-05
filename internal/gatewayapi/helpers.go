@@ -31,11 +31,9 @@ import (
 )
 
 const (
-	TCPProtocol = "TCP"
-	UDPProtocol = "UDP"
-
-	L4Protocol = "L4"
-	L7Protocol = "L7"
+	HTTPProtocol = "HTTP"
+	TCPProtocol  = "TCP"
+	UDPProtocol  = "UDP"
 
 	// CACertKey is the key used in ConfigMaps and Secrets to store CA certificate data
 	CACertKey = "ca.crt"
@@ -381,26 +379,27 @@ func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
 	return len(wildcardMatch) > 0
 }
 
-func containsPort(ports []*protocolPort, port *protocolPort) bool {
-	for _, protocolPort := range ports {
-		curProtocol, curLevel := layer4Protocol(protocolPort)
-		myProtocol, myLevel := layer4Protocol(port)
-		if protocolPort.port == port.port && (curProtocol == myProtocol && curLevel == myLevel) {
-			return true
+func checkPortProtocol(gatewayPorts []*protocolPort, servicePort *protocolPort) (bool, bool) {
+	for _, gatewayPort := range gatewayPorts {
+		if gatewayPort.port != servicePort.port {
+			continue
 		}
+
+		return true, listenerProtocol(gatewayPort) == listenerProtocol(servicePort)
 	}
-	return false
+
+	return false, true
 }
 
-// layer4Protocol returns listener L4 protocol and listen protocol level
-func layer4Protocol(protocolPort *protocolPort) (string, string) {
+// listenerProtocol returns listener L4 protocol and listen protocol level
+func listenerProtocol(protocolPort *protocolPort) string {
 	switch protocolPort.protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-		return TCPProtocol, L7Protocol
+		return HTTPProtocol
 	case gwapiv1.TCPProtocolType:
-		return TCPProtocol, L4Protocol
+		return TCPProtocol
 	default:
-		return UDPProtocol, L4Protocol
+		return UDPProtocol
 	}
 }
 

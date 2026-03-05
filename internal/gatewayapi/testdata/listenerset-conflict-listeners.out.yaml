@@ -45,6 +45,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: core-http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -54,20 +59,25 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
         status: "True"
-        type: Conflicted
-      - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: Invalid
-        status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: conflict-listener
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -142,33 +152,38 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: All listeners are invalid
+      message: Some listeners are invalid
       reason: ListenersNotValid
-      status: "False"
+      status: "True"
       type: Accepted
     - lastTransitionTime: null
-      message: All listeners are invalid
-      reason: ListenersNotValid
-      status: "False"
+      message: Some listeners are invalid
+      reason: Programmed
+      status: "True"
       type: Programmed
     listeners:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: HostnameConflict
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
         status: "True"
-        type: Conflicted
-      - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: ListenersNotValid
-        status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: conflict-listener-1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -183,8 +198,13 @@ listenerSets:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: ListenersNotValid
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -240,8 +260,13 @@ listenerSets:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: ListenersNotValid
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
@@ -325,8 +350,13 @@ listenerSets:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: Listener is invalid, see other Conditions for details.
-        reason: ListenersNotValid
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: HostnameConflict
         status: "False"
         type: Programmed
       - lastTransitionTime: null
