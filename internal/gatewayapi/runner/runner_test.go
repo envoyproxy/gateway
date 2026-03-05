@@ -23,7 +23,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
@@ -308,7 +307,7 @@ func TestMergePolicyStatus(t *testing.T) {
 }
 
 func TestMergeRouteStatus(t *testing.T) {
-	t.Run("nil other keeps existing status", func(t *testing.T) {
+	t.Run("nil incoming keeps existing status", func(t *testing.T) {
 		existing := &gwapiv1.RouteStatus{
 			Parents: []gwapiv1.RouteParentStatus{
 				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")}},
@@ -320,15 +319,15 @@ func TestMergeRouteStatus(t *testing.T) {
 		require.Len(t, got.Parents, 1)
 	})
 
-	t.Run("nil existing takes other", func(t *testing.T) {
-		other := &gwapiv1.RouteStatus{
+	t.Run("nil existing takes incoming", func(t *testing.T) {
+		incoming := &gwapiv1.RouteStatus{
 			Parents: []gwapiv1.RouteParentStatus{
 				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")}},
 			},
 		}
 
-		got := mergeRouteStatus(nil, other)
-		require.Same(t, other, got)
+		got := mergeRouteStatus(nil, incoming)
+		require.Same(t, incoming, got)
 		require.Len(t, got.Parents, 1)
 	})
 
