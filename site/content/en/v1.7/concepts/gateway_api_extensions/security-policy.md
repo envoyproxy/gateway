@@ -71,7 +71,7 @@ spec:
       name: my-route
   cors:
     allowOrigins:
-      - exact: https://example.com
+      - https://example.com
 
 ---
 # Policy created later - lower precedence
@@ -86,7 +86,7 @@ spec:
       name: my-route
   cors:
     allowOrigins:
-      - exact: https://different.com
+      - https://different.com
 ```
 
 In this example, `alpha-policy` would take precedence due to its earlier creation time, so the HTTPRoute would use the CORS setting from `alpha-policy`.
@@ -120,7 +120,7 @@ spec:
     sectionName: rule-1  # Targets specific named rule
   cors:
     allowOrigins:
-    - exact: https://rule.example.com
+    - https://rule.example.com
 
 ---
 # Route-level policy (high precedence)
@@ -134,7 +134,7 @@ spec:
     name: my-route  # No sectionName = entire route
   cors:
     allowOrigins:
-    - exact: https://route.example.com
+    - https://route.example.com
 
 ---
 # Listener-level policy (medium precedence)
@@ -149,7 +149,7 @@ spec:
     sectionName: https-listener  # Targets specific listener
   cors:
     allowOrigins:
-    - exact: https://listener.example.com
+    - https://listener.example.com
 
 ---
 # Gateway-level policy (lowest precedence)
@@ -163,7 +163,7 @@ spec:
     name: my-gateway  # No sectionName = entire gateway
   cors:
     allowOrigins:
-    - exact: https://gateway.example.com
+    - https://gateway.example.com
 ```
 
 In this example, the specific rule `rule-1` within HTTPRoute `my-route` would use the CORS settings from the route rule-level policy (`https://rule.example.com`), overriding the route-level, listener-level, and gateway-level settings.
@@ -184,7 +184,7 @@ spec:
       sectionName: https  # Applies only to "https" listener
   cors:
     allowOrigins:
-      - exact: https://example.com
+      - https://example.com
 ---
 # Policy B: Applies to the entire gateway
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -198,7 +198,7 @@ spec:
       name: my-gateway  # Applies to all listeners
   cors:
     allowOrigins:
-      - exact: https://default.com
+      - https://default.com
 ```
 
 In the example, policy A affects only the HTTPS listener, while policy B applies to the rest of the listeners in the gateway. Since Policy A is more specific, the system will show Overridden=True for Policy B on the https listener.
