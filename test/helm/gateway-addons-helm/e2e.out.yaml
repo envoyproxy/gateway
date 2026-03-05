@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -307,10 +307,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10241,10 +10241,10 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10355,10 +10355,10 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10502,10 +10502,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10725,10 +10725,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.145.0
+    helm.sh/chart: opentelemetry-collector-0.146.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.145.0"
+    app.kubernetes.io/version: "0.146.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10745,7 +10745,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: d648a35e32e4f636184a961f0ca11602a78f6b48660e80eafda078b04373e02e
+        checksum/config: 6b82fb5a71749bbd891cff1fb0896b676f0dadeded2ec18bdc608fd0e15655e0
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10764,7 +10764,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.145.0"
+          image: "otel/opentelemetry-collector-contrib:0.146.1"
           imagePullPolicy: IfNotPresent
           ports:
             

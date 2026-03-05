@@ -19,25 +19,13 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.TLSRouteHostnameIntersection,
-		tests.TLSRouteInvalidNoMatchingListener,
-		tests.TLSRouteInvalidNoMatchingListenerHostname,
-		tests.TLSRouteInvalidReferenceGrant,
-		tests.TLSRouteListenerTerminateSupportedKinds,
-		tests.TLSRouteSimpleSameNamespace,
-		tests.TLSRouteTerminateSimpleSameNamespace,
-		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
-		tests.GatewayWithAttachedRoutes,
 		tests.GatewayTLSBackendClientCertificate,
 		tests.GatewayFrontendClientCertificateValidation,
 		tests.GatewayInvalidFrontendClientCertificateValidation,
 		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
+		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
-		tests.HTTPRoute303Redirect,
-		tests.HTTPRoute307Redirect,
-		tests.HTTPRoute308Redirect,
-		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
@@ -54,16 +42,12 @@ func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
 		return sets.New(
 			features.GatewayStaticAddressesFeature.Name,
-			// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
-			features.ListenerSetFeature.Name,
 		)
 	}
 
 	return sets.New(
 		features.GatewayStaticAddressesFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
-		// TODO: fix ListenerSet conformance tests and remove this from the skipped features list.
-		features.ListenerSetFeature.Name,
 	)
 }
 
