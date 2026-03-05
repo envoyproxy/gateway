@@ -7,11 +7,21 @@ envoyProxiesForGateways:
   spec:
     dynamicModules:
     - name: my-auth-module
-      libraryName: my_auth
+      source:
+        type: Local
+        local:
+          path: /usr/lib/envoy/modules/my_auth.so
     - name: ai-gateway-filter
-      libraryName: ai_gateway
+      source:
+        local:
+          path: /usr/lib/envoy/modules/ai_gateway.so
       doNotClose: true
       loadGlobally: true
+    - name: path-loaded-module
+      source:
+        type: Local
+        local:
+          path: /opt/modules/my_module.so
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -102,3 +112,5 @@ envoyextensionpolicies:
       filterName: token-ratelimit
       config:
         maxTokensPerMinute: 10000
+    - name: path-loaded-module
+      filterName: path-filter

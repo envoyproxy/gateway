@@ -21,7 +21,7 @@ require (
 	github.com/quic-go/quic-go v0.59.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/proto/otlp v1.9.0
-	golang.org/x/net v0.50.0
+	golang.org/x/net v0.51.0
 	gonum.org/v1/gonum v0.17.0
 	google.golang.org/grpc v1.79.1
 	google.golang.org/protobuf v1.36.11
@@ -101,9 +101,9 @@ require (
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.0 // indirect
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989 // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260217184816-6318b674fe2f // indirect
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097 // indirect
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989 // indirect
-	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
+	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.11 // indirect
