@@ -78,15 +78,16 @@ type aggregatedPolicyStatus struct {
 	generation int64
 }
 
-func mergeRouteStatus(status, other *gwapiv1.RouteStatus) *gwapiv1.RouteStatus {
-	if other != nil {
-		if status != nil {
-			status.Parents = append(status.Parents, other.Parents...)
+// TODO: zhaohuabing - truncate the parents to the max allowed(32)
+func mergeRouteStatus(aggregated, incoming *gwapiv1.RouteStatus) *gwapiv1.RouteStatus {
+	if incoming != nil {
+		if aggregated != nil {
+			aggregated.Parents = append(aggregated.Parents, incoming.Parents...)
 		} else {
-			return other
+			return incoming
 		}
 	}
-	return status
+	return aggregated
 }
 
 func mergePolicyStatus(aggregated aggregatedPolicyStatus, incoming *gwapiv1.PolicyStatus, generation int64) aggregatedPolicyStatus {

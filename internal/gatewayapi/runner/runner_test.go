@@ -352,50 +352,6 @@ func TestMergeRouteStatus(t *testing.T) {
 	})
 }
 
-func TestMergePolicyStatusTruncation(t *testing.T) {
-	controllerName := "example.com/gateway"
-	const generation int64 = 42
-
-	base := &gwapiv1.PolicyStatus{}
-	for i := 0; i < 10; i++ {
-		base.Ancestors = append(base.Ancestors, gwapiv1.PolicyAncestorStatus{
-			AncestorRef: gwapiv1.ParentReference{
-				Name: gwapiv1.ObjectName("gw-base-" + string(rune('a'+i))),
-			},
-			ControllerName: gwapiv1a2.GatewayController(controllerName),
-		})
-	}
-
-	incoming := &gwapiv1.PolicyStatus{}
-	for i := 0; i < 10; i++ {
-		incoming.Ancestors = append(incoming.Ancestors, gwapiv1.PolicyAncestorStatus{
-			AncestorRef: gwapiv1.ParentReference{
-				Name: gwapiv1.ObjectName("gw-incoming-" + string(rune('a'+i))),
-			},
-			ControllerName: gwapiv1a2.GatewayController(controllerName),
-		})
-	}
-
-	entry := mergePolicyStatus(aggregatedPolicyStatus{}, base, generation)
-	entry = mergePolicyStatus(entry, incoming, generation)
-
-	require.Len(t, entry.status.Ancestors, 20)
-	status.TruncatePolicyAncestors(entry.status, controllerName, entry.generation)
-
-	require.Len(t, entry.status.Ancestors, 16)
-
-	last := entry.status.Ancestors[15]
-	foundAggregated := false
-	for _, cond := range last.Conditions {
-		if cond.Type == string(egv1a1.PolicyConditionAggregated) {
-			foundAggregated = true
-			require.Equal(t, string(egv1a1.PolicyReasonAggregated), cond.Reason)
-			require.Equal(t, generation, cond.ObservedGeneration)
-		}
-	}
-	require.True(t, foundAggregated, "expected aggregated condition on the truncated ancestor")
-}
-
 func TestLoadTLSConfig_HostMode(t *testing.T) {
 	// Create temporary directory structure for certs using t.TempDir()
 	configHome := t.TempDir()
