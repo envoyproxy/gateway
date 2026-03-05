@@ -1,0 +1,58 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "route-with-weighted-zones-roundrobin"
+    hostname: "*"
+    destination:
+      name: "route-with-weighted-zones-roundrobin-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+          zone: us-east-1a
+        - host: "2.3.4.5"
+          port: 8080
+          zone: us-east-1a
+        - host: "3.4.5.6"
+          port: 8080
+          zone: us-east-1b
+        - host: "4.5.6.7"
+          port: 8080
+          zone: us-east-1c
+        name: "route-with-weighted-zones-roundrobin-dest/backend/0"
+        weight: 1
+    traffic:
+      loadBalancer:
+        roundRobin: {}
+        weightedZones:
+        - zone: us-east-1a
+          weight: 70
+        - zone: us-east-1b
+          weight: 20
+  - name: "route-with-weighted-zones-maglev"
+    hostname: "*"
+    destination:
+      name: "route-with-weighted-zones-maglev-dest"
+      settings:
+      - endpoints:
+        - host: "10.0.0.1"
+          port: 8080
+          zone: us-west-2a
+        - host: "10.0.0.2"
+          port: 8080
+          zone: us-west-2b
+        name: "route-with-weighted-zones-maglev-dest/backend/0"
+        weight: 1
+    traffic:
+      loadBalancer:
+        consistentHash:
+          sourceIP: true
+        weightedZones:
+        - zone: us-west-2a
+          weight: 80
+        - zone: us-west-2b
+          weight: 20

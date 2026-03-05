@@ -122,8 +122,7 @@ infraIR:
                   type: File
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/ep-from-gtw/http
+      - name: envoy-gateway/ep-from-gtw/http
         ports:
         - containerPort: 10080
           name: http-80

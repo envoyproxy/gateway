@@ -61,8 +61,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tls
+      - name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10090
           name: tls-90

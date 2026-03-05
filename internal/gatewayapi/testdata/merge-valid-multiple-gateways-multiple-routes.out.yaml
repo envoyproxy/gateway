@@ -194,15 +194,13 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-2/http-2
+      - name: envoy-gateway/gateway-2/http-2
         ports:
         - containerPort: 8888
           name: http-8888

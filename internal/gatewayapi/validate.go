@@ -20,7 +20,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -275,7 +274,7 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
@@ -284,7 +283,11 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
-		return true
+		if listener.isFromListenerSet() {
+			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+				"No conflicts detected")
+		}
+		return
 	}
 
 	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
@@ -295,7 +298,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		return true
+		return
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
@@ -311,6 +314,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			}
 		}
 		// set "Programmed: false" if it's not set already.
+		// xref: https://github.com/kubernetes-sigs/gateway-api/issues/4425
+		// Invalid Listener shouldn't block IR
 		if !hasProgrammedCond {
 			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
@@ -329,9 +334,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			)
 		}
 		// skip computing IR
-		return false
+		return
 	}
-	return true
 }
 
 func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
@@ -402,9 +406,9 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fromGroup := gwapiv1.GroupName
 			fromKind := resource.KindGateway
 
-			if listener.isFromXListenerSet() {
-				fromGroup = gwapixv1a1.GroupName
-				fromKind = resource.KindXListenerSet
+			if listener.isFromListenerSet() {
+				fromGroup = gwapiv1.GroupVersion.Group
+				fromKind = resource.KindListenerSet
 			}
 
 			if !t.validateCrossNamespaceRef(

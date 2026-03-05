@@ -13,8 +13,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
         certificateHashes:
@@ -65,8 +64,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
         certificateHashes:
@@ -116,9 +114,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
   status:
     ancestors:
@@ -152,8 +148,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
         optional: true
@@ -189,9 +184,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-from-default
+        - name: tls-secret-from-default
           namespace: default
   status:
     ancestors:
@@ -224,9 +217,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
     - allowedRoutes:
@@ -299,9 +290,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -345,9 +334,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
     - allowedRoutes:
@@ -358,9 +345,7 @@ gateways:
       protocol: TLS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -427,9 +412,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-from-default
+        - name: tls-secret-from-default
           namespace: default
         mode: Terminate
   status:
@@ -461,15 +444,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http-1
+      - name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-1/http-2
+      - name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 8080
           name: http-8080
@@ -487,8 +468,7 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http-1
+      - name: envoy-gateway/gateway-2/http-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -506,15 +486,13 @@ infraIR:
   envoy-gateway/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-3/http-1
+      - name: envoy-gateway/gateway-3/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-3/tls-1
+      - name: envoy-gateway/gateway-3/tls-1
         ports:
         - containerPort: 6443
           name: tls-6443
@@ -532,8 +510,7 @@ infraIR:
   envoy-gateway/gateway-4:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-4/http-1
+      - name: envoy-gateway/gateway-4/http-1
         ports:
         - containerPort: 10443
           name: https-443

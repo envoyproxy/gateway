@@ -1109,6 +1109,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -1234,9 +1247,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -1268,6 +1283,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -1591,6 +1612,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -1604,10 +1655,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -2266,6 +2322,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -2391,9 +2460,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -2425,6 +2496,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -2748,6 +2825,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -2761,10 +2868,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -3625,6 +3737,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -3756,10 +3881,11 @@ spec:
                                           type: string
                                         unhealthyThreshold:
                                           default: 3
-                                          description: UnhealthyThreshold defines
-                                            the number of unhealthy health checks
-                                            required before a backend host is marked
-                                            unhealthy.
+                                          description: |-
+                                            UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                            Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                            considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                            up to this threshold before the host is marked unhealthy.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -3792,6 +3918,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -4120,6 +4252,36 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
+                                                type: string
+                                            required:
+                                            - weight
+                                            - zone
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - zone
+                                          x-kubernetes-list-type: map
                                       type: object
                                   required:
                                   - type
@@ -4133,11 +4295,15 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -5060,6 +5226,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -5185,9 +5364,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -5219,6 +5400,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -5542,6 +5729,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -5555,10 +5772,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.

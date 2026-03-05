@@ -173,15 +173,13 @@ infraIR:
           logging: {}
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-tls/
+      - name: envoy-gateway/gateway-tls/
         ports:
         - containerPort: 10445
           name: tls-445
           protocol: TLS
           servicePort: 445
-      - address: null
-        name: envoy-gateway/gateway-tls/
+      - name: envoy-gateway/gateway-tls/
         ports:
         - containerPort: 10443
           name: https-443

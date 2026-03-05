@@ -15,7 +15,7 @@ gateways:
       protocol: UDP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -40,8 +40,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/udp
+      - name: envoy-gateway/gateway-1/udp
         ports:
         - containerPort: 10080
           name: udp-80

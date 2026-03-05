@@ -81,8 +81,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -106,9 +105,7 @@ securityPolicies:
   spec:
     apiKeyAuth:
       credentialRefs:
-      - group: null
-        kind: null
-        name: credential-1
+      - name: credential-1
       extractFrom:
       - headers:
         - X-API-KEY

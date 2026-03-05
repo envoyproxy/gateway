@@ -5,12 +5,12 @@ on:
     tags:
       - "v*.*.*"
     paths:
-      - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
+      - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
       - "internal/gatewayapi/conformance/suite.go"
   pull_request:
     paths:
-      - "charts/gateway-helm/crds/gatewayapi-crds.yaml"
+      - "charts/gateway-crds-helm/templates/experimental-gatewayapi-crds.yaml"
       - "test/conformance/experimental_conformance_test.go"
       - "internal/gatewayapi/conformance/suite.go"
   # Add workflow_dispatch to trigger this workflow manually by maintainers.
@@ -26,22 +26,22 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - version: v1.30.13
+          - version: v1.32.11
             ipFamily: ipv4
             profile: default
-          - version: v1.31.9
+          - version: v1.33.7
             ipFamily: ipv4
             profile: default
-          - version: v1.32.5
+          - version: v1.34.3
             # only run ipv6 test on this version to save time
             ipFamily: ipv6
             profile: default
           # TODO: this's IPv4 first, need a way to test IPv6 first.
-          - version: v1.33.1
+          - version: v1.35.0
             # only run dual test on latest version to save time
             ipFamily: dual
             profile: default
-          - version: v1.33.1
+          - version: v1.35.0
             # only run dual test on latest version to save time
             ipFamily: dual
             profile: gateway-namespace-mode

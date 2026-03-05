@@ -357,6 +357,17 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		}
 	}
 
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
+			}
+		}
+	}
+
 	// Add EndpointOverride if specified
 	if policy.LoadBalancer.EndpointOverride != nil {
 		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
@@ -471,6 +482,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
 		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
+		AlwaysEjectOneEndpoint:         hc.AlwaysEjectOneEndpoint,
 	}
 
 	if hc.Interval != nil {
@@ -563,6 +575,19 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	irHTTP.ExpectedStatuses = irStatuses
+
+	// deduplicate retriable http statuses
+	retriableStatusSet := sets.NewInt()
+	for _, r := range h.RetriableStatuses {
+		retriableStatusSet.Insert(int(r))
+	}
+	if retriableStatusSet.Len() > 0 {
+		irRetriableStatuses := make([]ir.HTTPStatus, 0, retriableStatusSet.Len())
+		for _, r := range retriableStatusSet.List() {
+			irRetriableStatuses = append(irRetriableStatuses, ir.HTTPStatus(r))
+		}
+		irHTTP.RetriableStatuses = irRetriableStatuses
+	}
 
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP

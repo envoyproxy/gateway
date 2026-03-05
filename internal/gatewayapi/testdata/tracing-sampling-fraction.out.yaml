@@ -203,15 +203,13 @@ infraIR:
                 numerator: 1
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-2/http-2
+      - name: envoy-gateway/gateway-2/http-2
         ports:
         - containerPort: 8888
           name: http-8888
@@ -384,5 +382,5 @@ xdsIR:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317
         type: OpenTelemetry
-      samplingRate: 0.01
+      samplingRate: 1
       serviceName: envoy-gateway-class

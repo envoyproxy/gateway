@@ -83,12 +83,11 @@ func TestGetExtensionRefFilters(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name           string
-		extGVKs        []schema.GroupVersionKind
-		objects        []client.Object
-		namespaceLabel *metav1.LabelSelector
-		expectedCount  int
-		expectedError  bool
+		name          string
+		extGVKs       []schema.GroupVersionKind
+		objects       []client.Object
+		expectedCount int
+		expectedError bool
 	}{
 		{
 			name:          "no extension GVKs configured",
@@ -116,36 +115,6 @@ func TestGetExtensionRefFilters(t *testing.T) {
 			expectedCount: 2,
 			expectedError: false,
 		},
-		{
-			name: "namespace label filtering - include test namespace only",
-			extGVKs: []schema.GroupVersionKind{
-				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
-				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
-			},
-			objects: []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
-			namespaceLabel: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"env": "test",
-				},
-			},
-			expectedCount: 1, // Only lambda-backend in test-ns should be included
-			expectedError: false,
-		},
-		{
-			name: "namespace label filtering - no matching namespaces",
-			extGVKs: []schema.GroupVersionKind{
-				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
-				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
-			},
-			objects: []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
-			namespaceLabel: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"env": "nonexistent",
-				},
-			},
-			expectedCount: 0,
-			expectedError: false,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -159,10 +128,9 @@ func TestGetExtensionRefFilters(t *testing.T) {
 
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
-				extGVKs:        tc.extGVKs,
-				namespaceLabel: tc.namespaceLabel,
-				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
-				client:         fakeClient,
+				extGVKs: tc.extGVKs,
+				log:     logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
+				client:  fakeClient,
 			}
 
 			// Call the function under test
@@ -244,7 +212,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 		name           string
 		extBackendGVKs []schema.GroupVersionKind
 		objects        []client.Object
-		namespaceLabel *metav1.LabelSelector
 		expectedCount  int
 		expectedError  bool
 	}{
@@ -274,36 +241,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			expectedCount: 2,
 			expectedError: false,
 		},
-		{
-			name: "namespace label filtering - include test namespace only",
-			extBackendGVKs: []schema.GroupVersionKind{
-				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
-				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
-			},
-			objects: []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
-			namespaceLabel: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"env": "test",
-				},
-			},
-			expectedCount: 1, // Only lambda-backend in test-ns should be included
-			expectedError: false,
-		},
-		{
-			name: "namespace label filtering - no matching namespaces",
-			extBackendGVKs: []schema.GroupVersionKind{
-				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
-				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
-			},
-			objects: []client.Object{s3Backend, lambdaBackend, defaultNamespace, testNamespace},
-			namespaceLabel: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"env": "nonexistent",
-				},
-			},
-			expectedCount: 0,
-			expectedError: false,
-		},
 	}
 
 	for _, tc := range testCases {
@@ -319,7 +256,6 @@ func TestGetExtensionBackendResources(t *testing.T) {
 			// Create reconciler with test configuration
 			r := &gatewayAPIReconciler{
 				extBackendGVKs: tc.extBackendGVKs,
-				namespaceLabel: tc.namespaceLabel,
 				log:            logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 				client:         fakeClient,
 			}

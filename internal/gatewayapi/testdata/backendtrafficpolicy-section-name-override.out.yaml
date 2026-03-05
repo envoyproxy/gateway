@@ -301,15 +301,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/listener-1
+      - name: envoy-gateway/gateway-1/listener-1
         ports:
         - containerPort: 8081
           name: http-8081
           protocol: HTTP
           servicePort: 8081
-      - address: null
-        name: envoy-gateway/gateway-1/listener-2
+      - name: envoy-gateway/gateway-1/listener-2
         ports:
         - containerPort: 8082
           name: http-8082
