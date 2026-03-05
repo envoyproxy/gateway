@@ -98,7 +98,7 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 			Specifier: &corev3.AsyncDataSource_Local{
 				Local: &corev3.DataSource{
 					Specifier: &corev3.DataSource_Filename{
-						Filename: dm.ModulePath,
+						Filename: dm.Path,
 					},
 				},
 			},

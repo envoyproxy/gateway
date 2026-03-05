@@ -310,14 +310,14 @@ xdsIR:
             doNotClose: true
             filterName: token-ratelimit
             loadGlobally: true
-            modulePath: /usr/lib/envoy/modules/ai_gateway.so
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
+            path: /usr/lib/envoy/modules/ai_gateway.so
             terminalFilter: false
           - doNotClose: false
             filterName: path-filter
             loadGlobally: false
-            modulePath: /opt/modules/my_module.so
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/1
+            path: /opt/modules/my_module.so
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false
@@ -356,8 +356,8 @@ xdsIR:
             doNotClose: false
             filterName: auth-check
             loadGlobally: false
-            modulePath: /usr/lib/envoy/modules/my_auth.so
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
+            path: /usr/lib/envoy/modules/my_auth.so
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false

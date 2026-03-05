@@ -1199,7 +1199,7 @@ func (t *Translator) buildDynamicModules(
 			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
 			continue
 		}
-		modulePath := entry.Source.Local.Path
+		path := entry.Source.Local.Path
 
 		filterName := ""
 		if dm.FilterName != nil {
@@ -1208,7 +1208,7 @@ func (t *Translator) buildDynamicModules(
 
 		dmIR := ir.DynamicModule{
 			Name:           name,
-			ModulePath:     modulePath,
+			Path:           path,
 			FilterName:     filterName,
 			Config:         dm.Config,
 			DoNotClose:     ptr.Deref(entry.DoNotClose, false),

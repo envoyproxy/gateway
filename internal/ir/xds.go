@@ -3439,8 +3439,8 @@ type DynamicModule struct {
 	// The xds translator generates one filter for each unique name.
 	Name string `json:"name"`
 
-	// ModulePath is the absolute filesystem path to the dynamic module shared library.
-	ModulePath string `json:"modulePath"`
+	// Path is the absolute filesystem path to the dynamic module shared library.
+	Path string `json:"path"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`

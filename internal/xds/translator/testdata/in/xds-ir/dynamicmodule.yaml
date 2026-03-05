@@ -33,7 +33,7 @@ http:
         doNotClose: true
         filterName: token-ratelimit
         loadGlobally: true
-        modulePath: /usr/lib/envoy/modules/ai_gateway.so
+        path: /usr/lib/envoy/modules/ai_gateway.so
         name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
         terminalFilter: false
   - destination:
@@ -60,7 +60,7 @@ http:
         doNotClose: false
         filterName: auth-check
         loadGlobally: false
-        modulePath: /usr/lib/envoy/modules/my_auth.so
+        path: /usr/lib/envoy/modules/my_auth.so
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
         terminalFilter: false
   - destination:
@@ -85,7 +85,7 @@ http:
       - doNotClose: false
         filterName: handler
         loadGlobally: false
-        modulePath: /usr/lib/envoy/modules/my_handler.so
+        path: /usr/lib/envoy/modules/my_handler.so
         name: envoyextensionpolicy/default/policy-terminal/dynamic-module/0
         terminalFilter: true
   - destination:
@@ -110,6 +110,6 @@ http:
       - doNotClose: false
         filterName: path-filter
         loadGlobally: false
-        modulePath: /opt/modules/my_module.so
+        path: /opt/modules/my_module.so
         name: envoyextensionpolicy/default/policy-path/dynamic-module/0
         terminalFilter: false
