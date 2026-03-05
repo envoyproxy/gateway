@@ -30686,31 +30686,18 @@ spec:
                       properties:
                         local:
                           description: |-
-                            Local specifies a module loaded from the proxy's local filesystem.
-                            Envoy searches for lib${libraryName}.so in the path specified by the
-                            ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
                           properties:
-                            libraryName:
-                              description: |-
-                                LibraryName is the name of the shared library file that Envoy will load.
-                                Envoy searches for lib${libraryName}.so in the path specified by the
-                                ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-                                If not specified, defaults to the value of the DynamicModuleEntry's Name.
-                              maxLength: 253
-                              pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
-                              type: string
                             path:
-                              description: |-
-                                Path is the absolute filesystem path to the dynamic module shared library.
-                                When specified, Envoy loads the module directly from this path instead
-                                of searching by library name.
+                              description: Path is the absolute filesystem path to
+                                the dynamic module shared library (.so file).
                               maxLength: 4096
                               minLength: 1
                               type: string
+                          required:
+                          - path
                           type: object
-                          x-kubernetes-validations:
-                          - message: libraryName and path are mutually exclusive
-                            rule: '!(has(self.libraryName) && has(self.path))'
                         remote:
                           description: |-
                             Remote specifies a module fetched from a remote source.
@@ -30729,6 +30716,8 @@ spec:
                       x-kubernetes-validations:
                       - message: If type is Remote, remote field needs to be set.
                         rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
                   required:
                   - name
                   - source

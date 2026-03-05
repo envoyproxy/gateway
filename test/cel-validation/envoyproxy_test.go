@@ -2046,25 +2046,11 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Source: egv1a1.DynamicModuleSource{
 								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
 								Local: &egv1a1.LocalDynamicModuleSource{
-									LibraryName: ptr.To("my_module"),
+									Path: "/opt/modules/my_module.so",
 								},
 							},
 							DoNotClose:   ptr.To(true),
 							LoadGlobally: ptr.To(true),
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "valid: dynamicModules with minimal fields (implicit Local default)",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					DynamicModules: []egv1a1.DynamicModuleEntry{
-						{
-							Name:   "my-module",
-							Source: egv1a1.DynamicModuleSource{},
 						},
 					},
 				}
@@ -2080,7 +2066,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Name: "auth-module",
 							Source: egv1a1.DynamicModuleSource{
 								Local: &egv1a1.LocalDynamicModuleSource{
-									LibraryName: ptr.To("auth_lib"),
+									Path: "/opt/modules/auth_lib.so",
 								},
 							},
 						},
@@ -2089,7 +2075,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 							Source: egv1a1.DynamicModuleSource{
 								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
 								Local: &egv1a1.LocalDynamicModuleSource{
-									LibraryName: ptr.To("rate_limit_lib"),
+									Path: "/opt/modules/rate_limit_lib.so",
 								},
 							},
 							DoNotClose:   ptr.To(true),
@@ -2129,22 +2115,18 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"spec.dynamicModules[0].name in body should match"},
 		},
 		{
-			desc: "invalid: dynamicModules libraryName with invalid chars",
+			desc: "invalid: dynamicModules Local type without local field",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name: "my-module",
-							Source: egv1a1.DynamicModuleSource{
-								Local: &egv1a1.LocalDynamicModuleSource{
-									LibraryName: ptr.To("my module!"),
-								},
-							},
+							Name:   "my-module",
+							Source: egv1a1.DynamicModuleSource{},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.dynamicModules[0].source.local.libraryName in body should match"},
+			wantErrors: []string{"If type is Local, local field needs to be set"},
 		},
 		{
 			desc: "invalid: dynamicModules source type Remote without remote field",
@@ -2161,45 +2143,6 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If type is Remote, remote field needs to be set"},
-		},
-		{
-			desc: "valid: dynamicModules with path",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					DynamicModules: []egv1a1.DynamicModuleEntry{
-						{
-							Name: "my-module",
-							Source: egv1a1.DynamicModuleSource{
-								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
-								Local: &egv1a1.LocalDynamicModuleSource{
-									Path: ptr.To("/opt/modules/my_module.so"),
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "invalid: dynamicModules with both libraryName and path",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					DynamicModules: []egv1a1.DynamicModuleEntry{
-						{
-							Name: "my-module",
-							Source: egv1a1.DynamicModuleSource{
-								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
-								Local: &egv1a1.LocalDynamicModuleSource{
-									LibraryName: ptr.To("my_module"),
-									Path:        ptr.To("/opt/modules/my_module.so"),
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{"libraryName and path are mutually exclusive"},
 		},
 		{
 			desc: "invalid: dynamicModules source type Local with remote field",

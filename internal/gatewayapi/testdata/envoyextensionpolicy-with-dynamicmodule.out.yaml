@@ -210,14 +210,14 @@ infraIR:
           - name: my-auth-module
             source:
               local:
-                libraryName: my_auth
+                path: /usr/lib/envoy/modules/my_auth.so
               type: Local
           - doNotClose: true
             loadGlobally: true
             name: ai-gateway-filter
             source:
               local:
-                libraryName: ai_gateway
+                path: /usr/lib/envoy/modules/ai_gateway.so
           - name: path-loaded-module
             source:
               local:
@@ -310,7 +310,7 @@ xdsIR:
             doNotClose: true
             filterName: token-ratelimit
             loadGlobally: true
-            moduleName: ai_gateway
+            modulePath: /usr/lib/envoy/modules/ai_gateway.so
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
             terminalFilter: false
           - doNotClose: false
@@ -356,7 +356,7 @@ xdsIR:
             doNotClose: false
             filterName: auth-check
             loadGlobally: false
-            moduleName: my_auth
+            modulePath: /usr/lib/envoy/modules/my_auth.so
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
             terminalFilter: false
         hostname: www.example.com

@@ -9,7 +9,7 @@ envoyProxiesForGateways:
     - name: allowed-module
       source:
         local:
-          libraryName: allowed
+          path: /opt/modules/allowed.so
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

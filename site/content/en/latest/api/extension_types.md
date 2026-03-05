@@ -1270,7 +1270,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
-| `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable. |
+| `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
 
 
 #### DynamicModuleSourceType
@@ -3526,8 +3526,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of the DynamicModuleEntry's Name. |
-| `path` | _string_ |  false  |  | Path is the absolute filesystem path to the dynamic module shared library.<br />When specified, Envoy loads the module directly from this path instead<br />of searching by library name. |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the dynamic module shared library (.so file). |
 
 
 #### LocalJWKS

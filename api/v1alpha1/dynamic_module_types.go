@@ -25,6 +25,7 @@ const (
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'Remote' ? has(self.remote) : !has(self.remote)",message="If type is Remote, remote field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type != 'Local' || has(self.local)",message="If type is Local, local field needs to be set."
 type DynamicModuleSource struct {
 	// Type is the type of the source of the dynamic module code.
 	// Defaults to Local.
@@ -34,9 +35,8 @@ type DynamicModuleSource struct {
 	// +optional
 	Type *DynamicModuleSourceType `json:"type,omitempty"`
 
-	// Local specifies a module loaded from the proxy's local filesystem.
-	// Envoy searches for lib${libraryName}.so in the path specified by the
-	// ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
+	// Local specifies a module loaded from the proxy's local filesystem
+	// by absolute path.
 	//
 	// +optional
 	Local *LocalDynamicModuleSource `json:"local,omitempty"`
@@ -50,27 +50,12 @@ type DynamicModuleSource struct {
 }
 
 // LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
-//
-// +kubebuilder:validation:XValidation:rule="!(has(self.libraryName) && has(self.path))",message="libraryName and path are mutually exclusive"
 type LocalDynamicModuleSource struct {
-	// LibraryName is the name of the shared library file that Envoy will load.
-	// Envoy searches for lib${libraryName}.so in the path specified by the
-	// ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-	// If not specified, defaults to the value of the DynamicModuleEntry's Name.
+	// Path is the absolute filesystem path to the dynamic module shared library (.so file).
 	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$`
-	LibraryName *string `json:"libraryName,omitempty"`
-
-	// Path is the absolute filesystem path to the dynamic module shared library.
-	// When specified, Envoy loads the module directly from this path instead
-	// of searching by library name.
-	//
-	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=4096
-	Path *string `json:"path,omitempty"`
+	Path string `json:"path"`
 }
 
 // RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.

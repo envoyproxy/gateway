@@ -10,11 +10,11 @@ envoyProxiesForGateways:
       source:
         type: Local
         local:
-          libraryName: my_auth
+          path: /usr/lib/envoy/modules/my_auth.so
     - name: ai-gateway-filter
       source:
         local:
-          libraryName: ai_gateway
+          path: /usr/lib/envoy/modules/ai_gateway.so
       doNotClose: true
       loadGlobally: true
     - name: path-loaded-module

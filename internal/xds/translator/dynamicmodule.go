@@ -94,9 +94,7 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 	dmConfig := &dmconfigv3.DynamicModuleConfig{
 		DoNotClose:   dm.DoNotClose,
 		LoadGlobally: dm.LoadGlobally,
-	}
-	if dm.ModulePath != "" {
-		dmConfig.Module = &corev3.AsyncDataSource{
+		Module: &corev3.AsyncDataSource{
 			Specifier: &corev3.AsyncDataSource_Local{
 				Local: &corev3.DataSource{
 					Specifier: &corev3.DataSource_Filename{
@@ -104,9 +102,7 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 					},
 				},
 			},
-		}
-	} else {
-		dmConfig.Name = dm.ModuleName
+		},
 	}
 
 	filterConfig := &dmfilterv3.DynamicModuleFilter{

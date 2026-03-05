@@ -131,7 +131,7 @@ infraIR:
           - name: allowed-module
             source:
               local:
-                libraryName: allowed
+                path: /opt/modules/allowed.so
           logging: {}
         status: {}
       listeners:

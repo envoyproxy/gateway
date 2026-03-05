@@ -1190,21 +1190,16 @@ func (t *Translator) buildDynamicModules(
 			continue
 		}
 
-		// Resolve library name from source (default to entry name)
-		moduleName := entry.Name
-		modulePath := ""
+		// Resolve module path from source
 		if entry.Source.Type != nil && *entry.Source.Type == egv1a1.RemoteDynamicModuleSourceType {
 			errs = errors.Join(errs, fmt.Errorf("dynamic module %q uses remote source which is not yet implemented", dm.Name))
 			continue
 		}
-		if entry.Source.Local != nil {
-			if entry.Source.Local.Path != nil {
-				modulePath = *entry.Source.Local.Path
-				moduleName = ""
-			} else if entry.Source.Local.LibraryName != nil {
-				moduleName = *entry.Source.Local.LibraryName
-			}
+		if entry.Source.Local == nil {
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
+			continue
 		}
+		modulePath := entry.Source.Local.Path
 
 		filterName := ""
 		if dm.FilterName != nil {
@@ -1213,7 +1208,6 @@ func (t *Translator) buildDynamicModules(
 
 		dmIR := ir.DynamicModule{
 			Name:           name,
-			ModuleName:     moduleName,
 			ModulePath:     modulePath,
 			FilterName:     filterName,
 			Config:         dm.Config,
