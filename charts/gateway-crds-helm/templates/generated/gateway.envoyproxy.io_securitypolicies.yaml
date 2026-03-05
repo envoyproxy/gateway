@@ -446,8 +446,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
@@ -1285,6 +1283,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -2492,6 +2496,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -3908,6 +3918,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -5384,6 +5400,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base

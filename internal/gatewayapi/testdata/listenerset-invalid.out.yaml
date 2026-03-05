@@ -200,12 +200,30 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-invalid/invalid-one
+        ports:
+        - containerPort: 8085
+          name: "-8085"
+          protocol: ""
+          servicePort: 8085
+      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-invalid/invalid-two
+        ports:
+        - containerPort: 8086
+          name: "-8086"
+          protocol: ""
+          servicePort: 8086
       - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-mixed/mixed-valid
         ports:
         - containerPort: 8087
           name: http-8087
           protocol: HTTP
           servicePort: 8087
+      - name: gateway-xls/composite-gateway/gateway-xls/same-namespace-mixed/mixed-invalid
+        ports:
+        - containerPort: 8088
+          name: "-8088"
+          protocol: ""
+          servicePort: 8088
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: composite-gateway
