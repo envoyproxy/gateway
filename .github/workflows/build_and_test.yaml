@@ -6,9 +6,6 @@ on:
     - "release/v*"
     tags:
     - "v*.*.*"
-    # Exclude rc.0 tags — they're not real release candidates but markers for main
-    # See: https://github.com/envoyproxy/gateway/issues/7248
-    - "!v*.*.*-rc.0"
     paths-ignore:
     - "**/*.png"
   pull_request:
@@ -125,18 +122,19 @@ jobs:
       # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
       # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
       with:
-        fetch-depth: ${{ github.ref == 'refs/heads/main' && 0 || 1 }}
+        fetch-depth: ${{ github.ref == 'refs/heads/main' && '0' || '1' }}
         filter: ${{ github.ref == 'refs/heads/main' && 'tree:0' || '' }}
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
-      # Build all platforms for release tags, only linux for other builds
+      env:
+        IS_RELEASE_TAG: ${{ github.ref_type == 'tag' && !endsWith(github.ref_name, '-rc.0') }}
       run: |
-        PLATFORMS="linux_amd64 linux_arm64"
-        if [[ "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
-          PLATFORMS=""
+        if [[ "$IS_RELEASE_TAG" == "true" ]]; then
+          make build-multiarch  # all platforms (default)
+        else
+          make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
         fi
-        make build-multiarch PLATFORMS="$PLATFORMS"
 
     - name: Upload EG Binaries
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
@@ -266,7 +264,7 @@ jobs:
     - build
     - changes
     # Run for pull requests or release tags.
-    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true') || startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ (github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true') || github.ref_type == 'tag' }}
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -355,7 +353,9 @@ jobs:
   release:
     runs-on: ubuntu-22.04
     needs: [conformance-test, e2e-test, benchmark-test, resilience-test]
-    if: startsWith(github.ref, 'refs/tags/')
+    # Exclude rc.0 tags — they're markers for main, not real releases
+    # See: https://github.com/envoyproxy/gateway/issues/7248
+    if: github.ref_type == 'tag' && !endsWith(github.ref_name, '-rc.0')
     permissions:
       contents: write
     steps:
@@ -377,6 +377,11 @@ jobs:
       with:
         name: envoy-gateway
         path: bin/
+
+    - name: Give Privileges To EG Binaries
+      run: |
+        chmod +x bin/linux/amd64/envoy-gateway
+        chmod +x bin/linux/arm64/envoy-gateway
 
     - name: Login to DockerHub
       uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3.7.0
