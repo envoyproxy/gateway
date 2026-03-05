@@ -16,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
@@ -82,11 +81,6 @@ func TestE2E(t *testing.T) {
 	if *flags.RunTest != "" {
 		skipTests = nil
 	}
-	timeout := config.DefaultTimeoutConfig()
-	// The default value of RequiredConsecutiveSuccesses is 3,
-	// which means a test needs to pass 3 times in a row to be considered successful.
-	// This's not necessary for E2E test.
-	timeout.RequiredConsecutiveSuccesses = 0
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
