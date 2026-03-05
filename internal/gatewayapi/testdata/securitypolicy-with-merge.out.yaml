@@ -141,8 +141,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret
     targetRefs:
     - group: gateway.networking.k8s.io

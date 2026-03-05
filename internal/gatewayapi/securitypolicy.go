@@ -883,8 +883,8 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// If policyTargetGateway is set, only apply to the specific gateway
 		if policyTargetGateway != nil {
 			gtwNN := types.NamespacedName{
-				Namespace: gtwCtx.Gateway.Namespace,
-				Name:      gtwCtx.Gateway.Name,
+				Namespace: gtwCtx.Namespace,
+				Name:      gtwCtx.Name,
 			}
 			if gtwNN != *policyTargetGateway {
 				continue
