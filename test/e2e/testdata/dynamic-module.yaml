@@ -13,8 +13,6 @@ spec:
         container:
           image: envoyproxy/gateway-dynamic-module-test:latest
           env:
-            - name: ENVOY_DYNAMIC_MODULES_SEARCH_PATH
-              value: /usr/local/lib
             - name: GODEBUG
               value: cgocheck=0
   dynamicModules:
