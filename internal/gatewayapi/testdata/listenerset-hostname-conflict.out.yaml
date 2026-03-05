@@ -479,7 +479,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - gateway-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -494,7 +493,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-gateway-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -509,7 +507,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - listener-set-1-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -524,7 +521,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-gateway-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -539,7 +535,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-listener-set-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -554,7 +549,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-gateway-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -569,7 +563,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - listener-set-2-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -584,7 +577,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-listener-set-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
@@ -599,7 +591,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - hostname-conflict-with-listener-set-listener.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-listenerset-hostname-conflict
