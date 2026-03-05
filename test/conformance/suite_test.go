@@ -3,6 +3,9 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
+// Add go build to avoid this to be run as part of make run-conformance/run-experimental-conformance
+//go:build conformance_unit_test
+
 package conformance
 
 import (
@@ -16,14 +19,15 @@ func TestEnvoyGatewaySuite(t *testing.T) {
 		name                 string
 		gatewayNamespaceMode bool
 		standardChannel      bool
-		includeFeatures      []features.FeatureName
-		excludeFeatures      []features.FeatureName
+		includedFeatures     []features.FeatureName
+		excludedFeatures     []features.FeatureName
 	}{
 		{
-			name:                 "TLSRouteModeMixed should be excluded when gatewayNamespaceMode is true and standardChannel is true",
+			name:                 "TLSRouteModeMixed should be included when gatewayNamespaceMode is true and standardChannel is true",
 			gatewayNamespaceMode: true,
 			standardChannel:      true,
-			excludeFeatures: []features.FeatureName{
+			includedFeatures: []features.FeatureName{
+				// need this feature to skip TLSRouteListenerMixedTerminationNotSupported test.
 				features.SupportTLSRouteModeMixed,
 			},
 		},
@@ -32,13 +36,13 @@ func TestEnvoyGatewaySuite(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(*testing.T) {
 			got := EnvoyGatewaySuite(tc.gatewayNamespaceMode, tc.standardChannel)
-			for _, in := range tc.includeFeatures {
+			for _, in := range tc.includedFeatures {
 				if !got.SupportedFeatures.Has(in) {
 					t.Fatalf("%s should be included", in)
 				}
 			}
 
-			for _, in := range tc.excludeFeatures {
+			for _, in := range tc.excludedFeatures {
 				if got.SupportedFeatures.Has(in) {
 					t.Fatalf("%s should be excluded", in)
 				}
