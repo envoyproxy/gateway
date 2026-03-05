@@ -579,7 +579,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br />Note: The secret must be in the same namespace as the SecurityPolicy. |
+| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
 
 
@@ -1253,9 +1253,39 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name. |
-| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of Name. |
+| `source` | _[DynamicModuleSource](#dynamicmodulesource)_ |  true  |  | Source defines where the dynamic module code is loaded from. |
 | `doNotClose` | _boolean_ |  false  | false | DoNotClose prevents the module from being unloaded with dlclose when no<br />more references exist. This is useful for modules that maintain global<br />state that should not be destroyed on configuration updates.<br />Defaults to false. |
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
+
+
+#### DynamicModuleSource
+
+
+
+DynamicModuleSource defines the source of the dynamic module code.
+
+_Appears in:_
+- [DynamicModuleEntry](#dynamicmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
+| `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+
+
+#### DynamicModuleSourceType
+
+_Underlying type:_ _string_
+
+DynamicModuleSourceType specifies the types of sources for dynamic module code.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalDynamicModuleSourceType specifies a module loaded from the local filesystem.<br /> | 
+| `Remote` | RemoteDynamicModuleSourceType specifies a module fetched from a remote source.<br /> | 
 
 
 #### EndpointOverride
@@ -2929,7 +2959,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />Only support Kubernetes Secret resource from the same namespace. |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
 | `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
 
 
@@ -2958,7 +2988,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>".<br />Note: The secret must be in the same namespace as the HTTPRouteFilter. |
+| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
 
 
 #### InvalidMessageAction
@@ -3483,6 +3513,20 @@ _Appears in:_
 | `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
+
+
+#### LocalDynamicModuleSource
+
+
+
+LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the dynamic module shared library (.so file). |
 
 
 #### LocalJWKS
@@ -4788,6 +4832,17 @@ _Appears in:_
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
 
 
+#### RemoteDynamicModuleSource
+
+
+
+RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+
+
 #### RemoteJWKS
 
 
@@ -5749,7 +5804,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.<br />Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy. |
+| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported. |
 
 
 #### WasmCodeSourceType
