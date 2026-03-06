@@ -450,7 +450,8 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
 		return nil
 	}
-	for i, rule := range p.Spec.Authorization.Rules {
+	for i := range p.Spec.Authorization.Rules {
+		rule := &p.Spec.Authorization.Rules[i]
 		if rule.Principal.JWT != nil {
 			return fmt.Errorf("rule %d: JWT not supported for TCP", i)
 		}
@@ -1284,7 +1285,7 @@ func (t *Translator) buildOIDC(
 		clientID = *oidc.ClientID
 	case oidc.ClientIDRef != nil:
 		var clientIDSecret *corev1.Secret
-		if clientIDSecret, err = t.validateSecretRef(false, from, *oidc.ClientIDRef, resources); err != nil {
+		if clientIDSecret, err = t.validateSecretRef(true, from, *oidc.ClientIDRef, resources); err != nil {
 			return nil, err
 		}
 		clientIDBytes, ok := clientIDSecret.Data[egv1a1.OIDCClientIDKey]
@@ -1297,7 +1298,7 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	if clientSecret, err = t.validateSecretRef(false, from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(true, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
@@ -1733,7 +1734,7 @@ func (t *Translator) buildAPIKeyAuth(
 	seenClients := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
-		credentialsSecret, err := t.validateSecretRef(false, from, ref, resources)
+		credentialsSecret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1788,7 +1789,7 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if usersSecret, err = t.validateSecretRef(false, from, basicAuth.Users, resources); err != nil {
+	if usersSecret, err = t.validateSecretRef(true, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
 
@@ -2086,7 +2087,8 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 	}
 	irAuth.DefaultAction = defaultAction
 
-	for i, rule := range authorization.Rules {
+	for i := range authorization.Rules {
+		rule := &authorization.Rules[i]
 		irPrincipal := ir.Principal{}
 
 		for _, cidr := range rule.Principal.ClientCIDRs {

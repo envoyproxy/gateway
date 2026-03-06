@@ -137,22 +137,28 @@ jobs:
         - version: v1.32.11
           ipFamily: ipv4
           profile: default
+          gwapiChannel: standard
         - version: v1.33.7
           ipFamily: ipv4
           profile: default
+          gwapiChannel: experimental
         - version: v1.34.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
+          gwapiChannel: experimental
         # TODO: this's IPv4 first, need a way to test IPv6 first.
         - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
+          gwapiChannel: experimental
         - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
+          gwapiChannel: experimental
           profile: gateway-namespace-mode
         - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+          gwapiChannel: experimental
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -175,6 +181,7 @@ jobs:
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
         KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
       run: make conformance
 
   e2e-test:
