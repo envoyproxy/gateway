@@ -22599,21 +22599,21 @@ spec:
                   maxRejectionProbability:
                     description: |-
                       MaxRejectionProbability represents the upper limit of the rejection probability.
-                      The value should be in the range [0.0, 1.0]. Defaults to 0.95 (95%) if not specified.
+                      The value should be in the range [0.0, 1.0]. Defaults to 0.80 (80%) if not specified.
                     maximum: 1
                     minimum: 0
                     type: number
                   rpsThreshold:
                     description: |-
                       RPSThreshold defines the minimum requests per second below which requests will
-                      pass through the filter without rejection. Defaults to 1 if not specified.
+                      pass through the filter without rejection. Defaults to 0 if not specified.
                     format: int32
                     minimum: 0
                     type: integer
                   samplingWindow:
                     description: |-
                       SamplingWindow defines the time window over which request success rates are calculated.
-                      Defaults to 60s if not specified.
+                      Defaults to 30s if not specified.
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                   successCriteria:
@@ -22632,23 +22632,23 @@ spec:
                                 GRPCSuccessCode defines gRPC status codes as defined in
                                 https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
                               enum:
-                              - OK
-                              - CANCELLED
-                              - UNKNOWN
-                              - INVALID_ARGUMENT
-                              - DEADLINE_EXCEEDED
-                              - NOT_FOUND
-                              - ALREADY_EXISTS
-                              - PERMISSION_DENIED
-                              - RESOURCE_EXHAUSTED
-                              - FAILED_PRECONDITION
-                              - ABORTED
-                              - OUT_OF_RANGE
-                              - UNIMPLEMENTED
-                              - INTERNAL
-                              - UNAVAILABLE
-                              - DATA_LOSS
-                              - UNAUTHENTICATED
+                              - Ok
+                              - Cancelled
+                              - Unknown
+                              - InvalidArgument
+                              - DeadlineExceeded
+                              - NotFound
+                              - AlreadyExists
+                              - PermissionDenied
+                              - ResourceExhausted
+                              - FailedPrecondition
+                              - Aborted
+                              - OutOfRange
+                              - Unimplemented
+                              - Internal
+                              - Unavailable
+                              - DataLoss
+                              - Unauthenticated
                               type: string
                             type: array
                         type: object
