@@ -28,6 +28,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
+  Added `source` field to `responseOverride` rules in BackendTrafficPolicy, allowing rules to target only Envoy-generated responses (`Local`), only upstream responses (`Backend`), or both (`All`, the default). This enables overriding auth/rate-limit failures without affecting legitimate upstream responses with the same status code.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
