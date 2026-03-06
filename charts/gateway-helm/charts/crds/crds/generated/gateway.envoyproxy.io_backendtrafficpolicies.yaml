@@ -343,6 +343,9 @@ spec:
                   - type
                   type: object
                   x-kubernetes-validations:
+                  - message: At least one decompressor config field (gzip, brotli,
+                      or zstd) must be set.
+                    rule: has(self.gzip) || has(self.brotli) || has(self.zstd)
                   - message: If decompressor type is Gzip, brotli and zstd fields
                       must not be set.
                     rule: 'self.type == ''Gzip'' ? !has(self.brotli) && !has(self.zstd)

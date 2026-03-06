@@ -36,6 +36,7 @@ type ZstdDecompressor struct{}
 // Decompressor defines the config for enabling a decompressor.
 // This can help decompress compressed requests from clients and/or compressed responses from backends.
 //
+// +kubebuilder:validation:XValidation:rule="has(self.gzip) || has(self.brotli) || has(self.zstd)",message="At least one decompressor config field (gzip, brotli, or zstd) must be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Gzip' ? !has(self.brotli) && !has(self.zstd) : true",message="If decompressor type is Gzip, brotli and zstd fields must not be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Brotli' ? !has(self.gzip) && !has(self.zstd) : true",message="If decompressor type is Brotli, gzip and zstd fields must not be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'Zstd' ? !has(self.gzip) && !has(self.brotli) : true",message="If decompressor type is Zstd, gzip and brotli fields must not be set."
