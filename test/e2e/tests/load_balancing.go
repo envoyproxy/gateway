@@ -283,14 +283,133 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 
 func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTestSuite, req *roundtripper.Request, expectedResponse *http.ExpectedResponse) {
 	if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-		got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-			// All traffic with the same header combination should route to the same pod
-			return len(trafficMap) == 1
-		})
+		got := runConsistentHashTrafficTest(t, suite, req, expectedResponse, sendRequests)
 		return got, nil
 	}); err != nil {
 		tlog.Errorf(t, "failed to run consistent hash load balancing test: %v", err)
 	}
+}
+
+func runConsistentHashTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
+	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
+	totalRequestCount int,
+) bool {
+	if req == nil {
+		t.Fatalf("request cannot be nil")
+	}
+	if expectedResponse == nil {
+		t.Fatalf("expected response cannot be nil")
+	}
+
+	// Keep a single downstream connection so all requests stay on one Envoy worker.
+	// The default conformance roundtripper disables keep-alive, so each request can
+	// land on different workers and make strict sticky-hash assertions flaky.
+	client := &nethttp.Client{
+		Transport: &nethttp.Transport{
+			MaxIdleConns:        1,
+			MaxIdleConnsPerHost: 1,
+			MaxConnsPerHost:     1,
+		},
+	}
+	defer client.CloseIdleConnections()
+
+	trafficMap := make(map[string]int)
+	for i := 0; i < totalRequestCount; i++ {
+		request := *req
+		cReq, cResp, err := captureRoundTripWithPersistentClient(t, client, suite.TimeoutConfig.RequestTimeout, &request)
+		if err != nil {
+			t.Errorf("failed to get expected response: %v", err)
+		}
+
+		if err := http.CompareRoundTrip(t, &request, cReq, cResp, *expectedResponse); err != nil {
+			t.Errorf("failed to compare request and response: %v", err)
+		}
+
+		podName := cReq.Pod
+		if len(podName) == 0 {
+			tlog.Errorf(t, "failed to get pod header in response: %v", err)
+		} else {
+			trafficMap[podName]++
+		}
+	}
+
+	ret := len(trafficMap) == 1
+	if !ret {
+		tlog.Logf(t, "traffic map: %v", trafficMap)
+	}
+
+	return ret
+}
+
+func captureRoundTripWithPersistentClient(
+	t *testing.T,
+	client *nethttp.Client,
+	timeout time.Duration,
+	request *roundtripper.Request,
+) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+	if request == nil {
+		return nil, nil, fmt.Errorf("request cannot be nil")
+	}
+
+	method := nethttp.MethodGet
+	if request.Method != "" {
+		method = request.Method
+	}
+
+	var reqBody io.Reader
+	if request.Body != "" {
+		reqBody = strings.NewReader(request.Body)
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), timeout)
+	defer cancel()
+
+	req, err := nethttp.NewRequestWithContext(ctx, method, request.URL.String(), reqBody)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if request.Host != "" {
+		req.Host = request.Host
+	}
+
+	if request.Headers != nil {
+		for name, value := range request.Headers {
+			if len(value) == 0 {
+				continue
+			}
+			req.Header.Set(name, value[0])
+		}
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cReq := &roundtripper.CapturedRequest{
+		Method: method,
+	}
+	if resp.Header.Get("Content-Type") == "application/json" {
+		if err := json.Unmarshal(body, cReq); err != nil {
+			return nil, nil, fmt.Errorf("unexpected error reading response: %w", err)
+		}
+	}
+
+	cRes := &roundtripper.CapturedResponse{
+		StatusCode:    resp.StatusCode,
+		ContentLength: resp.ContentLength,
+		Protocol:      resp.Proto,
+		Headers:       resp.Header,
+	}
+
+	return cReq, cRes, nil
 }
 
 var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
@@ -454,6 +573,7 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 			{"combo4", "foo", "bar"},
 			{"combo5", "alpha", "beta"},
 		}
+
 		for _, queryCombination := range queryCombinations {
 			t.Run(queryCombination.name, func(t *testing.T) {
 				expectedResponse := &http.ExpectedResponse{
