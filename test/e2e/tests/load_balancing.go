@@ -51,11 +51,14 @@ func init() {
 var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "RoundRobinLoadBalancing",
 	Description: "Test for round robin load balancing type",
-	Manifests:   []string{"testdata/load_balancing_round_robin.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_round_robin.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
 			sendRequests = 100
-			replicas     = 3
+			replicas     = 4
 			offset       = 5
 		)
 
@@ -70,9 +73,8 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "round-robin-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-roundrobin"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		verifyLBBackendReady(t, suite, gwAddr)
 
 		t.Run("traffic should be split evenly", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
@@ -97,7 +99,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 				return true
 			}
 
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
 				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
 				tlog.Errorf(t, "failed to run round robin load balancing test: %v", err)
@@ -119,7 +121,7 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		t.Fatalf("expected response cannot be nil")
 	}
 	trafficMap := make(map[string]int)
-	for i := 0; i < totalRequestCount; i++ {
+	for range totalRequestCount {
 		request := *req
 		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
 		if err != nil {
@@ -147,10 +149,68 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	return ret
 }
 
+// verifyLBBackendReady verifies that all backend pods are receiving traffic before running the load balancing test.
+// This's important to ensure that all the clusters and endpoints have been warmed up before we run the test,
+// especially for the consistent hash load balancing tests where we expect the same request to always hit the same backend.
+func verifyLBBackendReady(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string) {
+	const backendPodCount = 4
+	trafficMap := make(map[string]int)
+	expectedResponse := http.ExpectedResponse{
+		Request: http.Request{
+			Path: "/",
+		},
+		Response: http.Response{
+			StatusCodes: []int{200},
+		},
+		Namespace: "gateway-conformance-infra",
+	}
+	req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+	// add a timeout for this loop to avoid infinite loop in case of any issue with the backend pods
+	timeout := time.After(suite.TimeoutConfig.MaxTimeToConsistency)
+	for {
+		select {
+		case <-timeout:
+			t.Fatalf("timeout waiting for backend pods to be ready")
+			return
+		default:
+			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+			if err != nil {
+				t.Logf("failed to get expected response: %v", err)
+				// sleep for a while
+				time.Sleep(suite.TimeoutConfig.DefaultPollInterval)
+				continue
+			}
+
+			err = http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse)
+			if err != nil {
+				t.Logf("failed to compare request and response: %v", err)
+				time.Sleep(suite.TimeoutConfig.DefaultPollInterval)
+				continue
+			}
+
+			podName := cReq.Pod
+			if len(podName) == 0 {
+				// it shouldn't be missing here
+				tlog.Logf(t, "failed to get pod header in response: %v", err)
+			} else {
+				trafficMap[podName]++
+			}
+
+			if len(trafficMap) >= backendPodCount {
+				tlog.Logf(t, "all backend pods are receiving traffic: %v", trafficMap)
+				return
+			}
+		}
+	}
+}
+
 var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "SourceIPBasedConsistentHashLoadBalancing",
 	Description: "Test for source IP based consistent hash load balancing type",
-	Manifests:   []string{"testdata/load_balancing_consistent_hash_source_ip.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_consistent_hash_source_ip.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
@@ -163,9 +223,8 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "source-ip-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-sourceip"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		verifyLBBackendReady(t, suite, gwAddr)
 
 		t.Run("all traffics route to the same backend with same source ip", func(t *testing.T) {
 			expectedResponse := &http.ExpectedResponse{
@@ -187,7 +246,10 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "HeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for header based consistent hash load balancing type",
-	Manifests:   []string{"testdata/load_balancing_consistent_hash_header.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_consistent_hash_header.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
@@ -200,10 +262,8 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-
+		verifyLBBackendReady(t, suite, gwAddr)
 		expectedResponse := &http.ExpectedResponse{
 			Request: http.Request{
 				Path: "/header",
@@ -228,7 +288,10 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "MultiHeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple header based consistent hash load balancing type",
-	Manifests:   []string{"testdata/load_balancing_consistent_hash_multi_header.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_consistent_hash_multi_header.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
@@ -241,9 +304,8 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-header"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		verifyLBBackendReady(t, suite, gwAddr)
 
 		expectedResponse := &http.ExpectedResponse{
 			Request: http.Request{
@@ -296,7 +358,10 @@ func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTe
 var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "CookieBasedConsistentHashLoadBalancing",
 	Description: "Test for cookie based consistent hash load balancing type",
-	Manifests:   []string{"testdata/load_balancing_consistent_hash_cookie.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_consistent_hash_cookie.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const sendRequests = 10
 
@@ -311,10 +376,10 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cookie-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-cookie"}, corev1.PodRunning, &PodReady)
 
 		gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 		gwAddr := net.JoinHostPort(gwHost, "80")
+		verifyLBBackendReady(t, suite, gwAddr)
 
 		t.Run("all traffics route to the same backend with same test cookie", func(t *testing.T) {
 			cookieJar, err := cookiejar.New(nil)
@@ -426,7 +491,10 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "QueryParamsBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple query parameter based consistent hash load balancing type",
-	Manifests:   []string{"testdata/load_balancing_consistent_hash_query_parameter.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_consistent_hash_query_parameter.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "query-parameter-lb-route", Namespace: ns}
@@ -439,9 +507,8 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "query-parameter-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-query-parameter"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		verifyLBBackendReady(t, suite, gwAddr)
 		// Test with different combinations of multiple queries
 		queryCombinations := []struct {
 			name   string
@@ -466,7 +533,6 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 					Namespace: ns,
 				}
 				req := http.MakeRequest(t, expectedResponse, gwAddr, "HTTP", "http")
-
 				runConsistentHashLoadBalancingTest(t, suite, &req, expectedResponse)
 			})
 		}
@@ -476,7 +542,10 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "EndpointOverrideLoadBalancing",
 	Description: "Test for endpoint override load balancing functionality",
-	Manifests:   []string{"testdata/load_balancing_endpoint_override.yaml"},
+	Manifests: []string{
+		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_endpoint_override.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const sendRequests = 10
 
@@ -491,10 +560,8 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "endpoint-override-header-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-endpointoverride"}, corev1.PodRunning, &PodReady)
-
 		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), headerRouteNN)
-
+		verifyLBBackendReady(t, suite, gwAddr)
 		// Get pods associated with the service to find valid pod IPs and names
 		ctx, cancel := context.WithTimeout(context.Background(), suite.TimeoutConfig.GetTimeout)
 		defer cancel()
@@ -503,7 +570,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 		podList := &corev1.PodList{}
 		err := suite.Client.List(ctx, podList, &client.ListOptions{
 			Namespace:     ns,
-			LabelSelector: labels.SelectorFromSet(map[string]string{"app": "lb-backend-endpointoverride"}),
+			LabelSelector: labels.SelectorFromSet(map[string]string{"app": "lb-backend"}),
 		})
 		require.NoError(t, err, "failed to list pods")
 		require.NotEmpty(t, podList.Items, "should have pods")
@@ -521,7 +588,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 
 		// Get service port
 		svc := &corev1.Service{}
-		err = suite.Client.Get(ctx, types.NamespacedName{Name: "lb-backend-endpointoverride", Namespace: ns}, svc)
+		err = suite.Client.Get(ctx, types.NamespacedName{Name: "lb-backend", Namespace: ns}, svc)
 		require.NoError(t, err, "failed to get service")
 		require.NotEmpty(t, svc.Spec.Ports, "service should have ports")
 		servicePort := svc.Spec.Ports[0].TargetPort.IntValue()
