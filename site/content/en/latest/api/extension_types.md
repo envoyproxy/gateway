@@ -6032,8 +6032,9 @@ _Appears in:_
 | `VirtualHost` |  | 
 | `Route` |  | 
 | `HTTPListener` |  | 
-| `Translation` |  | 
 | `Cluster` |  | 
+| `Endpoints` |  | 
+| `Translation` |  | 
 
 
 #### XDSTranslatorHooks
