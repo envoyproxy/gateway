@@ -213,7 +213,7 @@ enable = true
 
 [menu]
   [[menu.main]]
-    name = "Contributions"
+    name = "Community"
     weight = -98
     url = "/contributions"
   [[menu.main]]
