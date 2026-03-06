@@ -472,7 +472,6 @@ xdsIR:
       - '*'
       http1:
         http10: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -490,7 +489,6 @@ xdsIR:
       http1:
         http10:
           defaultHost: www.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -506,7 +504,6 @@ xdsIR:
       hostnames:
       - '*'
       http1: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -524,7 +521,6 @@ xdsIR:
       http1:
         http10:
           defaultHost: route.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -571,7 +567,6 @@ xdsIR:
       hostnames:
       - '*'
       http1: {}
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

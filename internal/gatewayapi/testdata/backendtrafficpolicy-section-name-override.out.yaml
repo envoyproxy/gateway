@@ -353,7 +353,6 @@ xdsIR:
       externalPort: 8081
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -452,9 +451,11 @@ xdsIR:
               connectTimeout: 15s
     - address: 0.0.0.0
       externalPort: 8082
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1

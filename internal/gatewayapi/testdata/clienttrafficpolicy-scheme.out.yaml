@@ -157,7 +157,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       matchBackendScheme: true
       metadata:
         kind: Gateway
