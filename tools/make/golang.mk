@@ -65,11 +65,13 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi/resource --override-testdata=true
 
+GO_TEST_COVERAGE_ARGS ?= --tags=integration,conformance_unit_test -race
+
 .PHONY: go.test.coverage
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
-		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
+		go test ./... $(GO_TEST_COVERAGE_ARGS) -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
 
 .PHONY: go.test.cel
 go.test.cel: manifests # Run the CEL validation tests
