@@ -17,14 +17,12 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   ipFamily: IPv4
-  logging:
-    level:
-      default: debug
   provider:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
         container:
+          image: envoyproxy/envoy:distroless-v1.37.0
           volumeMounts:
             - mountPath: /var/run/ext-proc
               name: socket-dir
