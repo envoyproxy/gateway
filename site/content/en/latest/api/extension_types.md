@@ -724,6 +724,25 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
+#### ClientIPGeoLocation
+
+
+
+ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `country` | _string_ |  false  |  | Country is the country ISO code associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region ISO code associated with the client IP. |
+| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
+| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
+| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
+| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
+
+
 #### ClientTLSSettings
 
 
@@ -1855,6 +1874,20 @@ _Appears in:_
 
 
 
+#### EnvoyProxyGeoIP
+
+
+
+EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration used by GeoIP filter instances. |
+
+
 #### EnvoyProxyHostProvider
 
 
@@ -2379,6 +2412,90 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
+#### GeoIPAnonymousMatch
+
+
+
+GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+If multiple fields are specified, all specified fields must match.
+These signals are not mutually exclusive. A single IP may satisfy multiple
+flags at the same time (for example, a commercial VPN exit IP may also be
+classified as a public proxy, so both IsVPN and IsProxy can be true).
+
+_Appears in:_
+- [ClientIPGeoLocation](#clientipgeolocation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `isAnonymous` | _boolean_ |  false  |  | IsAnonymous matches whether the client IP is considered anonymous. |
+| `isVPN` | _boolean_ |  false  |  | IsVPN matches whether the client IP is detected as VPN. |
+| `isHosting` | _boolean_ |  false  |  | IsHosting matches whether the client IP belongs to a hosting provider. |
+| `isTor` | _boolean_ |  false  |  | IsTor matches whether the client IP belongs to a Tor exit node. |
+| `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
+
+
+#### GeoIPDBSource
+
+
+
+GeoIPDBSource defines where a GeoIP .mmdb database can be loaded from.
+
+_Appears in:_
+- [GeoIPMaxMind](#geoipmaxmind)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  true  |  | Local is a database source from a local file. |
+
+
+#### GeoIPMaxMind
+
+
+
+GeoIPMaxMind configures the MaxMind provider.
+These database files are expected to be mounted into the Envoy container, and a sidecar container can be used to update the database files.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `cityDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CityDBSource configures the City database source. |
+| `countryDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CountryDBSource configures the Country database source. |
+| `asnDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ASNDBSource configures the ASN database source. |
+| `ispDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ISPDBSource configures the ISP database source. |
+| `anonymousIpDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | AnonymousIPDBSource configures the Anonymous IP database source. |
+
+
+#### GeoIPProvider
+
+
+
+GeoIPProvider defines provider-specific settings.
+
+_Appears in:_
+- [EnvoyProxyGeoIP](#envoyproxygeoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[GeoIPProviderType](#geoipprovidertype)_ |  true  |  |  |
+| `maxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
+
+
+#### GeoIPProviderType
+
+_Underlying type:_ _string_
+
+GeoIPProviderType enumerates GeoIP providers supported by Envoy Gateway.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
 
 
 #### GlobalRateLimit
@@ -3527,6 +3644,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path is the absolute filesystem path to the dynamic module shared library (.so file). |
+
+
+#### LocalGeoIPDBSource
+
+
+
+LocalGeoIPDBSource configures a GeoIP database from a local file path.
+
+_Appears in:_
+- [GeoIPDBSource](#geoipdbsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the path to the database file. |
 
 
 #### LocalJWKS
