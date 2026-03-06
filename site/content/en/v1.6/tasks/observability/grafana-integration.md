@@ -85,3 +85,8 @@ Many of our older dashboards are manually created in the UI and exported as JSON
 These example dashboards cannot be updated in-place by default, if you are trying to
 make some changes to the older dashboards, you can save them directly as a JSON file
 and then re-import.
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)

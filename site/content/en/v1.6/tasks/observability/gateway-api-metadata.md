@@ -71,8 +71,12 @@ XDS Metadata serves multiple purposes:
   - Envoy Gateway [Extension Servers][] can leverage Gateway API metadata as additional context annotating XDS resources sent for mutation.  
   - Envoy Proxy extensions can leverage XDS metadata as additional context when processing traffic:
     - [lua][] extensions can access metadata using the [Metadata Stream handle API][] .
-    - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][]. 
-  
+    - [ext_proc][] extensions can access metadata using the `xds.*_metadata` [ext_proc attribute][].
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
 
 [Static Metadata]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#envoy-v3-api-msg-config-core-v3-metadata
 [Virtual Host]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
@@ -84,6 +88,3 @@ XDS Metadata serves multiple purposes:
 [ext_proc]: ../../api/extension_types#extproc
 [ext_proc attribute]: ../../api/extension_types#processingmodeoptions
 [Extension Servers]: ../extensibility/extension-server.md
-
-
-

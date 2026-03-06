@@ -256,6 +256,9 @@ kubectl delete secret/jwt-credential
 
 Check out the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../api/gateway_api/httproute)
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
 [BackendRef]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpbackendref
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter

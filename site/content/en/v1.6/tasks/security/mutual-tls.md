@@ -204,4 +204,7 @@ rm client.example.com.crt client.example.com.key client.example.com.csr
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)
+
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
