@@ -1,0 +1,77 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: sp-merged
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: listener-1
+    hostname: "listener1.merged.example.com"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: sp-merged-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: sp-merged
+    sectionName: listener-1
+  hostnames: ["listener1.merged.example.com"]
+  rules:
+  - matches:
+    - path:
+        value: "/merged"
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-merged-gateway
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: sp-merged
+    sectionName: listener-1
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: allow-all
+      action: Allow
+      principal:
+        clientCIDRs:
+        - 0.0.0.0/0
+        - ::/0
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: sp-merged-route
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: sp-merged-route
+  mergeType: StrategicMerge
+  cors:
+    allowOrigins:
+    - "https://www.example.com"
+    - "https://www.foo.com"
+    allowMethods:
+    - GET
+    - POST
+    allowHeaders:
+    - "x-header-1"
+    - "x-header-2"

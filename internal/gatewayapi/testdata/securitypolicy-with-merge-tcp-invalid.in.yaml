@@ -1,0 +1,110 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp
+      protocol: TCP
+      port: 9000
+      allowedRoutes:
+        namespaces:
+          from: All
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: default
+    name: tcproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: tcp-service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: tcp-service-1
+  spec:
+    ports:
+    - port: 8080
+      name: tcp
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-tcp-service-1
+    namespace: default
+    labels:
+      kubernetes.io/service-name: tcp-service-1
+  addressType: IPv4
+  ports:
+  - name: tcp
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - "10.244.0.5"
+    conditions:
+      ready: true
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: tcp
+    basicAuth:
+      users:
+        name: users-secret
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TCPRoute
+      name: tcproute-1
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: "allow-from-internal"
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/8
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
