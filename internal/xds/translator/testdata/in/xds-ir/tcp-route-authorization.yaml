@@ -16,6 +16,12 @@ tcp:
             ip: 10.0.0.0
             isIPv6: false
             maskLen: 24
+          sourceCIDRs:
+          - cidr: 172.16.0.0/16
+            distinct: false
+            ip: 172.16.0.0
+            isIPv6: false
+            maskLen: 16
       - action: Allow
         name: allow-corp
         principal:
@@ -25,6 +31,12 @@ tcp:
             ip: 192.168.100.0
             isIPv6: false
             maskLen: 24
+          sourceCIDRs:
+          - cidr: 172.16.1.0/16
+            distinct: false
+            ip: 172.16.1.0
+            isIPv6: false
+            maskLen: 16
     destination:
       name: "tcp-route-authorization-dest"
       settings:

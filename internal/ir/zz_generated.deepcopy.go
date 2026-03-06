@@ -3128,6 +3128,17 @@ func (in *Principal) DeepCopyInto(out *Principal) {
 			}
 		}
 	}
+	if in.SourceCIDRs != nil {
+		in, out := &in.SourceCIDRs, &out.SourceCIDRs
+		*out = make([]*CIDRMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(CIDRMatch)
+				**out = **in
+			}
+		}
+	}
 	if in.JWT != nil {
 		in, out := &in.JWT, &out.JWT
 		*out = new(v1alpha1.JWTPrincipal)

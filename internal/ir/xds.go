@@ -1542,6 +1542,8 @@ type AuthorizationRule struct {
 type Principal struct {
 	// ClientCIDRs defines the client CIDRs to be matched.
 	ClientCIDRs []*CIDRMatch `json:"clientCIDRs,omitempty"`
+	// SourceCIDRs defines the direct source CIDRs to be matched.
+	SourceCIDRs []*CIDRMatch `json:"sourceCIDRs,omitempty"`
 	// JWT defines the JWT principal to be matched.
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
 	// Headers defines the headers to be matched.

@@ -43,7 +43,7 @@ func buildTCPRBACConfig(statPrefix string, authorization *ir.Authorization) (*ne
 
 	matchers := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
 	for _, rule := range authorization.Rules {
-		predicate, err := buildTCPPrincipalPredicate(rule.Principal)
+		predicate, err := buildTCPPrincipalPredicate(&rule.Principal)
 		if err != nil {
 			return nil, err
 		}
@@ -117,10 +117,36 @@ func buildTCPRBACActions() (*anypb.Any, *anypb.Any, error) {
 	return allowAction, denyAction, nil
 }
 
-func buildTCPPrincipalPredicate(principal ir.Principal) (*matcherv3.Matcher_MatcherList_Predicate, error) {
-	// only build predicate for CIDR
-	if len(principal.ClientCIDRs) == 0 {
-		return nil, nil
+func buildTCPPrincipalPredicate(principal *ir.Principal) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
+
+	if len(principal.ClientCIDRs) > 0 {
+		predicate, err := buildClientIPPredicate(principal.ClientCIDRs)
+		if err != nil {
+			return nil, err
+		}
+		allPredicates = append(allPredicates, predicate)
 	}
-	return buildIPPredicate(principal.ClientCIDRs)
+	if len(principal.SourceCIDRs) > 0 {
+		predicate, err := buildDirectSourceIPPredicate(principal.SourceCIDRs)
+		if err != nil {
+			return nil, err
+		}
+		allPredicates = append(allPredicates, predicate)
+	}
+
+	switch len(allPredicates) {
+	case 0:
+		return nil, nil
+	case 1:
+		return allPredicates[0], nil
+	default:
+		return &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+				AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: allPredicates,
+				},
+			},
+		}, nil
+	}
 }

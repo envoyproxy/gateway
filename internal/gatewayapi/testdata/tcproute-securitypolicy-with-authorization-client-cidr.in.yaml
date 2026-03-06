@@ -157,6 +157,8 @@ securityPolicies:
         principal:
           clientCIDRs:
           - 10.10.2.0/24
+          sourceCIDRs:
+          - 192.168.1.0/24
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
