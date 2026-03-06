@@ -23,6 +23,7 @@ bug fixes: |
   Fixed ExternalTrafficPolicy not being applied to Envoy Service when ServiceType is NodePort.
   Fixed CRL ref not processed by gateway controller.
   Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
+  Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
 # Enhancements that improve performance.
 performance improvements: |
 
