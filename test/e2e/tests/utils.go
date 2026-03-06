@@ -75,6 +75,17 @@ const (
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
 
+// TimeoutConfig returns the default TimeoutConfig for E2E tests.
+// We need this to reduce the logs in CI because of https://github.com/kubernetes-sigs/gateway-api/pull/4630
+func TimeoutConfig() config.TimeoutConfig {
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
+	return timeout
+}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
