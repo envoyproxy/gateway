@@ -938,7 +938,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.CredentialInjection != nil {
 					secret, err := t.validateSecretRef(
-						false,
+						true,
 						crossNamespaceFrom{
 							group:     egv1a1.GroupName,
 							kind:      resource.KindHTTPRouteFilter,

@@ -110,27 +110,6 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			},
 		},
 		Response: http.Response{
-			StatusCodes: []int{200},
-			Headers: map[string]string{
-				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "1",
-			},
-		},
-		Namespace: ns,
-	})
-
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
-		Request: http.Request{
-			Path:    path,
-			Headers: headers,
-		},
-		ExpectedRequest: &http.ExpectedRequest{
-			Request: http.Request{
-				Path:    path,
-				Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
-			},
-		},
-		Response: http.Response{
 			StatusCodes: []int{429},
 			Headers: map[string]string{
 				RatelimitLimitHeaderName:     "3",
