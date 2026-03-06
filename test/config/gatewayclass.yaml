@@ -17,6 +17,9 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   ipFamily: IPv4
+  logging:
+    level:
+      default: debug
   provider:
     type: Kubernetes
     kubernetes:
