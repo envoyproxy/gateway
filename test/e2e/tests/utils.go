@@ -75,6 +75,17 @@ const (
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
 
+// TimeoutConfig returns the default TimeoutConfig for E2E tests.
+// We need this to reduce the logs in CI because of https://github.com/kubernetes-sigs/gateway-api/pull/4630
+func TimeoutConfig() config.TimeoutConfig {
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
+	return timeout
+}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
@@ -168,6 +179,29 @@ func SecurityPolicyMustFail(
 		})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
+}
+
+// SecurityPolicyMustBeMerged waits for the specified SecurityPolicy to have Merged condition.
+func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
@@ -310,6 +344,19 @@ func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controll
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
 				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionMerged) && condition.Status == metav1.ConditionTrue {
 					return true
 				}
 			}
@@ -748,6 +795,10 @@ func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, g
 
 func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
+}
+
+func UseStandardChannel() bool {
+	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
 }
 
 // TODO(zhaohuabing) remove this after the feature flag is removed.
