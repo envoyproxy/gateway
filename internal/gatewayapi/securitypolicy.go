@@ -1935,6 +1935,7 @@ func (t *Translator) buildExtAuth(
 		Traffic:           traffic,
 		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
 		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		StatusOnError:     policy.Spec.ExtAuth.StatusOnError,
 	}
 
 	if http != nil {
