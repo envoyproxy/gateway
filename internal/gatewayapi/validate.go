@@ -274,7 +274,7 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
@@ -283,7 +283,11 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
-		return true
+		if listener.isFromListenerSet() {
+			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+				"No conflicts detected")
+		}
+		return
 	}
 
 	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
@@ -294,7 +298,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		return true
+		return
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
@@ -310,6 +314,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			}
 		}
 		// set "Programmed: false" if it's not set already.
+		// xref: https://github.com/kubernetes-sigs/gateway-api/issues/4425
+		// Invalid Listener shouldn't block IR
 		if !hasProgrammedCond {
 			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
@@ -328,9 +334,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			)
 		}
 		// skip computing IR
-		return false
+		return
 	}
-	return true
 }
 
 func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
@@ -394,14 +399,23 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			continue
 		}
 
-		secretNamespace := listener.gateway.Namespace
+		listenerNamespace := listener.GetNamespace()
+		secretNamespace := listenerNamespace
 
-		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listenerNamespace {
+			fromGroup := gwapiv1.GroupName
+			fromKind := resource.KindGateway
+
+			if listener.isFromListenerSet() {
+				fromGroup = gwapiv1.GroupVersion.Group
+				fromKind = resource.KindListenerSet
+			}
+
 			if !t.validateCrossNamespaceRef(
 				crossNamespaceFrom{
-					group:     gwapiv1.GroupName,
-					kind:      resource.KindGateway,
-					namespace: listener.gateway.Namespace,
+					group:     fromGroup,
+					kind:      fromKind,
+					namespace: listenerNamespace,
 				},
 				crossNamespaceTo{
 					group:     "",
@@ -425,7 +439,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if secret == nil {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, listener.gateway.Namespace, certificateRef.Name),
+				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, secretNamespace, certificateRef.Name),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
@@ -433,7 +447,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if secret.Type != corev1.SecretTypeTLS {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
+				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, secretNamespace, certificateRef.Name, corev1.SecretTypeTLS),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
@@ -441,7 +455,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 
 		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
 			errs = append(errs, status.NewListenerStatusError(
-				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
+				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, secretNamespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
 			))
 			continue
@@ -954,7 +968,8 @@ func (t *Translator) validateSecretObjectRef(
 			resources.ReferenceGrants,
 		) {
 			return fmt.Errorf(
-				"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+				"ref to %s %s/%s not permitted by any ReferenceGrant",
+				kind,
 				*secretRef.Namespace, secretRef.Name)
 		}
 

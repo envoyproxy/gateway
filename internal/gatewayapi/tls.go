@@ -13,9 +13,30 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+)
+
+// validCipherSuites contains the list of supported TLS cipher suites.
+// The source of truth for these ciphers is the Envoy documentation:
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
+var validCipherSuites = sets.New(
+	"ECDHE-ECDSA-AES128-GCM-SHA256",
+	"ECDHE-RSA-AES128-GCM-SHA256",
+	"ECDHE-ECDSA-AES256-GCM-SHA384",
+	"ECDHE-RSA-AES256-GCM-SHA384",
+	"ECDHE-ECDSA-CHACHA20-POLY1305",
+	"ECDHE-RSA-CHACHA20-POLY1305",
+	"ECDHE-ECDSA-AES128-SHA",
+	"ECDHE-RSA-AES128-SHA",
+	"AES128-GCM-SHA256",
+	"AES128-SHA",
+	"ECDHE-ECDSA-AES256-SHA",
+	"ECDHE-RSA-AES256-SHA",
+	"AES256-GCM-SHA384",
+	"AES256-SHA",
 )
 
 // parseCertsFromTLSSecretsData parses the cert and key provided in a secret
@@ -243,6 +264,16 @@ func validateCrl(data []byte) error {
 	}
 	if now.Before(crl.ThisUpdate) {
 		return fmt.Errorf("CRL is not yet valid (this update starts at %v)", crl.ThisUpdate)
+	}
+	return nil
+}
+
+// validateCipherSuites validates the cipher suites provided in the TLS settings.
+func validateCipherSuites(ciphers []string) error {
+	for _, cipher := range ciphers {
+		if !validCipherSuites.Has(cipher) {
+			return fmt.Errorf("unsupported cipher suite: %s", cipher)
+		}
 	}
 	return nil
 }

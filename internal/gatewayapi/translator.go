@@ -13,11 +13,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -149,7 +147,7 @@ func newTranslateResult(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
-	xListenerSets []*gwapixv1a1.XListenerSet,
+	xListenerSets []*gwapiv1.ListenerSet,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
 ) *TranslateResult {
 	translateResult := &TranslateResult{
@@ -181,7 +179,7 @@ func newTranslateResult(
 	}
 
 	if n := len(tlsRoutes); n > 0 {
-		translateResult.TLSRoutes = make([]*gwapiv1a3.TLSRoute, n)
+		translateResult.TLSRoutes = make([]*gwapiv1.TLSRoute, n)
 		for i, tlsRoute := range tlsRoutes {
 			translateResult.TLSRoutes[i] = tlsRoute.TLSRoute
 		}
@@ -223,7 +221,7 @@ func newTranslateResult(
 		translateResult.Backends = backends
 	}
 	if len(xListenerSets) > 0 {
-		translateResult.XListenerSets = xListenerSets
+		translateResult.ListenerSets = xListenerSets
 	}
 
 	return translateResult
@@ -251,17 +249,27 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	// Gateways are already sorted by the provider layer
 
 	// Build IR maps.
-	xdsIR, infraIR := t.InitIRs(acceptedGateways)
+	xdsIR, infraIR := t.InitIRs(acceptedGateways, failedGateways)
 
-	// Process XListenerSets and attach them to the relevant Gateways
-	t.ProcessXListenerSets(resources.XListenerSets, acceptedGateways)
+	// Build pre-computed BTP RoutingType index for O(1) lookups in processDestination.
+	t.BTPRoutingTypeIndex = nil
+	if hasBTPRoutingType(resources.BackendTrafficPolicies) {
+		t.BTPRoutingTypeIndex = BuildBTPRoutingTypeIndex(
+			resources.BackendTrafficPolicies,
+			routesToObjects(resources),
+			acceptedGateways,
+		)
+	}
+
+	// Process ListenerSets and attach them to the relevant Gateways
+	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
-	// Compute XListenerSet status based on listener processing results
-	// This should be done after ProcessListeners because XListenerSet status depends on listener processing results
-	t.ProcessXListenerSetStatus(resources.XListenerSets)
+	// Compute ListenerSet status based on listener processing results
+	// This should be done after ProcessListeners because ListenerSet status depends on listener processing results
+	t.ProcessListenerSetStatus(resources.ListenerSets)
 
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
@@ -358,7 +366,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, resources.XListenerSets, xdsIR, infraIR), errs
+		extServerPolicies, backends, resources.ListenerSets, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
@@ -369,40 +377,40 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 	envoyproxyMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy, len(resources.EnvoyProxiesForGateways)+1)
 	envoyproxyValidationErrorMap := make(map[types.NamespacedName]error, len(resources.EnvoyProxiesForGateways))
 
+	for _, ep := range resources.EnvoyProxiesForGateways {
+		key := utils.NamespacedName(ep)
+		envoyproxyMap[key] = ep
+		if err := validateEnvoyProxy(ep); err != nil {
+			envoyproxyValidationErrorMap[key] = err
+		}
+	}
+
 	// if EnvoyProxy not found, provider layer set GC status to not accepted.
 	// if EnvoyProxy found but invalid, set GC status to not accepted,
 	// otherwise set GC status to accepted.
 	if ep := resources.EnvoyProxyForGatewayClass; ep != nil {
 		err := validateEnvoyProxy(ep)
 		if err != nil {
+			envoyproxyValidationErrorMap[utils.NamespacedName(ep)] = err
 			t.Logger.Error(err, "Skipping GatewayClass because EnvoyProxy is invalid",
 				"gatewayclass", t.GatewayClassName,
 				"envoyproxy", ep.Name, "namespace", ep.Namespace)
 			status.SetGatewayClassAccepted(resources.GatewayClass,
 				false, string(gwapiv1.GatewayClassReasonInvalidParameters),
 				fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err))
-			return acceptedGateways, failedGateways
-		}
+		} else {
+			// TODO: remove this nil check after we update all the testdata.
+			if resources.GatewayClass != nil {
+				status.SetGatewayClassAccepted(
+					resources.GatewayClass,
+					true,
+					string(gwapiv1.GatewayClassReasonAccepted),
+					status.MsgValidGatewayClass)
+			}
 
-		// TODO: remove this nil check after we update all the testdata.
-		if resources.GatewayClass != nil {
-			status.SetGatewayClassAccepted(
-				resources.GatewayClass,
-				true,
-				string(gwapiv1.GatewayClassReasonAccepted),
-				status.MsgValidGatewayClass)
-		}
-
-		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
-		// we didn't append to envoyproxyValidatioErrorMap because it's valid.
-	}
-
-	for _, ep := range resources.EnvoyProxiesForGateways {
-		key := utils.NamespacedName(ep)
-		envoyproxyMap[key] = ep
-		if err := validateEnvoyProxy(ep); err != nil {
-			envoyproxyValidationErrorMap[key] = err
+			key := utils.NamespacedName(ep)
+			envoyproxyMap[key] = ep
+			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 		}
 	}
 
@@ -463,40 +471,21 @@ func validateEnvoyProxy(ep *egv1a1.EnvoyProxy) error {
 }
 
 // InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
-func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
+func (t *Translator) InitIRs(acceptedGateways, failedGateways []*GatewayContext) (map[string]*ir.Xds, map[string]*ir.Infra) {
 	xdsIR := make(resource.XdsIRMap)
 	infraIR := make(resource.InfraIRMap)
 
-	for _, gateway := range gateways {
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		labels := infrastructureLabels(gateway.Gateway)
-		annotations := infrastructureAnnotations(gateway.Gateway)
-		gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+	for _, gateway := range acceptedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gateway)
+		// save the IR references in the map before the translation starts
+		xdsIR[irKey] = gwXdsIR
+		infraIR[irKey] = gwInfraIR
+	}
 
-		irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
-		if t.MergeGateways {
-			maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		} else {
-			maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
-			gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
-		}
-
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.Namespace = t.ControllerNamespace
-		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-			Kind: resource.KindGatewayClass,
-			Name: string(t.GatewayClassName),
-		}
-		if t.GatewayNamespaceMode {
-			gwInfraIR.Proxy.Name = gateway.Name
-			gwInfraIR.Proxy.Namespace = gateway.Namespace
-			gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
-				Kind: resource.KindGateway,
-				Name: gateway.Name,
-			}
-		}
+	// we need to build IRs for failed gateways to avoid delete event to Infra IR,
+	// which will cause the deletion of infra resources managed by the failed gateways.
+	for _, gtw := range failedGateways {
+		irKey, gwXdsIR, gwInfraIR := t.buildIR(gtw)
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
@@ -505,24 +494,89 @@ func (t *Translator) InitIRs(gateways []*GatewayContext) (map[string]*ir.Xds, ma
 	return xdsIR, infraIR
 }
 
-// IsEnvoyServiceRouting returns true if EnvoyProxy.Spec.RoutingType == ServiceRoutingType
-// or, alternatively, if Translator.EndpointRoutingDisabled has been explicitly set to true;
-// otherwise, it returns false.
-func (t *Translator) IsEnvoyServiceRouting(r *egv1a1.EnvoyProxy) bool {
+func (t *Translator) buildIR(gateway *GatewayContext) (string, *ir.Xds, *ir.Infra) {
+	gwXdsIR := &ir.Xds{}
+	gwInfraIR := ir.NewInfra()
+	labels := infrastructureLabels(gateway.Gateway)
+	annotations := infrastructureAnnotations(gateway.Gateway)
+	gwInfraIR.Proxy.GetProxyMetadata().Annotations = annotations
+
+	irKey := t.IRKey(types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name})
+	if t.MergeGateways {
+		maps.Copy(labels, GatewayClassOwnerLabel(string(t.GatewayClassName)))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	} else {
+		maps.Copy(labels, GatewayOwnerLabels(gateway.Namespace, gateway.Name))
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = labels
+	}
+
+	gwInfraIR.Proxy.Name = irKey
+	gwInfraIR.Proxy.Namespace = t.ControllerNamespace
+	gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+		Kind: resource.KindGatewayClass,
+		Name: string(t.GatewayClassName),
+	}
+	if t.GatewayNamespaceMode {
+		gwInfraIR.Proxy.Name = gateway.Name
+		gwInfraIR.Proxy.Namespace = gateway.Namespace
+		gwInfraIR.Proxy.GetProxyMetadata().OwnerReference = &ir.ResourceMetadata{
+			Kind: resource.KindGateway,
+			Name: gateway.Name,
+		}
+	}
+
+	return irKey, gwXdsIR, gwInfraIR
+}
+
+// routesToObjects collects all route types from Resources into a single []client.Object slice.
+func routesToObjects(resources *resource.Resources) []client.Object {
+	out := make([]client.Object, 0,
+		len(resources.HTTPRoutes)+len(resources.GRPCRoutes)+
+			len(resources.TLSRoutes)+len(resources.TCPRoutes)+len(resources.UDPRoutes))
+	for _, r := range resources.HTTPRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.GRPCRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.TLSRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.TCPRoutes {
+		out = append(out, r)
+	}
+	for _, r := range resources.UDPRoutes {
+		out = append(out, r)
+	}
+	return out
+}
+
+// IsServiceRouting determines if Service ClusterIP routing should be used.
+// It follows the priority hierarchy:
+//  1. Translator.EndpointRoutingDisabled (for tests) - if true, always use Service routing
+//  2. BTP RoutingType - per-route/gateway override
+//  3. EnvoyProxy RoutingType - cluster-wide setting
+//  4. Default: Endpoint routing
+func (t *Translator) IsServiceRouting(envoyProxy *egv1a1.EnvoyProxy, btpRoutingType *egv1a1.RoutingType) bool {
 	if t.EndpointRoutingDisabled {
 		return true
 	}
-	if r == nil {
-		return false
+
+	// BTP RoutingType has priority over EnvoyProxy
+	if btpRoutingType != nil {
+		switch *btpRoutingType {
+		case egv1a1.ServiceRoutingType:
+			return true
+		case egv1a1.EndpointRoutingType:
+			return false
+		}
 	}
-	switch ptr.Deref(r.Spec.RoutingType, egv1a1.EndpointRoutingType) {
-	case egv1a1.ServiceRoutingType:
+
+	// Fall back to EnvoyProxy RoutingType
+	if envoyProxy != nil && envoyProxy.Spec.RoutingType != nil && *envoyProxy.Spec.RoutingType == egv1a1.ServiceRoutingType {
 		return true
-	case egv1a1.EndpointRoutingType:
-		return false
-	default:
-		return false
 	}
+	return false
 }
 
 func infrastructureAnnotations(gtw *gwapiv1.Gateway) map[string]string {

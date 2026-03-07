@@ -12,10 +12,8 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     - name: test
-      stringMatch:
       suffix: "end"
     queryParamMatches:
     - name: "debug"
@@ -31,10 +29,8 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     - name: test
-      stringMatch:
       suffix: "end"
     queryParamMatches:
     - name: "debug"

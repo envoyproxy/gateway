@@ -242,6 +242,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -311,6 +313,26 @@ spec:
                     items:
                       type: string
                     type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
+                      enum:
+                      - JA3
+                      - JA4
+                      type: string
+                    type: array
                   insecureSkipVerify:
                     default: false
                     description: |-
@@ -368,8 +390,9 @@ spec:
                       If WellKnownCACertificates is unspecified or empty (""), then CACertificateRefs
                       must be specified with at least one entry for a valid configuration. Only one of
                       CACertificateRefs or WellKnownCACertificates may be specified, not both.
-                    enum:
-                    - System
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^(System|([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/([A-Za-z0-9][-A-Za-z0-9_.]{0,61})?[A-Za-z0-9]))$
                     type: string
                 type: object
                 x-kubernetes-validations:
@@ -920,6 +943,18 @@ spec:
                             maxLength: 1024
                             minLength: 1
                             type: string
+                          retriableStatuses:
+                            description: |-
+                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                              Responses matching these statuses count towards the unhealthy threshold but
+                              do not result in the host being considered immediately unhealthy.
+                              The expected statuses take precedence for any range overlaps with this field.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
                         required:
                         - path
                         type: object
@@ -935,6 +970,23 @@ spec:
                           checks.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      overrides:
+                        description: |-
+                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                          in the backend cluster. This allows customization of port and other settings that may differ
+                          from the main service configuration.
+                        properties:
+                          port:
+                            description: |-
+                              Port overrides the health check port.
+                              If not set, the endpoint's serving port is used for health checks.
+                              This is useful when health checks are served on a different port than
+                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                        type: object
                       tcp:
                         description: |-
                           TCP defines the configuration of tcp health checker.
@@ -1023,8 +1075,11 @@ spec:
                         type: string
                       unhealthyThreshold:
                         default: 3
-                        description: UnhealthyThreshold defines the number of unhealthy
-                          health checks required before a backend host is marked unhealthy.
+                        description: |-
+                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                          up to this threshold before the host is marked unhealthy.
                         format: int32
                         minimum: 1
                         type: integer
@@ -1054,6 +1109,12 @@ spec:
                   passive:
                     description: Passive passive check configuration
                     properties:
+                      alwaysEjectOneEndpoint:
+                        default: false
+                        description: |-
+                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                          regardless of MaxEjectionPercent.
+                        type: boolean
                       baseEjectionTime:
                         default: 30s
                         description: BaseEjectionTime defines the base duration for
@@ -1391,6 +1452,36 @@ spec:
                             minimum: 0
                             type: integer
                         type: object
+                      weightedZones:
+                        description: |-
+                          WeightedZones configures weight-based traffic distribution across locality zones.
+                          Traffic is distributed proportionally based on the sum of all zone weights.
+                        items:
+                          description: WeightedZoneConfig defines the weight for a
+                            specific locality zone.
+                          properties:
+                            weight:
+                              description: |-
+                                Weight defines the weight for this locality.
+                                Higher values receive more traffic. The actual traffic distribution
+                                is proportional to this value relative to other localities.
+                              format: int32
+                              type: integer
+                            zone:
+                              description: |-
+                                Zone specifies the topology zone this weight applies to.
+                                The value should match the topology.kubernetes.io/zone label
+                                of the nodes where endpoints are running.
+                                Zones not listed in the configuration receive a default weight of 1.
+                              type: string
+                          required:
+                          - weight
+                          - zone
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - zone
+                        x-kubernetes-list-type: map
                     type: object
                 required:
                 - type
@@ -1404,10 +1495,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
-                - message: Currently ZoneAware is only supported for LeastRequest,
-                    Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                - message: PreferLocal zone-aware routing is not supported for ConsistentHash
+                    load balancers. Use weightedZones instead.
+                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
+                    !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware PreferLocal and WeightedZones cannot be specified
+                    together.
+                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
+                    has(self.zoneAware.weightedZones)) : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -2167,9 +2262,7 @@ spec:
                         type: array
                         x-kubernetes-validations:
                         - message: response cost is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.cost) || !has(foo.cost.response))
-                        - message: shadow mode is not supported for Local Rate Limits
-                          rule: self.all(foo, !has(foo.shadowMode))
+                          rule: self.all(r, !has(r.cost) || !has(r.cost.response))
                     type: object
                   type:
                     description: |-
@@ -2507,8 +2600,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2581,8 +2680,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2702,7 +2807,7 @@ spec:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing.
-                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
               targetRef:
@@ -3735,8 +3840,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -3787,8 +3898,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -3894,8 +4011,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -3956,8 +4079,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4008,8 +4137,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4115,8 +4250,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -4627,6 +4768,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -4964,6 +5107,26 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   maxVersion:
@@ -5428,6 +5591,56 @@ spec:
           spec:
             description: Spec defines the desired state of EnvoyExtensionPolicy.
             properties:
+              dynamicModule:
+                description: |-
+                  DynamicModule is an ordered list of dynamic module HTTP filters
+                  that should be added to the envoy filter chain.
+                  Each module must be registered in the EnvoyProxy resource's dynamicModules
+                  allowlist.
+                  Order matters, as the filters will be loaded in the order they are
+                  defined in this list.
+                items:
+                  description: |-
+                    DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
+                    The module must be registered in the EnvoyProxy resource's dynamicModules
+                    allowlist by the infrastructure operator.
+                  properties:
+                    config:
+                      description: |-
+                        Config is the configuration for the dynamic module filter.
+                        This is serialized as JSON and passed to the module's initialization function.
+                      x-kubernetes-preserve-unknown-fields: true
+                    filterName:
+                      description: |-
+                        FilterName identifies a specific filter implementation within the dynamic
+                        module. A single shared library can contain multiple filter implementations.
+                        This value is passed to the module's HTTP filter config init function to
+                        select the appropriate implementation.
+                        If not specified, defaults to an empty string.
+                      maxLength: 253
+                      type: string
+                    name:
+                      description: |-
+                        Name references a dynamic module registered in the EnvoyProxy resource's
+                        dynamicModules list. The referenced module must exist in the registry;
+                        otherwise, the policy will be rejected.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    terminalFilter:
+                      default: false
+                      description: |-
+                        TerminalFilter indicates that this dynamic module handles requests without
+                        requiring an upstream backend. The module is responsible for generating and
+                        sending the response to downstream directly.
+                        Defaults to false.
+                      type: boolean
+                  required:
+                  - name
+                  type: object
+                maxItems: 16
+                type: array
               extProc:
                 description: |-
                   ExtProc is an ordered list of external processing filters
@@ -5876,6 +6089,19 @@ spec:
                                       maxLength: 1024
                                       minLength: 1
                                       type: string
+                                    retriableStatuses:
+                                      description: |-
+                                        RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                        Responses matching these statuses count towards the unhealthy threshold but
+                                        do not result in the host being considered immediately unhealthy.
+                                        The expected statuses take precedence for any range overlaps with this field.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
                                   required:
                                   - path
                                   type: object
@@ -5891,6 +6117,23 @@ spec:
                                     health checks.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
+                                overrides:
+                                  description: |-
+                                    Overrides defines the configuration of the overriding health check settings for all endpoints
+                                    in the backend cluster. This allows customization of port and other settings that may differ
+                                    from the main service configuration.
+                                  properties:
+                                    port:
+                                      description: |-
+                                        Port overrides the health check port.
+                                        If not set, the endpoint's serving port is used for health checks.
+                                        This is useful when health checks are served on a different port than
+                                        the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                      format: int32
+                                      maximum: 65535
+                                      minimum: 1
+                                      type: integer
+                                  type: object
                                 tcp:
                                   description: |-
                                     TCP defines the configuration of tcp health checker.
@@ -5984,9 +6227,11 @@ spec:
                                   type: string
                                 unhealthyThreshold:
                                   default: 3
-                                  description: UnhealthyThreshold defines the number
-                                    of unhealthy health checks required before a backend
-                                    host is marked unhealthy.
+                                  description: |-
+                                    UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                    Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                    considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                    up to this threshold before the host is marked unhealthy.
                                   format: int32
                                   minimum: 1
                                   type: integer
@@ -6016,6 +6261,12 @@ spec:
                             passive:
                               description: Passive passive check configuration
                               properties:
+                                alwaysEjectOneEndpoint:
+                                  default: false
+                                  description: |-
+                                    AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                    regardless of MaxEjectionPercent.
+                                  type: boolean
                                 baseEjectionTime:
                                   default: 30s
                                   description: BaseEjectionTime defines the base duration
@@ -6333,6 +6584,36 @@ spec:
                                       minimum: 0
                                       type: integer
                                   type: object
+                                weightedZones:
+                                  description: |-
+                                    WeightedZones configures weight-based traffic distribution across locality zones.
+                                    Traffic is distributed proportionally based on the sum of all zone weights.
+                                  items:
+                                    description: WeightedZoneConfig defines the weight
+                                      for a specific locality zone.
+                                    properties:
+                                      weight:
+                                        description: |-
+                                          Weight defines the weight for this locality.
+                                          Higher values receive more traffic. The actual traffic distribution
+                                          is proportional to this value relative to other localities.
+                                        format: int32
+                                        type: integer
+                                      zone:
+                                        description: |-
+                                          Zone specifies the topology zone this weight applies to.
+                                          The value should match the topology.kubernetes.io/zone label
+                                          of the nodes where endpoints are running.
+                                          Zones not listed in the configuration receive a default weight of 1.
+                                        type: string
+                                    required:
+                                    - weight
+                                    - zone
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-map-keys:
+                                  - zone
+                                  x-kubernetes-list-type: map
                               type: object
                           required:
                           - type
@@ -6346,10 +6627,15 @@ spec:
                               and LeastRequest load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
-                          - message: Currently ZoneAware is only supported for LeastRequest,
-                              Random, and RoundRobin load balancers.
-                            rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                              : true '
+                          - message: PreferLocal zone-aware routing is not supported
+                              for ConsistentHash load balancers. Use weightedZones
+                              instead.
+                            rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware PreferLocal and WeightedZones cannot
+                              be specified together.
+                            rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                              && has(self.zoneAware.weightedZones)) : true'
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -6926,13 +7212,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                   properties:
                                     group:
                                       default: ""
@@ -6990,9 +7275,8 @@ spec:
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
                             pullSecretRef:
-                              description: |-
-                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
-                                Only support Kubernetes Secret resource from the same namespace.
+                              description: PullSecretRef is a reference to the secret
+                                containing the credentials to pull the image.
                               properties:
                                 group:
                                   default: ""
@@ -7051,13 +7335,12 @@ spec:
                               properties:
                                 caCertificateRef:
                                   description: |-
-                                    CACertificateRef contains a references to
+                                    CACertificateRef contains a reference to
                                     Kubernetes objects that contain TLS certificates of
                                     the Certificate Authorities that can be used
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
-                                    Kubernetes ConfigMap and Kubernetes Secret are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
+                                    Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
                                   properties:
                                     group:
                                       default: ""
@@ -8134,6 +8417,8 @@ spec:
                     description: |-
                       Ciphers specifies the set of cipher suites supported when
                       negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.
+                      For the list of supported ciphers, please refer to the Envoy documentation:
+                      https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters
                       In non-FIPS Envoy Proxy builds the default cipher list is:
                       - [ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]
                       - [ECDHE-RSA-AES128-GCM-SHA256|ECDHE-RSA-CHACHA20-POLY1305]
@@ -8201,6 +8486,26 @@ spec:
                       In builds using BoringSSL FIPS the default curve is:
                       - P-256
                     items:
+                      type: string
+                    type: array
+                  fingerprints:
+                    description: |-
+                      Fingerprints specifies TLS client fingerprinting.
+                      When specified, a JAX fingerprint derived from the client’s TLS handshake
+                      is generated. The fingerprint can be logged in access logs or
+                      forwarded to upstream services using request headers.
+
+                      Fingerprinting is disabled if not specified.
+
+                      Supported values are:
+                      - JA3
+                      - JA4
+                    items:
+                      description: TLSFingerprintType specifies the TLS client fingerprinting
+                        mode.
+                      enum:
+                      - JA3
+                      - JA4
                       type: string
                     type: array
                   maxVersion:
@@ -8329,6 +8634,92 @@ spec:
                   the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              dynamicModules:
+                description: |-
+                  DynamicModules defines the set of dynamic modules that are allowed to be
+                  used by EnvoyExtensionPolicy resources. Each entry registers a module by
+                  a logical name and specifies the shared library that Envoy will load.
+
+                  The EnvoyProxy owner is responsible for ensuring the module .so files are available
+                  on the proxy container's filesystem (e.g., via init containers, custom images,
+                  or shared volumes).
+                items:
+                  description: |-
+                    DynamicModuleEntry defines a dynamic module that is registered and allowed
+                    for use by EnvoyExtensionPolicy resources.
+                  properties:
+                    doNotClose:
+                      default: false
+                      description: |-
+                        DoNotClose prevents the module from being unloaded with dlclose when no
+                        more references exist. This is useful for modules that maintain global
+                        state that should not be destroyed on configuration updates.
+                        Defaults to false.
+                      type: boolean
+                    loadGlobally:
+                      default: false
+                      description: |-
+                        LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.
+                        By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.
+                        Set this to true when the module needs to share symbols with other
+                        dynamic libraries it loads.
+                        Defaults to false.
+                      type: boolean
+                    name:
+                      description: |-
+                        Name is the logical name for this module. EnvoyExtensionPolicy resources
+                        reference modules by this name.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                      type: string
+                    source:
+                      description: Source defines where the dynamic module code is
+                        loaded from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
+                          properties:
+                            path:
+                              description: Path is the absolute filesystem path to
+                                the dynamic module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          type: object
+                        remote:
+                          description: |-
+                            Remote specifies a module fetched from a remote source.
+                            The module binary is downloaded and cached by Envoy.
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the dynamic module code.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          - Remote
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Remote, remote field needs to be set.
+                        rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
+                  required:
+                  - name
+                  - source
+                  type: object
+                maxItems: 16
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               extraArgs:
                 description: |-
                   ExtraArgs defines additional command line options that are provided to Envoy.
@@ -8374,6 +8765,8 @@ spec:
 
                   - envoy.filters.http.wasm
 
+                  - envoy.filters.http.dynamic_modules
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -8417,6 +8810,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -8446,6 +8840,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -8473,6 +8868,7 @@ spec:
                       - envoy.filters.http.lua
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
+                      - envoy.filters.http.dynamic_modules
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -8492,6 +8888,130 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              geoIP:
+                description: GeoIP defines shared GeoIP provider configuration for
+                  this EnvoyProxy fleet.
+                properties:
+                  provider:
+                    description: Provider defines the GeoIP provider configuration
+                      used by GeoIP filter instances.
+                    properties:
+                      maxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbSource:
+                            description: AnonymousIPDBSource configures the Anonymous
+                              IP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          asnDbSource:
+                            description: ASNDBSource configures the ASN database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          cityDbSource:
+                            description: CityDBSource configures the City database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          countryDbSource:
+                            description: CountryDBSource configures the Country database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          ispDbSource:
+                            description: ISPDBSource configures the ISP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                        type: object
+                        x-kubernetes-validations:
+                        - message: at least one MaxMind database source must be specified
+                          rule: has(self.cityDbSource) || has(self.countryDbSource)
+                            || has(self.asnDbSource) || has(self.ispDbSource) || has(self.anonymousIpDbSource)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: maxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.maxMind) : true'
+                required:
+                - provider
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.
@@ -19600,6 +20120,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -19616,6 +20150,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -19720,10 +20271,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -19760,6 +20312,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -20104,6 +20662,37 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      - zone
+                                                      type: object
+                                                    type: array
+                                                    x-kubernetes-list-map-keys:
+                                                    - zone
+                                                    x-kubernetes-list-type: map
                                                 type: object
                                             required:
                                             - type
@@ -20118,11 +20707,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -20852,6 +21448,20 @@ spec:
                                                         maxLength: 1024
                                                         minLength: 1
                                                         type: string
+                                                      retriableStatuses:
+                                                        description: |-
+                                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                          Responses matching these statuses count towards the unhealthy threshold but
+                                                          do not result in the host being considered immediately unhealthy.
+                                                          The expected statuses take precedence for any range overlaps with this field.
+                                                        items:
+                                                          description: HTTPStatus
+                                                            defines the http status
+                                                            code.
+                                                          maximum: 599
+                                                          minimum: 100
+                                                          type: integer
+                                                        type: array
                                                     required:
                                                     - path
                                                     type: object
@@ -20868,6 +21478,23 @@ spec:
                                                       checks.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  overrides:
+                                                    description: |-
+                                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                                      from the main service configuration.
+                                                    properties:
+                                                      port:
+                                                        description: |-
+                                                          Port overrides the health check port.
+                                                          If not set, the endpoint's serving port is used for health checks.
+                                                          This is useful when health checks are served on a different port than
+                                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                        format: int32
+                                                        maximum: 65535
+                                                        minimum: 1
+                                                        type: integer
+                                                    type: object
                                                   tcp:
                                                     description: |-
                                                       TCP defines the configuration of tcp health checker.
@@ -20972,10 +21599,11 @@ spec:
                                                     type: string
                                                   unhealthyThreshold:
                                                     default: 3
-                                                    description: UnhealthyThreshold
-                                                      defines the number of unhealthy
-                                                      health checks required before
-                                                      a backend host is marked unhealthy.
+                                                    description: |-
+                                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                      up to this threshold before the host is marked unhealthy.
                                                     format: int32
                                                     minimum: 1
                                                     type: integer
@@ -21012,6 +21640,12 @@ spec:
                                                 description: Passive passive check
                                                   configuration
                                                 properties:
+                                                  alwaysEjectOneEndpoint:
+                                                    default: false
+                                                    description: |-
+                                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                      regardless of MaxEjectionPercent.
+                                                    type: boolean
                                                   baseEjectionTime:
                                                     default: 30s
                                                     description: BaseEjectionTime
@@ -21356,6 +21990,37 @@ spec:
                                                         minimum: 0
                                                         type: integer
                                                     type: object
+                                                  weightedZones:
+                                                    description: |-
+                                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                                    items:
+                                                      description: WeightedZoneConfig
+                                                        defines the weight for a specific
+                                                        locality zone.
+                                                      properties:
+                                                        weight:
+                                                          description: |-
+                                                            Weight defines the weight for this locality.
+                                                            Higher values receive more traffic. The actual traffic distribution
+                                                            is proportional to this value relative to other localities.
+                                                          format: int32
+                                                          type: integer
+                                                        zone:
+                                                          description: |-
+                                                            Zone specifies the topology zone this weight applies to.
+                                                            The value should match the topology.kubernetes.io/zone label
+                                                            of the nodes where endpoints are running.
+                                                            Zones not listed in the configuration receive a default weight of 1.
+                                                          type: string
+                                                      required:
+                                                      - weight
+                                                      - zone
+                                                      type: object
+                                                    type: array
+                                                    x-kubernetes-list-map-keys:
+                                                    - zone
+                                                    x-kubernetes-list-type: map
                                                 type: object
                                             required:
                                             - type
@@ -21370,11 +22035,18 @@ spec:
                                                 load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
-                                            - message: Currently ZoneAware is only
-                                                supported for LeastRequest, Random,
-                                                and RoundRobin load balancers.
+                                            - message: PreferLocal zone-aware routing
+                                                is not supported for ConsistentHash
+                                                load balancers. Use weightedZones
+                                                instead.
                                               rule: 'self.type == ''ConsistentHash''
-                                                ? !has(self.zoneAware) : true '
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
+                                            - message: ZoneAware PreferLocal and WeightedZones
+                                                cannot be specified together.
+                                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                                && has(self.zoneAware.weightedZones))
+                                                : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -21593,8 +22265,14 @@ spec:
                                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                               type: string
                                             value:
-                                              description: Value is the value of HTTP
-                                                Header to be matched.
+                                              description: |-
+                                                Value is the value of HTTP Header to be matched.
+                                                <gateway:experimental:description>
+                                                Must consist of printable US-ASCII characters, optionally separated
+                                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                </gateway:experimental:description>
+
+                                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                               maxLength: 4096
                                               minLength: 1
                                               type: string
@@ -22281,6 +22959,19 @@ spec:
                                                   maxLength: 1024
                                                   minLength: 1
                                                   type: string
+                                                retriableStatuses:
+                                                  description: |-
+                                                    RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                    Responses matching these statuses count towards the unhealthy threshold but
+                                                    do not result in the host being considered immediately unhealthy.
+                                                    The expected statuses take precedence for any range overlaps with this field.
+                                                  items:
+                                                    description: HTTPStatus defines
+                                                      the http status code.
+                                                    maximum: 599
+                                                    minimum: 100
+                                                    type: integer
+                                                  type: array
                                               required:
                                               - path
                                               type: object
@@ -22296,6 +22987,23 @@ spec:
                                                 between active health checks.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            overrides:
+                                              description: |-
+                                                Overrides defines the configuration of the overriding health check settings for all endpoints
+                                                in the backend cluster. This allows customization of port and other settings that may differ
+                                                from the main service configuration.
+                                              properties:
+                                                port:
+                                                  description: |-
+                                                    Port overrides the health check port.
+                                                    If not set, the endpoint's serving port is used for health checks.
+                                                    This is useful when health checks are served on a different port than
+                                                    the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                                  format: int32
+                                                  maximum: 65535
+                                                  minimum: 1
+                                                  type: integer
+                                              type: object
                                             tcp:
                                               description: |-
                                                 TCP defines the configuration of tcp health checker.
@@ -22395,10 +23103,11 @@ spec:
                                               type: string
                                             unhealthyThreshold:
                                               default: 3
-                                              description: UnhealthyThreshold defines
-                                                the number of unhealthy health checks
-                                                required before a backend host is
-                                                marked unhealthy.
+                                              description: |-
+                                                UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                                Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                                considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                                up to this threshold before the host is marked unhealthy.
                                               format: int32
                                               minimum: 1
                                               type: integer
@@ -22431,6 +23140,12 @@ spec:
                                         passive:
                                           description: Passive passive check configuration
                                           properties:
+                                            alwaysEjectOneEndpoint:
+                                              default: false
+                                              description: |-
+                                                AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                                regardless of MaxEjectionPercent.
+                                              type: boolean
                                             baseEjectionTime:
                                               default: 30s
                                               description: BaseEjectionTime defines
@@ -22764,6 +23479,37 @@ spec:
                                                   minimum: 0
                                                   type: integer
                                               type: object
+                                            weightedZones:
+                                              description: |-
+                                                WeightedZones configures weight-based traffic distribution across locality zones.
+                                                Traffic is distributed proportionally based on the sum of all zone weights.
+                                              items:
+                                                description: WeightedZoneConfig defines
+                                                  the weight for a specific locality
+                                                  zone.
+                                                properties:
+                                                  weight:
+                                                    description: |-
+                                                      Weight defines the weight for this locality.
+                                                      Higher values receive more traffic. The actual traffic distribution
+                                                      is proportional to this value relative to other localities.
+                                                    format: int32
+                                                    type: integer
+                                                  zone:
+                                                    description: |-
+                                                      Zone specifies the topology zone this weight applies to.
+                                                      The value should match the topology.kubernetes.io/zone label
+                                                      of the nodes where endpoints are running.
+                                                      Zones not listed in the configuration receive a default weight of 1.
+                                                    type: string
+                                                required:
+                                                - weight
+                                                - zone
+                                                type: object
+                                              type: array
+                                              x-kubernetes-list-map-keys:
+                                              - zone
+                                              x-kubernetes-list-type: map
                                           type: object
                                       required:
                                       - type
@@ -22777,11 +23523,17 @@ spec:
                                           for RoundRobin and LeastRequest load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
-                                      - message: Currently ZoneAware is only supported
-                                          for LeastRequest, Random, and RoundRobin
-                                          load balancers.
-                                        rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                          : true '
+                                      - message: PreferLocal zone-aware routing is
+                                          not supported for ConsistentHash load balancers.
+                                          Use weightedZones instead.
+                                        rule: 'self.type == ''ConsistentHash'' &&
+                                          has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                          : true'
+                                      - message: ZoneAware PreferLocal and WeightedZones
+                                          cannot be specified together.
+                                        rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                          && has(self.zoneAware.weightedZones)) :
+                                          true'
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -22990,8 +23742,14 @@ spec:
                                         pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                         type: string
                                       value:
-                                        description: Value is the value of HTTP Header
-                                          to be matched.
+                                        description: |-
+                                          Value is the value of HTTP Header to be matched.
+                                          <gateway:experimental:description>
+                                          Must consist of printable US-ASCII characters, optionally separated
+                                          by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                          </gateway:experimental:description>
+
+                                          <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                         maxLength: 4096
                                         minLength: 1
                                         type: string
@@ -23608,6 +24366,19 @@ spec:
                                             maxLength: 1024
                                             minLength: 1
                                             type: string
+                                          retriableStatuses:
+                                            description: |-
+                                              RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                              Responses matching these statuses count towards the unhealthy threshold but
+                                              do not result in the host being considered immediately unhealthy.
+                                              The expected statuses take precedence for any range overlaps with this field.
+                                            items:
+                                              description: HTTPStatus defines the
+                                                http status code.
+                                              maximum: 599
+                                              minimum: 100
+                                              type: integer
+                                            type: array
                                         required:
                                         - path
                                         type: object
@@ -23623,6 +24394,23 @@ spec:
                                           active health checks.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
+                                      overrides:
+                                        description: |-
+                                          Overrides defines the configuration of the overriding health check settings for all endpoints
+                                          in the backend cluster. This allows customization of port and other settings that may differ
+                                          from the main service configuration.
+                                        properties:
+                                          port:
+                                            description: |-
+                                              Port overrides the health check port.
+                                              If not set, the endpoint's serving port is used for health checks.
+                                              This is useful when health checks are served on a different port than
+                                              the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                            format: int32
+                                            maximum: 65535
+                                            minimum: 1
+                                            type: integer
+                                        type: object
                                       tcp:
                                         description: |-
                                           TCP defines the configuration of tcp health checker.
@@ -23722,9 +24510,11 @@ spec:
                                         type: string
                                       unhealthyThreshold:
                                         default: 3
-                                        description: UnhealthyThreshold defines the
-                                          number of unhealthy health checks required
-                                          before a backend host is marked unhealthy.
+                                        description: |-
+                                          UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                          Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                          considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                          up to this threshold before the host is marked unhealthy.
                                         format: int32
                                         minimum: 1
                                         type: integer
@@ -23757,6 +24547,12 @@ spec:
                                   passive:
                                     description: Passive passive check configuration
                                     properties:
+                                      alwaysEjectOneEndpoint:
+                                        default: false
+                                        description: |-
+                                          AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                          regardless of MaxEjectionPercent.
+                                        type: boolean
                                       baseEjectionTime:
                                         default: 30s
                                         description: BaseEjectionTime defines the
@@ -24084,6 +24880,36 @@ spec:
                                             minimum: 0
                                             type: integer
                                         type: object
+                                      weightedZones:
+                                        description: |-
+                                          WeightedZones configures weight-based traffic distribution across locality zones.
+                                          Traffic is distributed proportionally based on the sum of all zone weights.
+                                        items:
+                                          description: WeightedZoneConfig defines
+                                            the weight for a specific locality zone.
+                                          properties:
+                                            weight:
+                                              description: |-
+                                                Weight defines the weight for this locality.
+                                                Higher values receive more traffic. The actual traffic distribution
+                                                is proportional to this value relative to other localities.
+                                              format: int32
+                                              type: integer
+                                            zone:
+                                              description: |-
+                                                Zone specifies the topology zone this weight applies to.
+                                                The value should match the topology.kubernetes.io/zone label
+                                                of the nodes where endpoints are running.
+                                                Zones not listed in the configuration receive a default weight of 1.
+                                              type: string
+                                          required:
+                                          - weight
+                                          - zone
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-map-keys:
+                                        - zone
+                                        x-kubernetes-list-type: map
                                     type: object
                                 required:
                                 - type
@@ -24097,10 +24923,15 @@ spec:
                                     RoundRobin and LeastRequest load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
-                                - message: Currently ZoneAware is only supported for
-                                    LeastRequest, Random, and RoundRobin load balancers.
-                                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                    : true '
+                                - message: PreferLocal zone-aware routing is not supported
+                                    for ConsistentHash load balancers. Use weightedZones
+                                    instead.
+                                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
+                                - message: ZoneAware PreferLocal and WeightedZones
+                                    cannot be specified together.
+                                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                    && has(self.zoneAware.weightedZones)) : true'
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -24317,8 +25148,14 @@ spec:
                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                       type: string
                                     value:
-                                      description: Value is the value of HTTP Header
-                                        to be matched.
+                                      description: |-
+                                        Value is the value of HTTP Header to be matched.
+                                        <gateway:experimental:description>
+                                        Must consist of printable US-ASCII characters, optionally separated
+                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                        </gateway:experimental:description>
+
+                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                       maxLength: 4096
                                       minLength: 1
                                       type: string
@@ -24762,7 +25599,6 @@ spec:
                           "credential", and the value should be the credential to be injected.
                           For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
                           for bearer token, the value should be "Bearer <token>".
-                          Note: The secret must be in the same namespace as the HTTPRouteFilter.
                         properties:
                           group:
                             default: ""
@@ -24824,7 +25660,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the direct response.
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -24932,8 +25770,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -25006,8 +25850,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -25442,6 +26292,85 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
+                            clientIPGeoLocations:
+                              description: |-
+                                ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+                              items:
+                                description: ClientIPGeoLocation specifies geolocation-based
+                                  match criteria for authorization.
+                                properties:
+                                  anonymous:
+                                    description: Anonymous matches anonymous network
+                                      detection signals.
+                                    properties:
+                                      isAnonymous:
+                                        description: IsAnonymous matches whether the
+                                          client IP is considered anonymous.
+                                        type: boolean
+                                      isHosting:
+                                        description: IsHosting matches whether the
+                                          client IP belongs to a hosting provider.
+                                        type: boolean
+                                      isProxy:
+                                        description: IsProxy matches whether the client
+                                          IP belongs to a public proxy.
+                                        type: boolean
+                                      isTor:
+                                        description: IsTor matches whether the client
+                                          IP belongs to a Tor exit node.
+                                        type: boolean
+                                      isVPN:
+                                        description: IsVPN matches whether the client
+                                          IP is detected as VPN.
+                                        type: boolean
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of isAnonymous, isVPN,
+                                        isHosting, isTor, or isProxy must be specified
+                                      rule: has(self.isAnonymous) || has(self.isVPN)
+                                        || has(self.isHosting) || has(self.isTor)
+                                        || has(self.isProxy)
+                                  asn:
+                                    description: ASN is the autonomous system number
+                                      associated with the client IP.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  city:
+                                    description: City is the city associated with
+                                      the client IP.
+                                    maxLength: 128
+                                    minLength: 1
+                                    type: string
+                                  country:
+                                    description: Country is the country ISO code associated
+                                      with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
+                                    type: string
+                                  isp:
+                                    description: ISP is the internet service provider
+                                      associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
+                                    type: string
+                                  region:
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: at least one of country, region, city,
+                                    asn, isp, or anonymous must be specified
+                                  rule: has(self.country) || has(self.region) || has(self.city)
+                                    || has(self.asn) || has(self.isp) || has(self.anonymous)
+                              minItems: 1
+                              type: array
                             headers:
                               description: |-
                                 Headers authorize the request based on user identity extracted from custom headers.
@@ -25584,9 +26513,10 @@ spec:
                               type: array
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, or headers
-                              must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers))
+                          - message: at least one of clientCIDRs, jwt, headers, or
+                              clientIPGeoLocations must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
+                              || has(self.clientIPGeoLocations))
                       required:
                       - action
                       - principal
@@ -25616,8 +26546,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
@@ -26281,6 +27209,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -26296,6 +27237,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -26389,9 +27347,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -26423,6 +27383,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -26746,6 +27712,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -26759,10 +27755,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -27421,6 +28422,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -27436,6 +28450,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -27529,9 +28560,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -27563,6 +28596,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -27886,6 +28925,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -27899,10 +28968,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -28763,6 +29837,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -28778,6 +29865,23 @@ spec:
                                             active health checks.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        overrides:
+                                          description: |-
+                                            Overrides defines the configuration of the overriding health check settings for all endpoints
+                                            in the backend cluster. This allows customization of port and other settings that may differ
+                                            from the main service configuration.
+                                          properties:
+                                            port:
+                                              description: |-
+                                                Port overrides the health check port.
+                                                If not set, the endpoint's serving port is used for health checks.
+                                                This is useful when health checks are served on a different port than
+                                                the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                          type: object
                                         tcp:
                                           description: |-
                                             TCP defines the configuration of tcp health checker.
@@ -28877,10 +29981,11 @@ spec:
                                           type: string
                                         unhealthyThreshold:
                                           default: 3
-                                          description: UnhealthyThreshold defines
-                                            the number of unhealthy health checks
-                                            required before a backend host is marked
-                                            unhealthy.
+                                          description: |-
+                                            UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                            Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                            considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                            up to this threshold before the host is marked unhealthy.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -28913,6 +30018,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -29241,6 +30352,36 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
+                                                type: string
+                                            required:
+                                            - weight
+                                            - zone
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - zone
+                                          x-kubernetes-list-type: map
                                       type: object
                                   required:
                                   - type
@@ -29254,11 +30395,15 @@ spec:
                                       for RoundRobin and LeastRequest load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                      : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -29487,6 +30632,14 @@ spec:
                 required:
                 - providers
                 type: object
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing SecurityPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
@@ -30181,6 +31334,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -30196,6 +31362,23 @@ spec:
                                       active health checks.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  overrides:
+                                    description: |-
+                                      Overrides defines the configuration of the overriding health check settings for all endpoints
+                                      in the backend cluster. This allows customization of port and other settings that may differ
+                                      from the main service configuration.
+                                    properties:
+                                      port:
+                                        description: |-
+                                          Port overrides the health check port.
+                                          If not set, the endpoint's serving port is used for health checks.
+                                          This is useful when health checks are served on a different port than
+                                          the main service port (e.g., port 443 for service, port 9090 for health checks).
+                                        format: int32
+                                        maximum: 65535
+                                        minimum: 1
+                                        type: integer
+                                    type: object
                                   tcp:
                                     description: |-
                                       TCP defines the configuration of tcp health checker.
@@ -30289,9 +31472,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -30323,6 +31508,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -30646,6 +31837,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -30659,10 +31880,15 @@ spec:
                                 and LeastRequest load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware)
-                                : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.

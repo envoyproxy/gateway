@@ -357,6 +357,17 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		}
 	}
 
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
+			}
+		}
+	}
+
 	// Add EndpointOverride if specified
 	if policy.LoadBalancer.EndpointOverride != nil {
 		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
@@ -471,6 +482,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
 		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
+		AlwaysEjectOneEndpoint:         hc.AlwaysEjectOneEndpoint,
 	}
 
 	if hc.Interval != nil {
@@ -525,6 +537,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		}
 	}
 
+	if hc.Overrides != nil {
+		irHC.Overrides = buildHealthCheckOverrides(hc.Overrides)
+	}
+
 	return irHC
 }
 
@@ -560,6 +576,19 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
+	// deduplicate retriable http statuses
+	retriableStatusSet := sets.NewInt()
+	for _, r := range h.RetriableStatuses {
+		retriableStatusSet.Insert(int(r))
+	}
+	if retriableStatusSet.Len() > 0 {
+		irRetriableStatuses := make([]ir.HTTPStatus, 0, retriableStatusSet.Len())
+		for _, r := range retriableStatusSet.List() {
+			irRetriableStatuses = append(irRetriableStatuses, ir.HTTPStatus(r))
+		}
+		irHTTP.RetriableStatuses = irRetriableStatuses
+	}
+
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
 }
@@ -574,6 +603,18 @@ func buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealth
 		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
+}
+
+func buildHealthCheckOverrides(overrides *egv1a1.HealthCheckOverrides) *ir.HealthCheckOverrides {
+	if overrides == nil {
+		return nil
+	}
+
+	irOverrides := &ir.HealthCheckOverrides{
+		Port: uint32(overrides.Port),
+	}
+
+	return irOverrides
 }
 
 func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {

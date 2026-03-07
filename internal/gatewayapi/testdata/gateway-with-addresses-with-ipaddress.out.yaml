@@ -47,8 +47,7 @@ infraIR:
       - 1.2.3.4
       - 5.6.7.8
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tcp
+      - name: envoy-gateway/gateway-1/tcp
         ports:
         - containerPort: 10080
           name: tcp-80

@@ -251,8 +251,7 @@ infraIR:
                   type: OpenTelemetry
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -451,7 +450,8 @@ xdsIR:
             weight: 1
         logType: Route
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a route log
       - authority: otel-collector.monitoring.svc.cluster.local
@@ -471,7 +471,8 @@ xdsIR:
             weight: 1
         logType: Listener
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a listener log
       - authority: otel-collector.monitoring.svc.cluster.local
@@ -490,7 +491,8 @@ xdsIR:
             protocol: GRPC
             weight: 1
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: |
           this is a Global log
       text:

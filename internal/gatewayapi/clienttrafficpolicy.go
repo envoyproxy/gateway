@@ -845,6 +845,9 @@ func (t *Translator) buildListenerTLSParameters(
 		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
+		if err := validateCipherSuites(tlsParams.Ciphers); err != nil {
+			return nil, err
+		}
 		irTLSConfig.Ciphers = tlsParams.Ciphers
 	}
 	if len(tlsParams.ECDHCurves) > 0 {
@@ -852,6 +855,13 @@ func (t *Translator) buildListenerTLSParameters(
 	}
 	if len(tlsParams.SignatureAlgorithms) > 0 {
 		irTLSConfig.SignatureAlgorithms = tlsParams.SignatureAlgorithms
+	}
+
+	if tlsParams.Fingerprints != nil {
+		irTLSConfig.Fingerprints = make([]ir.TLSFingerprintType, len(tlsParams.Fingerprints))
+		for i := range tlsParams.Fingerprints {
+			irTLSConfig.Fingerprints[i] = (ir.TLSFingerprintType)(tlsParams.Fingerprints[i])
+		}
 	}
 
 	if tlsParams.ClientValidation != nil {
@@ -936,7 +946,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
-		secret, err := t.validateSecretRef(false, from, ref, resources)
+		secret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -947,7 +957,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
-		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
+		configMap, err := t.validateConfigMapRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}

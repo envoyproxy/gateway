@@ -29,7 +29,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -110,8 +109,8 @@ func TestProvider(t *testing.T) {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "gatewayapi-crds.yaml")
-	egAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "generated")
+	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "gatewayapi-crds.yaml")
+	egAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "charts", "crds", "crds", "generated")
 	mcsAPIs := filepath.Join(".", "testdata", "crds", "multicluster-svc.yaml")
 
 	env := &envtest.Environment{
@@ -976,16 +975,16 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 	testCases := []struct {
 		name  string
-		route gwapiv1a3.TLSRoute
+		route gwapiv1.TLSRoute
 	}{
 		{
 			name: "tlsroute",
-			route: gwapiv1a3.TLSRoute{
+			route: gwapiv1.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a3.TLSRouteSpec{
+				Spec: gwapiv1.TLSRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
 							{
@@ -994,7 +993,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 						},
 					},
 					Hostnames: []gwapiv1a2.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1a2.TLSRouteRule{
+					Rules: []gwapiv1.TLSRouteRule{
 						{
 							BackendRefs: []gwapiv1a2.BackendRef{
 								{
@@ -1128,19 +1127,19 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	tlsRoute := gwapiv1a3.TLSRoute{
+	tlsRoute := gwapiv1.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1.TLSRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{{
 					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
-			Rules: []gwapiv1a2.TLSRouteRule{
+			Rules: []gwapiv1.TLSRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{

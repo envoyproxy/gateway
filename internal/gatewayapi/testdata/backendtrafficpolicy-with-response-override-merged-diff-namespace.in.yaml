@@ -1,0 +1,100 @@
+# Tests merged BackendTrafficPolicies when ResponseOverride ConfigMap lives in the
+# gateway (parent) policy's namespace. Gateway BTP is in envoy-gateway-system with
+# a ConfigMap reference; route BTP is in default with mergeType. After merge, the
+# ConfigMap must be resolved in the parent policy's namespace.
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway-system
+      name: my-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: error-page
+      namespace: envoy-gateway-system
+    data:
+      response.body: |
+        error page contents here
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      name: my-gateway-error-response
+      namespace: envoy-gateway-system
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: my-gateway
+      responseOverride:
+        - match:
+            statusCodes:
+              - type: Range
+                range:
+                  start: 502
+                  end: 504
+          response:
+            contentType: "text/html"
+            body:
+              type: ValueRef
+              valueRef:
+                group: ""
+                kind: ConfigMap
+                name: error-page
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      name: my-app-rate-limit
+      namespace: default
+    spec:
+      targetRefs:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+          name: my-app
+      mergeType: StrategicMerge
+      rateLimit:
+        local:
+          rules:
+            - clientSelectors:
+                - sourceCIDR:
+                    type: Distinct
+                    value: 0.0.0.0/0
+              limit:
+                requests: 200
+                unit: Minute
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: my-app
+      namespace: default
+    spec:
+      hostnames:
+        - myapp.example.com
+      parentRefs:
+        - group: gateway.networking.k8s.io
+          kind: Gateway
+          name: my-gateway
+          namespace: envoy-gateway-system
+      rules:
+        - backendRefs:
+            - group: ""
+              kind: Service
+              name: service-1
+              port: 8080
+              weight: 1
+          matches:
+            - path:
+                type: PathPrefix
+                value: /

@@ -681,12 +681,12 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 	}{
 		{
 			name:      "valid htpasswd with SHA format",
-			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:{SHA}hashed_user2_password",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
 			wantError: false,
 		},
 		{
 			name:      "valid htpasswd with SHA format and empty lines",
-			htpasswd:  "user1:{SHA}hashed_user1_password\n\nuser2:{SHA}hashed_user2_password\n",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\n\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\n",
 			wantError: false,
 		},
 		{
@@ -710,8 +710,13 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name:      "invalid htpasswd with hex sha1",
+			htpasswd:  "user1:{SHA}5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+			wantError: true,
+		},
+		{
 			name:      "mixed valid and invalid formats",
-			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:$apr1$hashed_user2_password",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:$apr1$hashed_user2_password",
 			wantError: true,
 		},
 	}
@@ -879,6 +884,23 @@ func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
 	return false
 }
 
+func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference) {
+	ctx := &RouteParentContext{ParentReference: &parentRef}
+	switch r := route.(type) {
+	case *HTTPRouteContext:
+		ctx.HTTPRoute = r.HTTPRoute
+	case *GRPCRouteContext:
+		ctx.GRPCRoute = r.GRPCRoute
+	case *TLSRouteContext:
+		ctx.TLSRoute = r.TLSRoute
+	case *TCPRouteContext:
+		ctx.TCPRoute = r.TCPRoute
+	case *UDPRouteContext:
+		ctx.UDPRoute = r.UDPRoute
+	}
+	route.SetRouteParentContext(parentRef, ctx)
+}
+
 // --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
 func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
@@ -918,6 +940,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 			},
 		},
 	}
+	SetRouteParentContext(tcpRoute, tcpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
 	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -937,14 +960,22 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
 
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -995,6 +1026,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 			},
 		},
 	}
+	SetRouteParentContext(httpRoute, httpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
 	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
@@ -1014,14 +1046,22 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	}
 	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
 
-	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
 	resources := resource.NewResources()
 	xdsIR := make(resource.XdsIRMap)
 	trContext.SetServices(resources.Services)
 	tr.TranslatorContext = trContext
 
 	// Process the policy - this should set error status
-	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, policy, target)
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
 
 	// Assert that the policy has a False condition (error was set)
 	require.True(t, hasParentFalseCondition(policy))
@@ -1368,6 +1408,241 @@ func Test_buildContextExtensions(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMergeSecurityPolicy(t *testing.T) {
+	tests := []struct {
+		name         string
+		routePolicy  *egv1a1.SecurityPolicy
+		parentPolicy *egv1a1.SecurityPolicy
+		wantSpec     egv1a1.SecurityPolicySpec
+		wantErr      bool
+	}{
+		{
+			name: "merge with StrategicMerge - different fields",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+			},
+		},
+		{
+			name: "no merge when MergeType is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+		{
+			name: "no merge when parentPolicy is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: nil,
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+		{
+			name: "merge CORS with Authorization",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://example.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+						Rules: []egv1a1.AuthorizationRule{
+							{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+						},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://example.com"},
+				},
+				Authorization: &egv1a1.Authorization{
+					DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+					Rules: []egv1a1.AuthorizationRule{
+						{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+					},
+				},
+			},
+		},
+		{
+			name: "merge with JSONMerge type",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.JSONMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.JSONMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+			},
+		},
+		{
+			name: "merge multiple fields - JWT, CORS, and BasicAuth",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+				Authorization: &egv1a1.Authorization{
+					DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+				},
+			},
+		},
+		{
+			name: "merge same field - route overrides parent",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+						AllowMethods: []string{"GET", "POST"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://gateway.com"},
+						AllowMethods: []string{"GET"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					AllowMethods: []string{"GET", "POST"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				// Compare all fields that could be merged
+				require.Equal(t, tt.wantSpec.MergeType, got.Spec.MergeType, "MergeType should match")
+				require.Equal(t, tt.wantSpec.JWT, got.Spec.JWT, "JWT should match")
+				require.Equal(t, tt.wantSpec.BasicAuth, got.Spec.BasicAuth, "BasicAuth should match")
+				require.Equal(t, tt.wantSpec.CORS, got.Spec.CORS, "CORS should match")
+				require.Equal(t, tt.wantSpec.Authorization, got.Spec.Authorization, "Authorization should match")
+			}
 		})
 	}
 }

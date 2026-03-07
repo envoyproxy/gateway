@@ -1,8 +1,7 @@
 - address:
     socketAddress:
-      address: 0.0.0.0
+      address: '::'
       portValue: 10080
-  drainType: MODIFY_ONLY
   filterChains:
   - filters:
     - name: envoy.filters.network.http_connection_manager
@@ -19,7 +18,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
             domain: eg-ratelimit
-            disableXEnvoyRatelimitedHeader: true
             failureModeDeny: true
             rateLimitService:
               grpcService:
@@ -40,8 +38,9 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https
+        statPrefix: https-10080
         useRemoteAddress: true
+    name: first-listener
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -59,5 +58,8 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

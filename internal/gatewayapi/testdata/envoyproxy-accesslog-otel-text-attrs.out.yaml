@@ -69,8 +69,7 @@ infraIR:
                   type: OpenTelemetry
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -90,9 +89,12 @@ xdsIR:
     accessLog:
       openTelemetry:
       - attributes:
-          response_code_details: '%RESPONSE_CODE_DETAILS%'
-          upstream_cluster: '%UPSTREAM_CLUSTER%'
-          upstream_host: '%UPSTREAM_HOST%'
+        - key: response_code_details
+          value: '%RESPONSE_CODE_DETAILS%'
+        - key: upstream_cluster
+          value: '%UPSTREAM_CLUSTER%'
+        - key: upstream_host
+          value: '%UPSTREAM_HOST%'
         authority: otel-collector.monitoring.svc.cluster.local
         destination:
           metadata:
@@ -109,7 +111,8 @@ xdsIR:
             protocol: GRPC
             weight: 1
         resourceAttributes:
-          k8s.cluster.name: cluster-1
+        - key: k8s.cluster.name
+          value: cluster-1
         text: '%REQ(:METHOD)% %REQ(:PATH)% %PROTOCOL% %RESPONSE_CODE%'
     globalResources:
       proxyServiceCluster:

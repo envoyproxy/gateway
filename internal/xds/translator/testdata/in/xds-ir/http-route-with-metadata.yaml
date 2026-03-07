@@ -3,13 +3,13 @@ http:
   address: 0.0.0.0
   port: 10080
   metadata:
-    groupVersion: "gateway.networking.k8s.io/v1"
     kind: "Gateway"
     name: "first-gateway"
     namespace: "first-gateway"
     sectionName: "first-listener"
     annotations:
-      foo: bar
+    - key: foo
+      value: bar
   hostnames:
   - "*"
   path:
@@ -18,13 +18,13 @@ http:
   routes:
   - destination:
       metadata:
-        groupVersion: "gateway.networking.k8s.io/v1"
         kind: "HTTPRoute"
         name: "first-route-name"
         namespace: "first-route-ns"
         sectionName: "first-route-rule"
         annotations:
-          foo: bar
+        - key: foo
+          value: bar
       name: "first-route-dest"
       settings:
       - endpoints:
@@ -38,13 +38,13 @@ http:
         name: "first-route-dest/backend/0"
     hostname: example.com
     metadata:
-      groupVersion: "gateway.networking.k8s.io/v1"
       kind: "HTTPRoute"
       name: "first-route-name"
       namespace: "first-route-ns"
       sectionName: "first-route-rule"
       annotations:
-        foo: bar
+      - key: foo
+        value: bar
     name: envoy-gateway/httproute-2/rule/0/match/0/example.com
     pathMatch:
       prefix: /v1/example
@@ -53,13 +53,13 @@ http:
       name: debug
   - destination:
       metadata:
-        groupVersion: "gateway.networking.k8s.io/v1"
         kind: "HTTPRoute"
         name: "second-route-name"
         namespace: "second-route-ns"
         sectionName: "second-route-rule"
         annotations:
-          foo: bar
+        - key: foo
+          value: bar
       name: "second-route-dest"
       settings:
       - endpoints:

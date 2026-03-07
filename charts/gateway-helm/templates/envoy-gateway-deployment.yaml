@@ -37,7 +37,7 @@ spec:
       {{- end }}
       {{- with .Values.deployment.pod.nodeSelector }}
       nodeSelector:
-        {{ toYaml . | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.deployment.pod.topologySpreadConstraints }}
       topologySpreadConstraints:

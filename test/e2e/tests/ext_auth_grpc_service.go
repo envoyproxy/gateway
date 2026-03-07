@@ -51,7 +51,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/myapp",
+					Path: "/grpc",
 					Headers: map[string]string{
 						"Authorization": "Bearer token1",
 					},
@@ -69,7 +69,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/myapp",
+					Path: "/grpc",
 				},
 				Response: http.Response{
 					StatusCodes: []int{403},
@@ -84,7 +84,7 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Host: "www.example.com",
-					Path: "/myapp",
+					Path: "/grpc",
 					Headers: map[string]string{
 						"Authorization": "Bearer invalid-token",
 					},

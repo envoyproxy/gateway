@@ -8,8 +8,8 @@ ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
-GATEWAY_API_MINOR_VERSION ?= 1.4
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
+GATEWAY_API_MINOR_VERSION ?= 1.5
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -40,6 +40,9 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
 E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
+
+# Define the Gateway API channel used in tests
+E2E_GATEWAY_API_CHANNEL ?= experimental
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
@@ -86,8 +89,9 @@ endif
 .PHONY: manifests
 manifests: generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/crds/generated
 	@mkdir -p charts/gateway-helm/templates/generated
+	@mkdir -p charts/gateway-helm/charts/crds/crds/generated
+	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-helm/charts/crds/crds/generated
 	$(GO_TOOL) controller-gen crd:allowDangerousTypes=true paths="./api/..." output:crd:artifacts:config=charts/gateway-crds-helm/templates/generated
 	@for file in charts/gateway-crds-helm/templates/generated/*.yaml; do \
 		sed -i.bak '1s/^/{{- if .Values.crds.envoyGateway.enabled }}\n/' $$file && \
@@ -102,7 +106,8 @@ generate-gwapi-manifests: ## Generate Gateway API manifests and make it consiste
 	@mkdir -p $(OUTPUT_DIR)/
 	@curl -sLo $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml ${EXPERIMENTAL_GATEWAY_API_RELEASE_URL}
 	@curl -sLo $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml ${STANDARD_GATEWAY_API_RELEASE_URL}
-	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	@mkdir -p charts/gateway-helm/charts/crds/crds
+	cp $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
 	@sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (eq .Values.crds.gatewayAPI.channel "standard") }}\n/' $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	echo '{{- end }}' >> $(OUTPUT_DIR)/standard-gatewayapi-crds.yaml && \
 	sed -i.bak '1s/^/{{- if and .Values.crds.gatewayAPI.enabled (or (eq .Values.crds.gatewayAPI.channel "experimental") (eq .Values.crds.gatewayAPI.channel "")) }}\n/' $(OUTPUT_DIR)/experimental-gatewayapi-crds.yaml && \
@@ -170,19 +175,33 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-deploy
-kube-deploy: manifests helm-generate.gateway-helm ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
+ifeq ($(E2E_GATEWAY_API_CHANNEL),standard)
+	# Install standard Gateway API CRDs and EG CRDs.
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		-f $(ROOT_DIR)/test/helm/gateway-crds-helm/e2e.in.yaml \
+		| kubectl apply -f - --server-side
+	# Install EG with --skip-crds since CRDs are already installed.
+	$(GO_TOOL) helm install eg charts/gateway-helm \
+		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		--skip-crds \
+		-n envoy-gateway-system --create-namespace \
+		--debug --timeout='$(WAIT_TIMEOUT)' \
+		--wait --wait-for-jobs \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+else
 	$(GO_TOOL) helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
 		--wait --wait-for-jobs \
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+endif
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
-	# Install Envoy Gateway
 	$(GO_TOOL) helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
@@ -198,9 +217,14 @@ kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway
  		-n monitoring --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
-kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-undeploy: manifests helm-generate ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system
+	$(GO_TOOL) helm uninstall eg -n envoy-gateway-system || true
+	# Uninstall CRDs
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		| kubectl delete -f - --ignore-not-found=$(ignore-not-found)
 
 .PHONY: kube-demo-prepare
 kube-demo-prepare:
@@ -275,23 +299,24 @@ setup-mac-net-connect:
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
+	
 ifeq ($(E2E_RUN_TEST),)
-	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
-	go test $(E2E_TEST_ARGS) ./test/e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false
-	go test $(E2E_TEST_ARGS) ./test/e2e/multiple_gc $(E2E_TEST_SUITE_ARGS)  --cleanup-base-resources=true
-	LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
+	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
+	cd test/ && go test $(E2E_TEST_ARGS) ./e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false
+	cd test/ && go test $(E2E_TEST_ARGS) ./e2e/multiple_gc $(E2E_TEST_SUITE_ARGS)  --cleanup-base-resources=true
+	cd test/ && LAST_VERSION_TAG=$(shell cat VERSION) go test $(E2E_TEST_ARGS) ./e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 else
-	go test $(E2E_TEST_ARGS) ./test/e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
+	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --cleanup-base-resources=$(E2E_CLEANUP) \
 		--run-test $(E2E_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 run-e2e-upgrade:
-	go test $(E2E_TEST_ARGS) ./test/e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
+	cd test && go test $(E2E_TEST_ARGS) ./e2e/upgrade $(E2E_TEST_SUITE_ARGS) --gateway-class=upgrade --cleanup-base-resources=$(E2E_CLEANUP)
 
 .PHONY: run-resilience
 run-resilience: ## Run resilience tests
 	@$(LOG_TARGET)
-	go test -v -tags resilience ./test/resilience --gateway-class=envoy-gateway
+	cd test && go test -v -tags resilience ./resilience --gateway-class=envoy-gateway
 
 .PHONY: run-benchmark
 run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
@@ -300,7 +325,7 @@ run-benchmark: install-benchmark-server prepare-ip-family ## Run benchmark tests
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n benchmark-test deployment/nighthawk-test-server --for=condition=Available
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/benchmark/config/gatewayclass.yaml
-	go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./test/benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
+	cd test && go test -v -tags benchmark -timeout $(BENCHMARK_TIMEOUT) ./benchmark --baseline-rps=$(BENCHMARK_BASELINE_RPS) --connections=$(BENCHMARK_CONNECTIONS) --duration=$(BENCHMARK_DURATION) --report-save-dir=$(BENCHMARK_REPORT_DIR)
 	# render benchmark profiles into image
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then dot -V; fi
 	@if [ "$(BENCHMARK_RENDER_PNG)" != "false" ]; then find test/benchmark/$(BENCHMARK_REPORT_DIR)/profiles -name "*.pprof" -type f -exec sh -c 'go tool pprof -png "$$1" > "$$${1%.pprof}.png"' _ {} \; ; fi
@@ -355,9 +380,9 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
 else
-	go test $(CONFORMANCE_TEST_ARGS) ./test/conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -368,13 +393,13 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
+	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
 else
     # we didn't care about output when running single test
-	go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./test/conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST)
+	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST)
 endif
 
 
@@ -388,11 +413,17 @@ generate-manifests: helm-generate.gateway-helm ## Generate Kubernetes release ma
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --include-crds --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.gatewayAPI.enabled=true \
+		--set crds.envoyGateway.enabled=true \
+		> $(OUTPUT_DIR)/install.yaml
+	$(GO_TOOL) helm template --set createNamespace=true eg charts/gateway-helm --namespace envoy-gateway-system >> $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
-	cat charts/gateway-helm/crds/generated/* >> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		--set crds.envoyGateway.enabled=true \
+		> $(OUTPUT_DIR)/envoy-gateway-crds.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/envoy-gateway-crds.yaml")
 
 .PHONY: generate-artifacts

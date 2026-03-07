@@ -22,7 +22,7 @@ gateways:
         mode: Terminate
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -49,8 +49,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tls
+      - name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10090
           name: tls-90

@@ -66,6 +66,11 @@
       path: /healthz
       receive:
       - binary: cG9uZw==
+      retriableStatuses:
+      - end: "430"
+        start: "429"
+      - end: "504"
+        start: "503"
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3
@@ -206,3 +211,10 @@
   name: fifth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536

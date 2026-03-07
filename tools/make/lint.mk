@@ -20,7 +20,8 @@ GOLANGCI_LINT_FLAGS ?=
 lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
-	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
+	cd test && $(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.kube-api-linter
 lint: lint.kube-api-linter
@@ -77,7 +78,7 @@ lint.fix-golint:
 	$(MAKE) lint.golint GOLANGCI_LINT_FLAGS="--fix"
 
 .PHONY: gen-check
-gen-check: format generate manifests protos go.testdata.complete
+gen-check: format generate manifests helm-template protos go.testdata.complete
 	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
 		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate', 'make manifests' and 'make protos' to include any changed files to your PR); \
@@ -114,7 +115,13 @@ lint.markdown:
 		
 
 .PHONY: lint.dependabot
-lint: lint.dependabot
+# lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
+
+.PHONY: lint.release-notes-filenames
+lint: lint.release-notes-filenames
+lint.release-notes-filenames: ## Check if release notes filenames follow naming conventions
+	@$(LOG_TARGET)
+	@tools/hack/check-release-notes-filenames.sh

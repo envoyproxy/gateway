@@ -1,32 +1,34 @@
-name: "tracing"
 tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:
-    "literal1":
-      type: Literal
-      literal:
-        value: "value1"
-    "env1":
-      type: Environment
-      environment:
-        name: "env1"
-        defaultValue: "-"
-    "req1":
-      type: RequestHeader
-      requestHeader:
-        name: "X-Request-Id"
-        defaultValue: "-"
+    - key: "env1"
+      value:
+        type: Environment
+        environment:
+          name: "env1"
+          defaultValue: "-"
+    - key: "literal1"
+      value:
+        type: Literal
+        literal:
+          value: "value1"
+    - key: "req1"
+      value:
+        type: RequestHeader
+        requestHeader:
+          name: "X-Request-Id"
+          defaultValue: "-"
   authority: "otel-collector.default.svc.cluster.local"
   destination:
     name: "tracing-0"
     settings:
-    - endpoints:
-      - host: "otel-collector.default.svc.cluster.local"
-        port: 4317
-      protocol: "GRPC"
-      addressType: FQDN
-      name: "tracing-0/backend/0"
+      - endpoints:
+          - host: "otel-collector.default.svc.cluster.local"
+            port: 4317
+        protocol: "GRPC"
+        addressType: FQDN
+        name: "tracing-0/backend/0"
   traffic:
     backendConnection:
       bufferLimit: 20971520
@@ -51,21 +53,21 @@ tracing:
     port: 4317
     type: OpenTelemetry
 http:
-- name: "first-listener"
-  address: "::"
-  port: 10080
-  hostnames:
-  - "*"
-  path:
-    mergeSlashes: true
-    escapedSlashesAction: UnescapeAndRedirect
-  routes:
-  - name: "direct-route"
-    hostname: "*"
-    destination:
-      name: "direct-route-dest"
-      settings:
-      - endpoints:
-        - host: "1.2.3.4"
-          port: 50000
-        name: "direct-route-dest/backend/0"
+  - name: "first-listener"
+    address: "::"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "direct-route"
+        hostname: "*"
+        destination:
+          name: "direct-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "direct-route-dest/backend/0"

@@ -103,10 +103,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			isReady := t.validateListenerConditions(listener)
-			if !isReady {
-				continue
-			}
+			t.validateListenerConditions(listener)
 
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
@@ -442,7 +439,7 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
 		Name:        gateway.GetName(),
 		Namespace:   gateway.GetNamespace(),
-		Annotations: filterEGPrefix(gateway.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(gateway.GetAnnotations())),
 		SectionName: string(listener.Name),
 	}
 }
@@ -585,7 +582,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 		if len(accessLog.Sinks) == 0 {
 			al := &ir.JSONAccessLog{
-				JSON:       format.JSON,
+				JSON:       ir.MapToSlice(format.JSON),
 				CELMatches: validExprs,
 				LogType:    accessLogType,
 				Path:       "/dev/stdout",
@@ -611,7 +608,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				} else {
 					// Default to JSON format if type is nil or JSON
 					al := &ir.JSONAccessLog{
-						JSON:       format.JSON,
+						JSON:       ir.MapToSlice(format.JSON),
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
 						LogType:    accessLogType,
@@ -668,7 +665,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Text = format.Text
 				} else {
 					// Default to JSON format if type is nil or JSON
-					al.Attributes = format.JSON
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -691,7 +688,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 
 				al := &ir.OpenTelemetryAccessLog{
 					CELMatches:         validExprs,
-					ResourceAttributes: sink.OpenTelemetry.GetResourceAttributes(),
+					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
 					Headers:            sink.OpenTelemetry.Headers,
 					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
@@ -720,7 +717,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					al.Text = format.Text
 				}
 				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
-					al.Attributes = format.JSON
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -782,9 +779,9 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		Authority:          authority,
 		ServiceName:        serviceName,
 		SamplingRate:       proxySamplingRate(tracing),
-		CustomTags:         tracing.CustomTags,
-		Tags:               tracing.Tags,
-		ResourceAttributes: getOpenTelemetryTracingResourceAttributes(&tracing.Provider),
+		CustomTags:         ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:               ir.MapToSlice(tracing.Tags),
+		ResourceAttributes: ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
 			Name:     destName,
 			Settings: ds,
@@ -803,12 +800,9 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 		rate = float64(*tracing.SamplingRate)
 	} else if tracing.SamplingFraction != nil {
 		numerator := float64(tracing.SamplingFraction.Numerator)
-		denominator := float64(100)
-		if tracing.SamplingFraction.Denominator != nil {
-			denominator = float64(*tracing.SamplingFraction.Denominator)
-		}
+		denominator := ptr.Deref(tracing.SamplingFraction.Denominator, 100)
 
-		rate = numerator / denominator
+		rate = numerator * 100 / float64(denominator)
 		// Identifies a percentage, in the range [0.0, 100.0]
 		rate = math.Max(0, rate)
 		rate = math.Min(100, rate)
@@ -949,7 +943,7 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
 			if err != nil {
 				return nil, nil, err
 			}

@@ -1,0 +1,61 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: tcproute/default/tcproute-1/rule/-1
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: TCPRoute
+          name: tcproute-1
+          namespace: default
+          sectionName: rule-1
+  name: tcproute/default/tcproute-1/rule/-1
+  perConnectionBufferLimitBytes: 32768
+  transportSocketMatches:
+  - match:
+      name: tcproute/default/tcproute-1/rule/-1/tls/0
+    name: tcproute/default/tcproute-1/rule/-1/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: spiffe://cluster.local/ns/istio-demo/sa/echo-v1
+                sanType: URI
+              - matcher:
+                  exact: subdomain.secondexample.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: policy-btls-for-service-1/default-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway-system/client-auth
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        sni: example.com
+  type: EDS

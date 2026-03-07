@@ -22,10 +22,8 @@ http:
     security:
       cors:
         allowOrigins:
-        - stringMatch:
-          safeRegex: http://.*\.example\.com
-        - stringMatch:
-          exact: https://foo.bar.com
+        - safeRegex: http://.*\.example\.com
+        - exact: https://foo.bar.com
         allowMethods:
         - GET
         - POST
@@ -40,7 +38,6 @@ http:
         maxAge: 1000s
     cors:   # The CORS settings from the Gateway API HTTPCORSFilter take precedence over the CORS settings from the SecurityPolicy.
       allowOrigins:
-      - stringMatch:
-        exact: https://gateway.envoyproxy.io
+      - exact: https://gateway.envoyproxy.io
       allowMethods:
       - GET

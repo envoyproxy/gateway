@@ -111,8 +111,7 @@ infraIR:
                   type: File
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -132,8 +131,10 @@ xdsIR:
     accessLog:
       json:
       - json:
-          duration: '%DURATION%'
-          protocol: '%PROTOCOL%'
+        - key: duration
+          value: '%DURATION%'
+        - key: protocol
+          value: '%PROTOCOL%'
         path: /dev/stdout
     globalResources:
       proxyServiceCluster:

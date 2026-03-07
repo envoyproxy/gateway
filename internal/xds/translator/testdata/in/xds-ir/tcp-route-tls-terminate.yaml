@@ -22,8 +22,6 @@ tcp:
           port: 50001
         name: "tls-terminate-dest/backend/0"
   - name: "tls-terminate-hostname"
-    address: "::"
-    port: 10080
     tls:
       inspector:
         snis:
