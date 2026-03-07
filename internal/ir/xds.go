@@ -2487,6 +2487,7 @@ type ProxyAccessLogType egv1a1.ProxyAccessLogType
 const (
 	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
+	ProxyAccessLogTypeUpstream = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeUpstream)
 )
 
 // ReadyListener holds the configuration for ready listener.

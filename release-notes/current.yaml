@@ -29,6 +29,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
+  Added support for upstrean access log.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
