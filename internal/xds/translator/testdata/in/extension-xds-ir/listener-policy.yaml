@@ -29,7 +29,6 @@ http:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
   hostnames:
   - '*'
-  isHTTP2: false
   name: policyextension-listener
   path:
     escapedSlashesAction: UnescapeAndRedirect
