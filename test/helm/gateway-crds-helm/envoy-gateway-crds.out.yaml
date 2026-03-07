@@ -816,7 +816,7 @@ spec:
                   Supports HTTP and gRPC traffic.
                 items:
                   description: |-
-                    Decompression defines the config of enabling decompression.
+                    Decompressor defines the config for enabling a decompressor.
                     This can help decompress compressed requests from clients and/or compressed responses from backends.
                   properties:
                     brotli:
@@ -835,7 +835,7 @@ spec:
                         - Gzip
                         - Brotli
                         - Zstd
-                      description: Type defines the decompressor type to use for decompression.
+                      description: Type defines the decompressor type to use.
                       type: string
                     zstd:
                       description: The configuration for Zstd decompressor.
@@ -844,6 +844,9 @@ spec:
                   - type
                   type: object
                   x-kubernetes-validations:
+                  - message: At least one decompressor config field (gzip, brotli,
+                      or zstd) must be set.
+                    rule: has(self.gzip) || has(self.brotli) || has(self.zstd)
                   - message: If decompressor type is Gzip, brotli and zstd fields
                       must not be set.
                     rule: 'self.type == ''Gzip'' ? !has(self.brotli) && !has(self.zstd)
