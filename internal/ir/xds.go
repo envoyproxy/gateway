@@ -3422,6 +3422,22 @@ type Wasm struct {
 	// HostKeys is a list of keys for environment variables from the host envoy process
 	// that should be passed into the Wasm VM.
 	HostKeys []string `json:"hostKeys,omitempty"`
+
+	// HTTPCodeFetchRetryPolicy is the retry policy for Envoy fetching Wasm code.
+	HTTPCodeFetchRetryPolicy *HTTPWasmCodeFetchRetryPolicy `json:"httpCodeFetchRetryPolicy,omitempty"`
+}
+
+// HTTPWasmCodeFetchRetryPolicy defines the retry policy for Envoy fetching Wasm code.
+// +k8s:deepcopy-gen=true
+type HTTPWasmCodeFetchRetryPolicy struct {
+	// NumRetries is the number of retries.
+	NumRetries uint32 `json:"numRetries"`
+
+	// BaseInterval is the base interval between retries.
+	BaseInterval *metav1.Duration `json:"baseInterval,omitempty"`
+
+	// MaxInterval is the maximum interval between retries.
+	MaxInterval *metav1.Duration `json:"maxInterval,omitempty"`
 }
 
 // HTTPWasmCode holds the information associated with the HTTP Wasm code source.

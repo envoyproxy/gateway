@@ -1649,6 +1649,37 @@ spec:
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
+                        fetchRetryPolicy:
+                          description: |-
+                            FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
+                            If not specified, the default retry policy will be used.
+                          properties:
+                            backOff:
+                              description: BackOff is the backoff policy to be applied
+                                between retry attempts.
+                              properties:
+                                baseInterval:
+                                  default: 1s
+                                  description: BaseInterval is the base interval between
+                                    retries.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                maxInterval:
+                                  default: 10s
+                                  description: |-
+                                    MaxInterval is the maximum interval between retries.
+                                    This parameter is optional, but must be greater than or equal to the baseInterval if set.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                            numRetries:
+                              default: 5
+                              description: NumRetries is the number of retries to
+                                attempt when fetching the Wasm code.
+                              format: int32
+                              minimum: 0
+                              type: integer
+                          type: object
                         http:
                           description: |-
                             HTTP is the HTTP URL containing the Wasm code.
