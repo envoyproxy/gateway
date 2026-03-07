@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.25.7
+go 1.25.8
 
 require (
 	fortio.org/fortio v1.73.2
