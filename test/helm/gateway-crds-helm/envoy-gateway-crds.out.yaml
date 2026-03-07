@@ -3775,6 +3775,21 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              grpc:
+                description: GRPC provides gRPC configuration on the listener.
+                properties:
+                  enableWeb:
+                    description: |-
+                      EnableWeb configures the gRPC-web filter on the listener.
+                      The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+                      using HTTP/1.1 or HTTP/2.
+
+                      This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                      In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                      users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                      Therefore, we enable this behavior only when it is explicitly opted in.
+                    type: boolean
+                type: object
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
@@ -30609,6 +30624,14 @@ spec:
                 required:
                 - providers
                 type: object
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing SecurityPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
