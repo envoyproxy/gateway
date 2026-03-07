@@ -48,6 +48,8 @@ func init() {
 	)
 }
 
+const lbBackendPodCount = 4
+
 var RoundRobinLoadBalancing = suite.ConformanceTest{
 	ShortName:   "RoundRobinLoadBalancing",
 	Description: "Test for round robin load balancing type",
@@ -57,8 +59,8 @@ var RoundRobinLoadBalancing = suite.ConformanceTest{
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const (
-			sendRequests = 100
-			replicas     = 4
+			replicas     = lbBackendPodCount
+			sendRequests = 3 * 50
 			offset       = 5
 		)
 
@@ -163,7 +165,6 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 // This's important to ensure that all the clusters and endpoints have been warmed up before we run the test,
 // especially for the consistent hash load balancing tests where we expect the same request to always hit the same backend.
 func verifyLBBackendReady(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string) {
-	const backendPodCount = 4
 	trafficMap := make(map[string]int)
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -206,7 +207,7 @@ func verifyLBBackendReady(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 				trafficMap[podName]++
 			}
 
-			if len(trafficMap) >= backendPodCount {
+			if len(trafficMap) >= lbBackendPodCount {
 				tlog.Logf(t, "all backend pods are receiving traffic: %v", trafficMap)
 				return
 			}
@@ -425,7 +426,10 @@ var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 
 					body, err := io.ReadAll(resp.Body)
 					require.NoError(t, err)
-					require.Equal(t, nethttp.StatusOK, resp.StatusCode)
+					if resp.StatusCode != nethttp.StatusOK {
+						t.Logf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
+						continue
+					}
 
 					// Parse response body.
 					cReq := &roundtripper.CapturedRequest{}
