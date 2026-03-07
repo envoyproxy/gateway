@@ -682,21 +682,34 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
 		return
 	}
-
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	opts := []tb.CollectOption{
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
+	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+}
 
+func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s", data)
+		tlog.Logf(t, "\ndata: \n%s\n", data)
 	}
+}
+
+func consistentHashDump(t *testing.T, rest *rest.Config) {
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
+		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
+	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
