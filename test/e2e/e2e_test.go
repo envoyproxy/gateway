@@ -90,12 +90,14 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 		Hook:              Hook,
+		FailFast:          true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -61,6 +60,7 @@ const (
 	configMapHTTPRouteFilterIndex    = "configMapHTTPRouteFilterIndex"
 	secretHTTPRouteFilterIndex       = "secretHTTPRouteFilterIndex"
 	// ClusterTrustBundle related indexers
+	clusterTrustBundleEepIndex     = "clusterTrustBundleEepIndex"
 	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
 	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
 	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
@@ -382,7 +382,7 @@ func listenerSetGRPCRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func listenerSetTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
+	tlsRoute := rawObj.(*gwapiv1.TLSRoute)
 	listenerSets := make([]string, 0, len(tlsRoute.Spec.ParentRefs))
 	for _, parent := range tlsRoute.Spec.ParentRefs {
 		if parent.Group != nil && string(*parent.Group) == gwapiv1.GroupVersion.Group &&
@@ -474,21 +474,21 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 // referenced in TLSRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for TLSRoutes that are affected by a particular Service CRUD.
 func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc); err != nil {
 		return err
 	}
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, listenerSetTLSRouteIndex, listenerSetTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TLSRoute{}, listenerSetTLSRouteIndex, listenerSetTLSRouteIndexFunc); err != nil {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
 func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsRoute := rawObj.(*gwapiv1a3.TLSRoute)
+	tlsRoute := rawObj.(*gwapiv1.TLSRoute)
 	var gateways []string
 	for _, parent := range tlsRoute.Spec.ParentRefs {
 		if string(*parent.Kind) == resource.KindGateway {
@@ -506,7 +506,7 @@ func gatewayTLSRouteIndexFunc(rawObj client.Object) []string {
 }
 
 func backendTLSRouteIndexFunc(rawObj client.Object) []string {
-	tlsroute := rawObj.(*gwapiv1a3.TLSRoute)
+	tlsroute := rawObj.(*gwapiv1.TLSRoute)
 	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
@@ -1063,9 +1063,6 @@ func configMapBtpIndexFunc(rawObj client.Object) []string {
 func configMapEepIndexFunc(rawObj client.Object) []string {
 	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
 	var configMapReferences []string
-	if eep.Spec.Lua == nil {
-		return configMapReferences
-	}
 
 	for _, p := range eep.Spec.Lua {
 		if p.ValueRef != nil {
@@ -1079,6 +1076,25 @@ func configMapEepIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
+
+	for _, wasm := range eep.Spec.Wasm {
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindConfigMap {
+			configMapReferences = append(configMapReferences,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, eep.Namespace),
+					Name:      string(caCertRef.Name),
+				}.String(),
+			)
+		}
+	}
+
 	return configMapReferences
 }
 
@@ -1223,6 +1239,12 @@ func addEnvoyExtensionPolicyIndexers(ctx context.Context, mgr manager.Manager) e
 		return err
 	}
 
+	if err = mgr.GetFieldIndexer().IndexField(
+		ctx, &egv1a1.EnvoyExtensionPolicy{}, clusterTrustBundleEepIndex,
+		clusterTrustBundleEepIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1259,7 +1281,40 @@ func secretEnvoyExtensionPolicyIndexFunc(rawObj client.Object) []string {
 					Name:      string(secretRef.Name),
 				}.String())
 		}
+
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && (caCertRef.Kind == nil || string(*caCertRef.Kind) == resource.KindSecret) {
+			ret = append(ret,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(caCertRef.Namespace, envoyExtensionPolicy.Namespace),
+					Name:      string(caCertRef.Name),
+				}.String())
+		}
 	}
 
 	return ret
+}
+
+func clusterTrustBundleEepIndexFunc(rawObj client.Object) []string {
+	eep := rawObj.(*egv1a1.EnvoyExtensionPolicy)
+	var refs []string
+	for _, wasm := range eep.Spec.Wasm {
+		var caCertRef *gwapiv1.SecretObjectReference
+		if wasm.Code.HTTP != nil && wasm.Code.HTTP.TLS != nil {
+			caCertRef = &wasm.Code.HTTP.TLS.CACertificateRef
+		} else if wasm.Code.Image != nil && wasm.Code.Image.TLS != nil {
+			caCertRef = &wasm.Code.Image.TLS.CACertificateRef
+		}
+
+		if caCertRef != nil && caCertRef.Kind != nil && string(*caCertRef.Kind) == resource.KindClusterTrustBundle {
+			refs = append(refs, string(caCertRef.Name))
+		}
+	}
+	return refs
 }

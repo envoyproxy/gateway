@@ -596,6 +596,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 			httpChecker.Method = corev3.RequestMethod(corev3.RequestMethod_value[*healthcheck.HTTP.Method])
 		}
 		httpChecker.ExpectedStatuses = buildHTTPStatusRange(healthcheck.HTTP.ExpectedStatuses)
+		httpChecker.RetriableStatuses = buildHTTPStatusRange(healthcheck.HTTP.RetriableStatuses)
 		if receive := buildHealthCheckPayload(healthcheck.HTTP.ExpectedResponse); receive != nil {
 			httpChecker.Receive = append(httpChecker.Receive, receive)
 		}
@@ -651,6 +652,10 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	if outlierDetection.FailurePercentageThreshold != nil {
 		od.FailurePercentageThreshold = wrapperspb.UInt32(*outlierDetection.FailurePercentageThreshold)
 		od.EnforcingFailurePercentage = wrapperspb.UInt32(100)
+	}
+
+	if outlierDetection.AlwaysEjectOneEndpoint != nil {
+		od.AlwaysEjectOneHost = wrapperspb.Bool(*outlierDetection.AlwaysEjectOneEndpoint)
 	}
 
 	return od

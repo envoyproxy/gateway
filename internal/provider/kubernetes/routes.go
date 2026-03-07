@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -26,19 +25,10 @@ import (
 
 // processTLSRoute processes a single TLSRoute, performing namespace label checks,
 // backend reference validation, and updating the resource map and tree.
-func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1a3.TLSRoute,
+func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gwapiv1.TLSRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
 	r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
-	if r.namespaceLabel != nil {
-		if ok, err := r.checkObjectNamespaceLabels(tlsRoute); err != nil {
-			r.log.Error(err, "failed to check namespace labels for TLSRoute %s in namespace %s: %w", tlsRoute.GetName(), tlsRoute.GetNamespace())
-			return
-		} else if !ok {
-			r.log.Info("TLSRoute namespace labels don't match", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
-			return
-		}
-	}
 
 	key := utils.NamespacedName(tlsRoute).String()
 	if resourceMap.allAssociatedTLSRoutes.Has(key) {
@@ -81,7 +71,7 @@ func (r *gatewayAPIReconciler) processTLSRoute(ctx context.Context, tlsRoute *gw
 func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) error {
-	tlsRouteList := &gwapiv1a3.TLSRouteList{}
+	tlsRouteList := &gwapiv1.TLSRouteList{}
 
 	// Process TLSRoutes attached to the gateway
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
@@ -98,7 +88,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 	// Process TLSRoutes attached to the ListenerSet
 	for _, xlsNN := range resourceMap.gatewayToListenerSets[gatewayNamespaceName] {
-		tlsRouteList = &gwapiv1a3.TLSRouteList{}
+		tlsRouteList = &gwapiv1.TLSRouteList{}
 		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(listenerSetTLSRouteIndex, xlsNN.String()),
 		}); err != nil {
@@ -154,15 +144,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 func (r *gatewayAPIReconciler) processGRPCRoute(ctx context.Context, grpcRoute *gwapiv1.GRPCRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if r.namespaceLabel != nil {
-		if ok, err := r.checkObjectNamespaceLabels(grpcRoute); err != nil {
-			r.log.Error(err, "failed to check namespace labels for GRPCRoute %s in namespace %s: %w", grpcRoute.GetName(), grpcRoute.GetNamespace())
-			return
-		} else if !ok {
-			return
-		}
-	}
-
 	key := utils.NamespacedName(grpcRoute).String()
 	if resourceMap.allAssociatedGRPCRoutes.Has(key) {
 		r.log.Info("current GRPCRoute has been processed already", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
@@ -297,15 +278,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 func (r *gatewayAPIReconciler) processHTTPRoute(ctx context.Context, httpRoute *gwapiv1.HTTPRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if r.namespaceLabel != nil {
-		if ok, err := r.checkObjectNamespaceLabels(httpRoute); err != nil {
-			r.log.Error(err, "failed to check namespace labels for HTTPRoute %s in namespace %s: %w", httpRoute.GetName(), httpRoute.GetNamespace())
-			return
-		} else if !ok {
-			return
-		}
-	}
-
 	key := utils.NamespacedName(httpRoute).String()
 	if resourceMap.allAssociatedHTTPRoutes.Has(key) {
 		r.log.Info("current HTTPRoute has been processed already", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
@@ -462,15 +434,6 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 func (r *gatewayAPIReconciler) processTCPRoute(ctx context.Context, tcpRoute *gwapiv1a2.TCPRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if r.namespaceLabel != nil {
-		if ok, err := r.checkObjectNamespaceLabels(tcpRoute); err != nil {
-			r.log.Error(err, "failed to check namespace labels for TCPRoute %s in namespace %s: %w", tcpRoute.GetName(), tcpRoute.GetNamespace())
-			return
-		} else if !ok {
-			return
-		}
-	}
-
 	key := utils.NamespacedName(tcpRoute).String()
 	if resourceMap.allAssociatedTCPRoutes.Has(key) {
 		r.log.Info("current TCPRoute has been processed already", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
@@ -551,15 +514,6 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 func (r *gatewayAPIReconciler) processUDPRoute(ctx context.Context, udpRoute *gwapiv1a2.UDPRoute,
 	resourceMap *resourceMappings, resourceTree *resource.Resources,
 ) {
-	if r.namespaceLabel != nil {
-		if ok, err := r.checkObjectNamespaceLabels(udpRoute); err != nil {
-			r.log.Error(err, "failed to check namespace labels for UDPRoute %s in namespace %s: %w", udpRoute.GetName(), udpRoute.GetNamespace())
-			return
-		} else if !ok {
-			return
-		}
-	}
-
 	key := utils.NamespacedName(udpRoute).String()
 	if resourceMap.allAssociatedUDPRoutes.Has(key) {
 		r.log.Info("current UDPRoute has been processed already", "namespace", udpRoute.Namespace, "name", udpRoute.Name)

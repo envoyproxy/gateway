@@ -361,7 +361,6 @@ xdsIR:
       externalPort: 8081
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -542,7 +541,6 @@ xdsIR:
       externalPort: 8082
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
