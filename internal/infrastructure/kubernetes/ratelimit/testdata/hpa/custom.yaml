@@ -7,6 +7,11 @@ metadata:
     app.kubernetes.io/name: envoy-ratelimit
   name: envoy-ratelimit
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+    uid: test-owner-reference-uid-for-deployment
 spec:
   maxReplicas: 10
   metrics:
