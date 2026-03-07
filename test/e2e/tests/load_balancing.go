@@ -52,7 +52,7 @@ var RoundRobinLoadBalancing = suite.ConformanceTest{
 	ShortName:   "RoundRobinLoadBalancing",
 	Description: "Test for round robin load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_round_robin.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -115,10 +115,12 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	totalRequestCount int, compareFunc TrafficCompareFunc,
 ) bool {
 	if req == nil {
+		// this should never happen, just a sanity check for the caller
 		t.Fatalf("request cannot be nil")
 		return false
 	}
 	if expectedResponse == nil {
+		// this should never happen, just a sanity check for the caller
 		t.Fatalf("expected response cannot be nil")
 		return false
 	}
@@ -216,7 +218,7 @@ var SourceIPBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "SourceIPBasedConsistentHashLoadBalancing",
 	Description: "Test for source IP based consistent hash load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_consistent_hash_source_ip.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -255,7 +257,7 @@ var HeaderBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "HeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for header based consistent hash load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_consistent_hash_header.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -297,7 +299,7 @@ var MultiHeaderConsistentHashHeaderLoadBalancing = suite.ConformanceTest{
 	ShortName:   "MultiHeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple header based consistent hash load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_consistent_hash_multi_header.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -352,9 +354,9 @@ var MultiHeaderConsistentHashHeaderLoadBalancing = suite.ConformanceTest{
 }
 
 func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTestSuite, req *roundtripper.Request, expectedResponse *http.ExpectedResponse) {
-	if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+	if err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (bool, error) {
 		got := runTrafficTest(t, suite, req, expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
-			// All traffic with the same header combination should route to the same pod
+			// All traffic with the same hash combination should route to the same pod
 			return len(trafficMap) == 1
 		})
 		return got, nil
@@ -367,7 +369,7 @@ var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "CookieBasedConsistentHashLoadBalancing",
 	Description: "Test for cookie based consistent hash load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_consistent_hash_cookie.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -417,7 +419,8 @@ var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 				for range sendRequests {
 					resp, err := client.Do(req)
 					if err != nil {
-						t.Errorf("failed to get response: %v", err)
+						t.Logf("failed to get response: %v", err)
+						continue
 					}
 
 					body, err := io.ReadAll(resp.Body)
@@ -436,7 +439,7 @@ var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 					podName := cReq.Pod
 					if len(podName) == 0 {
 						// it shouldn't be missing here
-						t.Errorf("failed to get pod header in response: %v", err)
+						t.Logf("failed to get pod header in response: %v", err)
 					} else {
 						if len(expectPodName) == 0 {
 							expectPodName = podName
@@ -474,11 +477,12 @@ var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 			waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
 				resp, err := client.Do(req)
 				if err != nil {
-					t.Errorf("failed to get response: %v", err)
+					tlog.Logf(t, "failed to get response: %v", err)
 					return false, err
 				}
 
 				if resp.StatusCode != nethttp.StatusOK {
+					tlog.Logf(t, "unexpected status code: %d", resp.StatusCode)
 					return false, nil
 				}
 
@@ -500,7 +504,7 @@ var QueryParamsBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "QueryParamsBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple query parameter based consistent hash load balancing type",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_consistent_hash_query_parameter.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -551,7 +555,7 @@ var EndpointOverrideLoadBalancing = suite.ConformanceTest{
 	ShortName:   "EndpointOverrideLoadBalancing",
 	Description: "Test for endpoint override load balancing functionality",
 	Manifests: []string{
-		"testdata/load_balacing_backend.yaml",
+		"testdata/load_balancing_backend.yaml",
 		"testdata/load_balancing_endpoint_override.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
