@@ -38,6 +38,175 @@ type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
 }
 
+func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *resource.Resources) {
+	for _, gtw := range gateways {
+		if gtw.Spec.TLS == nil {
+			continue
+		}
+
+		resolvedRefsSuccess := true
+		if gtw.Spec.TLS.Frontend != nil {
+			var gtwDefaultTLSCACertificate *ListenerFrontendTLSValidation
+			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
+			allowInsecureFallback := false
+			if gtwDefaultFrontendTLSValidation.Validation != nil {
+				caCert, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
+				if err != nil {
+					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters,
+						fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
+					resolvedRefsSuccess = false
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						ValidateError: err,
+					}
+				} else {
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
+							Certificate: caCert,
+							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+						},
+					}
+					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
+					}
+				}
+			}
+
+			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
+			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
+				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
+				if err != nil {
+					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
+					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
+					resolvedRefsSuccess = false
+
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						ValidateError: err,
+					}
+				} else {
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
+							Certificate: caCert,
+							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+						},
+					}
+					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
+					}
+				}
+			}
+
+			if allowInsecureFallback {
+				status.UpdateGatewayStatusCondition(gtw.Gateway, gwapiv1.GatewayConditionInsecureFrontendValidationMode, metav1.ConditionTrue, gwapiv1.GatewayReasonConfigurationChanged,
+					"Gateway is using AllowInsecureFallback frontend validation mode.")
+			}
+
+			for _, listener := range gtw.listeners {
+				// HTTP listener doesn't have TLS validation, skip directly.
+				if listener.Protocol == gwapiv1.HTTPProtocolType {
+					continue
+				}
+
+				if perPortConfig, exits := gtwPerPortCaCertificate[listener.Port]; exits {
+					listener.tls.frontendTLSValidation = perPortConfig
+				} else {
+					listener.tls.frontendTLSValidation = gtwDefaultTLSCACertificate
+				}
+			}
+		}
+
+		if gtw.Spec.TLS.Backend != nil {
+			if validateErr := validClientCertificateRef(gtw.Spec.TLS.Backend.ClientCertificateRef); validateErr != nil {
+				t.Logger.Error(validateErr, "Invalid backend client certificate reference for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+				status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway,
+					metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef,
+					fmt.Sprintf("Invalid backend client certificate reference for gateway: %v", validateErr),
+				)
+				resolvedRefsSuccess = false
+			} else {
+				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
+				if ns != gtw.Namespace {
+					// check reference grant
+					if !t.validateCrossNamespaceRef(
+						crossNamespaceFrom{
+							group:     gwapiv1.GroupName,
+							kind:      string(resource.KindGateway),
+							namespace: gtw.Namespace,
+						},
+						crossNamespaceTo{
+							group:     GroupDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Group, ""),
+							kind:      KindDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Kind, resource.KindSecret),
+							namespace: ns,
+							name:      string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name),
+						},
+						resources.ReferenceGrants,
+					) {
+						err := fmt.Errorf("invalid cross-namespace reference to backend client certificate")
+						t.Logger.Error(err, "Invalid backend client certificate reference for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway,
+							metav1.ConditionFalse, gwapiv1.GatewayReasonRefNotPermitted,
+							err.Error(),
+						)
+						resolvedRefsSuccess = false
+					}
+				}
+				if resolvedRefsSuccess {
+					secret := t.GetSecret(ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
+					switch {
+					case secret == nil:
+						err := fmt.Errorf("failed to get backend client certs for gateway")
+						t.Logger.Error(err, "Failed to get backend client certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
+						resolvedRefsSuccess = false
+					case !isValidClientCertificateRef(secret):
+						err := fmt.Errorf("invalid backend client cert secret for gateway: secret %s/%s must contain 'tls.crt' and 'tls.key' fields", ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
+						t.Logger.Error(err, "Invalid backend client cert secret for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
+						resolvedRefsSuccess = false
+					default:
+						gtw.backendTLS = &egv1a1.BackendTLSConfig{
+							ClientCertificateRef: gtw.Spec.TLS.Backend.ClientCertificateRef,
+						}
+					}
+				}
+
+			}
+		}
+
+		if resolvedRefsSuccess {
+			status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionTrue, gwapiv1.GatewayReasonResolvedRefs, "Successfully resolved all TLS references for the gateway")
+		}
+	}
+}
+
+func validClientCertificateRef(ref *gwapiv1.SecretObjectReference) error {
+	if ref == nil {
+		return nil
+	}
+	switch ptr.Deref(ref.Kind, gwapiv1.Kind("Secret")) {
+	case resource.KindSecret:
+		if ptr.Deref(ref.Group, "") != "" {
+			return fmt.Errorf("invalid client certificate reference group: %s", ptr.Deref(ref.Group, ""))
+		}
+	default:
+		return fmt.Errorf("invalid client certificate reference kind: %s", ptr.Deref(ref.Kind, gwapiv1.Kind("Secret")))
+	}
+
+	return nil
+}
+
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
@@ -105,6 +274,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			// Process conditions and check if the listener is ready
 			t.validateListenerConditions(listener)
 
+			// Skip listeners with invalid frontend TLS validation as they are not functional.
+			if listener.frontendTLSValidationInvalid() {
+				continue
+			}
+
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
 			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
@@ -125,7 +299,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 						Metadata:     buildListenerMetadata(listener, gateway),
 						IPFamily:     ipFamily,
 					},
-					TLS: irTLSConfigs(listener.tlsSecrets...),
+					TLS: irTLSConfigs(&listener.tls),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -159,7 +333,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
+					TLS: irTLSConfigsForTCPListener(&listener.tls),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
@@ -330,7 +504,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 				continue
 			}
 
-			overlappingCertificate := isOverlappingCertificate(httpsListeners[i].certDNSNames, httpsListeners[j].certDNSNames)
+			overlappingCertificate := isOverlappingCertificate(httpsListeners[i].tls.certDNSNames, httpsListeners[j].tls.certDNSNames)
 			if overlappingCertificate != nil {
 				// Overlapping listeners can be more than two, we only report the first two for simplicity.
 				overlappingListeners[i] = &overlappingListener{

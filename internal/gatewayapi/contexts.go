@@ -32,6 +32,31 @@ type GatewayContext struct {
 
 	listeners  []*ListenerContext
 	envoyProxy *egv1a1.EnvoyProxy
+	backendTLS *egv1a1.BackendTLSConfig
+}
+
+type ResourceMetadata struct {
+	Name      string
+	Namespace string
+	Kind      string
+}
+
+// GetBackendTLSConfig returns the BackendTLSConfig for the Gateway,
+// which may come from the EnvoyProxy attached to the Gateway or GatewayClass,
+// or from the default specified in the Gateway.spec.tls.backend configuration.
+func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *ResourceMetadata) {
+	if g.envoyProxy == nil || g.envoyProxy.Spec.BackendTLS == nil {
+		return g.backendTLS, &ResourceMetadata{
+			Namespace: g.Namespace,
+			Name:      g.Name,
+			Kind:      "Gateway",
+		}
+	}
+	return g.envoyProxy.Spec.BackendTLS, &ResourceMetadata{
+		Namespace: g.envoyProxy.Namespace,
+		Name:      g.envoyProxy.Name,
+		Kind:      egv1a1.KindEnvoyProxy,
+	}
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
@@ -108,10 +133,33 @@ type ListenerContext struct {
 	listenerSetStatusIdx int
 
 	namespaceSelector labels.Selector
-	tlsSecrets        []*corev1.Secret
-	certDNSNames      []string
+
+	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
+}
+
+type ListenerTLSConfig struct {
+	secrets               []*corev1.Secret
+	certDNSNames          []string
+	frontendTLSValidation *ListenerFrontendTLSValidation
+}
+
+type ListenerFrontendTLSValidation struct {
+	ValidateError error
+	*ir.TLSCACertificate
+}
+
+func (l *ListenerContext) frontendTLSValidationInvalid() bool {
+	if l.tls.frontendTLSValidation == nil {
+		return false
+	}
+
+	if l.tls.frontendTLSValidation.ValidateError != nil {
+		return true
+	}
+
+	return false
 }
 
 // isFromListenerSet returns true if the listener belongs to a ListenerSet instead of a Gateway.
@@ -255,7 +303,7 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 }
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tlsSecrets = tlsSecrets
+	l.tls.secrets = tlsSecrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
