@@ -6378,6 +6378,11 @@ func (in *ProxyMetrics) DeepCopyInto(out *ProxyMetrics) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EnableGRPCStats != nil {
+		in, out := &in.EnableGRPCStats, &out.EnableGRPCStats
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ClusterStatName != nil {
 		in, out := &in.ClusterStatName, &out.ClusterStatName
 		*out = new(string)
