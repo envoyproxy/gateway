@@ -770,6 +770,57 @@ spec:
                       Note that when the suffix is not provided, the value is interpreted as bytes.
                     x-kubernetes-int-or-string: true
                 type: object
+              decompressor:
+                description: |-
+                  The decompressor config for the http streams.
+                  This enables decompression of compressed requests from clients and/or compressed responses from backends.
+                  Supports HTTP and gRPC traffic.
+                items:
+                  description: |-
+                    Decompressor defines the config for enabling a decompressor.
+                    This can help decompress compressed requests from clients and/or compressed responses from backends.
+                  properties:
+                    brotli:
+                      description: The configuration for Brotli decompressor.
+                      type: object
+                    gzip:
+                      description: The configuration for GZIP decompressor.
+                      type: object
+                    type:
+                      allOf:
+                      - enum:
+                        - Gzip
+                        - Brotli
+                        - Zstd
+                      - enum:
+                        - Gzip
+                        - Brotli
+                        - Zstd
+                      description: Type defines the decompressor type to use.
+                      type: string
+                    zstd:
+                      description: The configuration for Zstd decompressor.
+                      type: object
+                  required:
+                  - type
+                  type: object
+                  x-kubernetes-validations:
+                  - message: At least one decompressor config field (gzip, brotli,
+                      or zstd) must be set.
+                    rule: has(self.gzip) || has(self.brotli) || has(self.zstd)
+                  - message: If decompressor type is Gzip, brotli and zstd fields
+                      must not be set.
+                    rule: 'self.type == ''Gzip'' ? !has(self.brotli) && !has(self.zstd)
+                      : true'
+                  - message: If decompressor type is Brotli, gzip and zstd fields
+                      must not be set.
+                    rule: 'self.type == ''Brotli'' ? !has(self.gzip) && !has(self.zstd)
+                      : true'
+                  - message: If decompressor type is Zstd, gzip and brotli fields
+                      must not be set.
+                    rule: 'self.type == ''Zstd'' ? !has(self.gzip) && !has(self.brotli)
+                      : true'
+                type: array
               dns:
                 description: DNS includes dns resolution settings.
                 properties:
@@ -8803,6 +8854,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     before:
@@ -8833,6 +8885,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                     name:
@@ -8861,6 +8914,7 @@ spec:
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
                       - envoy.filters.http.compressor
+                      - envoy.filters.http.decompressor
                       - envoy.filters.http.dynamic_forward_proxy
                       type: string
                   required:
@@ -30609,6 +30663,14 @@ spec:
                 required:
                 - providers
                 type: object
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing SecurityPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
