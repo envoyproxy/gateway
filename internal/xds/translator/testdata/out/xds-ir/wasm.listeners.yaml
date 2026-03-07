@@ -32,10 +32,10 @@
                       timeout: 10s
                       uri: https://envoy-gateway:18002/fe571e7b1ef5dc626ceb2c2c86782a134a92989a2643485238951696ae4334c3.wasm
                     retryPolicy:
-                      numRetries: 5
+                      numRetries: 3
                       retryBackOff:
-                        baseInterval: 1s
-                        maxInterval: 10s
+                        baseInterval: 2s
+                        maxInterval: 30s
                     sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/default/policy-for-http-route/wasm/0

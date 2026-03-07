@@ -25,6 +25,10 @@ import (
 
 const (
 	vmRuntimeV8 = "envoy.wasm.runtime.v8"
+
+	defaultWasmRetryNumRetries   = uint32(5)
+	defaultWasmRetryBaseInterval = 1 * time.Second
+	defaultWasmRetryMaxInterval  = 10 * time.Second
 )
 
 func init() {
@@ -128,14 +132,8 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						},
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
-					Sha256: wasm.Code.SHA256,
-					RetryPolicy: &corev3.RetryPolicy{
-						RetryBackOff: &corev3.BackoffStrategy{
-							BaseInterval: durationpb.New(1 * time.Second),
-							MaxInterval:  durationpb.New(10 * time.Second),
-						},
-						NumRetries: wrapperspb.UInt32(5),
-					},
+					Sha256:      wasm.Code.SHA256,
+					RetryPolicy: buildWasmRetryPolicy(wasm),
 				},
 			},
 		},
@@ -163,6 +161,30 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	}
 
 	return filterConfig, nil
+}
+
+func buildWasmRetryPolicy(wasm *ir.Wasm) *corev3.RetryPolicy {
+	numRetries := defaultWasmRetryNumRetries
+	baseInterval := defaultWasmRetryBaseInterval
+	maxInterval := defaultWasmRetryMaxInterval
+
+	if rp := wasm.HTTPCodeFetchRetryPolicy; rp != nil {
+		numRetries = rp.NumRetries
+		if rp.BaseInterval != nil {
+			baseInterval = rp.BaseInterval.Duration
+		}
+		if rp.MaxInterval != nil {
+			maxInterval = rp.MaxInterval.Duration
+		}
+	}
+
+	return &corev3.RetryPolicy{
+		RetryBackOff: &corev3.BackoffStrategy{
+			BaseInterval: durationpb.New(baseInterval),
+			MaxInterval:  durationpb.New(maxInterval),
+		},
+		NumRetries: wrapperspb.UInt32(numRetries),
+	}
 }
 
 // routeContainsWasm returns true if Wasms exists for the provided route.

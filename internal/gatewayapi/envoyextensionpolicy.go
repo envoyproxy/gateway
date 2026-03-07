@@ -1132,6 +1132,26 @@ func (t *Translator) buildWasm(
 		wasmIR.HostKeys = config.Env.HostKeys
 	}
 
+	if config.Code.FetchRetryPolicy != nil {
+		retryIR := &ir.HTTPWasmCodeFetchRetryPolicy{}
+		if config.Code.FetchRetryPolicy.NumRetries != nil {
+			retryIR.NumRetries = uint32(*config.Code.FetchRetryPolicy.NumRetries)
+		}
+		if config.Code.FetchRetryPolicy.BackOff != nil {
+			if config.Code.FetchRetryPolicy.BackOff.BaseInterval != nil {
+				if d, err := time.ParseDuration(string(*config.Code.FetchRetryPolicy.BackOff.BaseInterval)); err == nil {
+					retryIR.BaseInterval = &metav1.Duration{Duration: d}
+				}
+			}
+			if config.Code.FetchRetryPolicy.BackOff.MaxInterval != nil {
+				if d, err := time.ParseDuration(string(*config.Code.FetchRetryPolicy.BackOff.MaxInterval)); err == nil {
+					retryIR.MaxInterval = &metav1.Duration{Duration: d}
+				}
+			}
+		}
+		wasmIR.HTTPCodeFetchRetryPolicy = retryIR
+	}
+
 	return wasmIR, nil
 }
 
