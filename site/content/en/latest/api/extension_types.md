@@ -5459,7 +5459,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[SourceMatchType](#sourcematchtype)_ |  false  | Exact |  |
-| `value` | _string_ |  true  |  | Value is the IP CIDR that represents the range of Source IP Addresses of the client.<br />These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.<br />For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
+| `value` | _string_ |  true  |  | Value is the IP CIDR that represents the range of Source IP Addresses of the client.<br />These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.<br />For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.<br />Note that for Exact type (shared bucket), same descriptor value is used irrespective of whether invert match is set to true. For example,<br />if the CIDR is 192.168.0.0/24 and the source IP is 10.1.0.2 with invert match set to true, a descriptor with value 192.168.0.0/24 will be used. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the source range match result will be inverted.<br />When true, the rule matches when the client IP is not in the specified range(s). |
 
 
 #### SourceMatchType
