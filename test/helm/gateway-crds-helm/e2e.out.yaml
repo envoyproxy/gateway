@@ -3775,6 +3775,21 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              grpc:
+                description: GRPC provides gRPC configuration on the listener.
+                properties:
+                  enableWeb:
+                    description: |-
+                      EnableWeb configures the gRPC-web filter on the listener.
+                      The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+                      using HTTP/1.1 or HTTP/2.
+
+                      This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                      In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                      users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                      Therefore, we enable this behavior only when it is explicitly opted in.
+                    type: boolean
+                type: object
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
@@ -7178,6 +7193,37 @@ spec:
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
+                        fetchRetryPolicy:
+                          description: |-
+                            FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
+                            If not specified, the default retry policy will be used.
+                          properties:
+                            backOff:
+                              description: BackOff is the backoff policy to be applied
+                                between retry attempts.
+                              properties:
+                                baseInterval:
+                                  default: 1s
+                                  description: BaseInterval is the base interval between
+                                    retries.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                maxInterval:
+                                  default: 10s
+                                  description: |-
+                                    MaxInterval is the maximum interval between retries.
+                                    This parameter is optional, but must be greater than or equal to the baseInterval if set.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                            numRetries:
+                              default: 5
+                              description: NumRetries is the number of retries to
+                                attempt when fetching the Wasm code.
+                              format: int32
+                              minimum: 0
+                              type: integer
+                          type: object
                         http:
                           description: |-
                             HTTP is the HTTP URL containing the Wasm code.

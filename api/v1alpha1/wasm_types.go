@@ -104,6 +104,41 @@ type WasmCodeSource struct {
 	// It only updates the Wasm module when the EnvoyExtension resource version changes.
 	// +optional
 	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
+
+	// FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
+	// If not specified, the default retry policy will be used.
+	// +optional
+	FetchRetryPolicy *WasmCodeFetchRetryPolicy `json:"fetchRetryPolicy,omitempty"`
+}
+
+// WasmCodeFetchRetryPolicy defines the retry policy for Envoy to use when fetching the Wasm code.
+type WasmCodeFetchRetryPolicy struct {
+	// NumRetries is the number of retries to attempt when fetching the Wasm code.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=5
+	NumRetries *int32 `json:"numRetries,omitempty"`
+
+	// BackOff is the backoff policy to be applied between retry attempts.
+	// +optional
+	BackOff *WasmCodeFetchBackOffPolicy `json:"backOff,omitempty"`
+}
+
+// WasmCodeFetchBackOffPolicy defines the backoff policy for retrying Wasm code fetches.
+type WasmCodeFetchBackOffPolicy struct {
+	// BaseInterval is the base interval between retries.
+	//
+	// +optional
+	// +kubebuilder:default="1s"
+	BaseInterval *gwapiv1.Duration `json:"baseInterval,omitempty"`
+
+	// MaxInterval is the maximum interval between retries.
+	// This parameter is optional, but must be greater than or equal to the baseInterval if set.
+	//
+	// +optional
+	// +kubebuilder:default="10s"
+	MaxInterval *gwapiv1.Duration `json:"maxInterval,omitempty"`
 }
 
 // WasmCodeSourceType specifies the types of sources for the Wasm code.

@@ -45,6 +45,10 @@ http:
           sha256: a1f0b78b8c1320690327800e3a5de10e7dbba7b6c752e702193a395a52c727b6
         name: envoyextensionpolicy/default/policy-for-http-route/wasm/0
         wasmName: wasm-filter-4
+        httpCodeFetchRetryPolicy:
+          numRetries: 3
+          baseInterval: 2s
+          maxInterval: 30s
   - destination:
       name: httproute/default/httproute-2/rule/0
       settings:
