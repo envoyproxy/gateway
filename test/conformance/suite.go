@@ -55,7 +55,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		tests.GatewayInvalidFrontendClientCertificateValidation,
 		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
 		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
-		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	}
 
 	if gatewayNamespaceMode {
