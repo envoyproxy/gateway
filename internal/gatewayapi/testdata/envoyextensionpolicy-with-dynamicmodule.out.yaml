@@ -10,6 +10,8 @@ envoyExtensionPolicies:
         maxTokensPerMinute: 10000
       filterName: token-ratelimit
       name: ai-gateway-filter
+    - filterName: path-filter
+      name: path-loaded-module
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -205,12 +207,22 @@ infraIR:
           namespace: envoy-gateway
         spec:
           dynamicModules:
-          - libraryName: my_auth
-            name: my-auth-module
+          - name: my-auth-module
+            source:
+              local:
+                path: /usr/lib/envoy/modules/my_auth.so
+              type: Local
           - doNotClose: true
-            libraryName: ai_gateway
             loadGlobally: true
             name: ai-gateway-filter
+            source:
+              local:
+                path: /usr/lib/envoy/modules/ai_gateway.so
+          - name: path-loaded-module
+            source:
+              local:
+                path: /opt/modules/my_module.so
+              type: Local
           logging: {}
         status: {}
       listeners:
@@ -260,7 +272,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -298,8 +309,14 @@ xdsIR:
             doNotClose: true
             filterName: token-ratelimit
             loadGlobally: true
-            moduleName: ai_gateway
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
+            path: /usr/lib/envoy/modules/ai_gateway.so
+            terminalFilter: false
+          - doNotClose: false
+            filterName: path-filter
+            loadGlobally: false
+            name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/1
+            path: /opt/modules/my_module.so
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false
@@ -338,8 +355,8 @@ xdsIR:
             doNotClose: false
             filterName: auth-check
             loadGlobally: false
-            moduleName: my_auth
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
+            path: /usr/lib/envoy/modules/my_auth.so
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false
