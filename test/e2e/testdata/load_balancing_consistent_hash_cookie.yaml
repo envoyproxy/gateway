@@ -25,7 +25,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: lb-backend-gateway
   rules:
     - matches:
         - path:

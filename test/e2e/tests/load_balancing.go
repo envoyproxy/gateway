@@ -38,17 +38,17 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests,
-		RoundRobinLoadBalancingTest,
-		ConsistentHashSourceIPLoadBalancingTest,
-		ConsistentHashHeaderLoadBalancingTest,
-		ConsistentHashCookieLoadBalancingTest,
-		EndpointOverrideLoadBalancingTest,
-		MultiHeaderConsistentHashHeaderLoadBalancingTest,
-		ConsistentHashQueryParamsLoadBalancingTest,
+		RoundRobinLoadBalancing,
+		SourceIPBasedConsistentHashLoadBalancing,
+		HeaderBasedConsistentHashLoadBalancing,
+		CookieBasedConsistentHashLoadBalancing,
+		EndpointOverrideLoadBalancing,
+		MultiHeaderConsistentHashHeaderLoadBalancing,
+		QueryParamsBasedConsistentHashLoadBalancing,
 	)
 }
 
-var RoundRobinLoadBalancingTest = suite.ConformanceTest{
+var RoundRobinLoadBalancing = suite.ConformanceTest{
 	ShortName:   "RoundRobinLoadBalancing",
 	Description: "Test for round robin load balancing type",
 	Manifests: []string{
@@ -64,7 +64,7 @@ var RoundRobinLoadBalancingTest = suite.ConformanceTest{
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "round-robin-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -116,26 +116,30 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 ) bool {
 	if req == nil {
 		t.Fatalf("request cannot be nil")
+		return false
 	}
 	if expectedResponse == nil {
 		t.Fatalf("expected response cannot be nil")
+		return false
 	}
 	trafficMap := make(map[string]int)
 	for range totalRequestCount {
 		request := *req
 		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
 		if err != nil {
-			t.Errorf("failed to get expected response: %v", err)
+			tlog.Logf(t, "failed to get expected response: %v", err)
+			continue
 		}
 
 		if err := http.CompareRoundTrip(t, &request, cReq, cResp, *expectedResponse); err != nil {
-			t.Errorf("failed to compare request and response: %v", err)
+			tlog.Logf(t, "failed to get expected response: %v", err)
+			continue
 		}
 
 		podName := cReq.Pod
 		if len(podName) == 0 {
 			// it shouldn't be missing here
-			tlog.Errorf(t, "failed to get pod header in response: %v", err)
+			tlog.Logf(t, "failed to get pod header in response: %v", err)
 		} else {
 			trafficMap[podName]++
 		}
@@ -144,6 +148,10 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	ret := compareFunc(trafficMap)
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
+		// wait for a while to let envoy flush all the logs.
+		time.Sleep(6 * time.Second)
+		consistentHashDump(t, suite.RestConfig)
+		t.FailNow()
 	}
 
 	return ret
@@ -204,7 +212,7 @@ func verifyLBBackendReady(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 	}
 }
 
-var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
+var SourceIPBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "SourceIPBasedConsistentHashLoadBalancing",
 	Description: "Test for source IP based consistent hash load balancing type",
 	Manifests: []string{
@@ -214,7 +222,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "source-ip-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -243,7 +251,7 @@ var ConsistentHashSourceIPLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
+var HeaderBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "HeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for header based consistent hash load balancing type",
 	Manifests: []string{
@@ -253,7 +261,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -285,7 +293,7 @@ var ConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
+var MultiHeaderConsistentHashHeaderLoadBalancing = suite.ConformanceTest{
 	ShortName:   "MultiHeaderBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple header based consistent hash load balancing type",
 	Manifests: []string{
@@ -295,7 +303,7 @@ var MultiHeaderConsistentHashHeaderLoadBalancingTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "header-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -355,7 +363,7 @@ func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTe
 	}
 }
 
-var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
+var CookieBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "CookieBasedConsistentHashLoadBalancing",
 	Description: "Test for cookie based consistent hash load balancing type",
 	Manifests: []string{
@@ -367,7 +375,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "cookie-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -488,7 +496,7 @@ var ConsistentHashCookieLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
+var QueryParamsBasedConsistentHashLoadBalancing = suite.ConformanceTest{
 	ShortName:   "QueryParamsBasedConsistentHashLoadBalancing",
 	Description: "Test for multiple query parameter based consistent hash load balancing type",
 	Manifests: []string{
@@ -498,7 +506,7 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "query-parameter-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -539,7 +547,7 @@ var ConsistentHashQueryParamsLoadBalancingTest = suite.ConformanceTest{
 	},
 }
 
-var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
+var EndpointOverrideLoadBalancing = suite.ConformanceTest{
 	ShortName:   "EndpointOverrideLoadBalancing",
 	Description: "Test for endpoint override load balancing functionality",
 	Manifests: []string{
@@ -551,7 +559,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 
 		ns := "gateway-conformance-infra"
 		headerRouteNN := types.NamespacedName{Name: "endpoint-override-header-lb-route", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "lb-backend-gateway", Namespace: ns}
 
 		ancestorRef := gwapiv1.ParentReference{
 			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
@@ -686,7 +694,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
 
 			// Make multiple requests and verify fallback behavior (just check 200 response)
-			for i := 0; i < sendRequests; i++ {
+			for range sendRequests {
 				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
 				require.NoError(t, err, "failed to get expected response")
 				require.NoError(t, http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse), "failed to compare request and response")

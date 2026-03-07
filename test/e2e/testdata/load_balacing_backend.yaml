@@ -47,6 +47,48 @@ spec:
             requests:
               cpu: 10m
 ---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: lb-backend-proxy-config
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  logging:
+    level:
+      default: trace
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" "%REQ(X-REQUEST-ID)%"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: lb-backend-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: lb-backend-proxy-config
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -54,7 +96,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: same-namespace
+    - name: lb-backend-gateway
   rules:
     - matches:
         - path:
