@@ -45,4 +45,10 @@ type Lua struct {
 	// +optional
 	// +unionMember
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
+
+	// Percentage controls what percentage of requests are sent through this Lua extension.
+	// When not specified, 100% of requests are sent through the extension.
+	//
+	// +optional
+	Percentage *gwapiv1.Fraction `json:"percentage,omitempty"`
 }
