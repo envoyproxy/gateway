@@ -325,7 +325,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: composite-gateway
@@ -340,7 +339,6 @@ xdsIR:
       externalPort: 8083
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: composite-gateway
@@ -382,7 +380,6 @@ xdsIR:
       externalPort: 8085
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: composite-gateway
