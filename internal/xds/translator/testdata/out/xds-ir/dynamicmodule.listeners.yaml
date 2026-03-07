@@ -21,17 +21,30 @@
             dynamicModuleConfig:
               doNotClose: true
               loadGlobally: true
-              name: ai_gateway
+              module:
+                local:
+                  filename: /usr/lib/envoy/modules/ai_gateway.so
             filterConfig:
               '@type': type.googleapis.com/google.protobuf.StringValue
               value: '{"maxTokensPerMinute":10000}'
             filterName: token-ratelimit
         - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-path/dynamic-module/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                local:
+                  filename: /opt/modules/my_module.so
+            filterName: path-filter
+        - disabled: true
           name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamic-module/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
             dynamicModuleConfig:
-              name: my_handler
+              module:
+                local:
+                  filename: /usr/lib/envoy/modules/my_handler.so
             filterName: handler
             terminalFilter: true
         - disabled: true
@@ -39,7 +52,9 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
             dynamicModuleConfig:
-              name: my_auth
+              module:
+                local:
+                  filename: /usr/lib/envoy/modules/my_auth.so
             filterConfig:
               '@type': type.googleapis.com/google.protobuf.StringValue
               value: '{"authEndpoint":"https://auth.example.com"}'

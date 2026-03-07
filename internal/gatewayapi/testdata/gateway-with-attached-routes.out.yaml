@@ -373,7 +373,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-one-attached-route
@@ -429,7 +428,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - foo.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-two-attached-routes
@@ -494,7 +492,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: unresolved-gateway-with-one-attached-unresolved-route

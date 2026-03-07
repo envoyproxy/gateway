@@ -55,6 +55,7 @@ func NewResilienceTestSuite(client client.Client, reportDir string, manifestFS [
 
 	// Reset some timeout config for the benchmark test.
 	config.SetupTimeoutConfig(&timeoutConfig)
+	timeoutConfig.DefaultPollInterval = 100 * time.Millisecond
 	timeoutConfig.RouteMustHaveParents = 180 * time.Second
 	roundTripper := &roundtripper.DefaultRoundTripper{Debug: true, TimeoutConfig: timeoutConfig}
 	// Initial various client.

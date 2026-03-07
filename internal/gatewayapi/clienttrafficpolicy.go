@@ -493,6 +493,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			}
 		}
 
+		// Translate GRPC Settings
+		translateGRPCSettings(policy.Spec.GRPC, httpIR)
+
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
@@ -773,6 +776,17 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	return nil
 }
 
+func translateGRPCSettings(grpcSettings *egv1a1.GRPCSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if grpcSettings == nil {
+		return
+	}
+	if httpIR.GRPC == nil {
+		httpIR.GRPC = &ir.GRPCSettings{}
+	}
+	httpIR.GRPC.EnableGRPCWeb = grpcSettings.EnableWeb
+}
+
 func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if healthCheckSettings == nil {
@@ -932,7 +946,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
-		secret, err := t.validateSecretRef(false, from, ref, resources)
+		secret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -943,7 +957,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
-		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
+		configMap, err := t.validateConfigMapRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}

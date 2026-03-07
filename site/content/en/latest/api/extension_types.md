@@ -579,7 +579,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details.<br />Note: The secret must be in the same namespace as the SecurityPolicy. |
+| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
 
 
@@ -724,6 +724,25 @@ _Appears in:_
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
 
 
+#### ClientIPGeoLocation
+
+
+
+ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
+
+_Appears in:_
+- [Principal](#principal)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `country` | _string_ |  false  |  | Country is the country ISO code associated with the client IP. |
+| `region` | _string_ |  false  |  | Region is the region ISO code associated with the client IP. |
+| `city` | _string_ |  false  |  | City is the city associated with the client IP. |
+| `asn` | _integer_ |  false  |  | ASN is the autonomous system number associated with the client IP. |
+| `isp` | _string_ |  false  |  | ISP is the internet service provider associated with the client IP. |
+| `anonymous` | _[GeoIPAnonymousMatch](#geoipanonymousmatch)_ |  false  |  | Anonymous matches anonymous network detection signals. |
+
+
 #### ClientTLSSettings
 
 
@@ -805,6 +824,7 @@ _Appears in:_
 | `http1` | _[HTTP1Settings](#http1settings)_ |  false  |  | HTTP1 provides HTTP/1 configuration on the listener. |
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration on the listener. |
 | `http3` | _[HTTP3Settings](#http3settings)_ |  false  |  | HTTP3 provides HTTP/3 configuration on the listener. |
+| `grpc` | _[GRPCSettings](#grpcsettings)_ |  false  |  | GRPC provides gRPC configuration on the listener. |
 | `healthCheck` | _[HealthCheckSettings](#healthchecksettings)_ |  false  |  | HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy. |
 | `scheme` | _[SchemeHeaderTransform](#schemeheadertransform)_ |  false  |  | Scheme configures how the :scheme pseudo-header is set for requests forwarded to backends.<br />- Preserve (default): Preserves the :scheme from the original client request.<br />  Use this when backends need to know the original client scheme for URL generation or redirects.<br />- MatchBackend: Sets the :scheme to match the backend transport protocol.<br />  If the backend uses TLS, the scheme is "https", otherwise "http".<br />  Use this when backends require the scheme to match the actual transport protocol,<br />  such as strictly HTTPS services that validate the :scheme header. |
 
@@ -1253,9 +1273,39 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name is the logical name for this module. EnvoyExtensionPolicy resources<br />reference modules by this name. |
-| `libraryName` | _string_ |  false  |  | LibraryName is the name of the shared library file that Envoy will load.<br />Envoy searches for lib$\{libraryName\}.so in the path specified by the<br />ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.<br />If not specified, defaults to the value of Name. |
+| `source` | _[DynamicModuleSource](#dynamicmodulesource)_ |  true  |  | Source defines where the dynamic module code is loaded from. |
 | `doNotClose` | _boolean_ |  false  | false | DoNotClose prevents the module from being unloaded with dlclose when no<br />more references exist. This is useful for modules that maintain global<br />state that should not be destroyed on configuration updates.<br />Defaults to false. |
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
+
+
+#### DynamicModuleSource
+
+
+
+DynamicModuleSource defines the source of the dynamic module code.
+
+_Appears in:_
+- [DynamicModuleEntry](#dynamicmoduleentry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
+| `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+
+
+#### DynamicModuleSourceType
+
+_Underlying type:_ _string_
+
+DynamicModuleSourceType specifies the types of sources for dynamic module code.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Value | Description |
+| ----- | ----------- |
+| `Local` | LocalDynamicModuleSourceType specifies a module loaded from the local filesystem.<br /> | 
+| `Remote` | RemoteDynamicModuleSourceType specifies a module fetched from a remote source.<br /> | 
 
 
 #### EndpointOverride
@@ -1825,6 +1875,20 @@ _Appears in:_
 
 
 
+#### EnvoyProxyGeoIP
+
+
+
+EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `provider` | _[GeoIPProvider](#geoipprovider)_ |  true  |  | Provider defines the GeoIP provider configuration used by GeoIP filter instances. |
+
+
 #### EnvoyProxyHostProvider
 
 
@@ -2310,6 +2374,20 @@ _Appears in:_
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 
 
+#### GRPCSettings
+
+
+
+GRPCSettings provides gRPC configuration for listeners.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `enableWeb` | _boolean_ |  false  |  | EnableWeb configures the gRPC-web filter on the listener.<br />The gRPC-web filter allows clients (typically browsers) to make gRPC calls<br />using HTTP/1.1 or HTTP/2.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
+
+
 #### Gateway
 
 
@@ -2350,6 +2428,90 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[GatewayAPI](#gatewayapi) array_ |  true  |  |  |
+
+
+#### GeoIPAnonymousMatch
+
+
+
+GeoIPAnonymousMatch matches anonymous network signals emitted by the GeoIP provider.
+If multiple fields are specified, all specified fields must match.
+These signals are not mutually exclusive. A single IP may satisfy multiple
+flags at the same time (for example, a commercial VPN exit IP may also be
+classified as a public proxy, so both IsVPN and IsProxy can be true).
+
+_Appears in:_
+- [ClientIPGeoLocation](#clientipgeolocation)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `isAnonymous` | _boolean_ |  false  |  | IsAnonymous matches whether the client IP is considered anonymous. |
+| `isVPN` | _boolean_ |  false  |  | IsVPN matches whether the client IP is detected as VPN. |
+| `isHosting` | _boolean_ |  false  |  | IsHosting matches whether the client IP belongs to a hosting provider. |
+| `isTor` | _boolean_ |  false  |  | IsTor matches whether the client IP belongs to a Tor exit node. |
+| `isProxy` | _boolean_ |  false  |  | IsProxy matches whether the client IP belongs to a public proxy. |
+
+
+#### GeoIPDBSource
+
+
+
+GeoIPDBSource defines where a GeoIP .mmdb database can be loaded from.
+
+_Appears in:_
+- [GeoIPMaxMind](#geoipmaxmind)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `local` | _[LocalGeoIPDBSource](#localgeoipdbsource)_ |  true  |  | Local is a database source from a local file. |
+
+
+#### GeoIPMaxMind
+
+
+
+GeoIPMaxMind configures the MaxMind provider.
+These database files are expected to be mounted into the Envoy container, and a sidecar container can be used to update the database files.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `cityDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CityDBSource configures the City database source. |
+| `countryDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | CountryDBSource configures the Country database source. |
+| `asnDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ASNDBSource configures the ASN database source. |
+| `ispDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | ISPDBSource configures the ISP database source. |
+| `anonymousIpDbSource` | _[GeoIPDBSource](#geoipdbsource)_ |  false  |  | AnonymousIPDBSource configures the Anonymous IP database source. |
+
+
+#### GeoIPProvider
+
+
+
+GeoIPProvider defines provider-specific settings.
+
+_Appears in:_
+- [EnvoyProxyGeoIP](#envoyproxygeoip)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[GeoIPProviderType](#geoipprovidertype)_ |  true  |  |  |
+| `maxMind` | _[GeoIPMaxMind](#geoipmaxmind)_ |  false  |  | MaxMind configures the MaxMind provider. |
+
+
+#### GeoIPProviderType
+
+_Underlying type:_ _string_
+
+GeoIPProviderType enumerates GeoIP providers supported by Envoy Gateway.
+
+_Appears in:_
+- [GeoIPProvider](#geoipprovider)
+
+| Value | Description |
+| ----- | ----------- |
+| `MaxMind` | GeoIPProviderTypeMaxMind configures Envoy with the MaxMind provider pointing to local files.<br /> | 
 
 
 #### GlobalRateLimit
@@ -2930,7 +3092,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image.<br />Only support Kubernetes Secret resource from the same namespace. |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
 | `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
 
 
@@ -2959,7 +3121,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>".<br />Note: The secret must be in the same namespace as the HTTPRouteFilter. |
+| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
 
 
 #### InvalidMessageAction
@@ -3486,6 +3648,34 @@ _Appears in:_
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 
 
+#### LocalDynamicModuleSource
+
+
+
+LocalDynamicModuleSource defines a dynamic module loaded from the local filesystem.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the absolute filesystem path to the dynamic module shared library (.so file). |
+
+
+#### LocalGeoIPDBSource
+
+
+
+LocalGeoIPDBSource configures a GeoIP database from a local file path.
+
+_Appears in:_
+- [GeoIPDBSource](#geoipdbsource)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path is the path to the database file. |
+
+
 #### LocalJWKS
 
 
@@ -3625,6 +3815,7 @@ MergeType defines the type of merge operation
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
+- [SecurityPolicySpec](#securitypolicyspec)
 
 | Value | Description |
 | ----- | ----------- |
@@ -4790,6 +4981,17 @@ _Appears in:_
 | `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
 
 
+#### RemoteDynamicModuleSource
+
+
+
+RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+
+_Appears in:_
+- [DynamicModuleSource](#dynamicmodulesource)
+
+
+
 #### RemoteJWKS
 
 
@@ -5132,6 +5334,7 @@ _Appears in:_
 | `targetRef` | _[LocalPolicyTargetReferenceWithSectionName](#localpolicytargetreferencewithsectionname)_ |  true  |  | TargetRef is the name of the resource this policy is being attached to.<br />This policy and the TargetRef MUST be in the same namespace for this<br />Policy to have effect<br />Deprecated: use targetRefs/targetSelectors instead |
 | `targetRefs` | _LocalPolicyTargetReferenceWithSectionName array_ |  true  |  | TargetRefs are the names of the Gateway resources this policy<br />is being attached to. |
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing SecurityPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `apiKeyAuth` | _[APIKeyAuth](#apikeyauth)_ |  false  |  | APIKeyAuth defines the configuration for the API Key Authentication. |
 | `cors` | _[CORS](#cors)_ |  false  |  | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 | `basicAuth` | _[BasicAuth](#basicauth)_ |  false  |  | BasicAuth defines the configuration for the HTTP Basic Authentication. |
@@ -5752,7 +5955,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.<br />Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy. |
+| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported. |
 
 
 #### WasmCodeSourceType
