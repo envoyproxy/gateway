@@ -6,7 +6,7 @@ metadata:
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
   listeners:
-    - name: ip
+    - name: tcp
       protocol: TCP
       port: 8080
       allowedRoutes:
@@ -21,7 +21,7 @@ metadata:
 spec:
   parentRefs:
     - name: tcp-stat-name-backend-gateway
-      sectionName: ip
+      sectionName: tcp
   rules:
     - backendRefs:
         - name: infra-backend-v1
