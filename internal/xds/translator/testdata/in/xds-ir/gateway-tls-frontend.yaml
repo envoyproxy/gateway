@@ -3,7 +3,6 @@ http:
     externalPort: 443
     hostnames:
       - "*"
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: client-validation-insecure-fallback
@@ -28,7 +27,6 @@ http:
     externalPort: 8443
     hostnames:
       - second-example.org
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: client-validation-insecure-fallback
