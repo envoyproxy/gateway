@@ -629,12 +629,12 @@ type HTTP2Settings struct {
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
 	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
-	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
 }
 
-// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
 // +k8s:deepcopy-gen=true
-type HTTP2ConnectionKeepalive struct {
+type HTTP2KeepaliveSettings struct {
 	// Interval specifies how often to send HTTP/2 PING frames.
 	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
 	// Timeout specifies how long to wait for a PING response.

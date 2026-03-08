@@ -74,7 +74,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 	}
 
 	if http2Settings.ConnectionKeepalive != nil {
-		keepalive := &ir.HTTP2ConnectionKeepalive{}
+		keepalive := &ir.HTTP2KeepaliveSettings{}
 		if http2Settings.ConnectionKeepalive.Interval != nil {
 			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.Interval))
 			if err != nil {

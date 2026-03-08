@@ -2588,11 +2588,11 @@ _Appears in:_
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
 
 
-#### HTTP2ConnectionKeepalive
+#### HTTP2KeepaliveSettings
 
 
 
-HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
 
 _Appears in:_
 - [HTTP2Settings](#http2settings)
@@ -2622,7 +2622,7 @@ _Appears in:_
 | `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  |  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
 | `onInvalidMessage` | _[InvalidMessageAction](#invalidmessageaction)_ |  false  |  | OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to TerminateStream.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: TerminateConnection |
-| `connectionKeepalive` | _[HTTP2ConnectionKeepalive](#http2connectionkeepalive)_ |  false  |  | ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames. |
+| `connectionKeepalive` | _[HTTP2KeepaliveSettings](#http2keepalivesettings)_ |  false  |  | ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames. |
 
 
 #### HTTP3Settings

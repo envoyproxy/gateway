@@ -721,12 +721,12 @@ type HTTP2Settings struct {
 
 	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
 	// +optional
-	ConnectionKeepalive *HTTP2ConnectionKeepalive `json:"connectionKeepalive,omitempty"`
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty"`
 }
 
-// HTTP2ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
 // +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.interval) || duration(self.timeout) < duration(self.interval)",message="timeout must be less than interval"
-type HTTP2ConnectionKeepalive struct {
+type HTTP2KeepaliveSettings struct {
 	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
 	// +optional
 	Interval *gwapiv1.Duration `json:"interval,omitempty"`

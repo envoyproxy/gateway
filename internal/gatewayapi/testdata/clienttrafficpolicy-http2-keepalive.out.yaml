@@ -127,7 +127,6 @@ xdsIR:
           interval: 1m0s
           intervalJitter: 20
           timeout: 10s
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
