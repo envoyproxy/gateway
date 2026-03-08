@@ -45,6 +45,7 @@ func init() {
 		EndpointOverrideLoadBalancingTest,
 		MultiHeaderConsistentHashHeaderLoadBalancingTest,
 		ConsistentHashQueryParamsLoadBalancingTest,
+		LocalityWeightedConsistentHashLoadBalancingTest,
 	)
 }
 
@@ -629,6 +630,116 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 			}
 
 			t.Logf("All %d requests without override header got 200 response (fallback working)", sendRequests)
+		})
+	},
+}
+
+var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "LocalityWeightedConsistentHashLoadBalancing",
+	Description: "Test for locality weighted consistent hash load balancing across multiple backend refs",
+	Manifests:   []string{"testdata/load_balancing_locality_weighted_consistent_hash.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const sendRequests = 10
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "locality-weighted-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "locality-weighted-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		t.Run("same hash key routes to same backend consistently", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/locality-weighted",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			// Test multiple hash keys - each should consistently route to the same backend ref
+			hashKeys := []string{"user-1", "user-2", "user-3", "user-4", "user-5"}
+
+			for _, hashKey := range hashKeys {
+				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+				req.Headers["X-Hash-Key"] = []string{hashKey}
+
+				// All requests with the same hash key should go to the same pod
+				compareFunc := func(trafficMap map[string]int) bool {
+					return len(trafficMap) == 1
+				}
+
+				if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+					return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
+				}); err != nil {
+					tlog.Errorf(t, "failed: hash key %s did not consistently route to same pod: %v", hashKey, err)
+				}
+			}
+		})
+
+		t.Run("different hash keys distribute across both backends", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/locality-weighted",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+				// Map to track which backend each hash key routes to
+				hashKeyToBackend := make(map[string]string)
+				hashKeys := []string{"key-1", "key-2", "key-3", "key-4", "key-5", "key-6", "key-7", "key-8", "key-9", "key-10"}
+
+				for _, hashKey := range hashKeys {
+					req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+					req.Headers["X-Hash-Key"] = []string{hashKey}
+
+					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+					if err != nil {
+						return false, nil
+					}
+
+					if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+						return false, nil
+					}
+
+					podName := cReq.Pod
+					if len(podName) == 0 {
+						return false, nil
+					}
+					// Extract backend name from pod name (e.g., "infra-backend-v1-xxx" -> "infra-backend-v1")
+					backend := strings.Join(strings.Split(podName, "-")[:3], "-")
+					hashKeyToBackend[hashKey] = backend
+				}
+
+				// Count unique backends that received traffic
+				uniqueBackends := make(map[string]bool)
+				for _, backend := range hashKeyToBackend {
+					uniqueBackends[backend] = true
+				}
+
+				// Different hash keys should distribute across both backend refs
+				if len(uniqueBackends) < 2 {
+					tlog.Logf(t, "only reached %d backends so far, retrying: %v", len(uniqueBackends), hashKeyToBackend)
+					return false, nil
+				}
+				tlog.Logf(t, "different hash keys distributed across %d backends: %v", len(uniqueBackends), hashKeyToBackend)
+				return true, nil
+			}); err != nil {
+				t.Errorf("failed: different hash keys did not distribute across both backends: %v", err)
+			}
 		})
 	},
 }
