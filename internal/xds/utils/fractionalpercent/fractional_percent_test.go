@@ -52,6 +52,61 @@ func TestFromIn32(t *testing.T) {
 	}
 }
 
+func TestNormalizeToMillion(t *testing.T) {
+	cases := []struct {
+		name     string
+		input    *xdstype.FractionalPercent
+		expected uint32
+	}{
+		{
+			name: "nil returns zero",
+			input: nil,
+			expected: 0,
+		},
+		{
+			name: "hundred denominator",
+			input: &xdstype.FractionalPercent{
+				Numerator:   7,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+			expected: 70000,
+		},
+		{
+			name: "ten thousand denominator",
+			input: &xdstype.FractionalPercent{
+				Numerator:   7,
+				Denominator: xdstype.FractionalPercent_TEN_THOUSAND,
+			},
+			expected: 700,
+		},
+		{
+			name: "million denominator",
+			input: &xdstype.FractionalPercent{
+				Numerator:   7,
+				Denominator: xdstype.FractionalPercent_MILLION,
+			},
+			expected: 7,
+		},
+		{
+			name: "unsupported denominator falls back to numerator",
+			input: &xdstype.FractionalPercent{
+				Numerator:   11,
+				Denominator: xdstype.FractionalPercent_DenominatorType(999),
+			},
+			expected: 11,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := NormalizeToMillion(tc.input)
+			if result != tc.expected {
+				t.Errorf("expected %v, got %v", tc.expected, result)
+			}
+		})
+	}
+}
+
 func TestFromFloat32(t *testing.T) {
 	cases := []struct {
 		input    float32
