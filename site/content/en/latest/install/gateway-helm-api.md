@@ -19,6 +19,12 @@ The Helm chart for Envoy Gateway
 
 * <https://github.com/envoyproxy/gateway>
 
+## Requirements
+
+| Repository | Name | Version |
+|------------|------|---------|
+|  | crds | 0.0.0 |
+
 ## Values
 
 | Key | Type | Default | Description |

@@ -357,6 +357,17 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		}
 	}
 
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
+			}
+		}
+	}
+
 	// Add EndpointOverride if specified
 	if policy.LoadBalancer.EndpointOverride != nil {
 		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)

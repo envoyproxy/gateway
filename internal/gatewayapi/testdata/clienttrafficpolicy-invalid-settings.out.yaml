@@ -18,7 +18,6 @@ clientTrafficPolicies:
       clientValidation:
         caCertificateRefs:
         - group: ""
-          kind: null
           name: tls-secret-1
           namespace: default
   status:
@@ -145,9 +144,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:
@@ -164,9 +161,7 @@ gateways:
       protocol: TLS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:
@@ -283,9 +278,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:
@@ -302,9 +295,7 @@ gateways:
       protocol: TLS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:
@@ -421,9 +412,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:
@@ -440,9 +429,7 @@ gateways:
       protocol: TLS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: default
         mode: Terminate
     - allowedRoutes:

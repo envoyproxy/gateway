@@ -112,8 +112,6 @@ securityPolicies:
     oidc:
       clientID: client.oauth.foo.com
       clientSecret:
-        group: null
-        kind: null
         name: client-secret-1
       passThroughAuthHeader: true
       provider:

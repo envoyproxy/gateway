@@ -145,6 +145,39 @@ Here's an example of retrieving the [xDS Route Configuration](https://www.envoyp
 }
 ```
 
+`egctl config` also supports reading Envoy Gateway in-memory resources through the Envoy Gateway admin API config dump endpoint.
+
+```console
+~ egctl config envoy-gateway all -n envoy-gateway-system
+{
+  "envoy-gateway-system": {
+    "envoy-gateway-6d8f9d7d9f-abcde": [
+      {
+        "gatewayClass": {
+          "metadata": {
+            "name": "eg"
+          }
+        },
+        "gateways": [
+          {
+            "metadata": {
+              "name": "eg",
+              "namespace": "default"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+You can also retrieve a specific resource type from Envoy Gateway memory. For example:
+
+```console
+~ egctl config envoy-gateway gateway -n envoy-gateway-system
+```
+
 ## egctl experimental status
 
 This subcommand allows users to show the summary of the status of specific or all resource types, in order to quickly find

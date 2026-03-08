@@ -446,8 +446,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     extAuth:
       failOpen: true
@@ -527,8 +525,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     extAuth:
       failOpen: true

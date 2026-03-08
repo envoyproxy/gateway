@@ -30,7 +30,7 @@ If you do, make sure that you don't install the CRDs again when installing the E
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.gatewayAPI.enabled=true' --set 'crds.envoyGateway.enabled=true' \
     --version v0.0.0-latest | kubectl apply --server-side -f -
 ```
 

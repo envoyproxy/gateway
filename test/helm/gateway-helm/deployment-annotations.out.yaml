@@ -149,6 +149,7 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gateways
+  - listenersets
   - grpcroutes
   - httproutes
   - referencegrants
@@ -164,26 +165,13 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gateways/status
+  - listenersets/status
   - grpcroutes/status
   - httproutes/status
   - tcproutes/status
   - tlsroutes/status
   - udproutes/status
   - backendtlspolicies/status
-  verbs:
-  - update
-- apiGroups:
-  - gateway.networking.x-k8s.io
-  resources:
-  - xlistenersets
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - gateway.networking.x-k8s.io
-  resources:
-  - xlistenersets/status
   verbs:
   - update
 - apiGroups:

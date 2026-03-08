@@ -75,7 +75,7 @@ type HTTPDirectResponseFilter struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the direct response.
-	//
+	// Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
 	// +optional
 	Body *CustomResponseBody `json:"body,omitempty"`
 

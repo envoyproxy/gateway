@@ -16,7 +16,6 @@ import (
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -171,9 +170,9 @@ func TestNewOfflineGatewayAPIControllerIndexRegistration(t *testing.T) {
 	})
 
 	t.Run("TLSRoute indices", func(t *testing.T) {
-		err := cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
+		err := cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{gatewayTLSRouteIndex: "any"})
 		require.NoError(t, err)
-		err = cli.List(context.Background(), &gwapiv1a3.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
+		err = cli.List(context.Background(), &gwapiv1.TLSRouteList{}, client.MatchingFields{backendTLSRouteIndex: "any"})
 		require.NoError(t, err)
 	})
 

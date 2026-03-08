@@ -1039,6 +1039,36 @@ spec:
                             minimum: 0
                             type: integer
                         type: object
+                      weightedZones:
+                        description: |-
+                          WeightedZones configures weight-based traffic distribution across locality zones.
+                          Traffic is distributed proportionally based on the sum of all zone weights.
+                        items:
+                          description: WeightedZoneConfig defines the weight for a
+                            specific locality zone.
+                          properties:
+                            weight:
+                              description: |-
+                                Weight defines the weight for this locality.
+                                Higher values receive more traffic. The actual traffic distribution
+                                is proportional to this value relative to other localities.
+                              format: int32
+                              type: integer
+                            zone:
+                              description: |-
+                                Zone specifies the topology zone this weight applies to.
+                                The value should match the topology.kubernetes.io/zone label
+                                of the nodes where endpoints are running.
+                                Zones not listed in the configuration receive a default weight of 1.
+                              type: string
+                          required:
+                          - weight
+                          - zone
+                          type: object
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - zone
+                        x-kubernetes-list-type: map
                     type: object
                 required:
                 - type
@@ -1052,10 +1082,14 @@ spec:
                     LeastRequest load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
-                - message: Currently ZoneAware is only supported for LeastRequest,
-                    Random, and RoundRobin load balancers.
-                  rule: 'self.type == ''ConsistentHash'' ? !has(self.zoneAware) :
-                    true '
+                - message: PreferLocal zone-aware routing is not supported for ConsistentHash
+                    load balancers. Use weightedZones instead.
+                  rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
+                    !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware PreferLocal and WeightedZones cannot be specified
+                    together.
+                  rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
+                    has(self.zoneAware.weightedZones)) : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -2153,8 +2187,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2227,8 +2267,14 @@ spec:
                                     pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                     type: string
                                   value:
-                                    description: Value is the value of HTTP Header
-                                      to be matched.
+                                    description: |-
+                                      Value is the value of HTTP Header to be matched.
+                                      <gateway:experimental:description>
+                                      Must consist of printable US-ASCII characters, optionally separated
+                                      by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                      </gateway:experimental:description>
+
+                                      <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                     maxLength: 4096
                                     minLength: 1
                                     type: string
@@ -2348,7 +2394,7 @@ spec:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
                   or it can be set to "Endpoint" to use Endpoint routing.
-                  When specified, this overrides the EnvoyProxy-level setting for the relevant targeRefs.
+                  When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.
                   If not specified, the EnvoyProxy-level setting is used.
                 type: string
               targetRef:

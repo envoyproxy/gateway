@@ -12,6 +12,8 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/require"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestAddServerNamesMatch(t *testing.T) {
@@ -19,6 +21,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 		name               string
 		xdsListener        *listenerv3.Listener
 		hostnames          []string
+		fingerprints       []ir.TLSFingerprintType
 		expectFilterChain  bool
 		expectTLSInspector bool
 		expectServerNames  []string
@@ -27,6 +30,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 			name:               "nil listener",
 			xdsListener:        nil,
 			hostnames:          []string{"example.com"},
+			fingerprints:       nil,
 			expectFilterChain:  false,
 			expectTLSInspector: false,
 			expectServerNames:  nil,
@@ -47,6 +51,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 				},
 			},
 			hostnames:          []string{"example.com"},
+			fingerprints:       []ir.TLSFingerprintType{},
 			expectFilterChain:  true,
 			expectTLSInspector: false,
 			expectServerNames:  []string{"example.com"},
@@ -67,6 +72,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 				},
 			},
 			hostnames:          []string{"example.com", "api.example.com"},
+			fingerprints:       nil,
 			expectFilterChain:  true,
 			expectTLSInspector: true,
 			expectServerNames:  []string{"example.com", "api.example.com"},
@@ -87,8 +93,30 @@ func TestAddServerNamesMatch(t *testing.T) {
 				},
 			},
 			hostnames:          []string{"*"},
+			fingerprints:       nil,
 			expectFilterChain:  false,
 			expectTLSInspector: false,
+			expectServerNames:  nil,
+		},
+		{
+			name: "TCP listener with wildcard hostname and fingerprint enabled",
+			xdsListener: &listenerv3.Listener{
+				Address: &corev3.Address{
+					Address: &corev3.Address_SocketAddress{
+						SocketAddress: &corev3.SocketAddress{
+							Protocol: corev3.SocketAddress_TCP,
+							Address:  "0.0.0.0",
+							PortSpecifier: &corev3.SocketAddress_PortValue{
+								PortValue: 443,
+							},
+						},
+					},
+				},
+			},
+			hostnames:          []string{"*"},
+			fingerprints:       []ir.TLSFingerprintType{ir.TLSFingerprintTypeJA3, ir.TLSFingerprintTypeJA3},
+			expectFilterChain:  false,
+			expectTLSInspector: true,
 			expectServerNames:  nil,
 		},
 	}
@@ -97,7 +125,7 @@ func TestAddServerNamesMatch(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			filterChain := &listenerv3.FilterChain{}
 
-			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames)
+			err := addServerNamesMatch(tt.xdsListener, filterChain, tt.hostnames, tt.fingerprints)
 			require.NoError(t, err)
 
 			// Check if filter chain match was added
