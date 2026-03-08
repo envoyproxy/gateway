@@ -106,7 +106,8 @@ type WasmCodeSource struct {
 	PullPolicy *ImagePullPolicy `json:"pullPolicy,omitempty"`
 
 	// FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
-	// If not specified, the default retry policy will be used.
+	// If not specified, the default retry policy will be used:
+	// numRetries: 5, backOff baseInterval: 1s, backOff maxInterval: 10s.
 	// +optional
 	FetchRetryPolicy *WasmCodeFetchRetryPolicy `json:"fetchRetryPolicy,omitempty"`
 }

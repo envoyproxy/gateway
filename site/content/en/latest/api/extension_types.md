@@ -5968,7 +5968,7 @@ _Appears in:_
 | `http` | _[HTTPWasmCodeSource](#httpwasmcodesource)_ |  false  |  | HTTP is the HTTP URL containing the Wasm code.<br />Note that the HTTP server must be accessible from the Envoy proxy. |
 | `image` | _[ImageWasmCodeSource](#imagewasmcodesource)_ |  false  |  | Image is the OCI image containing the Wasm code.<br />Note that the image must be accessible from the Envoy Gateway. |
 | `pullPolicy` | _[ImagePullPolicy](#imagepullpolicy)_ |  false  |  | PullPolicy is the policy to use when pulling the Wasm module by either the HTTP or Image source.<br />This field is only applicable when the SHA256 field is not set.<br />If not specified, the default policy is IfNotPresent except for OCI images whose tag is latest.<br />Note: EG does not update the Wasm module every time an Envoy proxy requests<br />the Wasm module even if the pull policy is set to Always.<br />It only updates the Wasm module when the EnvoyExtension resource version changes. |
-| `fetchRetryPolicy` | _[WasmCodeFetchRetryPolicy](#wasmcodefetchretrypolicy)_ |  false  |  | FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.<br />If not specified, the default retry policy will be used. |
+| `fetchRetryPolicy` | _[WasmCodeFetchRetryPolicy](#wasmcodefetchretrypolicy)_ |  false  |  | FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.<br />If not specified, the default retry policy will be used:<br />numRetries: 5, backOff baseInterval: 1s, backOff maxInterval: 10s. |
 
 
 #### WasmCodeSourceTLSConfig

@@ -29215,7 +29215,8 @@ spec:
                         fetchRetryPolicy:
                           description: |-
                             FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
-                            If not specified, the default retry policy will be used.
+                            If not specified, the default retry policy will be used:
+                            numRetries: 5, backOff baseInterval: 1s, backOff maxInterval: 10s.
                           properties:
                             backOff:
                               description: BackOff is the backoff policy to be applied
