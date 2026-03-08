@@ -636,7 +636,7 @@ var EndpointOverrideLoadBalancingTest = suite.ConformanceTest{
 
 var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "LocalityWeightedConsistentHashLoadBalancing",
-	Description: "Test for locality weighted consistent hash load balancing type",
+	Description: "Test for locality weighted consistent hash load balancing across multiple backend refs",
 	Manifests:   []string{"testdata/load_balancing_locality_weighted_consistent_hash.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		const sendRequests = 10
@@ -652,11 +652,10 @@ var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
 			Name:      gwapiv1.ObjectName(gwNN.Name),
 		}
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "locality-weighted-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
-		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-locality-weighted"}, corev1.PodRunning, &PodReady)
 
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-		t.Run("same hash key routes to same pod consistently", func(t *testing.T) {
+		t.Run("same hash key routes to same backend consistently", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/locality-weighted",
@@ -667,7 +666,7 @@ var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Test multiple hash keys - each should stick to one pod
+			// Test multiple hash keys - each should consistently route to the same backend ref
 			hashKeys := []string{"user-1", "user-2", "user-3", "user-4", "user-5"}
 
 			for _, hashKey := range hashKeys {
@@ -687,7 +686,7 @@ var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
 			}
 		})
 
-		t.Run("different hash keys can distribute to different pods", func(t *testing.T) {
+		t.Run("different hash keys distribute across both backends", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/locality-weighted",
@@ -698,45 +697,48 @@ var LocalityWeightedConsistentHashLoadBalancingTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Map to track which pod each hash key routes to
-			hashKeyToPod := make(map[string]string)
-			hashKeys := []string{"key-1", "key-2", "key-3", "key-4", "key-5", "key-6", "key-7", "key-8", "key-9", "key-10"}
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
+				// Map to track which backend each hash key routes to
+				hashKeyToBackend := make(map[string]string)
+				hashKeys := []string{"key-1", "key-2", "key-3", "key-4", "key-5", "key-6", "key-7", "key-8", "key-9", "key-10"}
 
-			for _, hashKey := range hashKeys {
-				req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-				req.Headers["X-Hash-Key"] = []string{hashKey}
+				for _, hashKey := range hashKeys {
+					req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+					req.Headers["X-Hash-Key"] = []string{hashKey}
 
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					t.Errorf("failed to get expected response: %v", err)
-					continue
+					cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
+					if err != nil {
+						return false, nil
+					}
+
+					if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
+						return false, nil
+					}
+
+					podName := cReq.Pod
+					if len(podName) == 0 {
+						return false, nil
+					}
+					// Extract backend name from pod name (e.g., "infra-backend-v1-xxx" -> "infra-backend-v1")
+					backend := strings.Join(strings.Split(podName, "-")[:3], "-")
+					hashKeyToBackend[hashKey] = backend
 				}
 
-				if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
-					t.Errorf("failed to compare request and response: %v", err)
-					continue
+				// Count unique backends that received traffic
+				uniqueBackends := make(map[string]bool)
+				for _, backend := range hashKeyToBackend {
+					uniqueBackends[backend] = true
 				}
 
-				podName := cReq.Pod
-				if len(podName) == 0 {
-					t.Errorf("failed to get pod header in response")
-				} else {
-					hashKeyToPod[hashKey] = podName
+				// Different hash keys should distribute across both backend refs
+				if len(uniqueBackends) < 2 {
+					tlog.Logf(t, "only reached %d backends so far, retrying: %v", len(uniqueBackends), hashKeyToBackend)
+					return false, nil
 				}
-			}
-
-			// Count unique pods that received traffic
-			uniquePods := make(map[string]bool)
-			for _, pod := range hashKeyToPod {
-				uniquePods[pod] = true
-			}
-
-			// Different hash keys should distribute across multiple pods (at least 2)
-			// This verifies both consistent hashing distribution and locality weighting
-			if len(uniquePods) < 2 {
-				t.Errorf("expected different hash keys to distribute across at least 2 pods, but got %d pods: %v", len(uniquePods), hashKeyToPod)
-			} else {
-				tlog.Logf(t, "different hash keys distributed across %d pods: %v", len(uniquePods), hashKeyToPod)
+				tlog.Logf(t, "different hash keys distributed across %d backends: %v", len(uniqueBackends), hashKeyToBackend)
+				return true, nil
+			}); err != nil {
+				t.Errorf("failed: different hash keys did not distribute across both backends: %v", err)
 			}
 		})
 	},
