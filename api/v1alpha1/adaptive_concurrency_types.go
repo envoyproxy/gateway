@@ -27,6 +27,7 @@ type AdaptiveConcurrency struct {
 	// Defaults to 503 (Service Unavailable).
 	//
 	// +optional
+	// +kubebuilder:default=503
 	// +kubebuilder:validation:Minimum=400
 	// +kubebuilder:validation:Maximum=599
 	ConcurrencyLimitExceededStatus *int32 `json:"concurrencyLimitExceededStatus,omitempty"`
@@ -42,6 +43,7 @@ type GradientController struct {
 	// summarizing aggregated latency samples. Defaults to 50 (p50).
 	//
 	// +optional
+	// +kubebuilder:default=50
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	SampleAggregatePercentile *float64 `json:"sampleAggregatePercentile,omitempty"`
@@ -67,6 +69,7 @@ type ConcurrencyLimitParams struct {
 	// Defaults to 1000.
 	//
 	// +optional
+	// +kubebuilder:default=1000
 	// +kubebuilder:validation:Minimum=1
 	MaxConcurrencyLimit *uint32 `json:"maxConcurrencyLimit,omitempty"`
 
@@ -75,6 +78,7 @@ type ConcurrencyLimitParams struct {
 	// Defaults to 100ms.
 	//
 	// +optional
+	// +kubebuilder:default="100ms"
 	ConcurrencyUpdateInterval *gwapiv1.Duration `json:"concurrencyUpdateInterval,omitempty"`
 }
 
@@ -87,6 +91,7 @@ type MinRTTCalcParams struct {
 	// (use FixedMinRTT in that case).
 	//
 	// +optional
+	// +kubebuilder:default="30s"
 	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 
 	// FixedMinRTT sets a fixed minimum RTT value instead of dynamically
@@ -99,6 +104,7 @@ type MinRTTCalcParams struct {
 	// recalculation window. Defaults to 50.
 	//
 	// +optional
+	// +kubebuilder:default=50
 	// +kubebuilder:validation:Minimum=1
 	RequestCount *uint32 `json:"requestCount,omitempty"`
 
@@ -106,6 +112,7 @@ type MinRTTCalcParams struct {
 	// window, expressed as a percentage of the interval. Defaults to 15%.
 	//
 	// +optional
+	// +kubebuilder:default=15
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	Jitter *float64 `json:"jitter,omitempty"`
@@ -114,6 +121,7 @@ type MinRTTCalcParams struct {
 	// minRTT. Defaults to 3.
 	//
 	// +optional
+	// +kubebuilder:default=3
 	// +kubebuilder:validation:Minimum=1
 	MinConcurrency *uint32 `json:"minConcurrency,omitempty"`
 
@@ -122,6 +130,7 @@ type MinRTTCalcParams struct {
 	// value. Defaults to 25%.
 	//
 	// +optional
+	// +kubebuilder:default=25
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	Buffer *float64 `json:"buffer,omitempty"`
