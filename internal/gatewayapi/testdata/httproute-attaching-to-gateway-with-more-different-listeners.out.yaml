@@ -375,7 +375,6 @@ xdsIR:
       externalPort: 81
       hostnames:
       - foo.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -421,7 +420,6 @@ xdsIR:
       externalPort: 82
       hostnames:
       - bar.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -467,7 +465,6 @@ xdsIR:
       externalPort: 83
       hostnames:
       - foo1.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -513,7 +510,6 @@ xdsIR:
       externalPort: 84
       hostnames:
       - bar1.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -559,7 +555,6 @@ xdsIR:
       externalPort: 85
       hostnames:
       - foo2.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -605,7 +600,6 @@ xdsIR:
       externalPort: 86
       hostnames:
       - bar2.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -651,7 +645,6 @@ xdsIR:
       externalPort: 87
       hostnames:
       - foo3.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -697,7 +690,6 @@ xdsIR:
       externalPort: 88
       hostnames:
       - bar3.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

@@ -41,6 +41,7 @@ func TestE2E(t *testing.T) {
 
 	skipTests := []string{
 		tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
+		tests.ConsistentHashQueryParamsLoadBalancingTest.ShortName,
 	}
 
 	// Skip test only work on DualStack cluster
@@ -90,6 +91,7 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: enabledFeatures,

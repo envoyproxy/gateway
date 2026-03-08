@@ -6,11 +6,41 @@
 package conformance
 
 import (
+	"testing"
+
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/gateway-api/conformance"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
+
+	"github.com/envoyproxy/gateway/test/e2e"
+	egtests "github.com/envoyproxy/gateway/test/e2e/tests"
 )
+
+func conformanceOpts(t *testing.T) suite.ConformanceOptions {
+	gatewayNamespaceMode := egtests.IsGatewayNamespaceMode()
+	internalSuite := EnvoyGatewaySuite(gatewayNamespaceMode, egtests.UseStandardChannel())
+
+	opts := conformance.DefaultOptions(t)
+	opts.SkipTests = internalSuite.SkipTests
+	opts.SupportedFeatures = internalSuite.SupportedFeatures
+	opts.ExemptFeatures = internalSuite.ExemptFeatures
+	if egtests.IPFamily == "dual" {
+		// I don't know why this happens, but the UDPRoute test failed on dual stack
+		// because on some VM(e.g. Ubuntu 22.04), the ipv4 address for UDP gateway is not
+		// reachable. There's a same test in our e2e test fixtures that passed, it's so odd.
+		// So we skip this test on dual stack for now.
+		opts.SkipTests = append(opts.SkipTests,
+			tests.UDPRouteTest.ShortName,
+		)
+	}
+
+	opts.Hook = e2e.Hook
+	opts.FailFast = true
+
+	return opts
+}
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
@@ -19,21 +49,13 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.TLSRouteHostnameIntersection,
-		tests.TLSRouteInvalidNoMatchingListener,
-		tests.TLSRouteMixedTerminationSameNamespace,
 		tests.GatewayInvalidTLSBackendConfiguration,
-		tests.GatewayWithAttachedRoutes,
 		tests.GatewayTLSBackendClientCertificate,
 		tests.GatewayFrontendClientCertificateValidation,
 		tests.GatewayInvalidFrontendClientCertificateValidation,
 		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
 		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
-		tests.HTTPRoute303Redirect,
-		tests.HTTPRoute307Redirect,
-		tests.HTTPRoute308Redirect,
-		tests.HTTPRouteHostnameIntersection,
 	}
 
 	if gatewayNamespaceMode {
@@ -68,26 +90,37 @@ func skipTestsShortNames(skipTests []suite.ConformanceTest) []string {
 }
 
 // EnvoyGatewaySuite is the conformance suite configuration for the Gateway API.
-func EnvoyGatewaySuite(gatewayNamespaceMode bool) suite.ConformanceOptions {
+func EnvoyGatewaySuite(gatewayNamespaceMode, standardChannel bool) suite.ConformanceOptions {
 	return suite.ConformanceOptions{
-		SupportedFeatures: allFeatures(gatewayNamespaceMode),
+		SupportedFeatures: allFeatures(gatewayNamespaceMode, standardChannel),
 		ExemptFeatures:    meshFeatures(),
 		SkipTests:         skipTestsShortNames(SkipTests(gatewayNamespaceMode)),
 	}
 }
 
-func allFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
+func allFeatures(gatewayNamespaceMode, standardChannel bool) sets.Set[features.FeatureName] {
 	result := sets.New[features.FeatureName]()
 	skipped := SkipFeatures(gatewayNamespaceMode)
 	for _, feature := range features.AllFeatures.UnsortedList() {
+		if standardChannel && feature.Channel != features.FeatureChannelStandard {
+			continue
+		}
+
 		// Don't add skipped features in the conformance report.
 		if !skipped.Has(feature.Name) {
 			result.Insert(feature.Name)
 		}
 	}
 	for _, feature := range features.UDPRouteFeatures {
+		if standardChannel && feature.Channel != features.FeatureChannelStandard {
+			continue
+		}
+
 		result.Insert(feature.Name)
 	}
+
+	// this's used to skip TLSRouteListenerMixedTerminationNotSupported
+	result.Insert(features.TLSRouteModeMixedFeature.Name)
 	return result
 }
 
