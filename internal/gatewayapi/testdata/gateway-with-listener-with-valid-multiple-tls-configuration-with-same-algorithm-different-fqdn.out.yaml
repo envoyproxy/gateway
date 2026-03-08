@@ -15,12 +15,8 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-ecdsa-1
-        - group: null
-          kind: null
-          name: tls-secret-ecdsa-2
+        - name: tls-secret-ecdsa-1
+        - name: tls-secret-ecdsa-2
         mode: Terminate
   status:
     listeners:
@@ -131,7 +127,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

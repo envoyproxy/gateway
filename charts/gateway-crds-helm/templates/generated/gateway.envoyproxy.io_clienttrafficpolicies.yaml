@@ -213,6 +213,21 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              grpc:
+                description: GRPC provides gRPC configuration on the listener.
+                properties:
+                  enableWeb:
+                    description: |-
+                      EnableWeb configures the gRPC-web filter on the listener.
+                      The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+                      using HTTP/1.1 or HTTP/2.
+
+                      This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                      In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                      users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                      Therefore, we enable this behavior only when it is explicitly opted in.
+                    type: boolean
+                type: object
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
@@ -263,8 +278,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -315,8 +336,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -422,8 +449,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -484,8 +517,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -536,8 +575,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string
@@ -643,8 +688,14 @@ spec:
                               pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                               type: string
                             value:
-                              description: Value is the value of HTTP Header to be
-                                matched.
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                               maxLength: 4096
                               minLength: 1
                               type: string

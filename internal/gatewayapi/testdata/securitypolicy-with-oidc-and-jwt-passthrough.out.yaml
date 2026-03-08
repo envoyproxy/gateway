@@ -112,8 +112,6 @@ securityPolicies:
     oidc:
       clientID: client.oauth.foo.com
       clientSecret:
-        group: null
-        kind: null
         name: client-secret-1
       passThroughAuthHeader: true
       provider:
@@ -170,7 +168,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

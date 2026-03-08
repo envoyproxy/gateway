@@ -106,8 +106,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       cookieNames:
         accessToken: CustomAccessTokenCookie
@@ -165,7 +163,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

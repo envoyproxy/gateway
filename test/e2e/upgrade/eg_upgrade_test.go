@@ -58,8 +58,10 @@ func TestEGUpgrade(t *testing.T) {
 		RunTest:              *flags.RunTest,
 		BaseManifests:        "upgrade/manifests.yaml",
 		SupportedFeatures:    sets.New(features.SupportGateway),
+		TimeoutConfig:        tests.TimeoutConfig(),
 		SkipTests:            skipTests,
 		Hook:                 e2e.Hook,
+		FailFast:             true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create test suite: %v", err)
