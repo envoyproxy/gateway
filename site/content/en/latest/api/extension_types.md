@@ -2495,23 +2495,23 @@ _Appears in:_
 
 | Value | Description |
 | ----- | ----------- |
-| `Ok` |  |
-| `Cancelled` |  |
-| `Unknown` |  |
-| `InvalidArgument` |  |
-| `DeadlineExceeded` |  |
-| `NotFound` |  |
-| `AlreadyExists` |  |
-| `PermissionDenied` |  |
-| `ResourceExhausted` |  |
-| `FailedPrecondition` |  |
-| `Aborted` |  |
-| `OutOfRange` |  |
-| `Unimplemented` |  |
-| `Internal` |  |
-| `Unavailable` |  |
-| `DataLoss` |  |
-| `Unauthenticated` |  |
+| `Ok` |  | 
+| `Cancelled` |  | 
+| `Unknown` |  | 
+| `InvalidArgument` |  | 
+| `DeadlineExceeded` |  | 
+| `NotFound` |  | 
+| `AlreadyExists` |  | 
+| `PermissionDenied` |  | 
+| `ResourceExhausted` |  | 
+| `FailedPrecondition` |  | 
+| `Aborted` |  | 
+| `OutOfRange` |  | 
+| `Unimplemented` |  | 
+| `Internal` |  | 
+| `Unavailable` |  | 
+| `DataLoss` |  | 
+| `Unauthenticated` |  | 
 
 
 #### GRPCSuccessCriteria
