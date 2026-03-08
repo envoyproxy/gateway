@@ -58,6 +58,7 @@ spec:
                   increases.
                 properties:
                   concurrencyLimitExceededStatus:
+                    default: 503
                     description: |-
                       ConcurrencyLimitExceededStatus sets the HTTP status code returned to
                       downstream clients when the concurrency limit is exceeded.
@@ -78,6 +79,7 @@ spec:
                           recalculation.
                         properties:
                           concurrencyUpdateInterval:
+                            default: 100ms
                             description: |-
                               ConcurrencyUpdateInterval is the period of time between
                               recalculations of the concurrency limit.
@@ -85,6 +87,7 @@ spec:
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                           maxConcurrencyLimit:
+                            default: 1000
                             description: |-
                               MaxConcurrencyLimit sets the upper bound on the concurrency limit.
                               Defaults to 1000.
@@ -97,6 +100,7 @@ spec:
                           recalculation.
                         properties:
                           buffer:
+                            default: 25
                             description: |-
                               Buffer is the amount added to the measured minRTT to add stability
                               to the concurrency limit, expressed as a percentage of the measured
@@ -111,6 +115,7 @@ spec:
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                           interval:
+                            default: 30s
                             description: |-
                               Interval is the time interval between recalculating the minimum RTT.
                               Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling
@@ -118,6 +123,7 @@ spec:
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                           jitter:
+                            default: 15
                             description: |-
                               Jitter adds a randomized delay to the start of the minRTT calculation
                               window, expressed as a percentage of the interval. Defaults to 15%.
@@ -125,6 +131,7 @@ spec:
                             minimum: 0
                             type: number
                           minConcurrency:
+                            default: 3
                             description: |-
                               MinConcurrency sets the concurrency limit used while measuring the
                               minRTT. Defaults to 3.
@@ -132,6 +139,7 @@ spec:
                             minimum: 1
                             type: integer
                           requestCount:
+                            default: 50
                             description: |-
                               RequestCount is the number of requests to aggregate during the minRTT
                               recalculation window. Defaults to 50.
@@ -140,6 +148,7 @@ spec:
                             type: integer
                         type: object
                       sampleAggregatePercentile:
+                        default: 50
                         description: |-
                           SampleAggregatePercentile specifies the percentile to use when
                           summarizing aggregated latency samples. Defaults to 50 (p50).

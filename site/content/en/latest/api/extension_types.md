@@ -203,7 +203,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `gradientController` | _[GradientController](#gradientcontroller)_ |  false  |  | GradientController configures the gradient-based concurrency controller.<br />This is the core algorithm that adjusts the concurrency limit based on<br />latency measurements. |
-| `concurrencyLimitExceededStatus` | _integer_ |  false  |  | ConcurrencyLimitExceededStatus sets the HTTP status code returned to<br />downstream clients when the concurrency limit is exceeded.<br />Defaults to 503 (Service Unavailable). |
+| `concurrencyLimitExceededStatus` | _integer_ |  false  | 503 | ConcurrencyLimitExceededStatus sets the HTTP status code returned to<br />downstream clients when the concurrency limit is exceeded.<br />Defaults to 503 (Service Unavailable). |
 
 
 #### AppProtocolType
@@ -941,8 +941,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxConcurrencyLimit` | _integer_ |  false  |  | MaxConcurrencyLimit sets the upper bound on the concurrency limit.<br />Defaults to 1000. |
-| `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | ConcurrencyUpdateInterval is the period of time between<br />recalculations of the concurrency limit.<br />Defaults to 100ms. |
+| `maxConcurrencyLimit` | _integer_ |  false  | 1000 | MaxConcurrencyLimit sets the upper bound on the concurrency limit.<br />Defaults to 1000. |
+| `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 100ms | ConcurrencyUpdateInterval is the period of time between<br />recalculations of the concurrency limit.<br />Defaults to 100ms. |
 
 
 #### ConnectConfig
@@ -2373,7 +2373,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `sampleAggregatePercentile` | _float_ |  false  |  | SampleAggregatePercentile specifies the percentile to use when<br />summarizing aggregated latency samples. Defaults to 50 (p50). |
+| `sampleAggregatePercentile` | _float_ |  false  | 50 | SampleAggregatePercentile specifies the percentile to use when<br />summarizing aggregated latency samples. Defaults to 50 (p50). |
 | `concurrencyLimitParams` | _[ConcurrencyLimitParams](#concurrencylimitparams)_ |  false  |  | ConcurrencyLimitParams controls the periodic concurrency limit<br />recalculation. |
 | `minRTTCalcParams` | _[MinRTTCalcParams](#minrttcalcparams)_ |  false  |  | MinRTTCalcParams controls the periodic minRTT recalculation. |
 
@@ -3681,12 +3681,12 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Interval is the time interval between recalculating the minimum RTT.<br />Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling<br />(use FixedMinRTT in that case). |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 30s | Interval is the time interval between recalculating the minimum RTT.<br />Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling<br />(use FixedMinRTT in that case). |
 | `fixedMinRTT` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | FixedMinRTT sets a fixed minimum RTT value instead of dynamically<br />sampling it. This is required when Interval is set to 0s. |
-| `requestCount` | _integer_ |  false  |  | RequestCount is the number of requests to aggregate during the minRTT<br />recalculation window. Defaults to 50. |
-| `jitter` | _float_ |  false  |  | Jitter adds a randomized delay to the start of the minRTT calculation<br />window, expressed as a percentage of the interval. Defaults to 15%. |
-| `minConcurrency` | _integer_ |  false  |  | MinConcurrency sets the concurrency limit used while measuring the<br />minRTT. Defaults to 3. |
-| `buffer` | _float_ |  false  |  | Buffer is the amount added to the measured minRTT to add stability<br />to the concurrency limit, expressed as a percentage of the measured<br />value. Defaults to 25%. |
+| `requestCount` | _integer_ |  false  | 50 | RequestCount is the number of requests to aggregate during the minRTT<br />recalculation window. Defaults to 50. |
+| `jitter` | _float_ |  false  | 15 | Jitter adds a randomized delay to the start of the minRTT calculation<br />window, expressed as a percentage of the interval. Defaults to 15%. |
+| `minConcurrency` | _integer_ |  false  | 3 | MinConcurrency sets the concurrency limit used while measuring the<br />minRTT. Defaults to 3. |
+| `buffer` | _float_ |  false  | 25 | Buffer is the amount added to the measured minRTT to add stability<br />to the concurrency limit, expressed as a percentage of the measured<br />value. Defaults to 25%. |
 
 
 #### OIDC
