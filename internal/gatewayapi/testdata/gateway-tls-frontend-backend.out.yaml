@@ -800,7 +800,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: client-validation-default
@@ -825,7 +824,6 @@ xdsIR:
       externalPort: 8443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: client-validation-default
@@ -881,7 +879,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: client-validation-insecure-fallback
@@ -906,7 +903,6 @@ xdsIR:
       externalPort: 8443
       hostnames:
       - second-example.org
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: client-validation-insecure-fallback
@@ -962,7 +958,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-tls-frontend-backend
@@ -1004,7 +999,6 @@ xdsIR:
       externalPort: 8443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-tls-frontend-backend
@@ -1060,7 +1054,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-with-invalid-client-cert-validation
@@ -1116,7 +1109,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: invalid-default-client-validation-config
