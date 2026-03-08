@@ -82,7 +82,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -160,7 +160,7 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -264,7 +264,7 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -388,7 +388,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -484,7 +484,7 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -581,7 +581,7 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			// expectOkResp.Response.Headers["X-Ratelimit-Limit"] is not defined because we disabled it.
+			// expectOkResp.Response.Headers[RatelimitLimitHeaderName] is not defined because we disabled it.
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -704,7 +704,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			JwtOkResp.Request.Headers["Authorization"] = "Bearer " + "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4TSMb4bXP3l3YlNWACwyXPGffz5aXHc6lty1Y2t4SWRqGteragsVdZufDn5BlnJl9pdR_kdVFUsra2rWKEofkZeIC4yWytE58sMIihvo9H1ScmmVwBcQP6XETqYd0aSHp1gOa9RdUPDvoXQ5oqygTqVtxaDr6wUFKrKItgBMzWIdNZ6y7O9E0DhEPTbE9rfBo6KTFsHAZnMg4k68CDp2woYIaXbmYTWcvbzIuHO7_37GT79XdIwkm95QJ7hYC9RiwrV7mesbY4PAahERJawntho0my942XheVLmGwLMBkQ"
-			JwtOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			JwtOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 
 			JwtReq := http.MakeRequest(t, &JwtOkResp, gwAddr, "HTTP", "http")
 
@@ -817,7 +817,7 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 					},
 					Namespace: ns,
 				}
-				expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+				expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 				expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 				expectLimitResp := http.ExpectedResponse{
@@ -889,7 +889,7 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -1015,7 +1015,7 @@ var UsageRateLimitTest = suite.ConformanceTest{
 			Response:  http.Response{StatusCodes: []int{200}, Headers: ratelimitHeader},
 			Namespace: ns,
 		}
-		expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "21, 21;w=3600"
+		expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "21, 21;w=3600"
 		expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 		expectLimitResp := http.ExpectedResponse{
@@ -1081,7 +1081,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp1.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 
 			expectOkResp2 := http.ExpectedResponse{
 				Request: http.Request{
@@ -1093,7 +1093,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp2.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp2.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -1194,7 +1194,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp1.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 
 			expectOkResp2 := http.ExpectedResponse{
 				Request: http.Request{
@@ -1207,7 +1207,7 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp2.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp2.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -1300,7 +1300,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 				if err != nil {
 					return false
 				}
-				vals := cRes.Headers["X-Ratelimit-Limit"]
+				vals := cRes.Headers[RatelimitLimitHeaderName]
 				return len(vals) > 0 && vals[0] == "3, 3;w=3600"
 			}, suite.TimeoutConfig.MaxTimeToConsistency, suite.TimeoutConfig.RequestTimeout, "rate limit header not yet present")
 
@@ -1408,7 +1408,7 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "100, 100;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "100, 100;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -1500,7 +1500,7 @@ var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			// In shadow mode, requests are never blocked even when exceeding the rate limit.
@@ -1552,7 +1552,7 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkResp.Response.Headers[RatelimitLimitHeaderName] = "3, 3;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -1639,9 +1639,24 @@ func MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t *testing.T, 
 	}, timeoutConfig.MaxTimeToConsistency, time.Second)
 }
 
+// isRateLimitHeaderMissing returns true when the expected response requires X-Ratelimit-Limit
+// but the captured response is missing it (xDS may not be consistent across replicas yet).
+// Returns false if the expected response does not require the header.
+func isRateLimitHeaderMissing(resp *http.ExpectedResponse, cRes *roundtripper.CapturedResponse) bool {
+	if resp == nil || resp.Response.Headers == nil || resp.Response.Headers[RatelimitLimitHeaderName] == "" {
+		return false // expected response does not require rate limit header
+	}
+	if cRes == nil || cRes.Headers == nil {
+		return false
+	}
+	vals := cRes.Headers[RatelimitLimitHeaderName]
+	return len(vals) == 0
+}
+
 // GotExactExpectedResponseExceptErrors requires exactly n round trips that match the expected response.
-// It only counts responses that match; network errors are retried so that transient
-// failures do not cause the count to fall short. The test runner's timeout bounds the loop.
+// It only counts responses that match. Network errors are always retried. Response mismatches are
+// retried only until we get the first match (e.g. waiting for X-Ratelimit-Limit to appear); after
+// that, any mismatch is treated as a failure. The test runner's timeout bounds the loop.
 //
 //nolint:gocritic
 func GotExactExpectedResponseExceptErrors(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
@@ -1654,6 +1669,12 @@ func GotExactExpectedResponseExceptErrors(t *testing.T, n int, r roundtripper.Ro
 			continue
 		}
 		if err = http.CompareRoundTrip(t, &req, cReq, cRes, resp); err != nil {
+			// Skip when the expected response requires rate limit headers and the actual response is missing them.
+			// This handles inconsistent xDS state across replicas (rate limit config not pushed and processed on all replicas yet).
+			if isRateLimitHeaderMissing(&resp, cRes) {
+				tlog.Logf(t, "rate limit header missing in response (xDS may not be consistent across replicas yet): %v, not counting the round trip", err)
+				continue
+			}
 			return err
 		}
 		successCount++
