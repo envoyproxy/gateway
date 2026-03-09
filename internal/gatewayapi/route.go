@@ -1313,8 +1313,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 // checkRouteOverlaps detects overlapping route matches across all IR listeners
 // and sets a warning Overlap condition on the affected HTTPRoutes.
-// This runs once after all routes are processed, checking each listener's routes
-// for duplicates from different HTTPRoute resources.
 // routeKey returns a "namespace/name" key for a route resource metadata.
 func routeKey(namespace, name string) string {
 	return namespace + "/" + name
@@ -1322,8 +1320,6 @@ func routeKey(namespace, name string) string {
 
 // checkRouteOverlaps detects overlapping route matches across all IR listeners
 // and sets a warning Overlap condition on the affected HTTPRoutes and GRPCRoutes.
-// This runs once after all routes are processed, rather than inside the per-route
-// processing loop where it would execute N times.
 func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
 	// Build a combined lookup from "namespace/name" to RouteContext and its ParentRefs.
 	type routeInfo struct {

@@ -287,8 +287,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, acceptedGateways, resources, xdsIR)
 
 	// Check for overlapping route matches across all listeners after all HTTP and
-	// GRPC routes have been processed. This runs once rather than inside the
-	// per-route processing loop where it would execute N times.
+	// GRPC routes have been processed.
 	t.checkRouteOverlaps(httpRoutes, grpcRoutes, xdsIR)
 
 	// Process all relevant TLSRoutes.
