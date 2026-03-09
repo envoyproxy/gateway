@@ -622,7 +622,6 @@ type BackendCluster struct {
 // backend will be configured.
 //
 // +kubebuilder:validation:XValidation:rule="!((has(self.connection) && has(self.connection.preconnect) && has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer) && has(self.loadBalancer.type) && self.loadBalancer.type in ['Random', 'RoundRobin']))",message="predictivePercent in preconnect policy only works with RoundRobin or Random load balancers"
-// +kubebuilder:validation:XValidation:rule="!(has(self.retry) && has(self.retryBudget))",message="cannot use retry and retryBudget both"
 type ClusterSettings struct {
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints. Defaults to `LeastRequest`.
@@ -633,9 +632,6 @@ type ClusterSettings struct {
 	// If not set, retry will be disabled.
 	// +optional
 	Retry *Retry `json:"retry,omitempty"`
-	// RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
-	// +optional
-	RetryBudget *RetryBudget `json:"retryBudget,omitempty"`
 
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional

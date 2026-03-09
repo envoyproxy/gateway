@@ -214,7 +214,6 @@ func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
 	args.loadBalancer = traffic.LoadBalancer
 	args.proxyProtocol = traffic.ProxyProtocol
 	args.circuitBreaker = traffic.CircuitBreaker
-	args.retryBudget = traffic.RetryBudget
 	args.healthCheck = traffic.HealthCheck
 	args.timeout = traffic.Timeout
 	args.tcpkeepalive = traffic.TCPKeepalive

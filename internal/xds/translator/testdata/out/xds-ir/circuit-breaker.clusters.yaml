@@ -6,6 +6,10 @@
       maxPendingRequests: 1
       maxRequests: 1
       maxRetries: 2
+      retryBudget:
+        budgetPercent:
+          value: 0.1
+        minRetryConcurrency: 1
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED

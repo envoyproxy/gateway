@@ -11,6 +11,10 @@ backendTrafficPolicies:
       maxParallelRetries: 24
       maxPendingRequests: 42
       maxRequestsPerConnection: 42
+      retryBudget:
+        minRetryConcurrency: 1
+        percent:
+          numerator: 10
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -426,6 +430,9 @@ xdsIR:
             maxParallelRetries: 24
             maxPendingRequests: 42
             maxRequestsPerConnection: 42
+            retryBudget:
+              budgetPercent: 0.1
+              minRetryConcurrency: 1
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

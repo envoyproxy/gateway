@@ -22640,6 +22640,43 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  retryBudget:
+                    description: RetryBudget provides settings for retry budget, which
+                      limits the number of retries in a given percentage.
+                    properties:
+                      minRetryConcurrency:
+                        description: |-
+                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                          For example, a budget of 20% with a minimum retry concurrency of 3
+                          will allow 5 active retries while there are 25 active requests.
+                          If there are 2 active requests, there are still 3 active retries
+                          allowed because of the minimum retry concurrency.
+                          Defaults to 3.
+                        format: int32
+                        type: integer
+                      percent:
+                        description: |-
+                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                          the sum of active requests and active pending requests.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                    required:
+                    - percent
+                    type: object
                 type: object
               compression:
                 description: |-
@@ -24862,43 +24899,6 @@ spec:
                         type: array
                     type: object
                 type: object
-              retryBudget:
-                description: RetryBudget provides settings for retry budget, which
-                  limits the number of retries in a given percentage.
-                properties:
-                  MinRetryConcurrency:
-                    description: |-
-                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                      For example, a budget of 20% with a minimum retry concurrency of 3
-                      will allow 5 active retries while there are 25 active requests.
-                      If there are 2 active requests, there are still 3 active retries
-                      allowed because of the minimum retry concurrency.
-                      Defaults to 3.
-                    format: int32
-                    type: integer
-                  percent:
-                    description: |-
-                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                      the sum of active requests and active pending requests.
-                    properties:
-                      denominator:
-                        default: 100
-                        format: int32
-                        minimum: 1
-                        type: integer
-                      numerator:
-                        format: int32
-                        minimum: 0
-                        type: integer
-                    required:
-                    - numerator
-                    type: object
-                    x-kubernetes-validations:
-                    - message: numerator must be less than or equal to denominator
-                      rule: self.numerator <= self.denominator
-                required:
-                - percent
-                type: object
               routingType:
                 description: |-
                   RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,
@@ -25321,8 +25321,6 @@ spec:
                 has(self.connection.preconnect.predictivePercent)) && !(has(self.loadBalancer)
                 && has(self.loadBalancer.type) && self.loadBalancer.type in [''Random'',
                 ''RoundRobin'']))'
-            - message: cannot use retry and retryBudget both
-              rule: '!(has(self.retry) && has(self.retryBudget))'
           status:
             description: status defines the current status of BackendTrafficPolicy.
             properties:
@@ -28029,6 +28027,45 @@ spec:
                                   minimum: 0
                                   type: integer
                               type: object
+                            retryBudget:
+                              description: RetryBudget provides settings for retry
+                                budget, which limits the number of retries in a given
+                                percentage.
+                              properties:
+                                minRetryConcurrency:
+                                  description: |-
+                                    MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                    For example, a budget of 20% with a minimum retry concurrency of 3
+                                    will allow 5 active retries while there are 25 active requests.
+                                    If there are 2 active requests, there are still 3 active retries
+                                    allowed because of the minimum retry concurrency.
+                                    Defaults to 3.
+                                  format: int32
+                                  type: integer
+                                percent:
+                                  description: |-
+                                    Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                    the sum of active requests and active pending requests.
+                                  properties:
+                                    denominator:
+                                      default: 100
+                                      format: int32
+                                      minimum: 1
+                                      type: integer
+                                    numerator:
+                                      format: int32
+                                      minimum: 0
+                                      type: integer
+                                  required:
+                                  - numerator
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: numerator must be less than or equal
+                                      to denominator
+                                    rule: self.numerator <= self.denominator
+                              required:
+                              - percent
+                              type: object
                           type: object
                         connection:
                           description: Connection includes backend connection settings.
@@ -28904,43 +28941,6 @@ spec:
                                   type: array
                               type: object
                           type: object
-                        retryBudget:
-                          description: RetryBudget provides settings for retry budget,
-                            which limits the number of retries in a given percentage.
-                          properties:
-                            MinRetryConcurrency:
-                              description: |-
-                                MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                For example, a budget of 20% with a minimum retry concurrency of 3
-                                will allow 5 active retries while there are 25 active requests.
-                                If there are 2 active requests, there are still 3 active retries
-                                allowed because of the minimum retry concurrency.
-                                Defaults to 3.
-                              format: int32
-                              type: integer
-                            percent:
-                              description: |-
-                                Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                the sum of active requests and active pending requests.
-                              properties:
-                                denominator:
-                                  default: 100
-                                  format: int32
-                                  minimum: 1
-                                  type: integer
-                                numerator:
-                                  format: int32
-                                  minimum: 0
-                                  type: integer
-                              required:
-                              - numerator
-                              type: object
-                              x-kubernetes-validations:
-                              - message: numerator must be less than or equal to denominator
-                                rule: self.numerator <= self.denominator
-                          required:
-                          - percent
-                          type: object
                         tcpKeepalive:
                           description: |-
                             TcpKeepalive settings associated with the upstream client connection.
@@ -29019,8 +29019,6 @@ spec:
                           && has(self.connection.preconnect.predictivePercent)) &&
                           !(has(self.loadBalancer) && has(self.loadBalancer.type)
                           && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                      - message: cannot use retry and retryBudget both
-                        rule: '!(has(self.retry) && has(self.retryBudget))'
                     failOpen:
                       default: false
                       description: |-
@@ -42120,6 +42118,46 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: RetryBudget provides
+                                                  settings for retry budget, which
+                                                  limits the number of retries in
+                                                  a given percentage.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -43070,45 +43108,6 @@ spec:
                                                     type: array
                                                 type: object
                                             type: object
-                                          retryBudget:
-                                            description: RetryBudget provides settings
-                                              for retry budget, which limits the number
-                                              of retries in a given percentage.
-                                            properties:
-                                              MinRetryConcurrency:
-                                                description: |-
-                                                  MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                                  For example, a budget of 20% with a minimum retry concurrency of 3
-                                                  will allow 5 active retries while there are 25 active requests.
-                                                  If there are 2 active requests, there are still 3 active retries
-                                                  allowed because of the minimum retry concurrency.
-                                                  Defaults to 3.
-                                                format: int32
-                                                type: integer
-                                              percent:
-                                                description: |-
-                                                  Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                                  the sum of active requests and active pending requests.
-                                                properties:
-                                                  denominator:
-                                                    default: 100
-                                                    format: int32
-                                                    minimum: 1
-                                                    type: integer
-                                                  numerator:
-                                                    format: int32
-                                                    minimum: 0
-                                                    type: integer
-                                                required:
-                                                - numerator
-                                                type: object
-                                                x-kubernetes-validations:
-                                                - message: numerator must be less
-                                                    than or equal to denominator
-                                                  rule: self.numerator <= self.denominator
-                                            required:
-                                            - percent
-                                            type: object
                                           tcpKeepalive:
                                             description: |-
                                               TcpKeepalive settings associated with the upstream client connection.
@@ -43194,9 +43193,6 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
-                                        - message: cannot use retry and retryBudget
-                                            both
-                                          rule: '!(has(self.retry) && has(self.retryBudget))'
                                       http:
                                         description: HTTP defines additional configuration
                                           specific to HTTP access logs.
@@ -43529,6 +43525,46 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: RetryBudget provides
+                                                  settings for retry budget, which
+                                                  limits the number of retries in
+                                                  a given percentage.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -44479,45 +44515,6 @@ spec:
                                                     type: array
                                                 type: object
                                             type: object
-                                          retryBudget:
-                                            description: RetryBudget provides settings
-                                              for retry budget, which limits the number
-                                              of retries in a given percentage.
-                                            properties:
-                                              MinRetryConcurrency:
-                                                description: |-
-                                                  MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                                  For example, a budget of 20% with a minimum retry concurrency of 3
-                                                  will allow 5 active retries while there are 25 active requests.
-                                                  If there are 2 active requests, there are still 3 active retries
-                                                  allowed because of the minimum retry concurrency.
-                                                  Defaults to 3.
-                                                format: int32
-                                                type: integer
-                                              percent:
-                                                description: |-
-                                                  Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                                  the sum of active requests and active pending requests.
-                                                properties:
-                                                  denominator:
-                                                    default: 100
-                                                    format: int32
-                                                    minimum: 1
-                                                    type: integer
-                                                  numerator:
-                                                    format: int32
-                                                    minimum: 0
-                                                    type: integer
-                                                required:
-                                                - numerator
-                                                type: object
-                                                x-kubernetes-validations:
-                                                - message: numerator must be less
-                                                    than or equal to denominator
-                                                  rule: self.numerator <= self.denominator
-                                            required:
-                                            - percent
-                                            type: object
                                           tcpKeepalive:
                                             description: |-
                                               TcpKeepalive settings associated with the upstream client connection.
@@ -44603,9 +44600,6 @@ spec:
                                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                             && self.loadBalancer.type in [''Random'',
                                             ''RoundRobin'']))'
-                                        - message: cannot use retry and retryBudget
-                                            both
-                                          rule: '!(has(self.retry) && has(self.retryBudget))'
                                       headers:
                                         description: |-
                                           Headers is a list of additional headers to send with OTLP export requests.
@@ -45118,6 +45112,45 @@ spec:
                                               maximum: 4294967295
                                               minimum: 0
                                               type: integer
+                                          type: object
+                                        retryBudget:
+                                          description: RetryBudget provides settings
+                                            for retry budget, which limits the number
+                                            of retries in a given percentage.
+                                          properties:
+                                            minRetryConcurrency:
+                                              description: |-
+                                                MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                For example, a budget of 20% with a minimum retry concurrency of 3
+                                                will allow 5 active retries while there are 25 active requests.
+                                                If there are 2 active requests, there are still 3 active retries
+                                                allowed because of the minimum retry concurrency.
+                                                Defaults to 3.
+                                              format: int32
+                                              type: integer
+                                            percent:
+                                              description: |-
+                                                Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                the sum of active requests and active pending requests.
+                                              properties:
+                                                denominator:
+                                                  default: 100
+                                                  format: int32
+                                                  minimum: 1
+                                                  type: integer
+                                                numerator:
+                                                  format: int32
+                                                  minimum: 0
+                                                  type: integer
+                                              required:
+                                              - numerator
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: numerator must be less than
+                                                  or equal to denominator
+                                                rule: self.numerator <= self.denominator
+                                          required:
+                                          - percent
                                           type: object
                                       type: object
                                     connection:
@@ -46032,45 +46065,6 @@ spec:
                                               type: array
                                           type: object
                                       type: object
-                                    retryBudget:
-                                      description: RetryBudget provides settings for
-                                        retry budget, which limits the number of retries
-                                        in a given percentage.
-                                      properties:
-                                        MinRetryConcurrency:
-                                          description: |-
-                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                            For example, a budget of 20% with a minimum retry concurrency of 3
-                                            will allow 5 active retries while there are 25 active requests.
-                                            If there are 2 active requests, there are still 3 active retries
-                                            allowed because of the minimum retry concurrency.
-                                            Defaults to 3.
-                                          format: int32
-                                          type: integer
-                                        percent:
-                                          description: |-
-                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                            the sum of active requests and active pending requests.
-                                          properties:
-                                            denominator:
-                                              default: 100
-                                              format: int32
-                                              minimum: 1
-                                              type: integer
-                                            numerator:
-                                              format: int32
-                                              minimum: 0
-                                              type: integer
-                                          required:
-                                          - numerator
-                                          type: object
-                                          x-kubernetes-validations:
-                                          - message: numerator must be less than or
-                                              equal to denominator
-                                            rule: self.numerator <= self.denominator
-                                      required:
-                                      - percent
-                                      type: object
                                     tcpKeepalive:
                                       description: |-
                                         TcpKeepalive settings associated with the upstream client connection.
@@ -46151,8 +46145,6 @@ spec:
                                       && has(self.connection.preconnect.predictivePercent))
                                       && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                       && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                                  - message: cannot use retry and retryBudget both
-                                    rule: '!(has(self.retry) && has(self.retryBudget))'
                                 headers:
                                   description: |-
                                     Headers is a list of additional headers to send with OTLP export requests.
@@ -46603,6 +46595,45 @@ spec:
                                         maximum: 4294967295
                                         minimum: 0
                                         type: integer
+                                    type: object
+                                  retryBudget:
+                                    description: RetryBudget provides settings for
+                                      retry budget, which limits the number of retries
+                                      in a given percentage.
+                                    properties:
+                                      minRetryConcurrency:
+                                        description: |-
+                                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                          For example, a budget of 20% with a minimum retry concurrency of 3
+                                          will allow 5 active retries while there are 25 active requests.
+                                          If there are 2 active requests, there are still 3 active retries
+                                          allowed because of the minimum retry concurrency.
+                                          Defaults to 3.
+                                        format: int32
+                                        type: integer
+                                      percent:
+                                        description: |-
+                                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                          the sum of active requests and active pending requests.
+                                        properties:
+                                          denominator:
+                                            default: 100
+                                            format: int32
+                                            minimum: 1
+                                            type: integer
+                                          numerator:
+                                            format: int32
+                                            minimum: 0
+                                            type: integer
+                                        required:
+                                        - numerator
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: numerator must be less than or
+                                            equal to denominator
+                                          rule: self.numerator <= self.denominator
+                                    required:
+                                    - percent
                                     type: object
                                 type: object
                               connection:
@@ -47506,45 +47537,6 @@ spec:
                                         type: array
                                     type: object
                                 type: object
-                              retryBudget:
-                                description: RetryBudget provides settings for retry
-                                  budget, which limits the number of retries in a
-                                  given percentage.
-                                properties:
-                                  MinRetryConcurrency:
-                                    description: |-
-                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                      For example, a budget of 20% with a minimum retry concurrency of 3
-                                      will allow 5 active retries while there are 25 active requests.
-                                      If there are 2 active requests, there are still 3 active retries
-                                      allowed because of the minimum retry concurrency.
-                                      Defaults to 3.
-                                    format: int32
-                                    type: integer
-                                  percent:
-                                    description: |-
-                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                      the sum of active requests and active pending requests.
-                                    properties:
-                                      denominator:
-                                        default: 100
-                                        format: int32
-                                        minimum: 1
-                                        type: integer
-                                      numerator:
-                                        format: int32
-                                        minimum: 0
-                                        type: integer
-                                    required:
-                                    - numerator
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: numerator must be less than or equal
-                                        to denominator
-                                      rule: self.numerator <= self.denominator
-                                required:
-                                - percent
-                                type: object
                               tcpKeepalive:
                                 description: |-
                                   TcpKeepalive settings associated with the upstream client connection.
@@ -47624,8 +47616,6 @@ spec:
                                 && has(self.connection.preconnect.predictivePercent))
                                 && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                 && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                            - message: cannot use retry and retryBudget both
-                              rule: '!(has(self.retry) && has(self.retryBudget))'
                           host:
                             description: |-
                               Host define the provider service hostname.
@@ -49505,6 +49495,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: RetryBudget provides settings for retry
+                                  budget, which limits the number of retries in a
+                                  given percentage.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -50389,44 +50418,6 @@ spec:
                                     type: array
                                 type: object
                             type: object
-                          retryBudget:
-                            description: RetryBudget provides settings for retry budget,
-                              which limits the number of retries in a given percentage.
-                            properties:
-                              MinRetryConcurrency:
-                                description: |-
-                                  MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                  For example, a budget of 20% with a minimum retry concurrency of 3
-                                  will allow 5 active retries while there are 25 active requests.
-                                  If there are 2 active requests, there are still 3 active retries
-                                  allowed because of the minimum retry concurrency.
-                                  Defaults to 3.
-                                format: int32
-                                type: integer
-                              percent:
-                                description: |-
-                                  Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                  the sum of active requests and active pending requests.
-                                properties:
-                                  denominator:
-                                    default: 100
-                                    format: int32
-                                    minimum: 1
-                                    type: integer
-                                  numerator:
-                                    format: int32
-                                    minimum: 0
-                                    type: integer
-                                required:
-                                - numerator
-                                type: object
-                                x-kubernetes-validations:
-                                - message: numerator must be less than or equal to
-                                    denominator
-                                  rule: self.numerator <= self.denominator
-                            required:
-                            - percent
-                            type: object
                           tcpKeepalive:
                             description: |-
                               TcpKeepalive settings associated with the upstream client connection.
@@ -50505,8 +50496,6 @@ spec:
                             && has(self.connection.preconnect.predictivePercent))
                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                             && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                        - message: cannot use retry and retryBudget both
-                          rule: '!(has(self.retry) && has(self.retryBudget))'
                     type: object
                     x-kubernetes-validations:
                     - message: backendRef or backendRefs needs to be set
@@ -50791,6 +50780,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: RetryBudget provides settings for retry
+                                  budget, which limits the number of retries in a
+                                  given percentage.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -51675,44 +51703,6 @@ spec:
                                     type: array
                                 type: object
                             type: object
-                          retryBudget:
-                            description: RetryBudget provides settings for retry budget,
-                              which limits the number of retries in a given percentage.
-                            properties:
-                              MinRetryConcurrency:
-                                description: |-
-                                  MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                  For example, a budget of 20% with a minimum retry concurrency of 3
-                                  will allow 5 active retries while there are 25 active requests.
-                                  If there are 2 active requests, there are still 3 active retries
-                                  allowed because of the minimum retry concurrency.
-                                  Defaults to 3.
-                                format: int32
-                                type: integer
-                              percent:
-                                description: |-
-                                  Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                  the sum of active requests and active pending requests.
-                                properties:
-                                  denominator:
-                                    default: 100
-                                    format: int32
-                                    minimum: 1
-                                    type: integer
-                                  numerator:
-                                    format: int32
-                                    minimum: 0
-                                    type: integer
-                                required:
-                                - numerator
-                                type: object
-                                x-kubernetes-validations:
-                                - message: numerator must be less than or equal to
-                                    denominator
-                                  rule: self.numerator <= self.denominator
-                            required:
-                            - percent
-                            type: object
                           tcpKeepalive:
                             description: |-
                               TcpKeepalive settings associated with the upstream client connection.
@@ -51791,8 +51781,6 @@ spec:
                             && has(self.connection.preconnect.predictivePercent))
                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                             && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                        - message: cannot use retry and retryBudget both
-                          rule: '!(has(self.retry) && has(self.retryBudget))'
                       headersToBackend:
                         description: |-
                           HeadersToBackend are the authorization response headers that will be added
@@ -52318,6 +52306,45 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
+                                      type: object
+                                    retryBudget:
+                                      description: RetryBudget provides settings for
+                                        retry budget, which limits the number of retries
+                                        in a given percentage.
+                                      properties:
+                                        minRetryConcurrency:
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            For example, a budget of 20% with a minimum retry concurrency of 3
+                                            will allow 5 active retries while there are 25 active requests.
+                                            If there are 2 active requests, there are still 3 active retries
+                                            allowed because of the minimum retry concurrency.
+                                            Defaults to 3.
+                                          format: int32
+                                          type: integer
+                                        percent:
+                                          description: |-
+                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                            the sum of active requests and active pending requests.
+                                          properties:
+                                            denominator:
+                                              default: 100
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            numerator:
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                          required:
+                                          - numerator
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: numerator must be less than or
+                                              equal to denominator
+                                            rule: self.numerator <= self.denominator
+                                      required:
+                                      - percent
                                       type: object
                                   type: object
                                 connection:
@@ -53222,45 +53249,6 @@ spec:
                                           type: array
                                       type: object
                                   type: object
-                                retryBudget:
-                                  description: RetryBudget provides settings for retry
-                                    budget, which limits the number of retries in
-                                    a given percentage.
-                                  properties:
-                                    MinRetryConcurrency:
-                                      description: |-
-                                        MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                        For example, a budget of 20% with a minimum retry concurrency of 3
-                                        will allow 5 active retries while there are 25 active requests.
-                                        If there are 2 active requests, there are still 3 active retries
-                                        allowed because of the minimum retry concurrency.
-                                        Defaults to 3.
-                                      format: int32
-                                      type: integer
-                                    percent:
-                                      description: |-
-                                        Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                        the sum of active requests and active pending requests.
-                                      properties:
-                                        denominator:
-                                          default: 100
-                                          format: int32
-                                          minimum: 1
-                                          type: integer
-                                        numerator:
-                                          format: int32
-                                          minimum: 0
-                                          type: integer
-                                      required:
-                                      - numerator
-                                      type: object
-                                      x-kubernetes-validations:
-                                      - message: numerator must be less than or equal
-                                          to denominator
-                                        rule: self.numerator <= self.denominator
-                                  required:
-                                  - percent
-                                  type: object
                                 tcpKeepalive:
                                   description: |-
                                     TcpKeepalive settings associated with the upstream client connection.
@@ -53340,8 +53328,6 @@ spec:
                                   && has(self.connection.preconnect.predictivePercent))
                                   && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                                   && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                              - message: cannot use retry and retryBudget both
-                                rule: '!(has(self.retry) && has(self.retryBudget))'
                             cacheDuration:
                               default: 300s
                               description: |-
@@ -53896,6 +53882,45 @@ spec:
                                     maximum: 4294967295
                                     minimum: 0
                                     type: integer
+                                type: object
+                              retryBudget:
+                                description: RetryBudget provides settings for retry
+                                  budget, which limits the number of retries in a
+                                  given percentage.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
                                 type: object
                             type: object
                           connection:
@@ -54781,44 +54806,6 @@ spec:
                                     type: array
                                 type: object
                             type: object
-                          retryBudget:
-                            description: RetryBudget provides settings for retry budget,
-                              which limits the number of retries in a given percentage.
-                            properties:
-                              MinRetryConcurrency:
-                                description: |-
-                                  MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-                                  For example, a budget of 20% with a minimum retry concurrency of 3
-                                  will allow 5 active retries while there are 25 active requests.
-                                  If there are 2 active requests, there are still 3 active retries
-                                  allowed because of the minimum retry concurrency.
-                                  Defaults to 3.
-                                format: int32
-                                type: integer
-                              percent:
-                                description: |-
-                                  Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-                                  the sum of active requests and active pending requests.
-                                properties:
-                                  denominator:
-                                    default: 100
-                                    format: int32
-                                    minimum: 1
-                                    type: integer
-                                  numerator:
-                                    format: int32
-                                    minimum: 0
-                                    type: integer
-                                required:
-                                - numerator
-                                type: object
-                                x-kubernetes-validations:
-                                - message: numerator must be less than or equal to
-                                    denominator
-                                  rule: self.numerator <= self.denominator
-                            required:
-                            - percent
-                            type: object
                           tcpKeepalive:
                             description: |-
                               TcpKeepalive settings associated with the upstream client connection.
@@ -54897,8 +54884,6 @@ spec:
                             && has(self.connection.preconnect.predictivePercent))
                             && !(has(self.loadBalancer) && has(self.loadBalancer.type)
                             && self.loadBalancer.type in [''Random'', ''RoundRobin'']))'
-                        - message: cannot use retry and retryBudget both
-                          rule: '!(has(self.retry) && has(self.retryBudget))'
                       endSessionEndpoint:
                         description: |-
                           The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).

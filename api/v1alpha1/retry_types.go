@@ -132,5 +132,5 @@ type RetryBudget struct {
 	// Defaults to 3.
 	//
 	// +optional
-	MinRetryConcurrency *uint32 `json:"MinRetryConcurrency,omitempty"`
+	MinRetryConcurrency *uint32 `json:"minRetryConcurrency,omitempty"`
 }

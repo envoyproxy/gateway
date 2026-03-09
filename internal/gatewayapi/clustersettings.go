@@ -79,8 +79,6 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		return nil, err
 	}
 
-	ret.RetryBudget = buildRetryBudget(policy.RetryBudget)
-
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
 	var empty ir.TrafficFeatures
@@ -242,59 +240,63 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	var cb *ir.CircuitBreaker
 	pcb := policy.CircuitBreaker
 
-	if pcb != nil {
-		cb = &ir.CircuitBreaker{}
+	if pcb == nil {
+		return nil, nil
+	}
 
-		if pcb.MaxConnections != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
-				cb.MaxConnections = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
-			}
-		}
+	cb = &ir.CircuitBreaker{}
 
-		if pcb.MaxParallelRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
-				cb.MaxParallelRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
-			}
-		}
-
-		if pcb.MaxPendingRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
-				cb.MaxPendingRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
-			}
-		}
-
-		if pcb.MaxParallelRetries != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
-				cb.MaxParallelRetries = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
-			}
-		}
-
-		if pcb.MaxRequestsPerConnection != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
-				cb.MaxRequestsPerConnection = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
-			}
-		}
-
-		if pcb.PerEndpoint != nil {
-			perEndpoint := &ir.PerEndpointCircuitBreakers{}
-			if pcb.PerEndpoint.MaxConnections != nil {
-				if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
-					perEndpoint.MaxConnections = &ui32
-				}
-			}
-			cb.PerEndpoint = perEndpoint
+	if pcb.MaxConnections != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+			cb.MaxConnections = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
 		}
 	}
+
+	if pcb.MaxParallelRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+			cb.MaxParallelRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
+		}
+	}
+
+	if pcb.MaxPendingRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+			cb.MaxPendingRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
+		}
+	}
+
+	if pcb.MaxParallelRetries != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+			cb.MaxParallelRetries = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
+		}
+	}
+
+	if pcb.MaxRequestsPerConnection != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+			cb.MaxRequestsPerConnection = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
+		}
+	}
+
+	if pcb.PerEndpoint != nil {
+		perEndpoint := &ir.PerEndpointCircuitBreakers{}
+		if pcb.PerEndpoint.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+				perEndpoint.MaxConnections = &ui32
+			}
+		}
+		cb.PerEndpoint = perEndpoint
+	}
+
+	cb.RetryBudget = buildRetryBudget(policy.CircuitBreaker.RetryBudget)
 
 	return cb, nil
 }

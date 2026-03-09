@@ -51,6 +51,10 @@ type CircuitBreaker struct {
 	//
 	// +optional
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+
+	// RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+	// +optional
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint for an upstream cluster

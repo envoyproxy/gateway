@@ -19,6 +19,9 @@ http:
         maxRequestsPerConnection: 10
         perEndpoint:
           maxConnections: 1
+        retryBudget:
+          budgetPercent: 0.1
+          minRetryConcurrency: 1
     destination:
       name: "first-route-dest"
       settings:

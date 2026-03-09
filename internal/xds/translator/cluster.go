@@ -66,7 +66,6 @@ type xdsClusterArgs struct {
 	loadBalancer      *ir.LoadBalancer
 	proxyProtocol     *ir.ProxyProtocol
 	circuitBreaker    *ir.CircuitBreaker
-	retryBudget       *ir.RetryBudget
 	healthCheck       *ir.HealthCheck
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
@@ -457,7 +456,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker, args.retryBudget)
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -712,7 +711,7 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 	return &hcp
 }
 
-func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, rb *ir.RetryBudget) *clusterv3.CircuitBreakers {
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
 	// Always allow the same amount of retries as regular requests to handle surges in retries
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
@@ -720,7 +719,9 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, rb *ir.Ret
 		MaxRetries: &wrapperspb.UInt32Value{
 			Value: uint32(1024),
 		},
-		RetryBudget: buildCircuitBreakerRetryBudget(rb),
+	}
+	if circuitBreaker != nil {
+		cbt.RetryBudget = buildCircuitBreakerRetryBudget(circuitBreaker.RetryBudget)
 	}
 
 	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
@@ -1367,7 +1368,6 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
-		retryBudget:       route.RetryBudget,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
 		timeout:           route.Timeout,
