@@ -1004,7 +1004,8 @@ type TrafficFeatures struct {
 	// TcpKeepalive settings associated with the upstream client connection.
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Retry settings
-	Retry *Retry `json:"retry,omitempty" yaml:"retry,omitempty"`
+	Retry       *Retry       `json:"retry,omitempty" yaml:"retry,omitempty"`
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 	// settings of upstream connection
 	BackendConnection *BackendConnection `json:"backendConnection,omitempty" yaml:"backendConnection,omitempty"`
 	// HTTP2 provides HTTP/2 configuration for clusters
@@ -2221,6 +2222,7 @@ type TCPRoute struct {
 	Timeout *Timeout `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// Retry settings
 	CircuitBreaker *CircuitBreaker `json:"circuitBreaker,omitempty" yaml:"circuitBreaker,omitempty"`
+	RetryBudget    *RetryBudget    `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 	// HealthCheck defines the configuration for health checking on the upstream.
 	HealthCheck *HealthCheck `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// Proxy Protocol Settings
@@ -3197,6 +3199,15 @@ type Retry struct {
 
 	// PerRetry is the retry policy to be applied per retry attempt.
 	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+// RetryBudget defines the retry budget configuration.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// Percent is the percentage of requests that can be retried within a given time window.
+	Percent float64 `json:"budgetPercent"`
+	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
+	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }
 
 type TriggerEnum egv1a1.TriggerEnum

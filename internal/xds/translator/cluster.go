@@ -66,6 +66,7 @@ type xdsClusterArgs struct {
 	loadBalancer      *ir.LoadBalancer
 	proxyProtocol     *ir.ProxyProtocol
 	circuitBreaker    *ir.CircuitBreaker
+	retryBudget       *ir.RetryBudget
 	healthCheck       *ir.HealthCheck
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
@@ -456,7 +457,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
 
-	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker)
+	cluster.CircuitBreakers = buildXdsClusterCircuitBreaker(args.circuitBreaker, args.retryBudget)
 
 	if args.tcpkeepalive != nil {
 		cluster.UpstreamConnectionOptions = buildXdsClusterUpstreamOptions(args.tcpkeepalive)
@@ -711,7 +712,7 @@ func buildHealthCheckPayload(irLoad *ir.HealthCheckPayload) *corev3.HealthCheck_
 	return &hcp
 }
 
-func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3.CircuitBreakers {
+func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker, rb *ir.RetryBudget) *clusterv3.CircuitBreakers {
 	// Always allow the same amount of retries as regular requests to handle surges in retries
 	// related to pod restarts
 	cbt := &clusterv3.CircuitBreakers_Thresholds{
@@ -719,7 +720,9 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 		MaxRetries: &wrapperspb.UInt32Value{
 			Value: uint32(1024),
 		},
+		RetryBudget: buildCircuitBreakerRetryBudget(rb),
 	}
+
 	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
 
 	if circuitBreaker != nil {
@@ -766,6 +769,22 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	}
 
 	return ecb
+}
+
+func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreakers_Thresholds_RetryBudget {
+	if rb == nil {
+		return nil
+	}
+
+	trb := &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
+		BudgetPercent: &xdstype.Percent{
+			Value: rb.Percent,
+		},
+	}
+	if rb.MinRetryConcurrency != 3 {
+		trb.MinRetryConcurrency = wrapperspb.UInt32(rb.MinRetryConcurrency)
+	}
+	return trb
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
@@ -1348,6 +1367,7 @@ func (route *TCPRouteTranslator) asClusterArgs(name string,
 		loadBalancer:      route.LoadBalancer,
 		proxyProtocol:     route.ProxyProtocol,
 		circuitBreaker:    route.CircuitBreaker,
+		retryBudget:       route.RetryBudget,
 		tcpkeepalive:      route.TCPKeepalive,
 		healthCheck:       route.HealthCheck,
 		timeout:           route.Timeout,
@@ -1387,17 +1407,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	// Populate traffic features.
-	bt := httpRoute.Traffic
-	if bt != nil {
-		clusterArgs.loadBalancer = bt.LoadBalancer
-		clusterArgs.proxyProtocol = bt.ProxyProtocol
-		clusterArgs.circuitBreaker = bt.CircuitBreaker
-		clusterArgs.healthCheck = bt.HealthCheck
-		clusterArgs.timeout = bt.Timeout
-		clusterArgs.tcpkeepalive = bt.TCPKeepalive
-		clusterArgs.backendConnection = bt.BackendConnection
-		clusterArgs.dns = bt.DNS
-	}
+	applyTraffic(clusterArgs, httpRoute.Traffic)
 
 	return clusterArgs
 }

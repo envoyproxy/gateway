@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
@@ -77,6 +78,8 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	if ret.Retry, err = buildRetry(policy.Retry); err != nil {
 		return nil, err
 	}
+
+	ret.RetryBudget = buildRetryBudget(policy.RetryBudget)
 
 	// If nothing was set in any of the above calls, return nil instead of an empty
 	// container
@@ -731,4 +734,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	}
 
 	return rt, nil
+}
+
+func buildRetryBudget(r *egv1a1.RetryBudget) *ir.RetryBudget {
+	if r == nil {
+		return nil
+	}
+
+	rb := &ir.RetryBudget{
+		Percent:             fractionalpercent.ToPercent(&r.Percent),
+		MinRetryConcurrency: ptr.Deref(r.MinRetryConcurrency, 3),
+	}
+	return rb
 }

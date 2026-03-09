@@ -1019,6 +1019,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		to          *ir.Timeout
 		ka          *ir.TCPKeepalive
 		rt          *ir.Retry
+		retryBudget *ir.RetryBudget
 		bc          *ir.BackendConnection
 		ds          *ir.DNS
 		h2          *ir.HTTP2Settings
@@ -1057,6 +1058,8 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		err = perr.WithMessage(err, "Retry")
 		errs = errors.Join(errs, err)
 	}
+
+	retryBudget = buildRetryBudget(policy.Spec.RetryBudget)
 
 	if to, err = buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err != nil {
 		err = perr.WithMessage(err, "Timeout")
@@ -1102,6 +1105,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 		FaultInjection:    fi,
 		TCPKeepalive:      ka,
 		Retry:             rt,
+		RetryBudget:       retryBudget,
 		BackendConnection: bc,
 		HTTP2:             h2,
 		DNS:               ds,

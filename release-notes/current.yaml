@@ -32,6 +32,7 @@ new features: |
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
   Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
+  Added support for retry budget in BackendTrafficPolicy.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

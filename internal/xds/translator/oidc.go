@@ -502,18 +502,8 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	}
 
 	// Apply traffic features if they exist.
-	if oidc.Provider.Traffic != nil {
-		clusterArgs.loadBalancer = oidc.Provider.Traffic.LoadBalancer
-		clusterArgs.proxyProtocol = oidc.Provider.Traffic.ProxyProtocol
-		clusterArgs.circuitBreaker = oidc.Provider.Traffic.CircuitBreaker
-		clusterArgs.healthCheck = oidc.Provider.Traffic.HealthCheck
-		clusterArgs.timeout = oidc.Provider.Traffic.Timeout
-		clusterArgs.tcpkeepalive = oidc.Provider.Traffic.TCPKeepalive
-		clusterArgs.backendConnection = oidc.Provider.Traffic.BackendConnection
-		clusterArgs.dns = oidc.Provider.Traffic.DNS
-		clusterArgs.http2Settings = oidc.Provider.Traffic.HTTP2
-	}
-
+	applyTraffic(clusterArgs, oidc.Provider.Traffic)
+	
 	return addXdsCluster(tCtx, clusterArgs)
 }
 
