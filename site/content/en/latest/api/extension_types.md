@@ -532,6 +532,7 @@ _Appears in:_
 | `targetSelectors` | _[TargetSelector](#targetselector) array_ |  true  |  | TargetSelectors allow targeting resources for this policy based on labels |
 | `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  |  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints. Defaults to `LeastRequest`. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
+| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage. |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  |  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  |  | HealthCheck allows gateway to perform active health checking on backends. |
@@ -874,6 +875,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `loadBalancer` | _[LoadBalancer](#loadbalancer)_ |  false  |  | LoadBalancer policy to apply when routing traffic from the gateway to<br />the backend endpoints. Defaults to `LeastRequest`. |
 | `retry` | _[Retry](#retry)_ |  false  |  | Retry provides more advanced usage, allowing users to customize the number of retries, retry fallback strategy, and retry triggering conditions.<br />If not set, retry will be disabled. |
+| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage. |
 | `proxyProtocol` | _[ProxyProtocol](#proxyprotocol)_ |  false  |  | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 | `tcpKeepalive` | _[TCPKeepalive](#tcpkeepalive)_ |  false  |  | TcpKeepalive settings associated with the upstream client connection.<br />Disabled by default. |
 | `healthCheck` | _[HealthCheck](#healthcheck)_ |  false  |  | HealthCheck allows gateway to perform active health checking on backends. |
@@ -5190,6 +5192,23 @@ _Appears in:_
 | `numAttemptsPerPriority` | _integer_ |  false  |  | NumAttemptsPerPriority defines the number of requests (initial attempt + retries)<br />that should be sent to the same priority before switching to a different one.<br />If not specified or set to 0, all requests are sent to the highest priority that is healthy. |
 | `retryOn` | _[RetryOn](#retryon)_ |  false  |  | RetryOn specifies the retry trigger condition.<br />If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
 | `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  |  | PerRetry is the retry policy to be applied per retry attempt. |
+
+
+#### RetryBudget
+
+
+
+RetryBudget specifies the details of the retry budget configuration, like
+the percentage of requests in the budget, and the min retry concurrency.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [ClusterSettings](#clustersettings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `percent` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  true  |  | Percent specifies the limit on concurrent retries as a percentage [0, 100] of<br />the sum of active requests and active pending requests. |
+| `MinRetryConcurrency` | _integer_ |  false  |  | MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.<br />For example, a budget of 20% with a minimum retry concurrency of 3<br />will allow 5 active retries while there are 25 active requests.<br />If there are 2 active requests, there are still 3 active retries<br />allowed because of the minimum retry concurrency.<br />Defaults to 3. |
 
 
 #### RetryOn
