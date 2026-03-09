@@ -1181,6 +1181,24 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "client ip geo locations principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
+									{Country: ptr.To("US")},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "mixed allow and deny ok",
 			spec: egv1a1.SecurityPolicySpec{
 				Authorization: &egv1a1.Authorization{
@@ -1210,6 +1228,189 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
+	newAuthorization := func(location egv1a1.ClientIPGeoLocation) *ir.Authorization {
+		return &ir.Authorization{
+			Rules: []*ir.AuthorizationRule{
+				{
+					Principal: ir.Principal{
+						ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{location},
+					},
+				},
+			},
+		}
+	}
+
+	newEnvoyProxy := func(maxMind *egv1a1.GeoIPMaxMind) *egv1a1.EnvoyProxy {
+		if maxMind == nil {
+			return &egv1a1.EnvoyProxy{}
+		}
+
+		return &egv1a1.EnvoyProxy{
+			Spec: egv1a1.EnvoyProxySpec{
+				GeoIP: &egv1a1.EnvoyProxyGeoIP{
+					Provider: egv1a1.GeoIPProvider{
+						Type:    egv1a1.GeoIPProviderTypeMaxMind,
+						MaxMind: maxMind,
+					},
+				},
+			},
+		}
+	}
+
+	cityDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/city.mmdb"}}
+	countryDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/country.mmdb"}}
+	asnDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/asn.mmdb"}}
+	ispDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/isp.mmdb"}}
+	anonymousDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/anonymous.mmdb"}}
+	trueValue := true
+	customHeaderDetection := &ir.ClientIPDetectionSettings{
+		CustomHeader: &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+	}
+
+	tests := []struct {
+		name              string
+		authorization     *ir.Authorization
+		envoyProxy        *egv1a1.EnvoyProxy
+		clientIPDetection *ir.ClientIPDetectionSettings
+		wantProvider      bool
+		wantErr           string
+	}{
+		{
+			name:          "country allowed with country database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:              "missing provider rejected",
+			authorization:     newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy:        &egv1a1.EnvoyProxy{},
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "requires EnvoyProxy.spec.geoIP.provider to be configured",
+		},
+		{
+			name:          "missing client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "trusted cidrs rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				XForwardedFor: &egv1a1.XForwardedForSettings{
+					TrustedCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+			},
+			wantErr: "does not support ClientIPDetection.XForwardedFor.TrustedCIDRs",
+		},
+		{
+			name:          "region requires city database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Region: ptr.To("CA")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.region requires EnvoyProxy.spec.geoIP.provider.maxMind.cityDbSource",
+		},
+		{
+			name:          "asn requires asn database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.asn requires EnvoyProxy.spec.geoIP.provider.maxMind.asnDbSource",
+		},
+		{
+			name:          "isp requires isp database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.isp requires EnvoyProxy.spec.geoIP.provider.maxMind.ispDbSource",
+		},
+		{
+			name: "anonymous requires anonymous database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{
+				Anonymous: &egv1a1.GeoIPAnonymousMatch{IsProxy: &trueValue},
+			}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.anonymous requires EnvoyProxy.spec.geoIP.provider.maxMind.anonymousIpDbSource",
+		},
+		{
+			name: "anonymous accepted with anonymous database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{
+				Anonymous: &egv1a1.GeoIPAnonymousMatch{IsProxy: &trueValue},
+			}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				AnonymousIPDBSource: anonymousDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "country accepted with city database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "asn accepted with asn database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				ASNDBSource: asnDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "isp accepted with isp database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				ISPDBSource: ispDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			provider, err := validateAuthorizationGeoIP(tc.authorization, tc.envoyProxy, tc.clientIPDetection)
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.wantErr)
+				require.Nil(t, provider)
+				return
+			}
+
+			require.NoError(t, err)
+			if tc.wantProvider {
+				require.NotNil(t, provider)
+			} else {
+				require.Nil(t, provider)
 			}
 		})
 	}
