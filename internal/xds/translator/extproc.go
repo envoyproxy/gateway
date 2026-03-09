@@ -215,13 +215,46 @@ func (*extProc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HT
 	for i := range irRoute.EnvoyExtensions.ExtProcs {
 		ep := &irRoute.EnvoyExtensions.ExtProcs[i]
 		filterName := extProcFilterName(ep)
-		if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
-			Config: &anypb.Any{},
-		}); err != nil {
+		filterConfig, err := buildExtProcPerRouteFilterConfig(ep)
+		if err != nil {
+			return err
+		}
+		if err := enableFilterOnRoute(route, filterName, filterConfig); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// buildExtProcPerRouteFilterConfig builds a per-route FilterConfig for ext_proc.
+// When grpcInitialMetadata entries are configured, it emits a fully typed ExtProcPerRoute
+// with overrides.grpc_initial_metadata so the external processor can identify the route rule.
+// Otherwise it falls back to an empty FilterConfig (enable-only, no overrides).
+func buildExtProcPerRouteFilterConfig(ep *ir.ExtProc) (*routev3.FilterConfig, error) {
+	if len(ep.GRPCInitialMetadata) == 0 {
+		return &routev3.FilterConfig{Config: &anypb.Any{}}, nil
+	}
+
+	initialMetadata := make([]*corev3.HeaderValue, 0, len(ep.GRPCInitialMetadata))
+	for _, m := range ep.GRPCInitialMetadata {
+		initialMetadata = append(initialMetadata, &corev3.HeaderValue{
+			Key:   m.Name,
+			Value: m.Value,
+		})
+	}
+
+	perRoute := &extprocv3.ExtProcPerRoute{
+		Override: &extprocv3.ExtProcPerRoute_Overrides{
+			Overrides: &extprocv3.ExtProcOverrides{
+				GrpcInitialMetadata: initialMetadata,
+			},
+		},
+	}
+	perRouteAny, err := anypb.New(perRoute)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal ExtProcPerRoute: %w", err)
+	}
+	return &routev3.FilterConfig{Config: perRouteAny}, nil
 }
 
 func buildProcessingMode(extProc *ir.ExtProc) *extprocv3.ProcessingMode {

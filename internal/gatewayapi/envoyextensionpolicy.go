@@ -892,6 +892,13 @@ func (t *Translator) buildExtProc(
 		}
 	}
 
+	for _, entry := range extProc.GRPCInitialMetadata {
+		extProcIR.GRPCInitialMetadata = append(extProcIR.GRPCInitialMetadata, ir.ExtProcGRPCInitialMetadata{
+			Name:  entry.Name,
+			Value: entry.Value,
+		})
+	}
+
 	return extProcIR, err
 }
 

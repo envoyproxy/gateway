@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -192,6 +193,12 @@ func loadCA(caPath string) (*x509.CertPool, error) {
 
 func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_ProcessServer) error {
 	ctx := srv.Context()
+
+	// Read gRPC initial metadata sent by Envoy via ExtProcPerRoute.overrides.grpc_initial_metadata
+	initialMD, _ := metadata.FromIncomingContext(ctx)
+	routeHandler := strings.Join(initialMD["x-route-handler"], ",")
+	routeRule := strings.Join(initialMD["x-route-rule"], ",")
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -249,6 +256,18 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-request-xds-route-name",
 									RawValue: []byte(xdsRouteName),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-request-grpc-route-handler",
+									RawValue: []byte(routeHandler),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-request-grpc-route-rule",
+									RawValue: []byte(routeRule),
 								},
 							},
 						},
@@ -325,6 +344,18 @@ func (s *extProcServer) Process(srv envoy_service_proc_v3.ExternalProcessor_Proc
 								Header: &envoy_api_v3_core.HeaderValue{
 									Key:      "x-response-rbac-result-metadata",
 									RawValue: []byte(forwardedDynamicMetadata),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-response-grpc-route-handler",
+									RawValue: []byte(routeHandler),
+								},
+							},
+							{
+								Header: &envoy_api_v3_core.HeaderValue{
+									Key:      "x-response-grpc-route-rule",
+									RawValue: []byte(routeRule),
 								},
 							},
 						},
