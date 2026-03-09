@@ -30,6 +30,7 @@ new features: |
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
   Added support for configuring statusOnError in ExtAuth settings
+  Added support for GeoIP-based authorization on HTTPRoute and GRPCRoute via `SecurityPolicy.spec.authorization.rules[*].principal.clientIPGeoLocations`, backed by shared GeoIP provider settings in `EnvoyProxy.spec.geoIP`.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

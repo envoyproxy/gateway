@@ -312,6 +312,8 @@ type HTTPListener struct {
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
+	// GeoIPProvider holds the shared GeoIP provider configuration used by request-time GeoIP filters.
+	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
@@ -1530,6 +1532,43 @@ type Authorization struct {
 	DefaultAction egv1a1.AuthorizationAction `json:"defaultAction"`
 }
 
+func (a *Authorization) UsesClientIPGeoLocations() bool {
+	if a == nil {
+		return false
+	}
+
+	for _, rule := range a.Rules {
+		if rule != nil && len(rule.Principal.ClientIPGeoLocations) > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *Authorization) GeoIPRequirements() (country, region, city, asn, isp, anonymous bool) {
+	if a == nil {
+		return false, false, false, false, false, false
+	}
+
+	for _, rule := range a.Rules {
+		if rule == nil {
+			continue
+		}
+
+		for _, geo := range rule.Principal.ClientIPGeoLocations {
+			country = country || geo.Country != nil
+			region = region || geo.Region != nil
+			city = city || geo.City != nil
+			asn = asn || geo.ASN != nil
+			isp = isp || geo.ISP != nil
+			anonymous = anonymous || geo.Anonymous != nil
+		}
+	}
+
+	return country, region, city, asn, isp, anonymous
+}
+
 // AuthorizationRule defines the schema for the authorization rule.
 //
 // +k8s:deepcopy-gen=true
@@ -1558,6 +1597,8 @@ type Principal struct {
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
 	// Headers defines the headers to be matched.
 	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
+	// ClientIPGeoLocations defines the geolocation metadata to be matched.
+	ClientIPGeoLocations []egv1a1.ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -2398,6 +2439,23 @@ type GlobalResources struct {
 	// HMACSecret holds the HMAC Secret used by the OIDC.
 	// TODO: zhaohuabing move HMACSecret here
 	// HMACSecret PrivateBytes
+}
+
+// GeoIPProvider holds the shared GeoIP provider configuration used by request-time GeoIP filters.
+// +k8s:deepcopy-gen=true
+type GeoIPProvider struct {
+	// MaxMind holds MaxMind-specific provider settings.
+	MaxMind *GeoIPMaxMindProvider `json:"maxMind,omitempty" yaml:"maxMind,omitempty"`
+}
+
+// GeoIPMaxMindProvider holds MaxMind database file paths.
+// +k8s:deepcopy-gen=true
+type GeoIPMaxMindProvider struct {
+	CityDBPath        *string `json:"cityDbPath,omitempty" yaml:"cityDbPath,omitempty"`
+	CountryDBPath     *string `json:"countryDbPath,omitempty" yaml:"countryDbPath,omitempty"`
+	ASNDBPath         *string `json:"asnDbPath,omitempty" yaml:"asnDbPath,omitempty"`
+	ISPDBPath         *string `json:"ispDbPath,omitempty" yaml:"ispDbPath,omitempty"`
+	AnonymousIPDBPath *string `json:"anonymousIpDbPath,omitempty" yaml:"anonymousIpDbPath,omitempty"`
 }
 
 // LocalRateLimit holds the local rate limiting configuration.
