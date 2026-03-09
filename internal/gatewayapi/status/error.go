@@ -31,8 +31,9 @@ const (
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
 	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
 
-	// Route overlap reason
-	RouteReasonOverlap gwapiv1.RouteConditionReason = "Overlap"
+	// Route overlap reason and condition type
+	RouteReasonOverlap      gwapiv1.RouteConditionReason = "Overlap"
+	RouteConditionOverlap   gwapiv1.RouteConditionType   = "Overlap"
 
 	// Network configuration related condition types
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"

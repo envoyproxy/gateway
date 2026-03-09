@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -179,7 +180,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Resolved all the Object references for the Route",
 			)
 		}
-		hasHostnameIntersection, hasOverlap := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
@@ -189,18 +190,6 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
-			)
-		}
-
-		if hasOverlap {
-			routeStatus := GetRouteStatus(httpRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				httpRoute.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				status.RouteReasonOverlap,
-				"Overlapping match conditions with another HTTPRoute on the same listener and hostname",
 			)
 		}
 
@@ -920,7 +909,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
-		hasHostnameIntersection, hasOverlap := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		hasHostnameIntersection := t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
@@ -930,18 +919,6 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
 				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
-			)
-		}
-
-		if hasOverlap {
-			routeStatus := GetRouteStatus(grpcRoute)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				grpcRoute.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				status.RouteReasonOverlap,
-				"Overlapping match conditions with another GRPCRoute on the same listener and hostname",
 			)
 		}
 
@@ -1269,10 +1246,9 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	}
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) (bool, bool) {
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
 	// need to check hostname intersection if there are listeners
 	hasHostnameIntersection := len(parentRef.listeners) == 0
-	var hasOverlap bool
 
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
@@ -1328,31 +1304,130 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				irListener.GRPC.EnableGRPCStats = ptr.To(true)
 			}
 
-			// Check for overlapping route matches before adding new routes.
-			// Two routes overlap when they are from different route resources
-			// but have identical match conditions on the same hostname.
-			routePrefix := irRoutePrefix(route)
-			for _, newRoute := range perHostRoutes {
-				for _, existingRoute := range irListener.Routes {
-					if strings.HasPrefix(existingRoute.Name, routePrefix) {
-						// Same route resource, skip.
-						continue
-					}
-					if routeMatchesOverlap(existingRoute, newRoute) {
-						hasOverlap = true
-						break
-					}
-				}
-				if hasOverlap {
-					break
-				}
-			}
-
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 	}
 
-	return hasHostnameIntersection, hasOverlap
+	return hasHostnameIntersection
+}
+
+// checkRouteOverlaps detects overlapping route matches across all IR listeners
+// and sets a warning Overlap condition on the affected HTTPRoutes.
+// This runs once after all routes are processed, checking each listener's routes
+// for duplicates from different HTTPRoute resources.
+// routeKey returns a "namespace/name" key for a route resource metadata.
+func routeKey(namespace, name string) string {
+	return namespace + "/" + name
+}
+
+// checkRouteOverlaps detects overlapping route matches across all IR listeners
+// and sets a warning Overlap condition on the affected HTTPRoutes and GRPCRoutes.
+// This runs once after all routes are processed, rather than inside the per-route
+// processing loop where it would execute N times.
+func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
+	// Build a combined lookup from "namespace/name" to RouteContext and its ParentRefs.
+	type routeInfo struct {
+		route      RouteContext
+		parentRefs map[gwapiv1.ParentReference]*RouteParentContext
+	}
+	routeByKey := make(map[string]*routeInfo, len(httpRoutes)+len(grpcRoutes))
+	for _, hr := range httpRoutes {
+		routeByKey[routeKey(hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
+	}
+	for _, gr := range grpcRoutes {
+		routeByKey[routeKey(gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
+	}
+
+	// overlaps tracks per IR listener which routes overlap with which others.
+	// Key: IR listener name -> route key -> set of conflicting route keys.
+	type listenerOverlaps map[string]map[string]struct{}
+	overlaps := make(map[string]listenerOverlaps)
+
+	for _, xds := range xdsIR {
+		for _, httpListener := range xds.HTTP {
+			routes := httpListener.Routes
+			for i := 0; i < len(routes); i++ {
+				if routes[i].Metadata == nil {
+					continue
+				}
+				aKey := routeKey(routes[i].Metadata.Namespace, routes[i].Metadata.Name)
+				for j := i + 1; j < len(routes); j++ {
+					if routes[j].Metadata == nil {
+						continue
+					}
+					bKey := routeKey(routes[j].Metadata.Namespace, routes[j].Metadata.Name)
+					if aKey == bKey {
+						continue
+					}
+					if routeMatchesOverlap(routes[i], routes[j]) {
+						if overlaps[httpListener.Name] == nil {
+							overlaps[httpListener.Name] = make(listenerOverlaps)
+						}
+						lo := overlaps[httpListener.Name]
+						if lo[aKey] == nil {
+							lo[aKey] = make(map[string]struct{})
+						}
+						if lo[bKey] == nil {
+							lo[bKey] = make(map[string]struct{})
+						}
+						lo[aKey][bKey] = struct{}{}
+						lo[bKey][aKey] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	// Set the Overlap warning condition only on parentRefs whose listeners
+	// match an IR listener where the overlap was detected.
+	for rKey, info := range routeByKey {
+		// Collect all conflicts for this route across the parentRefs that have overlaps.
+		for _, parentRef := range info.parentRefs {
+			var conflicts map[string]struct{}
+			for _, listener := range parentRef.listeners {
+				irKey := t.getIRKey(listener.gateway.Gateway)
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				if irListener == nil {
+					continue
+				}
+				lo, ok := overlaps[irListener.Name]
+				if !ok {
+					continue
+				}
+				routeConflicts, ok := lo[rKey]
+				if !ok {
+					continue
+				}
+				if conflicts == nil {
+					conflicts = make(map[string]struct{})
+				}
+				for c := range routeConflicts {
+					conflicts[c] = struct{}{}
+				}
+			}
+			if len(conflicts) == 0 {
+				continue
+			}
+
+			conflictNames := make([]string, 0, len(conflicts))
+			for name := range conflicts {
+				conflictNames = append(conflictNames, name)
+			}
+			sort.Strings(conflictNames)
+
+			msg := fmt.Sprintf("Overlapping match conditions with route(s): %s", strings.Join(conflictNames, ", "))
+
+			routeStatus := GetRouteStatus(info.route)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				info.route.GetGeneration(),
+				status.RouteConditionOverlap,
+				metav1.ConditionTrue,
+				status.RouteReasonOverlap,
+				msg,
+			)
+		}
+	}
 }
 
 // routeMatchesOverlap checks if two IR HTTP routes have identical match conditions,
