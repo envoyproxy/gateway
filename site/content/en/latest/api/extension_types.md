@@ -2881,6 +2881,7 @@ _Appears in:_
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
 | `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | RequestTimeout is the time until which entire response is received from the upstream. |
 | `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time<br />from when the request is sent until the response stream is fully consumed and does not apply to<br />non-streaming requests.<br />When set to "0s", no max duration is applied and streams can run indefinitely. |
+| `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
 
 
 #### HTTPURLRewriteFilter

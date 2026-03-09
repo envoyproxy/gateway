@@ -53,6 +53,12 @@ type HTTPTimeout struct {
 	//
 	// +optional
 	MaxStreamDuration *gwapiv1.Duration `json:"maxStreamDuration,omitempty"`
+
+	//  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	//  Default: 5 minutes.
+	//
+	// +optional
+	StreamIdleTimeout *gwapiv1.Duration `json:"streamIdleTimeout,omitempty"`
 }
 
 type ClientTimeout struct {

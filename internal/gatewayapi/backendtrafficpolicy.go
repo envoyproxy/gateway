@@ -967,7 +967,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				r.Traffic = tf.DeepCopy()
 
-				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
+				if localTo, err := x(&policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
 
