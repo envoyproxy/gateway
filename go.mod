@@ -16,7 +16,7 @@ require (
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
 	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097
 	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989
-	github.com/envoyproxy/ratelimit v1.4.1-0.20230427142404-e2a87f41d3a7
+	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/fatih/color v1.18.0
@@ -191,7 +191,7 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/longhorn/go-iscsi-helper v0.0.0-20210330030558-49a327fb024e // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
-	github.com/lyft/gostats v0.4.1 // indirect
+	github.com/lyft/gostats v0.4.14 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
