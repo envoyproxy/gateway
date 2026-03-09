@@ -116,7 +116,7 @@ type WasmCodeSource struct {
 // When backOff is not specified, the default values are baseInterval: 1s, maxInterval: 10s.
 type WasmCodeFetchRetryPolicy struct {
 	// NumRetries is the number of retries to attempt when fetching the Wasm code.
-        // If not specified, defaults to 5.
+	// If not specified, defaults to 5.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
