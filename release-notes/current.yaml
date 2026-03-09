@@ -35,6 +35,7 @@ new features: |
   Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
   Added support for retry budget in BackendTrafficPolicy.
+  Added support for multiple ExtensionManagers with sequential chaining via a new `extensionManagers` field in `EnvoyGateway` configuration.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
