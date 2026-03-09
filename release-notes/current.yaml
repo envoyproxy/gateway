@@ -40,6 +40,7 @@ bug fixes: |
   Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
   Fixed xPolicy resources being processed from all namespaces when NamespaceSelector watch mode is configured in the Kubernetes provider.
   Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
+  Fixed missing CEL validation for BackOffPolicy where a baseInterval could be provided that's greater than maxInterval.
 
 # Enhancements that improve performance.
 performance improvements: |
