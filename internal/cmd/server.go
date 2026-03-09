@@ -297,10 +297,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	}
 
 	if extMgr != nil {
-		// Close connections to extension services
-		if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
-			mgr.CleanupHookConns()
-		}
+		extMgr.CleanupHookConns()
 	}
 
 	return nil
