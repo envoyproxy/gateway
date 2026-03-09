@@ -278,6 +278,7 @@ _Appears in:_
 
 _Appears in:_
 - [PerRetryPolicy](#perretrypolicy)
+- [WasmCodeFetchRetryPolicy](#wasmcodefetchretrypolicy)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -5923,34 +5924,20 @@ _Appears in:_
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
 
 
-#### WasmCodeFetchBackOffPolicy
-
-
-
-WasmCodeFetchBackOffPolicy defines the backoff policy for retrying Wasm code fetches.
-
-_Appears in:_
-- [WasmCodeFetchRetryPolicy](#wasmcodefetchretrypolicy)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `baseInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 1s | BaseInterval is the base interval between retries. |
-| `maxInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 10s | MaxInterval is the maximum interval between retries.<br />This parameter is optional, but must be greater than or equal to the baseInterval if set. |
-
-
 #### WasmCodeFetchRetryPolicy
 
 
 
 WasmCodeFetchRetryPolicy defines the retry policy for Envoy to use when fetching the Wasm code.
+When backOff is not specified, the default values are baseInterval: 1s, maxInterval: 10s.
 
 _Appears in:_
 - [WasmCodeSource](#wasmcodesource)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `numRetries` | _integer_ |  false  | 5 | NumRetries is the number of retries to attempt when fetching the Wasm code. |
-| `backOff` | _[WasmCodeFetchBackOffPolicy](#wasmcodefetchbackoffpolicy)_ |  false  |  | BackOff is the backoff policy to be applied between retry attempts. |
+| `numRetries` | _integer_ |  false  | 5 | NumRetries is the number of retries to attempt when fetching the Wasm code.<br />If not specified, defaults to 5. |
+| `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  |  | BackOff is the backoff policy to be applied between retry attempts.<br />If not specified, the default baseInterval is 1s and the default maxInterval is 10s. |
 
 
 #### WasmCodeSource

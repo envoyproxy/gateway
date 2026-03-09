@@ -80,6 +80,9 @@ http:
           sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0
         wasmName: wasm-filter-1
+        httpCodeFetchRetryPolicy:
+          numRetries: 3
+          baseInterval: 5s
       - config:
           parameter1: value1
           parameter2: value2

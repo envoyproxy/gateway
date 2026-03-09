@@ -2524,6 +2524,89 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{"either compression or compressor can be set, not both"},
 		},
+		{
+			desc: "valid backoff policy with maxInterval greater than baseInterval",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{
+							NumRetries: ptr.To[int32](3),
+							PerRetry: &egv1a1.PerRetryPolicy{
+								BackOff: &egv1a1.BackOffPolicy{
+									BaseInterval: ptr.To[gwapiv1.Duration]("1s"),
+									MaxInterval:  ptr.To[gwapiv1.Duration]("10s"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid backoff policy with maxInterval less than baseInterval",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{
+							NumRetries: ptr.To[int32](3),
+							PerRetry: &egv1a1.PerRetryPolicy{
+								BackOff: &egv1a1.BackOffPolicy{
+									BaseInterval: ptr.To[gwapiv1.Duration]("30s"),
+									MaxInterval:  ptr.To[gwapiv1.Duration]("10s"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"maxInterval must be greater than or equal to baseInterval"},
+		},
+		{
+			desc: "valid backoff policy with only baseInterval set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						Retry: &egv1a1.Retry{
+							NumRetries: ptr.To[int32](3),
+							PerRetry: &egv1a1.PerRetryPolicy{
+								BackOff: &egv1a1.BackOffPolicy{
+									BaseInterval: ptr.To[gwapiv1.Duration]("30s"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

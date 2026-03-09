@@ -24778,6 +24778,10 @@ spec:
                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                             type: string
                         type: object
+                        x-kubernetes-validations:
+                        - message: maxInterval must be greater than or equal to baseInterval
+                          rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                            || duration(self.maxInterval) >= duration(self.baseInterval)'
                       timeout:
                         description: Timeout is the timeout per retry attempt.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
@@ -28713,6 +28717,11 @@ spec:
                                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: maxInterval must be greater than or equal
+                                      to baseInterval
+                                    rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                      || duration(self.maxInterval) >= duration(self.baseInterval)'
                                 timeout:
                                   description: Timeout is the timeout per retry attempt.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
@@ -29219,27 +29228,32 @@ spec:
                             numRetries: 5, backOff baseInterval: 1s, backOff maxInterval: 10s.
                           properties:
                             backOff:
-                              description: BackOff is the backoff policy to be applied
-                                between retry attempts.
+                              description: |-
+                                BackOff is the backoff policy to be applied between retry attempts.
+                                If not specified, the default baseInterval is 1s and the default maxInterval is 10s.
                               properties:
                                 baseInterval:
-                                  default: 1s
                                   description: BaseInterval is the base interval between
                                     retries.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 maxInterval:
-                                  default: 10s
                                   description: |-
-                                    MaxInterval is the maximum interval between retries.
-                                    This parameter is optional, but must be greater than or equal to the baseInterval if set.
+                                    MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
+                                    The default is 10 times the base_interval
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
+                              x-kubernetes-validations:
+                              - message: maxInterval must be greater than or equal
+                                  to baseInterval
+                                rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                  || duration(self.maxInterval) >= duration(self.baseInterval)'
                             numRetries:
                               default: 5
-                              description: NumRetries is the number of retries to
-                                attempt when fetching the Wasm code.
+                              description: |-
+                                NumRetries is the number of retries to attempt when fetching the Wasm code.
+                                If not specified, defaults to 5.
                               format: int32
                               minimum: 0
                               type: integer
@@ -42831,6 +42845,13 @@ spec:
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: maxInterval must be
+                                                        greater than or equal to baseInterval
+                                                      rule: '!(has(self.baseInterval)
+                                                        && has(self.maxInterval))
+                                                        || duration(self.maxInterval)
+                                                        >= duration(self.baseInterval)'
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
@@ -44159,6 +44180,13 @@ spec:
                                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                         type: string
                                                     type: object
+                                                    x-kubernetes-validations:
+                                                    - message: maxInterval must be
+                                                        greater than or equal to baseInterval
+                                                      rule: '!(has(self.baseInterval)
+                                                        && has(self.maxInterval))
+                                                        || duration(self.maxInterval)
+                                                        >= duration(self.baseInterval)'
                                                   timeout:
                                                     description: Timeout is the timeout
                                                       per retry attempt.
@@ -45635,6 +45663,12 @@ spec:
                                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                   type: string
                                               type: object
+                                              x-kubernetes-validations:
+                                              - message: maxInterval must be greater
+                                                  than or equal to baseInterval
+                                                rule: '!(has(self.baseInterval) &&
+                                                  has(self.maxInterval)) || duration(self.maxInterval)
+                                                  >= duration(self.baseInterval)'
                                             timeout:
                                               description: Timeout is the timeout
                                                 per retry attempt.
@@ -47033,6 +47067,11 @@ spec:
                                             pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                             type: string
                                         type: object
+                                        x-kubernetes-validations:
+                                        - message: maxInterval must be greater than
+                                            or equal to baseInterval
+                                          rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                            || duration(self.maxInterval) >= duration(self.baseInterval)'
                                       timeout:
                                         description: Timeout is the timeout per retry
                                           attempt.
@@ -49865,6 +49904,11 @@ spec:
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: maxInterval must be greater than or
+                                        equal to baseInterval
+                                      rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                        || duration(self.maxInterval) >= duration(self.baseInterval)'
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.
@@ -51078,6 +51122,11 @@ spec:
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: maxInterval must be greater than or
+                                        equal to baseInterval
+                                      rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                        || duration(self.maxInterval) >= duration(self.baseInterval)'
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.
@@ -52505,6 +52554,11 @@ spec:
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
+                                          x-kubernetes-validations:
+                                          - message: maxInterval must be greater than
+                                              or equal to baseInterval
+                                            rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                              || duration(self.maxInterval) >= duration(self.baseInterval)'
                                         timeout:
                                           description: Timeout is the timeout per
                                             retry attempt.
@@ -53990,6 +54044,11 @@ spec:
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
+                                    x-kubernetes-validations:
+                                    - message: maxInterval must be greater than or
+                                        equal to baseInterval
+                                      rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                        || duration(self.maxInterval) >= duration(self.baseInterval)'
                                   timeout:
                                     description: Timeout is the timeout per retry
                                       attempt.

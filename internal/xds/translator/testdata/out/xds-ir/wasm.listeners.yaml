@@ -56,9 +56,9 @@
                       timeout: 10s
                       uri: https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/5c90b9a82642ce00a7753923fabead306b9d9a54a7c0bd2463a1af3efcfb110b.wasm
                     retryPolicy:
-                      numRetries: 5
+                      numRetries: 3
                       retryBackOff:
-                        baseInterval: 1s
+                        baseInterval: 5s
                         maxInterval: 10s
                     sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
                 runtime: envoy.wasm.runtime.v8
