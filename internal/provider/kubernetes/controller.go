@@ -2785,6 +2785,9 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
@@ -2821,12 +2824,15 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
+	// Discard Status to reduce memory consumption in watchable
+	// It will be recomputed by the gateway-api layer
+	ep.Status = egv1a1.EnvoyProxyStatus{}
 	r.processEnvoyProxy(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
-// processEnvoyProxy processes the parametersRef of the provided GatewayClass.
+// processEnvoyProxy processes the parametersRef of the provided GatewayClass/Gateway.
 func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {

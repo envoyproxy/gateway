@@ -234,7 +234,19 @@ infraIR:
                 path: /opt/modules/my_module.so
               type: Local
           logging: {}
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: ""
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
