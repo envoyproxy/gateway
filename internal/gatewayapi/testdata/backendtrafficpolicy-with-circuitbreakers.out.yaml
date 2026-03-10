@@ -431,7 +431,7 @@ xdsIR:
             maxPendingRequests: 42
             maxRequestsPerConnection: 42
             retryBudget:
-              budgetPercent: 0.1
+              budgetPercent: 10
               minRetryConcurrency: 1
     readyListener:
       address: 0.0.0.0

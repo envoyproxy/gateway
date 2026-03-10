@@ -3206,7 +3206,7 @@ type Retry struct {
 // +k8s:deepcopy-gen=true
 type RetryBudget struct {
 	// Percent is the percentage of requests that can be retried within a given time window.
-	Percent float64 `json:"budgetPercent"`
+	Percent float64 `json:"percent"`
 	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
 	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }

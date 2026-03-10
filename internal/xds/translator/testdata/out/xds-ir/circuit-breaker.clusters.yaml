@@ -8,7 +8,7 @@
       maxRetries: 2
       retryBudget:
         budgetPercent:
-          value: 0.1
+          value: 10
         minRetryConcurrency: 1
   commonLbConfig: {}
   connectTimeout: 10s

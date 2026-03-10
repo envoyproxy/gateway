@@ -95,5 +95,5 @@ func ToPercent(fp *gwapiv1.Fraction) float64 {
 	}
 
 	denominator := ptr.Deref(fp.Denominator, 100)
-	return float64(fp.Numerator) / float64(denominator)
+	return float64(fp.Numerator) / float64(denominator) * 100
 }
