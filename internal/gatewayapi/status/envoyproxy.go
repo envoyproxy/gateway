@@ -12,7 +12,8 @@ import (
 )
 
 func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.ParentReference,
-	reason egv1a1.EnvoyProxyConditionReason, msg string) {
+	reason egv1a1.EnvoyProxyConditionReason, msg string,
+) {
 	if ep == nil || ancestor == nil {
 		return
 	}
