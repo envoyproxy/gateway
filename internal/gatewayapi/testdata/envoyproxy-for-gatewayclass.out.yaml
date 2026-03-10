@@ -120,7 +120,19 @@ infraIR:
                 - file:
                     path: /dev/stdout
                   type: File
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: ep-from-gtw
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: ""
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/ep-from-gtw/http
         ports:
