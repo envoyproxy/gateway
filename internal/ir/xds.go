@@ -3159,6 +3159,10 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+
+	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // Retry define the retry policy configuration.
