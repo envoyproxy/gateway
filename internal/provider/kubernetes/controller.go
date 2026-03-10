@@ -2692,9 +2692,7 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	r.processEnvoyProxy(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
 	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
@@ -2730,19 +2728,17 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	r.processEnvoyProxy(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
 // processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
-		return nil
+		return
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -2790,7 +2786,6 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 	}
 
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
-	return nil
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.
