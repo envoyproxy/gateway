@@ -458,7 +458,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 		var ancestor *gwapiv1.ParentReference
 		if gCtx.envoyProxyFromGateway {
-			// didn't need to update EnvoyProxy status if it's inherted
+			// didn't need to update EnvoyProxy status if it's inherited
 			//  from GatewayClass/EnvoyGateway.
 			ancestor = &gwapiv1.ParentReference{
 				Group:     GroupPtr(gwapiv1.GroupName),
