@@ -51,3 +51,4 @@ deprecations: |
 # Other notable changes not covered by the above sections.
 Other changes: |
   Moved Envoy Gateway CRDs into a sub-chart to avoid the Helm release secret exceeding the 1MB size limit when adding new API fields. Upgrade/Install behavior is unchanged for users.
+  The maximum number of rules in a RateLimit policy is increased from 128 to 256.
