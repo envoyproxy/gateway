@@ -474,6 +474,30 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "invalid Connection Limit closeDelay without value",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							CloseDelay: ptr.To(gwapiv1.Duration("5s")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"closeDelay can only be configured when value is set",
+			},
+		},
+		{
 			desc: "invalid InitialStreamWindowSize format",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{

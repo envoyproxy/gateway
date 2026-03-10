@@ -129,7 +129,7 @@ tcp:
   port: 10086
   connection:
     limit:
-      closeDelay: 5s
+      maxConnectionDuration: 600s
   routes:
   - destination:
       name: "tcp-route-dest-2"

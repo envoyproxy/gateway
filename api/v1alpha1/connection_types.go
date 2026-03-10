@@ -111,6 +111,7 @@ type PreconnectPolicy struct {
 	PredictivePercent *uint32 `json:"predictivePercent,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!has(self.closeDelay) || has(self.value)",message="closeDelay can only be configured when value is set"
 type ConnectionLimit struct {
 	// Value of the maximum concurrent connections limit.
 	// When the limit is reached, incoming connections will be closed after the CloseDelay duration.
