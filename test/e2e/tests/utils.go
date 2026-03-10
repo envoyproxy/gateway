@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -153,6 +154,28 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
+}
+
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
 }
 
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.

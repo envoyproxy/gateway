@@ -18,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -114,7 +115,19 @@ var OIDCTest = suite.ConformanceTest{
 			}
 		})
 
-		// Apply the security policy that configures OIDC authentication with BackendCluster
+		// Delete the existing policy before applying the BackendCluster variant so the
+		// dataplane does not race between two versions of the same SecurityPolicy.
+		existingSP := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      "oidc-test",
+			},
+		}
+		err := suite.Client.Delete(context.TODO(), existingSP)
+		require.Truef(t, err == nil || apierrors.IsNotFound(err), "failed to delete SecurityPolicy %s/%s: %v", ns, existingSP.Name, err)
+		SecurityPolicyMustNotExist(t, suite.Client, types.NamespacedName{Name: existingSP.Name, Namespace: ns})
+
+		// Apply the security policy that configures OIDC authentication with BackendCluster.
 		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
 			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
