@@ -990,7 +990,9 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	if connection.ConnectionLimit != nil {
 		irConnectionLimit := &ir.ConnectionLimit{}
 
-		irConnectionLimit.Value = ptr.To(uint64(connection.ConnectionLimit.Value))
+		if connection.ConnectionLimit.Value != nil {
+			irConnectionLimit.Value = ptr.To(uint64(*connection.ConnectionLimit.Value))
+		}
 
 		if connection.ConnectionLimit.CloseDelay != nil {
 			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
