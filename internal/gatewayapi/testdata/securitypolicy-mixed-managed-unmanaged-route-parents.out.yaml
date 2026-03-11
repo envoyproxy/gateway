@@ -78,7 +78,8 @@ infraIR:
   default/managed-gateway:
     proxy:
       listeners:
-      - name: default/managed-gateway/http
+      - address: null
+        name: default/managed-gateway/http
         ports:
         - containerPort: 10080
           name: http-80

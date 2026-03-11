@@ -249,7 +249,8 @@ infraIR:
           name: http-8080
           protocol: HTTP
           servicePort: 8080
-      - name: envoy-gateway/gateway-1/http-3
+      - address: null
+        name: envoy-gateway/gateway-1/http-3
         ports:
         - containerPort: 9090
           name: http-9090
@@ -345,6 +346,7 @@ xdsIR:
       externalPort: 9090
       hostnames:
       - '*'
+      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
