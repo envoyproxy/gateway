@@ -397,7 +397,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "invalid Connection Limit Empty",
+			desc: "valid Connection Limit Empty",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -414,9 +414,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.connection.connectionLimit.value: Invalid value: 0: spec.connection.connectionLimit.value in body should be greater than or equal to 1",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "invalid Connection Limit < 1",
@@ -433,13 +431,60 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					Connection: &egv1a1.ClientConnection{
 						ConnectionLimit: &egv1a1.ConnectionLimit{
-							Value: -1, // Value: 0 is covered by existence test, as 0 is the nil value.
+							Value: ptr.To(int64(-1)),
 						},
 					},
 				}
 			},
 			wantErrors: []string{
 				"spec.connection.connectionLimit.value: Invalid value: -1: spec.connection.connectionLimit.value in body should be greater than or equal to 1",
+			},
+		},
+		{
+			desc: "valid Connection Limit with only optional fields",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDuration:    ptr.To(gwapiv1.Duration("300s")),
+							MaxRequestsPerConnection: ptr.To(uint32(100)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Connection Limit closeDelay without value",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							CloseDelay: ptr.To(gwapiv1.Duration("5s")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"closeDelay can only be configured when value is set",
 			},
 		},
 		{
