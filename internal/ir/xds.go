@@ -3376,6 +3376,17 @@ type ExtProc struct {
 
 	// AllowModeOverride allows the external processor to modify the processing mode.
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
+
+	// GRPCInitialMetadata defines key-value pairs sent as gRPC initial metadata to the external processor on a per-route basis.
+	GRPCInitialMetadata []ExtProcGRPCInitialMetadata `json:"grpcInitialMetadata,omitempty" yaml:"grpcInitialMetadata,omitempty"`
+}
+
+// ExtProcGRPCInitialMetadata holds a key-value pair for gRPC initial metadata sent per-route to the external processor.
+type ExtProcGRPCInitialMetadata struct {
+	// Name is the metadata key.
+	Name string `json:"name" yaml:"name"`
+	// Value is the metadata value.
+	Value string `json:"value" yaml:"value"`
 }
 
 // Lua holds the information associated with Lua extensions

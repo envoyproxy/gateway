@@ -106,6 +106,29 @@ type ExtProc struct {
 	//
 	// +optional
 	Metadata *ExtProcMetadata `json:"metadata,omitempty"`
+
+	// GRPCInitialMetadata defines a list of key-value pairs to be sent as initial metadata
+	// on the gRPC stream to the external processing server. These key-value pairs are sent
+	// per-route, allowing the external processor to identify which route rule is being
+	// processed and apply route-specific logic accordingly.
+	//
+	// This maps to Envoy's ExtProcPerRoute.overrides.grpc_initial_metadata, enabling
+	// per-route metadata without duplicating the full gRPC service configuration.
+	//
+	// +optional
+	GRPCInitialMetadata []ExtProcGRPCInitialMetadataEntry `json:"grpcInitialMetadata,omitempty"`
+}
+
+// ExtProcGRPCInitialMetadataEntry defines a key-value pair to be sent as gRPC initial metadata
+// to the external processing server on a per-route basis.
+type ExtProcGRPCInitialMetadataEntry struct {
+	// Name is the key of the metadata entry.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Value is the value of the metadata entry.
+	Value string `json:"value"`
 }
 
 // ExtProcMetadata defines options related to the sending and receiving of dynamic metadata to and from the

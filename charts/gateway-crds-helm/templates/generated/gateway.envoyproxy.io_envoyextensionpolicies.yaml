@@ -1286,6 +1286,32 @@ spec:
 
                         If set to true, the ExtProc extension will also be bypassed if the configuration is invalid.
                       type: boolean
+                    grpcInitialMetadata:
+                      description: |-
+                        GRPCInitialMetadata defines a list of key-value pairs to be sent as initial metadata
+                        on the gRPC stream to the external processing server. These key-value pairs are sent
+                        per-route, allowing the external processor to identify which route rule is being
+                        processed and apply route-specific logic accordingly.
+
+                        This maps to Envoy's ExtProcPerRoute.overrides.grpc_initial_metadata, enabling
+                        per-route metadata without duplicating the full gRPC service configuration.
+                      items:
+                        description: |-
+                          ExtProcGRPCInitialMetadataEntry defines a key-value pair to be sent as gRPC initial metadata
+                          to the external processing server on a per-route basis.
+                        properties:
+                          name:
+                            description: Name is the key of the metadata entry.
+                            minLength: 1
+                            type: string
+                          value:
+                            description: Value is the value of the metadata entry.
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      type: array
                     messageTimeout:
                       description: |-
                         MessageTimeout is the timeout for a response to be returned from the external processor

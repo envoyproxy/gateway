@@ -26,7 +26,7 @@ endif
 .PHONY: image.verify
 image.verify:
 	@$(LOG_TARGET)
-	$(eval API_VERSION := $(shell $(DOCKER) version | grep -E 'API version: {1,6}[0-9]' | head -n1 | awk '{print $$3} END { if (NR==0) print 0}' ))
+	$(eval API_VERSION := $(shell $(DOCKER) version | grep -iE 'API version: {1,6}[0-9]' | head -n1 | awk '{print $$3} END { if (NR==0) print 0}' ))
 	$(eval PASS := $(shell echo "$(API_VERSION) > $(DOCKER_SUPPORTED_API_VERSION)" | bc))
 	@if [ $(PASS) -ne 1 ]; then \
 		$(DOCKER) -v ;\

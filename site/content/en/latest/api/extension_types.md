@@ -2055,6 +2055,7 @@ _Appears in:_
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `grpcInitialMetadata` | _[ExtProcGRPCInitialMetadataEntry](#extprocgrpcinitialmetadataentry) array_ |  false  |  | GRPCInitialMetadata defines a list of key-value pairs to be sent as initial metadata<br />on the gRPC stream to the external processing server. These key-value pairs are sent<br />per-route, allowing the external processor to identify which route rule is being<br />processed and apply route-specific logic accordingly.<br />This maps to Envoy's ExtProcPerRoute.overrides.grpc_initial_metadata, enabling<br />per-route metadata without duplicating the full gRPC service configuration. |
 
 
 #### ExtProcBodyProcessingMode
@@ -2072,6 +2073,22 @@ _Appears in:_
 | `Buffered` | BufferedExtProcBodyProcessingMode will buffer the message body in memory and send the entire body at once. If the body exceeds the configured buffer limit, then the downstream system will receive an error.<br /> | 
 | `FullDuplexStreamed` | FullDuplexStreamedExtBodyProcessingMode will send the body in pieces, to be read in a stream. When enabled, trailers are also sent, and failOpen must be false.<br />Full details here: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ext_proc/v3/processing_mode.proto.html#enum-extensions-filters-http-ext-proc-v3-processingmode-bodysendmode<br /> | 
 | `BufferedPartial` | BufferedPartialExtBodyHeaderProcessingMode will buffer the message body in memory and send the entire body in one chunk. If the body exceeds the configured buffer limit, then the body contents up to the buffer limit will be sent.<br /> | 
+
+
+#### ExtProcGRPCInitialMetadataEntry
+
+
+
+ExtProcGRPCInitialMetadataEntry defines a key-value pair to be sent as gRPC initial metadata
+to the external processing server on a per-route basis.
+
+_Appears in:_
+- [ExtProc](#extproc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name is the key of the metadata entry. |
+| `value` | _string_ |  true  |  | Value is the value of the metadata entry. |
 
 
 #### ExtProcMetadata
