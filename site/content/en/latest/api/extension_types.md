@@ -960,7 +960,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _integer_ |  true  |  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
+| `value` | _integer_ |  false  |  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
 | `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
 | `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionDuration is the maximum amount of time a connection can remain established<br />(usually via TCP/HTTP Keepalive packets) before being drained and/or closed.<br />If not specified, there is no limit. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.<br />If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive. |
