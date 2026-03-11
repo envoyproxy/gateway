@@ -791,6 +791,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		Traffic:  traffic,
 		Headers:  getOpenTelemetryTracingHeaders(&tracing.Provider),
 		SpanName: tracing.SpanName,
+		Sampler:  getOpenTelemetryTracingSampler(&tracing.Provider),
 	}, nil
 }
 
@@ -849,6 +850,13 @@ func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
 func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.HTTPHeader {
 	if provider != nil && provider.OpenTelemetry != nil {
 		return provider.OpenTelemetry.Headers
+	}
+	return nil
+}
+
+func getOpenTelemetryTracingSampler(provider *egv1a1.TracingProvider) *egv1a1.OTelSampler {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.Sampler
 	}
 	return nil
 }

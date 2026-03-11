@@ -13,16 +13,19 @@ import (
 	tracecfg "github.com/envoyproxy/go-control-plane/envoy/config/trace/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	resourcedetectorsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/tracers/opentelemetry/resource_detectors/v3"
+	samplersv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/tracers/opentelemetry/samplers/v3"
 	tracingtype "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const (
@@ -56,6 +59,10 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		providerName = envoyOpenTelemetry
 
 		providerConfig = func() (*anypb.Any, error) {
+			sampler, sErr := buildSampler(tracing.Sampler)
+			if sErr != nil {
+				return nil, sErr
+			}
 			config := &tracecfg.OpenTelemetryConfig{
 				GrpcService: &corev3.GrpcService{
 					TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
@@ -68,6 +75,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 				},
 				ServiceName:       tracing.ServiceName,
 				ResourceDetectors: buildResourceDetectors(tracing.ResourceAttributes),
+				Sampler:           sampler,
 			}
 
 			return proto.ToAnyWithValidation(config)
@@ -110,7 +118,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 			Value: 100.0,
 		},
 		RandomSampling: &xdstype.Percent{
-			Value: tracing.SamplingRate,
+			Value: randomSamplingValue(tracing),
 		},
 		Provider: &tracecfg.Tracing_Http{
 			Name: providerName,
@@ -123,6 +131,16 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		Operation:         op,
 		UpstreamOperation: upstreamOp,
 	}, nil
+}
+
+// randomSamplingValue returns the HCM RandomSampling percentage. When an OTel
+// sampler is configured, this returns 100% so the sampler alone decides whether
+// to record spans. Otherwise, HCM would drop requests before the sampler runs.
+func randomSamplingValue(tracing *ir.Tracing) float64 {
+	if tracing.Sampler != nil {
+		return 100.0
+	}
+	return tracing.SamplingRate
 }
 
 func buildTracingOperation(span *egv1a1.TracingSpanName) (string, string) {
@@ -244,4 +262,87 @@ func buildResourceDetectors(resources []ir.MapEntry) []*corev3.TypedExtensionCon
 			TypedConfig: any,
 		},
 	}
+}
+
+// buildSampler creates a sampler TypedExtensionConfig for the OpenTelemetry tracer.
+func buildSampler(sampler *egv1a1.OTelSampler) (*corev3.TypedExtensionConfig, error) {
+	if sampler == nil {
+		return nil, nil
+	}
+	zero := &gwapiv1.Fraction{Numerator: 0}
+	switch sampler.Type {
+	case egv1a1.OTelSamplerTypeAlwaysOn:
+		return buildAlwaysOnSampler()
+	case egv1a1.OTelSamplerTypeAlwaysOff:
+		return buildTraceIDRatioSampler(zero)
+	case egv1a1.OTelSamplerTypeTraceIDRatioBased:
+		return buildTraceIDRatioSampler(sampler.SamplingPercentage)
+	case egv1a1.OTelSamplerTypeParentBasedAlwaysOn:
+		wrapped, err := buildAlwaysOnSampler()
+		if err != nil {
+			return nil, err
+		}
+		return buildParentBasedSampler(wrapped)
+	case egv1a1.OTelSamplerTypeParentBasedAlwaysOff:
+		wrapped, err := buildTraceIDRatioSampler(zero)
+		if err != nil {
+			return nil, err
+		}
+		return buildParentBasedSampler(wrapped)
+	case egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased:
+		wrapped, err := buildTraceIDRatioSampler(sampler.SamplingPercentage)
+		if err != nil {
+			return nil, err
+		}
+		return buildParentBasedSampler(wrapped)
+	default:
+		return nil, fmt.Errorf("unknown sampler type: %s", sampler.Type)
+	}
+}
+
+func buildAlwaysOnSampler() (*corev3.TypedExtensionConfig, error) {
+	cfg, err := proto.ToAnyWithValidation(&samplersv3.AlwaysOnSamplerConfig{})
+	if err != nil {
+		return nil, err
+	}
+	return &corev3.TypedExtensionConfig{
+		Name:        "envoy.tracers.opentelemetry.samplers.always_on",
+		TypedConfig: cfg,
+	}, nil
+}
+
+func buildTraceIDRatioSampler(fraction *gwapiv1.Fraction) (*corev3.TypedExtensionConfig, error) {
+	var fp *xdstype.FractionalPercent
+	if fraction != nil {
+		fp = fractionalpercent.FromFraction(fraction)
+	} else {
+		// Default to 100% sampling.
+		fp = &xdstype.FractionalPercent{
+			Numerator:   100,
+			Denominator: xdstype.FractionalPercent_HUNDRED,
+		}
+	}
+	cfg, err := proto.ToAnyWithValidation(&samplersv3.TraceIdRatioBasedSamplerConfig{
+		SamplingPercentage: fp,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &corev3.TypedExtensionConfig{
+		Name:        "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based",
+		TypedConfig: cfg,
+	}, nil
+}
+
+func buildParentBasedSampler(wrapped *corev3.TypedExtensionConfig) (*corev3.TypedExtensionConfig, error) {
+	cfg, err := proto.ToAnyWithValidation(&samplersv3.ParentBasedSamplerConfig{
+		WrappedSampler: wrapped,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &corev3.TypedExtensionConfig{
+		Name:        "envoy.tracers.opentelemetry.samplers.parent_based",
+		TypedConfig: cfg,
+	}, nil
 }
