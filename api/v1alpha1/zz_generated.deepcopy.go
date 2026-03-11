@@ -6077,11 +6077,6 @@ func (in *Principal) DeepCopyInto(out *Principal) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SourceCIDRs != nil {
-		in, out := &in.SourceCIDRs, &out.SourceCIDRs
-		*out = make([]CIDR, len(*in))
-		copy(*out, *in)
-	}
 	if in.ClientIPGeoLocations != nil {
 		in, out := &in.ClientIPGeoLocations, &out.ClientIPGeoLocations
 		*out = make([]ClientIPGeoLocation, len(*in))
