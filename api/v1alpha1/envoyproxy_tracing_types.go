@@ -154,4 +154,41 @@ type OpenTelemetryTracingProvider struct {
 	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
 	// +optional
 	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
+	// Sampler controls whether spans are exported.
+	// +optional
+	Sampler *OTelSampler `json:"sampler,omitempty"`
+}
+
+// OTelSamplerType specifies the sampler type.
+// Values correspond to the OTEL_TRACES_SAMPLER environment variable.
+// +kubebuilder:validation:Enum=AlwaysOn;AlwaysOff;TraceIdRatioBased;ParentBasedAlwaysOn;ParentBasedAlwaysOff;ParentBasedTraceIdRatioBased
+type OTelSamplerType string
+
+const (
+	// OTelSamplerTypeAlwaysOn exports all spans.
+	OTelSamplerTypeAlwaysOn OTelSamplerType = "AlwaysOn"
+	// OTelSamplerTypeAlwaysOff drops all spans.
+	OTelSamplerTypeAlwaysOff OTelSamplerType = "AlwaysOff"
+	// OTelSamplerTypeTraceIDRatioBased exports a percentage of spans based on trace ID.
+	OTelSamplerTypeTraceIDRatioBased OTelSamplerType = "TraceIdRatioBased"
+	// OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.
+	OTelSamplerTypeParentBasedAlwaysOn OTelSamplerType = "ParentBasedAlwaysOn"
+	// OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.
+	OTelSamplerTypeParentBasedAlwaysOff OTelSamplerType = "ParentBasedAlwaysOff"
+	// OTelSamplerTypeParentBasedTraceIDRatioBased respects the parent span's sampling decision, using trace ID ratio when no parent exists.
+	OTelSamplerTypeParentBasedTraceIDRatioBased OTelSamplerType = "ParentBasedTraceIdRatioBased"
+)
+
+// OTelSampler configures the OpenTelemetry sampler.
+// Type maps to OTEL_TRACES_SAMPLER.
+//
+// +kubebuilder:validation:XValidation:message="samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",rule="has(self.samplingPercentage) ? (self.type == 'TraceIdRatioBased' || self.type == 'ParentBasedTraceIdRatioBased') : true"
+type OTelSampler struct {
+	// Type is the sampler type.
+	// +kubebuilder:default=AlwaysOn
+	Type OTelSamplerType `json:"type"`
+	// SamplingPercentage controls the percentage of traces to sample.
+	// Defaults to 100% when not set.
+	// +optional
+	SamplingPercentage *gwapiv1.Fraction `json:"samplingPercentage,omitempty"`
 }

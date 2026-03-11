@@ -1675,6 +1675,232 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid-sampler-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOn},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "valid-sampler-trace-id-ratio-with-sampling-percentage",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeTraceIDRatioBased,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "valid-sampler-parent-based-trace-id-ratio-with-sampling-percentage",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeAlwaysOn,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-always-off",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeAlwaysOff,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-parent-based-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedAlwaysOn,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-parent-based-always-off",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedAlwaysOff,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+			},
+		},
+		{
 			desc: "backendRefs-backend",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
