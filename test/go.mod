@@ -43,7 +43,7 @@ require (
 	cel.dev/expr v0.25.1 // indirect
 	cyphar.com/go-pathrs v0.2.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
-	filippo.io/edwards25519 v1.1.1 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	fortio.org/cli v1.12.3 // indirect
 	fortio.org/dflag v1.9.3 // indirect
 	fortio.org/duration v1.0.4 // indirect
