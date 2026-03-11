@@ -175,6 +175,9 @@ func buildWasmRetryPolicy(wasm *ir.Wasm) *corev3.RetryPolicy {
 		}
 		if rp.MaxInterval != nil {
 			maxInterval = rp.MaxInterval.Duration
+		} else if rp.BaseInterval != nil {
+			// Default maxInterval to 10x baseInterval per BackOffPolicy contract.
+			maxInterval = 10 * baseInterval
 		}
 	}
 

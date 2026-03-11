@@ -5937,7 +5937,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `numRetries` | _integer_ |  false  | 5 | NumRetries is the number of retries to attempt when fetching the Wasm code.<br />If not specified, defaults to 5. |
-| `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  |  | BackOff is the backoff policy to be applied between retry attempts.<br />If not specified, the default baseInterval is 1s and the default maxInterval is 10s. |
+| `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  |  | BackOff is the backoff policy to be applied per retry attempts.<br />If not specified, the default baseInterval is 1s and the default maxInterval is 10s.<br />When only baseInterval is set, maxInterval defaults to 10 * baseInterval.<br />When only maxInterval is set, baseInterval defaults to 1s. |
 
 
 #### WasmCodeSource

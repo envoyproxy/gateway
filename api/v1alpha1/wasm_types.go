@@ -123,8 +123,10 @@ type WasmCodeFetchRetryPolicy struct {
 	// +kubebuilder:default=5
 	NumRetries *int32 `json:"numRetries,omitempty"`
 
-	// BackOff is the backoff policy to be applied between retry attempts.
+	// BackOff is the backoff policy to be applied per retry attempts.
 	// If not specified, the default baseInterval is 1s and the default maxInterval is 10s.
+	// When only baseInterval is set, maxInterval defaults to 10 * baseInterval.
+	// When only maxInterval is set, baseInterval defaults to 1s.
 	// +optional
 	BackOff *BackOffPolicy `json:"backOff,omitempty"`
 }

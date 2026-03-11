@@ -59,7 +59,7 @@
                       numRetries: 3
                       retryBackOff:
                         baseInterval: 5s
-                        maxInterval: 10s
+                        maxInterval: 50s
                     sha256: 746df05c8f3a0b07a46c0967cfbc5cbe5b9d48d0f79b6177eeedf8be6c8b34b5
                 runtime: envoy.wasm.runtime.v8
                 vmId: envoyextensionpolicy/envoy-gateway/policy-for-gateway/wasm/0

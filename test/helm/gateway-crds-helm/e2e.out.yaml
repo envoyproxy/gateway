@@ -7210,8 +7210,10 @@ spec:
                           properties:
                             backOff:
                               description: |-
-                                BackOff is the backoff policy to be applied between retry attempts.
+                                BackOff is the backoff policy to be applied per retry attempts.
                                 If not specified, the default baseInterval is 1s and the default maxInterval is 10s.
+                                When only baseInterval is set, maxInterval defaults to 10 * baseInterval.
+                                When only maxInterval is set, baseInterval defaults to 1s.
                               properties:
                                 baseInterval:
                                   description: BaseInterval is the base interval between
