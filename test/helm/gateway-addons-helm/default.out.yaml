@@ -32,7 +32,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -197,7 +197,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -297,7 +297,7 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -9982,7 +9982,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10086,7 +10086,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10205,7 +10205,7 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10230,7 +10230,7 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10255,7 +10255,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10700,7 +10700,7 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.54.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "3.6.5"
@@ -10793,7 +10793,7 @@ spec:
           resources:
             {}
         - name: loki-sc-rules
-          image: docker.io/kiwigrid/k8s-sidecar:1.30.9
+          image: docker.io/kiwigrid/k8s-sidecar:2.5.0
           imagePullPolicy: IfNotPresent
           env:
             - name: METHOD
@@ -10817,6 +10817,8 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: sc-rules-volume
               mountPath: "/rules"
       affinity:

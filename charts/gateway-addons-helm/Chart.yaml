@@ -39,10 +39,10 @@ dependencies:
     condition: fluent-bit.enabled
   - name: alloy
     repository: https://grafana.github.io/helm-charts
-    version: 1.6.1
+    version: 1.6.2
     condition: alloy.enabled
   - name: loki
-    version: 6.53.0
+    version: 6.54.0
     repository: https://grafana.github.io/helm-charts
     condition: loki.enabled
   - name: tempo
@@ -51,5 +51,5 @@ dependencies:
     condition: tempo.enabled
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.146.1
+    version: 0.147.0
     condition: opentelemetry-collector.enabled
