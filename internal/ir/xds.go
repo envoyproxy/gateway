@@ -1452,6 +1452,11 @@ type ExtAuth struct {
 	// context in the filter chain.
 	// +optional
 	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration

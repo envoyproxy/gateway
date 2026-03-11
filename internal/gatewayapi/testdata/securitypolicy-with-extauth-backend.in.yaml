@@ -143,6 +143,7 @@ securityPolicies:
         name: httproute-1
       extAuth:
         failOpen: true
+        statusOnError: 500
         headersToExtAuth:
           - header1
           - header2

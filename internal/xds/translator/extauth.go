@@ -15,6 +15,7 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -165,6 +166,11 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		}
 	}
 
+	if extAuth.StatusOnError != nil {
+		config.StatusOnError = &typev3.HttpStatus{
+			Code: typev3.StatusCode(*extAuth.StatusOnError),
+		}
+	}
 	return config, nil
 }
 
