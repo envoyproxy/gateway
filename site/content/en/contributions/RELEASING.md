@@ -295,7 +295,7 @@ export GITHUB_REMOTE=origin
 2. Create a topic branch for adding the release notes.
 
    1. Create the release notes. The release note should only include the changes since the last minor or patch release.
-   1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+   1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "docs") -}}` to the latest patch version. For example:
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -308,12 +308,12 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+   1. Update `site/layouts/shortcodes/yaml-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "docs") -}}` to the latest patch version. For example:
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -326,7 +326,7 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
       ```
