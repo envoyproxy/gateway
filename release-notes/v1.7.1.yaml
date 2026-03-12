@@ -7,7 +7,7 @@ breaking changes: |
 security updates: |
   Bump golang to `1.25.8` for security fixes to the go command and the `crypto/tls` package.
   Bump Envoy Proxy image to v1.37.1 for fixing several security issues and bug fixes. For more details, please refer to the [Envoy Proxy v1.37.1 release notes](https://github.com/envoyproxy/envoy/releases/tag/v1.37.1).
-
+  Bump Envoy ratelimit image to `c8765e89` with security fixes for Go.
 
 # New features or capabilities added in this release.
 new features: |
