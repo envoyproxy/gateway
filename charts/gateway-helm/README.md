@@ -119,4 +119,3 @@ helm uninstall eg -n envoy-gateway-system
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 
-

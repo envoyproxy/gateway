@@ -83,4 +83,3 @@ The Helm chart for Envoy Gateway
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
 
-
