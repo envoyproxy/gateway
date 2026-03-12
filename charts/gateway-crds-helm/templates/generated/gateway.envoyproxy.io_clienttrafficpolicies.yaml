@@ -178,9 +178,10 @@ spec:
                         format: int64
                         minimum: 1
                         type: integer
-                    required:
-                    - value
                     type: object
+                    x-kubernetes-validations:
+                    - message: closeDelay can only be configured when value is set
+                      rule: '!has(self.closeDelay) || has(self.value)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-

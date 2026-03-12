@@ -48,6 +48,8 @@
                 authority: grpc-backend.default:9000
                 clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
               timeout: 10s
+            statusOnError:
+              code: InternalServerError
             transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
