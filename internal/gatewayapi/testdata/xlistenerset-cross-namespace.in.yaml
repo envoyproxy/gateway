@@ -56,6 +56,22 @@ xListenerSets:
 - apiVersion: gateway.networking.x-k8s.io/v1alpha1
   kind: XListenerSet
   metadata:
+    namespace: cross-allowed
+    name: cross-namespace-same
+  spec:
+    parentRef:
+      namespace: gateway-xls
+      name: composite-gateway
+    listeners:
+    - name: cross-http-same
+      protocol: HTTP
+      port: 8085
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.x-k8s.io/v1alpha1
+  kind: XListenerSet
+  metadata:
     namespace: cross-denied
     name: cross-namespace-denied
   spec:
@@ -89,6 +105,23 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
+    namespace: cross-allowed
+    name: route-same-namespace
+  spec:
+    parentRefs:
+    - group: gateway.networking.x-k8s.io
+      kind: XListenerSet
+      namespace: cross-allowed
+      name: cross-namespace-same
+      sectionName: cross-http-same
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
     namespace: default
     name: route-cross-http-denied
   spec:
@@ -102,3 +135,17 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: ReferenceGrant
+  metadata:
+    namespace: default
+    name: allow-cross-allowed
+  spec:
+    from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: cross-allowed
+    to:
+    - group: ""
+      kind: Service

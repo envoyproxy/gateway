@@ -170,7 +170,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 	}
 
 	if l.AllowedRoutes == nil || l.AllowedRoutes.Namespaces == nil || l.AllowedRoutes.Namespaces.From == nil {
-		return l.gateway.Namespace == namespace.Name
+		return l.GetNamespace() == namespace.Name
 	}
 
 	switch *l.AllowedRoutes.Namespaces.From {
@@ -183,7 +183,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 		return l.namespaceSelector.Matches(labels.Set(namespace.Labels))
 	default:
 		// NamespacesFromSame is the default
-		return l.gateway.Namespace == namespace.Name
+		return l.GetNamespace() == namespace.Name
 	}
 }
 
@@ -532,6 +532,22 @@ func GetHostnames(route RouteContext) []string {
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return route.GetParentReferences()
+}
+
+// GetManagedParentReferences returns route parentRefs that are managed by this controller.
+func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
+	parentRefs := GetParentReferences(route)
+	managed := make([]gwapiv1.ParentReference, 0, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		// RouteParentContext is only created for parentRefs handled by this
+		// translator run. If absent, the parentRef points to a Gateway that is
+		// not managed by this controller.
+		if route.GetRouteParentContext(parentRef) == nil {
+			continue
+		}
+		managed = append(managed, parentRef)
+	}
+	return managed
 }
 
 // GetRouteStatus returns the RouteStatus object associated with the Route.

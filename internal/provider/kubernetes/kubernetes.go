@@ -163,7 +163,6 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			// Disable deepcopy for read only resources
 			&corev1.Secret{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
-				Transform:             composeTransforms(cache.TransformStripManagedFields(), transformSecretData),
 			},
 			&corev1.ConfigMap{}: {
 				UnsafeDisableDeepCopy: ptr.To(true),
