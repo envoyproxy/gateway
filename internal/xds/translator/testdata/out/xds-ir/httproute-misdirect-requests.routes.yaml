@@ -1,0 +1,152 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https
+  virtualHosts:
+  - domains:
+    - example.org
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https
+    name: envoy-gateway/gateway-1/https/example_org
+    routes:
+    - match:
+        pathSeparatedPrefix: /detect-misdirected-requests
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: https-listener-detect-misdirected-requests-test-1
+              namespace: default
+      name: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0/match/0/example_org
+      route:
+        cluster: httproute/default/https-listener-detect-misdirected-requests-test-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*.wildcard.org'
+    - fourth-example.wildcard.org
+    - second-example.org
+    name: envoy-gateway/gateway-1/https/catch_all_tls_overlapping
+    routes:
+    - directResponse:
+        status: 421
+      match:
+        prefix: /
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-with-hostname
+  virtualHosts:
+  - domains:
+    - second-example.org
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-with-hostname
+    name: envoy-gateway/gateway-1/https-with-hostname/second-example_org
+    routes:
+    - match:
+        pathSeparatedPrefix: /detect-misdirected-requests
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: https-listener-detect-misdirected-requests-test-2
+              namespace: default
+      name: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0/match/0/second-example_org
+      route:
+        cluster: httproute/default/https-listener-detect-misdirected-requests-test-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-1/https-with-hostname/catch_all_tls_overlapping
+    routes:
+    - directResponse:
+        status: 421
+      match:
+        prefix: /
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-with-wildcard-hostname
+  virtualHosts:
+  - domains:
+    - '*.wildcard.org'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-with-wildcard-hostname
+    name: envoy-gateway/gateway-1/https-with-wildcard-hostname/*_wildcard_org
+    routes:
+    - match:
+        pathSeparatedPrefix: /detect-misdirected-requests
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: https-listener-detect-misdirected-requests-test-3
+              namespace: default
+      name: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0/match/0/*_wildcard_org
+      route:
+        cluster: httproute/default/https-listener-detect-misdirected-requests-test-3/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - fourth-example.wildcard.org
+    - '*'
+    name: envoy-gateway/gateway-1/https-with-wildcard-hostname/catch_all_tls_overlapping
+    routes:
+    - directResponse:
+        status: 421
+      match:
+        prefix: /
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard
+  virtualHosts:
+  - domains:
+    - fourth-example.wildcard.org
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-with-hostname-matching-wildcard
+    name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard/fourth-example_wildcard_org
+    routes:
+    - match:
+        pathSeparatedPrefix: /detect-misdirected-requests
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: https-listener-detect-misdirected-requests-test-4
+              namespace: default
+      name: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0/match/0/fourth-example_wildcard_org
+      route:
+        cluster: httproute/default/https-listener-detect-misdirected-requests-test-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - '*.wildcard.org'
+    - '*'
+    name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard/catch_all_tls_overlapping
+    routes:
+    - directResponse:
+        status: 421
+      match:
+        prefix: /
