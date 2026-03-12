@@ -1,0 +1,42 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    rateLimits:
+    - actions:
+      - remoteAddress: {}
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: second-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: second-listener/*
+    rateLimits:
+    - actions:
+      - remoteAddress: {}
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

@@ -137,7 +137,10 @@ xdsIR:
       - path: /dev/stdout
     envoyPatchPolicies:
     - jsonPatches:
-      - name: envoy-gateway-gateway-1-http
+      - name:
+          distinct: false
+          exact: envoy-gateway-gateway-1-http
+          name: ""
         operation:
           op: replace
           path: /per_connection_buffer_limit_bytes
@@ -159,7 +162,10 @@ xdsIR:
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
     - jsonPatches:
-      - name: envoy-gateway-gateway-1-http
+      - name:
+          distinct: false
+          exact: envoy-gateway-gateway-1-http
+          name: ""
         operation:
           op: replace
           path: /ignore_global_conn_limit
