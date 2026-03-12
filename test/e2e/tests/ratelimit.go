@@ -1070,7 +1070,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespFoo)
 
 			// Send a request to the second route with /bar path (total: 3 requests)
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespFoo)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespBar)
 
 			// At this point, 3 requests have been sent in total (2 to /foo, 1 to /bar)
 			// Since the rate limit is shared and set to 3, the next request should be rate limited
