@@ -1,0 +1,30 @@
+date: March 12, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bump golang to `1.25.8` for security fixes to the go command and the `crypto/tls` package.
+  Bump Envoy Proxy image to v1.36.5 for fixing several security issues and bug fixes. For more details, please refer to the [Envoy Proxy v1.36.5 release notes](https://github.com/envoyproxy/envoy/releases/tag/v1.36.5).
+  Bump Envoy ratelimit image to `c8765e89` with security fixes for Go.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
+  Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
+  Exclude unmanaged route parents from xPolicy status ancestors.
+  Fixed an issue where computeHosts doesn't work when listener and route both wildcard.
+  Add ownership references to ratelimit ConfigMap and HPA resources.
+  Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
