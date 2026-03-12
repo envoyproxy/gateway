@@ -26,8 +26,8 @@ type hookClientEntry struct {
 	name              string
 	client            types.XDSHookClient
 	failOpen          bool
-	policyGVKSet      map[string]struct{}          // used for per-extension policy filtering in PostTranslateModifyHook
-	translationConfig *egv1a1.TranslationConfig    // used for per-extension resource-type gating in PostTranslateModifyHook
+	policyGVKSet      map[string]struct{}       // used for per-extension policy filtering in PostTranslateModifyHook
+	translationConfig *egv1a1.TranslationConfig // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
 // compositeXDSHookClient chains multiple XDSHookClient calls sequentially.

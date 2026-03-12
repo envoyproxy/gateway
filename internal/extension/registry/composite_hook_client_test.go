@@ -73,13 +73,13 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 	t.Run("chains two clients", func(t *testing.T) {
 		client1 := &mockXDSHookClient{
 			postRouteModifyHook: func(r *route.Route, _ []string, _ []*unstructured.Unstructured) (*route.Route, error) {
-				r.Name = r.Name + "-ext1"
+				r.Name += "-ext1"
 				return r, nil
 			},
 		}
 		client2 := &mockXDSHookClient{
 			postRouteModifyHook: func(r *route.Route, _ []string, _ []*unstructured.Unstructured) (*route.Route, error) {
-				r.Name = r.Name + "-ext2"
+				r.Name += "-ext2"
 				return r, nil
 			},
 		}
@@ -105,7 +105,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		}
 		client2 := &mockXDSHookClient{
 			postRouteModifyHook: func(r *route.Route, _ []string, _ []*unstructured.Unstructured) (*route.Route, error) {
-				r.Name = r.Name + "-ext2"
+				r.Name += "-ext2"
 				return r, nil
 			},
 		}
@@ -146,13 +146,13 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 	client1 := &mockXDSHookClient{
 		postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
-			vh.Name = vh.Name + "-ext1"
+			vh.Name += "-ext1"
 			return vh, nil
 		},
 	}
 	client2 := &mockXDSHookClient{
 		postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
-			vh.Name = vh.Name + "-ext2"
+			vh.Name += "-ext2"
 			return vh, nil
 		},
 	}
@@ -173,13 +173,13 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 	client1 := &mockXDSHookClient{
 		postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
-			l.Name = l.Name + "-ext1"
+			l.Name += "-ext1"
 			return l, nil
 		},
 	}
 	client2 := &mockXDSHookClient{
 		postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
-			l.Name = l.Name + "-ext2"
+			l.Name += "-ext2"
 			return l, nil
 		},
 	}
@@ -200,13 +200,13 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
 	client1 := &mockXDSHookClient{
 		postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
-			c.Name = c.Name + "-ext1"
+			c.Name += "-ext1"
 			return c, nil
 		},
 	}
 	client2 := &mockXDSHookClient{
 		postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
-			c.Name = c.Name + "-ext2"
+			c.Name += "-ext2"
 			return c, nil
 		},
 	}
@@ -349,8 +349,8 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 					name:   "ext1",
 					client: client1,
 					translationConfig: &egv1a1.TranslationConfig{
-						Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)},
-						Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)},
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
 						// Listener and Route nil → defaults false
 					},
 				},
