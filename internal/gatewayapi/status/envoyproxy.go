@@ -26,7 +26,8 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	cond := newCondition(string(egv1a1.EnvoyProxyConditionAccepted), status,
 		string(reason), msg, ep.Generation)
 
-	for _, item := range ep.Status.Ancestors {
+	for i := range ep.Status.Ancestors {
+		item := ep.Status.Ancestors[i]
 		if ancestorRefsEqual(&item.AncestorRef, ancestor) {
 			item.Conditions = MergeConditions(item.Conditions, cond)
 			return
