@@ -7,7 +7,7 @@ breaking changes: |
 security updates: |
   Bump golang to `v1.25.6`.
   Bump Envoy proxy version to `v1.36.4`. Includes security patches for CVE-2025-0913. Ref: https://github.com/envoyproxy/envoy/releases/tag/v1.36.4.
-  Bump Envoy rate limit version to `c8765e89`.
+  Bump Envoy rate limit version to `3fb70258`.
 
 # New features or capabilities added in this release.
 new features: |
