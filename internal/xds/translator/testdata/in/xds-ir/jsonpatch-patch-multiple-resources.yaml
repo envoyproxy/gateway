@@ -1,0 +1,165 @@
+envoyPatchPolicies:
+  - status:
+      ancestors:
+        - ancestorRef:
+            group: "gateway.networking.k8s.io"
+            kind: "Gateway"
+            namespace: "default"
+            name: "foobar"
+    name: "first-policy"
+    namespace: "default"
+    jsonPatches:
+      - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+        name: ""
+        operation:
+          op: add
+          path: "/filter_chains/0/filters/0/typed_config/preserve_external_request_id"
+          value: true
+      - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+        name: ""
+        operation:
+          op: "add"
+          path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
+          value:
+            name: "envoy.filters.http.ratelimit"
+            typed_config:
+              "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+              domain: "eg-ratelimit"
+              failure_mode_deny: true
+              timeout: 1s
+              rate_limit_service:
+                grpc_service:
+                  envoy_grpc:
+                    cluster_name: rate-limit-cluster
+                transport_api_version: V3
+      - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+        name: ""
+        operation:
+          op: "add"
+          path: "/virtual_hosts/0/rate_limits"
+          value:
+            - actions:
+                - remote_address: {}
+      - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+        name: rate-limit-cluster
+        operation:
+          op: add
+          path: ""
+          value:
+            name: rate-limit-cluster
+            type: STRICT_DNS
+            connect_timeout: 10s
+            lb_policy: ROUND_ROBIN
+            http2_protocol_options: {}
+            load_assignment:
+              cluster_name: rate-limit-cluster
+              endpoints:
+                - lb_endpoints:
+                    - endpoint:
+                        address:
+                          socket_address:
+                            address: ratelimit.svc.cluster.local
+                            port_value: 8081
+      - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+        name: "first-route-dest"
+        operation:
+          op: "replace"
+          path: "/endpoints/0/load_balancing_weight"
+          value: "50"
+      - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+        name: "secret-1"
+        operation:
+          op: "replace"
+          path: "/tls_certificate/certificate_chain/inline_bytes"
+          value: "a2V5LWRhdGE="
+      - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
+        name: "test-secret"
+        operation:
+          op: "add"
+          path: ""
+          value:
+            name: test_secret
+            tls_certificate:
+              certificate_chain:
+                inline_bytes: Y2VydC1kYXRh
+      - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+        name: "first-route-dest"
+        operation:
+          op: add
+          path: "/endpoints/1"
+          value:
+            lbEndpoints:
+              - endpoint:
+                  address:
+                    socketAddress:
+                      address: 1.2.3.4
+                      portValue: 50000
+                loadBalancingWeight: 1
+      - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+        name: "first-route-dest"
+        operation:
+          op: "move"
+          from: "/endpoints/0/load_balancing_weight"
+          path: "/endpoints/1/load_balancing_weight"
+      - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+        name: "first-route-dest"
+        operation:
+          op: copy
+          from: "/endpoints/1/load_balancing_weight"
+          path: "/endpoints/0/load_balancing_weight"
+http:
+  - name: "first-listener"
+    address: 0.0.0.0
+    port: 10443
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    tls:
+      alpnProtocols:
+        - h2
+        - http/1.1
+      certificates:
+        - name: secret-1
+          # byte slice representation of "key-data"
+          certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+          # byte slice representation of "key-data"
+          privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+        - name: secret-2
+          certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+          privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    routes:
+      - name: "first-route"
+        hostname: "*"
+        headerMatches:
+          - name: user
+            exact: "jason"
+        destination:
+          name: "first-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "first-route-dest/backend/0"
+  - name: "second-listener"
+    address: 0.0.0.0
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "second-route"
+        hostname: "*"
+        headerMatches:
+          - name: user
+            exact: "jason"
+        destination:
+          name: "second-route-dest"
+          settings:
+            - endpoints:
+                - host: "1.2.3.4"
+                  port: 50000
+              name: "second-route-dest/backend/0"
