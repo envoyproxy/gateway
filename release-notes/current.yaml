@@ -30,6 +30,7 @@ new features: |
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
   Added RetryPolicy to WASM downloads to recover from transient issues.
+  Added support for configuring statusOnError in ExtAuth settings
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -42,6 +43,7 @@ bug fixes: |
   Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
   Fixed missing CEL validation for BackOffPolicy where a baseInterval could be provided that's greater than maxInterval.
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
+  Fixed endpoint hostname is not respected when doing active health check.
 
 # Enhancements that improve performance.
 performance improvements: |
