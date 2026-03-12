@@ -139,7 +139,10 @@ xdsIR:
       - path: /dev/stdout
     envoyPatchPolicies:
     - jsonPatches:
-      - name: envoy-gateway-gateway-1-http
+      - name:
+          distinct: false
+          exact: envoy-gateway-gateway-1-http
+          name: ""
         operation:
           op: replace
           path: /ignore_global_conn_limit

@@ -78,12 +78,20 @@ const (
 )
 
 // EnvoyJSONPatchConfig defines the configuration for patching a Envoy xDS Resource
-// using JSONPatch semantic
+// using JSONPatch semantics.
+//
+// +kubebuilder:validation:XValidation:rule="!(has(self.name) && has(self.nameSelector))",message="only one of name and nameSelector can be specified"
 type EnvoyJSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
 	Type EnvoyResourceType `json:"type"`
-	// Name is the name of the resource
-	Name string `json:"name"`
+	// Name is the name of the resource.
+	//
+	// +optional
+	Name *string `json:"name,omitempty"`
+	// NameSelector is a StringMatch that is used to select the resources to patch based on their name.
+	//
+	// +optional
+	NameSelector *StringMatch `json:"nameSelector,omitempty"`
 	// Patch defines the JSON Patch Operation
 	Operation JSONPatchOperation `json:"operation"`
 }
