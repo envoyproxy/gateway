@@ -136,9 +136,9 @@ In this case:
 
 ## Related Resources
 
-- [Connection Limit](../../tasks/traffic/connection-limit.md)
-- [HTTP Request Headers](../../tasks/traffic/http-request-headers)
-- [HTTP Response Headers](../../tasks/traffic/http-response-headers)
-- [HTTP/3](../../tasks/traffic/http3)
-- [Mutual TLS: External Clients to the Gateway](../../tasks/security/mutual-tls/)
-- [ClientTrafficPolicy API Reference](../../api/extension_types#clienttrafficpolicy)
+- [Connection Limit]({{< relref "../../tasks/traffic/connection-limit.md" >}})
+- [HTTP Request Headers]({{< relref "../../tasks/traffic/http-request-headers.md" >}})
+- [HTTP Response Headers]({{< relref "../../tasks/traffic/http-response-headers.md" >}})
+- [HTTP/3]({{< relref "../../tasks/traffic/http3.md" >}})
+- [Mutual TLS: External Clients to the Gateway]({{< relref "../../tasks/security/mutual-tls.md" >}})
+- [ClientTrafficPolicy API Reference]({{< relref "../../api/extension_types.md" >}}#clienttrafficpolicy)

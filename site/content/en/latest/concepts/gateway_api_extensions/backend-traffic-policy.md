@@ -222,12 +222,12 @@ In this example, the route-level policy merges with the gateway-level policy, re
 
 ## Related Resources
 
-- [Circuit Breakers](../../tasks/traffic/circuit-breaker.md)
-- [Failover](../../tasks/traffic/failover)
-- [Fault Injection](../../tasks/traffic/fault-injection)
-- [Global Rate Limit](../../tasks/traffic/global-rate-limit)
-- [Local Rate Limit](../../tasks/traffic/local-rate-limit)
-- [Load Balancing](../../tasks/traffic/load-balancing)
-- [Response Compression](../../tasks/traffic/response-compression)
-- [Response Override](../../tasks/traffic/response-override)
-- [BackendTrafficPolicy API Reference](../../api/extension_types#backendtrafficpolicy)
+- [Circuit Breakers]({{< relref "../../tasks/traffic/circuit-breaker.md" >}})
+- [Failover]({{< relref "../../tasks/traffic/failover.md" >}})
+- [Fault Injection]({{< relref "../../tasks/traffic/fault-injection.md" >}})
+- [Global Rate Limit]({{< relref "../../tasks/traffic/global-rate-limit.md" >}})
+- [Local Rate Limit]({{< relref "../../tasks/traffic/local-rate-limit.md" >}})
+- [Load Balancing]({{< relref "../../tasks/traffic/load-balancing.md" >}})
+- [Response Compression]({{< relref "../../tasks/traffic/response-compression.md" >}})
+- [Response Override]({{< relref "../../tasks/traffic/response-override.md" >}})
+- [BackendTrafficPolicy API Reference]({{< relref "../../api/extension_types.md" >}}#backendtrafficpolicy)

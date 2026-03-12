@@ -281,12 +281,12 @@ When policies are merged, secret references inherited from parent policies must 
 **Best Practice:** When using policy merging with secret-based authentication (BasicAuth, OIDC, JWT, APIKeyAuth), ensure that required secrets are available in each route's namespace, or design your namespace strategy accordingly.
 
 ## Related Resources
-- [API Key Authentication](../../tasks/security/apikey-auth.md)
-- [Basic Authentication](../../tasks/security/basic-auth.md)
-- [CORS](../../tasks/security/cors.md)
-- [External Authorization](../../tasks/security/ext-auth.md)
-- [IP Allowlist/Denylist](../../tasks/security/restrict-ip-access.md)
-- [JWT Authentication](../../tasks/security/jwt-authentication.md)
-- [JWT Claim Based Authorization](../../tasks/security/jwt-claim-authorization.md)
-- [OIDC Authorization](../../tasks/security/oidc.md)
-- [SecurityPolicy API Reference](../../api/extension_types#securitypolicy)
+- [API Key Authentication]({{< relref "../../tasks/security/apikey-auth.md" >}})
+- [Basic Authentication]({{< relref "../../tasks/security/basic-auth.md" >}})
+- [CORS]({{< relref "../../tasks/security/cors.md" >}})
+- [External Authorization]({{< relref "../../tasks/security/ext-auth.md" >}})
+- [IP Allowlist/Denylist]({{< relref "../../tasks/security/restrict-ip-access.md" >}})
+- [JWT Authentication]({{< relref "../../tasks/security/jwt-authentication.md" >}})
+- [JWT Claim Based Authorization]({{< relref "../../tasks/security/jwt-claim-authorization.md" >}})
+- [OIDC Authorization]({{< relref "../../tasks/security/oidc.md" >}})
+- [SecurityPolicy API Reference]({{< relref "../../api/extension_types.md" >}}#securitypolicy)
