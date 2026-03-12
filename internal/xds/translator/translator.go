@@ -991,8 +991,8 @@ func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener := r.(*listenerv3.Listener)
-		if listener.Name == name {
+		listener, ok := r.(*listenerv3.Listener)
+		if ok && listener.Name == name {
 			return listener
 		}
 	}
@@ -1007,8 +1007,8 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
-		route := r.(*routev3.RouteConfiguration)
-		if route.Name == name {
+		route, ok := r.(*routev3.RouteConfiguration)
+		if ok && route.Name == name {
 			return route
 		}
 	}
@@ -1023,8 +1023,8 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster := r.(*clusterv3.Cluster)
-		if cluster.Name == name {
+		cluster, ok := r.(*clusterv3.Cluster)
+		if ok && cluster.Name == name {
 			return cluster
 		}
 	}
@@ -1039,8 +1039,8 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
-		endpoint := r.(*endpointv3.ClusterLoadAssignment)
-		if endpoint.ClusterName == name {
+		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
+		if ok && endpoint.ClusterName == name {
 			return endpoint
 		}
 	}
@@ -1066,8 +1066,8 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
-		secret := r.(*tlsv3.Secret)
-		if secret.Name == name {
+		secret, ok := r.(*tlsv3.Secret)
+		if ok && secret.Name == name {
 			return secret
 		}
 	}
