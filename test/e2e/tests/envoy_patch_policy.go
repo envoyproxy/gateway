@@ -8,6 +8,7 @@
 package tests
 
 import (
+	stdnet "net"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -26,33 +27,45 @@ var EnvoyPatchPolicyTest = suite.ConformanceTest{
 	Description: "update xds using EnvoyPatchPolicy",
 	Manifests:   []string{"testdata/envoy-patch-policy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("envoy patch policy", func(t *testing.T) {
-			testEnvoyPatchPolicy(t, suite)
+		t.Run("With name", func(t *testing.T) {
+			testEnvoyPatchPolicy(t, suite, "same-namespace", "http-envoy-patch-policy", "infra-backend-v1")
+		})
+		t.Run("Without name", func(t *testing.T) {
+			testEnvoyPatchPolicy(t, suite, "epp-gateways", "epp-http", "infra-backend-v2")
+			testEnvoyPatchPolicyWithPort(t, suite, "epp-gateways", "epp-http-8080", "infra-backend-v3", "8080")
 		})
 	},
 }
 
-func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite) {
+func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite, gwName, routeName, backendName string) {
+	testEnvoyPatchPolicyWithPort(t, suite, gwName, routeName, backendName, "")
+}
+
+func testEnvoyPatchPolicyWithPort(t *testing.T, suite *suite.ConformanceTestSuite, gwName, routeName, backendName, gwPort string) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "http-envoy-patch-policy", Namespace: ns}
-	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
+	gwNN := types.NamespacedName{Name: gwName, Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-	OkResp := http.ExpectedResponse{
+	if gwPort != "" {
+		gwAddr = stdnet.JoinHostPort(gwAddr, gwPort)
+	}
+	okResp := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/foo",
+			Path: "/epp",
 		},
 		Response: http.Response{
 			StatusCodes: []int{200},
 		},
+		Backend:   backendName,
 		Namespace: ns,
 	}
 
 	// Send a request to a valid path and expect a successful response
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResp)
 
 	customResp := http.ExpectedResponse{
 		Request: http.Request{
-			Path: "/bar",
+			Path: "/not-exist-path",
 		},
 		Response: http.Response{
 			StatusCodes: []int{406},
