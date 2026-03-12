@@ -9,7 +9,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.2.1+incompatible
+	github.com/docker/cli v29.3.0+incompatible
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.0
@@ -24,8 +24,8 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/go-openapi/spec v0.22.4
-	github.com/go-openapi/strfmt v0.25.0
-	github.com/go-openapi/validate v0.25.1
+	github.com/go-openapi/strfmt v0.26.0
+	github.com/go-openapi/validate v0.25.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/cel-go v0.26.0
 	github.com/google/go-cmp v0.7.0
@@ -42,22 +42,22 @@ require (
 	github.com/tetratelabs/func-e v1.4.0
 	github.com/tsaarni/certyaml v0.11.0
 	github.com/yuin/gopher-lua v1.1.1
-	go.opentelemetry.io/otel v1.41.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.41.0
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.41.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.63.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.41.0
-	go.opentelemetry.io/otel/metric v1.41.0
-	go.opentelemetry.io/otel/sdk v1.41.0
-	go.opentelemetry.io/otel/sdk/metric v1.41.0
-	go.opentelemetry.io/otel/trace v1.41.0
-	go.opentelemetry.io/proto/otlp v1.9.0
+	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.42.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.42.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.64.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.42.0
+	go.opentelemetry.io/otel/metric v1.42.0
+	go.opentelemetry.io/otel/sdk v1.42.0
+	go.opentelemetry.io/otel/sdk/metric v1.42.0
+	go.opentelemetry.io/otel/trace v1.42.0
+	go.opentelemetry.io/proto/otlp v1.10.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.20.0
 	gomodules.xyz/jsonpatch/v2 v2.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.2
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
@@ -134,24 +134,24 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-openapi/analysis v0.24.1 // indirect
-	github.com/go-openapi/errors v0.22.4 // indirect
+	github.com/go-openapi/analysis v0.24.3 // indirect
+	github.com/go-openapi/errors v0.22.7 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
 	github.com/go-openapi/jsonreference v0.21.5 // indirect
-	github.com/go-openapi/loads v0.23.2 // indirect
+	github.com/go-openapi/loads v0.23.3 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-openapi/swag/conv v0.25.5 // indirect
-	github.com/go-openapi/swag/fileutils v0.25.1 // indirect
+	github.com/go-openapi/swag/fileutils v0.25.5 // indirect
 	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
 	github.com/go-openapi/swag/jsonutils v0.25.5 // indirect
 	github.com/go-openapi/swag/loading v0.25.5 // indirect
-	github.com/go-openapi/swag/mangling v0.25.1 // indirect
+	github.com/go-openapi/swag/mangling v0.25.5 // indirect
 	github.com/go-openapi/swag/stringutils v0.25.5 // indirect
 	github.com/go-openapi/swag/typeutils v0.25.5 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.5 // indirect
 	github.com/go-redis/redis/v7 v7.4.1 // indirect
 	github.com/go-sql-driver/mysql v1.9.3 // indirect
-	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -214,7 +214,7 @@ require (
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/oklog/ulid v1.3.1 // indirect
+	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
@@ -259,7 +259,6 @@ require (
 	go.etcd.io/etcd/api/v3 v3.6.5 // indirect
 	go.etcd.io/etcd/client/pkg/v3 v3.6.5 // indirect
 	go.etcd.io/etcd/client/v3 v3.6.5 // indirect
-	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.62.0 // indirect
