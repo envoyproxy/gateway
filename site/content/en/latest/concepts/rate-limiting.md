@@ -151,6 +151,6 @@ In practice, a request will be rejected if it exceeds either limit. For example:
 - If the system has already processed 100 requests in the current minute across all instances, the 101st request is rejected globally (global limit exceeded)
 
 ## Related Resources
-- [BackendTrafficPolicy](gateway_api_extensions/backend-traffic-policy.md)
-- [Task: Global Rate Limit](../tasks/traffic/global-rate-limit.md)
-- [Task: Local Rate Limit](../tasks/traffic/local-rate-limit.md)
+- [BackendTrafficPolicy]({{< relref "../concepts/gateway_api_extensions/backend-traffic-policy.md" >}})
+- [Task: Global Rate Limit]({{< relref "../tasks/traffic/global-rate-limit.md" >}})
+- [Task: Local Rate Limit]({{< relref "../tasks/traffic/local-rate-limit.md" >}})
