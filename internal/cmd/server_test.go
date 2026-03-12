@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
@@ -99,39 +100,44 @@ func testCustomProvider(t *testing.T, genCert bool) (string, string) {
 
 func TestCustomProviderCancelWhenStarting(t *testing.T) {
 	_, configPath := testCustomProvider(t, false)
-	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
-	go func() {
-		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, testHook, nil)
-	}()
+	var g errgroup.Group
+
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
+	g.Go(func() error {
+		return server(ctx, io.Discard, io.Discard, configPath, testHook, nil)
+	})
 	go func() {
 		cancel()
 	}()
 
-	err := <-errCh
+	err := g.Wait()
 	require.NoError(t, err)
 }
 
 func TestCustomProviderFailedToStart(t *testing.T) {
 	_, configPath := testCustomProvider(t, false)
 
-	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
-	go func() {
-		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, testHook, nil)
-	}()
+	defer cancel()
+	var g errgroup.Group
 
-	err := <-errCh
-	cancel()
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
+	g.Go(func() error {
+		return server(ctx, io.Discard, io.Discard, configPath, testHook, nil)
+	})
+
+	err := g.Wait()
 	require.Error(t, err, "failed to load TLS config")
 }
 
 func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 	configHome, configPath := testCustomProvider(t, true)
 
-	errCh := make(chan error)
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 	count := atomic.Int32{}
+	var g errgroup.Group
 	hook := func(c context.Context, cfg *config.Server) error {
 		if count.Add(1) >= 2 {
 			t.Logf("Config reload triggered, cancelling context")
@@ -151,12 +157,12 @@ func TestCustomProviderCancelWhenConfigReload(t *testing.T) {
 		}()
 	}
 
-	go func() {
-		errCh <- server(ctx, os.Stdout, os.Stdout, configPath, hook, startedCallback)
-	}()
+	// Use io.Discard to avoid data races (it's thread-safe unlike bytes.Buffer)
+	g.Go(func() error {
+		return server(ctx, io.Discard, io.Discard, configPath, hook, startedCallback)
+	})
 
-	err := <-errCh
-	cancel()
+	err := g.Wait()
 	require.NoError(t, err)
 }
 

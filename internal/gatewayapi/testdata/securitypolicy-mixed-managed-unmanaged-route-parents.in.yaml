@@ -1,0 +1,68 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: managed-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: unmanaged-gateway
+  spec:
+    gatewayClassName: other-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: mixed-parents-route
+  spec:
+    parentRefs:
+    - name: managed-gateway
+      sectionName: http
+    - name: unmanaged-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: route-policy
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: mixed-parents-route
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        principal:
+          clientCIDRs:
+          - 10.0.0.0/24
