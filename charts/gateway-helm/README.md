@@ -103,7 +103,7 @@ helm uninstall eg -n envoy-gateway-system
 | global.images.envoyGateway.image | string | `nil` |  |
 | global.images.envoyGateway.pullPolicy | string | `nil` |  |
 | global.images.envoyGateway.pullSecrets | list | `[]` |  |
-| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:3fb70258"` |  |
+| global.images.ratelimit.image | string | `"docker.io/envoyproxy/ratelimit:c8765e89"` |  |
 | global.images.ratelimit.pullPolicy | string | `"IfNotPresent"` |  |
 | global.images.ratelimit.pullSecrets | list | `[]` |  |
 | hpa.behavior | object | `{}` |  |
@@ -118,4 +118,3 @@ helm uninstall eg -n envoy-gateway-system
 | service.type | string | `"ClusterIP"` | Service type. Can be set to LoadBalancer with specific IP, e.g.: type: LoadBalancer loadBalancerIP: 10.236.90.20 |
 | topologyInjector.annotations | object | `{}` |  |
 | topologyInjector.enabled | bool | `true` |  |
-
