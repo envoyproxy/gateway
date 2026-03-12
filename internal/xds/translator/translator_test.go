@@ -87,6 +87,9 @@ func TestTranslateXds(t *testing.T) {
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
 		},
+		"jsonpatch-patch-multiple-resources": {
+			requireEnvoyPatchPolicies: true,
+		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
 		},
