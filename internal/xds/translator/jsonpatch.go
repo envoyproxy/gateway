@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -203,28 +202,32 @@ var (
 // findXdsResource return the XDS resource to patch
 // TODO: return multiple resources
 func findXdsResource(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) (cachetypes.Resource, error) {
-	var resource cachetypes.Resource
 	switch p.Type {
 	case resourcev3.ListenerType:
-		resource = findXdsListener(tCtx, p.Name)
+		if r := findXdsListener(tCtx, p.Name); r != nil {
+			return r, nil
+		}
 	case resourcev3.RouteType:
-		resource = findXdsRouteConfig(tCtx, p.Name)
+		if r := findXdsRouteConfig(tCtx, p.Name); r != nil {
+			return r, nil
+		}
 	case resourcev3.ClusterType:
-		resource = findXdsCluster(tCtx, p.Name)
+		if r := findXdsCluster(tCtx, p.Name); r != nil {
+			return r, nil
+		}
 	case resourcev3.EndpointType:
-		resource = findXdsEndpoint(tCtx, p.Name)
+		if r := findXdsEndpoint(tCtx, p.Name); r != nil {
+			return r, nil
+		}
 	case resourcev3.SecretType:
-		resource = findXdsSecret(tCtx, p.Name)
+		if r := findXdsSecret(tCtx, p.Name); r != nil {
+			return r, nil
+		}
 	default:
 		return nil, fmt.Errorf("unsupported patch type %s", p.Type)
 	}
 
-	// resource can be a non-nil interface with a nil pointer value
-	if resource == nil || reflect.ValueOf(resource).IsNil() {
-		return nil, errResourceNotFound
-	}
-
-	return resource, nil
+	return nil, errResourceNotFound
 }
 
 var unescaper = strings.NewReplacer(" ", " ")
