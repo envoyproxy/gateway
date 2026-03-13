@@ -170,6 +170,13 @@ func (*geoip) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPList
 		return nil
 	}
 
+	// geoIPProvider could be nil when GeoIP authorization is configured.
+	// Just silently ignore the GeoIP filter to avoid blocking xDS generation.
+	// The GeoIP provider missing errors are already surfaced to the status of the SecurityPolicy.
+	if irListener.GeoIPProvider == nil || irListener.GeoIPProvider.MaxMind == nil {
+		return nil
+	}
+
 	if hcmContainsFilter(mgr, egv1a1.EnvoyFilterGeoIP.String()) {
 		return nil
 	}
