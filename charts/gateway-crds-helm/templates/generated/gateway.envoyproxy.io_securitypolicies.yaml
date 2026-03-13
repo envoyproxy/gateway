@@ -976,9 +976,9 @@ spec:
                                     type: integer
                                 type: object
                               retryBudget:
-                                description: RetryBudget provides settings for retry
-                                  budget, which limits the number of retries in a
-                                  given percentage.
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
                                 properties:
                                   minRetryConcurrency:
                                     description: |-
@@ -2261,9 +2261,9 @@ spec:
                                     type: integer
                                 type: object
                               retryBudget:
-                                description: RetryBudget provides settings for retry
-                                  budget, which limits the number of retries in a
-                                  given percentage.
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
                                 properties:
                                   minRetryConcurrency:
                                     description: |-
@@ -3788,9 +3788,9 @@ spec:
                                           type: integer
                                       type: object
                                     retryBudget:
-                                      description: RetryBudget provides settings for
-                                        retry budget, which limits the number of retries
-                                        in a given percentage.
+                                      description: |-
+                                        RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                        RetryBudget take precedence over maxParallelRetries.
                                       properties:
                                         minRetryConcurrency:
                                           description: |-
@@ -5364,9 +5364,9 @@ spec:
                                     type: integer
                                 type: object
                               retryBudget:
-                                description: RetryBudget provides settings for retry
-                                  budget, which limits the number of retries in a
-                                  given percentage.
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
                                 properties:
                                   minRetryConcurrency:
                                     description: |-

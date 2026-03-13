@@ -117,20 +117,3 @@ type BackOffPolicy struct {
 	MaxInterval *gwapiv1.Duration `json:"maxInterval,omitempty"`
 	// we can add rate limited based backoff config here if we want to.
 }
-
-// RetryBudget specifies the details of the retry budget configuration, like
-// the percentage of requests in the budget, and the min retry concurrency.
-type RetryBudget struct {
-	// Percent specifies the limit on concurrent retries as a percentage [0, 100] of
-	// the sum of active requests and active pending requests.
-	Percent gwapiv1.Fraction `json:"percent"`
-	// MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
-	// For example, a budget of 20% with a minimum retry concurrency of 3
-	// will allow 5 active retries while there are 25 active requests.
-	// If there are 2 active requests, there are still 3 active retries
-	// allowed because of the minimum retry concurrency.
-	// Defaults to 3.
-	//
-	// +optional
-	MinRetryConcurrency *uint32 `json:"minRetryConcurrency,omitempty"`
-}
