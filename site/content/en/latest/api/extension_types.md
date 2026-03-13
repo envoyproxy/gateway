@@ -676,7 +676,7 @@ _Appears in:_
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
 | `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster |
-| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage. |
+| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.<br />RetryBudget take precedence over maxParallelRetries. |
 
 
 #### ClaimToHeader
