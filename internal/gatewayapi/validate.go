@@ -738,7 +738,11 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 				hostname = string(*listener.Hostname)
 			}
 
-			portListenerInfo[listener.Port].hostnames[hostname]++
+			// Track hostnames per actual protocol to allow same hostname on different protocols
+			// Use the actual protocol, not the grouped protocol, to distinguish HTTPS from TLS
+			actualProtocol := string(listener.Protocol)
+			protocolHostnameKey := fmt.Sprintf("%s:%s", actualProtocol, hostname)
+			portListenerInfo[listener.Port].hostnames[protocolHostnameKey]++
 		}
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
@@ -758,7 +762,10 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 					hostname = string(*listener.Hostname)
 				}
 
-				if info.hostnames[hostname] > 1 {
+				// Use actual protocol for hostname conflict detection
+				actualProtocol := string(listener.Protocol)
+				protocolHostnameKey := fmt.Sprintf("%s:%s", actualProtocol, hostname)
+				if info.hostnames[protocolHostnameKey] > 1 {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
