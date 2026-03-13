@@ -30,6 +30,7 @@ new features: |
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
   Added support for configuring statusOnError in ExtAuth settings
+  Added `--topology-webhook-name` flag to certgen to explicitly target a MutatingWebhookConfiguration by name.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -42,6 +43,7 @@ bug fixes: |
   Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
   Fixed endpoint hostname is not respected when doing active health check.
+  Fixed certgen job unable to find the topology injector webhook when deployed to a custom namespace.
 
 # Enhancements that improve performance.
 performance improvements: |
