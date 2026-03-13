@@ -161,6 +161,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// refers to the Listener TLS.
 					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
 				}
+				// Populate hostnames for TLS listeners to enable SNI-based routing
+				if listener.Protocol == gwapiv1.TLSProtocolType && listener.Hostname != nil {
+					irListener.Hostnames = []string{string(*listener.Hostname)}
+				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{

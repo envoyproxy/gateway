@@ -2173,6 +2173,9 @@ func (s StringMatch) Validate() error {
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
 	CoreListenerDetails `json:",inline" yaml:",inline"`
+	// Hostnames are the hostnames associated with the listener (for TLS SNI matching).
+	// This is used to match incoming connections based on SNI for TLS passthrough routing.
+	Hostnames []string `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener

@@ -761,6 +761,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
+	var sharedEmptyTCPRoute *ir.TCPRoute
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -851,22 +852,65 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			if findXdsCluster(tCtx, emptyClusterName) == nil {
-				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
-					errs = errors.Join(errs, err)
+			// TLS passthrough is indicated by having hostnames (for SNI matching) without TLS termination config
+			isTLSPassthrough := len(tcpListener.Hostnames) > 0
+
+			clusterName := emptyClusterName
+			var route *ir.TCPRoute
+
+			if isTLSPassthrough {
+				// TLS passthrough listeners must not share EmptyCluster
+				clusterName = fmt.Sprintf("%s-%s", emptyClusterName, tcpListener.Name)
+
+				if findXdsCluster(tCtx, clusterName) == nil {
+					if err := tCtx.AddXdsResource(
+						resourcev3.ClusterType,
+						&clusterv3.Cluster{
+							Name:                 clusterName,
+							ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+						},
+					); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
+
+				// Create TLS config with SNIs from listener hostnames for filter chain matching
+				tlsConfig := &ir.TLS{
+					TLSInspectorConfig: &ir.TLSInspectorConfig{
+						SNIs: tcpListener.Hostnames,
+					},
+				}
+
+				route = &ir.TCPRoute{
+					Name: clusterName,
+					Destination: &ir.RouteDestination{
+						Name: clusterName,
+					},
+					TLS: tlsConfig,
+				}
+			} else {
+				// Non-TLS-passthrough: reuse shared EmptyCluster
+				if findXdsCluster(tCtx, emptyClusterName) == nil {
+					if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+
+				if sharedEmptyTCPRoute == nil {
+					sharedEmptyTCPRoute = &ir.TCPRoute{
+						Name: emptyClusterName,
+						Destination: &ir.RouteDestination{
+							Name: emptyClusterName,
+						},
+					}
+				}
+				route = sharedEmptyTCPRoute
 			}
 
-			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
-				Destination: &ir.RouteDestination{
-					Name: emptyClusterName,
-				},
-			}
 			if err := t.addXdsTCPFilterChain(
 				xdsListener,
-				emptyRoute,
-				emptyClusterName,
+				route,
+				clusterName,
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,

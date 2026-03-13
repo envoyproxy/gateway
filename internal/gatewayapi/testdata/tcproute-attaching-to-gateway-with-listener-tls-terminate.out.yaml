@@ -245,6 +245,8 @@ xdsIR:
           privateKey: '[redacted]'
     - address: 0.0.0.0
       externalPort: 90
+      hostnames:
+      - foo.bar.com
       metadata:
         kind: Gateway
         name: gateway-1
