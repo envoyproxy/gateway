@@ -632,6 +632,19 @@ type GatewayPolicyRouteMap struct {
 	SectionIndex map[types.NamespacedName]sets.Set[string]
 }
 
+type FieldPath string
+type PolicyFieldOwners[T client.Object] map[FieldPath]T
+
+func resolvePolicyFieldOwner[T client.Object](owners PolicyFieldOwners[T], field FieldPath, def T) T {
+	ownerPolicy := def
+	if owners != nil {
+		if owner, ok := owners[field]; ok {
+			ownerPolicy = owner
+		}
+	}
+	return ownerPolicy
+}
+
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
 // that would share the same filter chain as the provided listener when translated
 // to XDS
