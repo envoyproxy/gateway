@@ -134,4 +134,5 @@ xdsIR:
         namespace: gateway-conformance-infra
         sectionName: https
       name: gateway-conformance-infra/gateway-tlsroute-referencegrant/https
+      passthrough: true
       port: 10443

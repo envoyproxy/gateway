@@ -852,8 +852,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			// TLS passthrough is indicated by having hostnames (for SNI matching) without TLS termination config
-			isTLSPassthrough := len(tcpListener.Hostnames) > 0
+			// Check if this is a TLS passthrough listener (traffic forwarded without termination)
+			isTLSPassthrough := tcpListener.Passthrough
 
 			clusterName := emptyClusterName
 			var route *ir.TCPRoute

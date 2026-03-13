@@ -4,6 +4,7 @@ tcp:
   port: 10443
   hostnames:
   - "app1.example.com"
+  passthrough: true
   tls: {}
   routes: []
 - name: tls-passthrough-2
@@ -11,6 +12,7 @@ tcp:
   port: 10443
   hostnames:
   - "app2.example.com"
+  passthrough: true
   tls: {}
   routes: []
 - name: tls-passthrough-3
@@ -18,5 +20,6 @@ tcp:
   port: 10443
   hostnames:
   - "app3.example.com"
+  passthrough: true
   tls: {}
   routes: []

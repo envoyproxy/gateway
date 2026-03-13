@@ -308,6 +308,7 @@ xdsIR:
         namespace: gateway-xls
         sectionName: extra-tls-passthrough
       name: gateway-xls/composite-gateway/gateway-xls/tls-xls/extra-tls-passthrough
+      passthrough: true
       port: 8443
       routes:
       - destination:

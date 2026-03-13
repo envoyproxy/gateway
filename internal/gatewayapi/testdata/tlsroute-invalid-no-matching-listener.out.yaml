@@ -578,6 +578,7 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls
       name: envoy-gateway/gateway-tls-exact-hostname/tls
+      passthrough: true
       port: 10443
   envoy-gateway/gateway-tls-wildcard-hostname:
     accessLog:
@@ -620,6 +621,7 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls
       name: envoy-gateway/gateway-tls-wildcard-hostname/tls
+      passthrough: true
       port: 10443
   envoy-gateway/gateway-tlsroute-http-only:
     accessLog:
@@ -756,6 +758,7 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls-passthrough
       name: envoy-gateway/gateway-tlsroute-tcproute-only/tls-passthrough
+      passthrough: true
       port: 10443
   envoy-gateway/gateway-tlsroute-tls-passthrough-only:
     accessLog:
@@ -796,4 +799,5 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls-passthrough
       name: envoy-gateway/gateway-tlsroute-tls-passthrough-only/tls-passthrough
+      passthrough: true
       port: 10443

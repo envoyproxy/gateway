@@ -2176,6 +2176,9 @@ type TCPListener struct {
 	// Hostnames are the hostnames associated with the listener (for TLS SNI matching).
 	// This is used to match incoming connections based on SNI for TLS passthrough routing.
 	Hostnames []string `json:"hostnames,omitempty" yaml:"hostnames,omitempty"`
+	// Passthrough indicates TLS passthrough mode where TLS is not terminated at the listener.
+	// When true, TLS traffic is forwarded to backends without decryption.
+	Passthrough bool `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TCPKeepalive configuration for the listener

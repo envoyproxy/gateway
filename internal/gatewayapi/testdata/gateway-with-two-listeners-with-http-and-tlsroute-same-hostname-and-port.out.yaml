@@ -210,4 +210,5 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls-1
       name: envoy-gateway/gateway-1/tls-1
+      passthrough: true
       port: 10080

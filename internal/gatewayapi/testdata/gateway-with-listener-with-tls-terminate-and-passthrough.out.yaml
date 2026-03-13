@@ -257,6 +257,7 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: tls-passthrough
       name: envoy-gateway/gateway-1/tls-passthrough
+      passthrough: true
       port: 10090
       routes:
       - destination:
