@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -24,6 +25,10 @@ import (
 
 const (
 	vmRuntimeV8 = "envoy.wasm.runtime.v8"
+
+	defaultWasmRetryNumRetries   = uint32(5)
+	defaultWasmRetryBaseInterval = 1 * time.Second
+	defaultWasmRetryMaxInterval  = 10 * time.Second
 )
 
 func init() {
@@ -127,7 +132,8 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 						},
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
-					Sha256: wasm.Code.SHA256,
+					Sha256:      wasm.Code.SHA256,
+					RetryPolicy: buildWasmRetryPolicy(wasm),
 				},
 			},
 		},
@@ -155,6 +161,33 @@ func wasmConfig(wasm *ir.Wasm) (*wasmfilterv3.Wasm, error) {
 	}
 
 	return filterConfig, nil
+}
+
+func buildWasmRetryPolicy(wasm *ir.Wasm) *corev3.RetryPolicy {
+	numRetries := defaultWasmRetryNumRetries
+	baseInterval := defaultWasmRetryBaseInterval
+	maxInterval := defaultWasmRetryMaxInterval
+
+	if rp := wasm.HTTPCodeFetchRetryPolicy; rp != nil {
+		numRetries = rp.NumRetries
+		if rp.BaseInterval != nil {
+			baseInterval = rp.BaseInterval.Duration
+		}
+		if rp.MaxInterval != nil {
+			maxInterval = rp.MaxInterval.Duration
+		} else if rp.BaseInterval != nil {
+			// Default maxInterval to 10x baseInterval per BackOffPolicy contract.
+			maxInterval = 10 * baseInterval
+		}
+	}
+
+	return &corev3.RetryPolicy{
+		RetryBackOff: &corev3.BackoffStrategy{
+			BaseInterval: durationpb.New(baseInterval),
+			MaxInterval:  durationpb.New(maxInterval),
+		},
+		NumRetries: wrapperspb.UInt32(numRetries),
+	}
 }
 
 // routeContainsWasm returns true if Wasms exists for the provided route.

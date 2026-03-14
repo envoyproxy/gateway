@@ -1150,6 +1150,11 @@ spec:
                                       pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                       type: string
                                   type: object
+                                  x-kubernetes-validations:
+                                  - message: maxInterval must be greater than or equal
+                                      to baseInterval
+                                    rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                      || duration(self.maxInterval) >= duration(self.baseInterval)'
                                 timeout:
                                   description: Timeout is the timeout per retry attempt.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
@@ -1649,6 +1654,45 @@ spec:
                     code:
                       description: Code is the Wasm code for the extension.
                       properties:
+                        fetchRetryPolicy:
+                          description: |-
+                            FetchRetryPolicy is the retry policy for Envoy to fetch the Wasm code.
+                            If not specified, the default retry policy will be used:
+                            numRetries: 5, backOff baseInterval: 1s, backOff maxInterval: 10s.
+                          properties:
+                            backOff:
+                              description: |-
+                                BackOff is the backoff policy to be applied per retry attempts.
+                                If not specified, the default baseInterval is 1s and the default maxInterval is 10s.
+                                When only baseInterval is set, maxInterval defaults to 10 * baseInterval.
+                                When only maxInterval is set, baseInterval defaults to 1s.
+                              properties:
+                                baseInterval:
+                                  description: BaseInterval is the base interval between
+                                    retries.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                maxInterval:
+                                  description: |-
+                                    MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
+                                    The default is 10 times the base_interval
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                              - message: maxInterval must be greater than or equal
+                                  to baseInterval
+                                rule: '!(has(self.baseInterval) && has(self.maxInterval))
+                                  || duration(self.maxInterval) >= duration(self.baseInterval)'
+                            numRetries:
+                              default: 5
+                              description: |-
+                                NumRetries is the number of retries to attempt when fetching the Wasm code.
+                                If not specified, defaults to 5.
+                              format: int32
+                              minimum: 0
+                              type: integer
+                          type: object
                         http:
                           description: |-
                             HTTP is the HTTP URL containing the Wasm code.
