@@ -7,7 +7,7 @@ clientTrafficPolicies:
   spec:
     http2:
       connectionKeepalive:
-        connectionIdleInterval: 30s
+        idleInterval: 30s
         interval: 60s
         intervalJitter: 20
         timeout: 10s
@@ -123,7 +123,7 @@ xdsIR:
       - '*'
       http2:
         connectionKeepalive:
-          connectionIdleInterval: 30s
+          idleInterval: 30s
           interval: 1m0s
           intervalJitter: 20
           timeout: 10s

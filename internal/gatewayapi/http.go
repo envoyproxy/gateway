@@ -94,12 +94,12 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 		if http2Settings.ConnectionKeepalive.IntervalJitter != nil {
 			keepalive.IntervalJitter = http2Settings.ConnectionKeepalive.IntervalJitter
 		}
-		if http2Settings.ConnectionKeepalive.ConnectionIdleInterval != nil {
-			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.ConnectionIdleInterval))
+		if http2Settings.ConnectionKeepalive.IdleInterval != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.IdleInterval))
 			if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.ConnectionIdleInterval: %w", err))
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.IdleInterval: %w", err))
 			} else {
-				keepalive.ConnectionIdleInterval = ir.MetaV1DurationPtr(d)
+				keepalive.IdleInterval = ir.MetaV1DurationPtr(d)
 			}
 		}
 		http2.ConnectionKeepalive = keepalive

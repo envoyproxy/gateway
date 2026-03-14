@@ -1777,8 +1777,8 @@ func (in *HTTP2KeepaliveSettings) DeepCopyInto(out *HTTP2KeepaliveSettings) {
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.ConnectionIdleInterval != nil {
-		in, out := &in.ConnectionIdleInterval, &out.ConnectionIdleInterval
+	if in.IdleInterval != nil {
+		in, out := &in.IdleInterval, &out.IdleInterval
 		*out = new(metav1.Duration)
 		**out = **in
 	}

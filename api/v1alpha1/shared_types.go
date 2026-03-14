@@ -742,9 +742,9 @@ type HTTP2KeepaliveSettings struct {
 	// +optional
 	IntervalJitter *uint32 `json:"intervalJitter,omitempty"`
 
-	// ConnectionIdleInterval specifies how long a connection must be idle before a PING is sent.
+	// IdleInterval specifies how long a connection must be idle before a PING is sent.
 	// +optional
-	ConnectionIdleInterval *gwapiv1.Duration `json:"connectionIdleInterval,omitempty"`
+	IdleInterval *gwapiv1.Duration `json:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration for listeners.

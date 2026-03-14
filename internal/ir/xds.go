@@ -641,8 +641,8 @@ type HTTP2KeepaliveSettings struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
 	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
-	// ConnectionIdleInterval specifies idle time before sending a PING.
-	ConnectionIdleInterval *metav1.Duration `json:"connectionIdleInterval,omitempty" yaml:"connectionIdleInterval,omitempty"`
+	// IdleInterval specifies idle time before sending a PING.
+	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration on the listener.
