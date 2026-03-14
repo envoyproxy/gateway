@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -119,6 +120,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 
 			for _, c := range p.Status.Conditions {
 				if c.Type == condition.Type && c.Status == condition.Status {
+					tlog.Logf(t, "pod %s/%s matches the status: %v ip: %v", p.Namespace, p.Name, condition.Status, p.Status.PodIPs)
 					continue checkPods // pod is ready, check next pod
 				}
 			}
@@ -152,6 +154,28 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
+}
+
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
 }
 
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
@@ -682,21 +706,34 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
 		return
 	}
-
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	opts := []tb.CollectOption{
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
+	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+}
 
+func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s", data)
+		tlog.Logf(t, "\ndata: \n%s\n", data)
 	}
+}
+
+func consistentHashDump(t *testing.T, rest *rest.Config) {
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
+		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
+	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {

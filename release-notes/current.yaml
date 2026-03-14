@@ -30,6 +30,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
+  Added support for configuring statusOnError in ExtAuth settings
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -40,9 +41,12 @@ bug fixes: |
   Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
   Fixed xPolicy resources being processed from all namespaces when NamespaceSelector watch mode is configured in the Kubernetes provider.
   Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
+  Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
+  Fixed endpoint hostname is not respected when doing active health check.
 
 # Enhancements that improve performance.
 performance improvements: |
+  Reduce chances of listener drain due to Lua policy updates by migrating to LuaPerRoute.
 
 # Deprecated features or APIs.
 deprecations: |
@@ -50,3 +54,4 @@ deprecations: |
 # Other notable changes not covered by the above sections.
 Other changes: |
   Moved Envoy Gateway CRDs into a sub-chart to avoid the Helm release secret exceeding the 1MB size limit when adding new API fields. Upgrade/Install behavior is unchanged for users.
+  The maximum number of rules in a RateLimit policy is increased from 128 to 256.
