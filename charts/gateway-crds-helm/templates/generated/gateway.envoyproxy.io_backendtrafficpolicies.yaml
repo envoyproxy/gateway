@@ -125,10 +125,121 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables literal context modeling format feature.
+                            This is a decoding-speed vs compression ratio trade-off.
+                            Default is false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes encoder for specific input.
+                            Valid values: DEFAULT, GENERIC, TEXT, FONT.
+                            Default is DEFAULT.
+                          enum:
+                          - DEFAULT
+                          - GENERIC
+                          - TEXT
+                          - FONT
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithmic of the compressor's input block size.
+                            Larger input block results in better compression at the expense of memory usage.
+                            Valid values are 16-24. Default is 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the compression speed-density lever.
+                            Higher quality means slower compression but better compression ratio.
+                            Valid values are 0-11. Default is 3.
+                          format: int32
+                          maximum: 11
+                          minimum: 0
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithmic of the compressor's window size.
+                            Larger window results in better compression at the expense of memory usage.
+                            Valid values are 10-24. Default is 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel controls the speed and amount of compression.
+                            Valid values: DEFAULT_COMPRESSION, BEST_SPEED, BEST_COMPRESSION, or COMPRESSION_LEVEL_1 through COMPRESSION_LEVEL_9.
+                            Default is DEFAULT_COMPRESSION.
+                          enum:
+                          - DEFAULT_COMPRESSION
+                          - BEST_SPEED
+                          - BEST_COMPRESSION
+                          - COMPRESSION_LEVEL_1
+                          - COMPRESSION_LEVEL_2
+                          - COMPRESSION_LEVEL_3
+                          - COMPRESSION_LEVEL_4
+                          - COMPRESSION_LEVEL_5
+                          - COMPRESSION_LEVEL_6
+                          - COMPRESSION_LEVEL_7
+                          - COMPRESSION_LEVEL_8
+                          - COMPRESSION_LEVEL_9
+                          type: string
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy.
+                            Valid values: DEFAULT_STRATEGY, FILTERED, HUFFMAN_ONLY, RLE, FIXED.
+                            Default is DEFAULT_STRATEGY.
+                          enum:
+                          - DEFAULT_STRATEGY
+                          - FILTERED
+                          - HUFFMAN_ONLY
+                          - RLE
+                          - FIXED
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib. Higher values
+                            use more memory, but are faster and produce better compression results.
+                            Valid values are 1-9. Default is 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithmic of the compressor's window size.
+                            Larger window results in better compression at the expense of memory usage.
+                            Valid values are 9-15. Default is 12 (4096 bytes window).
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     minContentLength:
                       allOf:
                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -153,7 +264,45 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets compression parameters according to pre-defined compression level table.
+                            Valid values start from 1. Default is 3.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum controls whether a 32-bit checksum is written at end of frame.
+                            Default is false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy affects compression ratio and speed. Higher values result in stronger but slower compression.
+                            Valid values: DEFAULT, FAST, DFAST, GREEDY, LAZY, LAZY2, BTLAZY2, BTOPT, BTULTRA, BTULTRA2.
+                            Default is DEFAULT.
+                          enum:
+                          - DEFAULT
+                          - FAST
+                          - DFAST
+                          - GREEDY
+                          - LAZY
+                          - LAZY2
+                          - BTLAZY2
+                          - BTOPT
+                          - BTULTRA
+                          - BTULTRA2
+                          type: string
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - type
                   type: object
@@ -170,10 +319,121 @@ spec:
                   properties:
                     brotli:
                       description: The configuration for Brotli compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        disableLiteralContextModeling:
+                          description: |-
+                            DisableLiteralContextModeling disables literal context modeling format feature.
+                            This is a decoding-speed vs compression ratio trade-off.
+                            Default is false.
+                          type: boolean
+                        encoderMode:
+                          description: |-
+                            EncoderMode tunes encoder for specific input.
+                            Valid values: DEFAULT, GENERIC, TEXT, FONT.
+                            Default is DEFAULT.
+                          enum:
+                          - DEFAULT
+                          - GENERIC
+                          - TEXT
+                          - FONT
+                          type: string
+                        inputBlockBits:
+                          description: |-
+                            InputBlockBits represents the base two logarithmic of the compressor's input block size.
+                            Larger input block results in better compression at the expense of memory usage.
+                            Valid values are 16-24. Default is 24.
+                          format: int32
+                          maximum: 24
+                          minimum: 16
+                          type: integer
+                        quality:
+                          description: |-
+                            Quality controls the compression speed-density lever.
+                            Higher quality means slower compression but better compression ratio.
+                            Valid values are 0-11. Default is 3.
+                          format: int32
+                          maximum: 11
+                          minimum: 0
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithmic of the compressor's window size.
+                            Larger window results in better compression at the expense of memory usage.
+                            Valid values are 10-24. Default is 18.
+                          format: int32
+                          maximum: 24
+                          minimum: 10
+                          type: integer
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     gzip:
                       description: The configuration for GZIP compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel controls the speed and amount of compression.
+                            Valid values: DEFAULT_COMPRESSION, BEST_SPEED, BEST_COMPRESSION, or COMPRESSION_LEVEL_1 through COMPRESSION_LEVEL_9.
+                            Default is DEFAULT_COMPRESSION.
+                          enum:
+                          - DEFAULT_COMPRESSION
+                          - BEST_SPEED
+                          - BEST_COMPRESSION
+                          - COMPRESSION_LEVEL_1
+                          - COMPRESSION_LEVEL_2
+                          - COMPRESSION_LEVEL_3
+                          - COMPRESSION_LEVEL_4
+                          - COMPRESSION_LEVEL_5
+                          - COMPRESSION_LEVEL_6
+                          - COMPRESSION_LEVEL_7
+                          - COMPRESSION_LEVEL_8
+                          - COMPRESSION_LEVEL_9
+                          type: string
+                        compressionStrategy:
+                          description: |-
+                            CompressionStrategy selects the zlib compression strategy.
+                            Valid values: DEFAULT_STRATEGY, FILTERED, HUFFMAN_ONLY, RLE, FIXED.
+                            Default is DEFAULT_STRATEGY.
+                          enum:
+                          - DEFAULT_STRATEGY
+                          - FILTERED
+                          - HUFFMAN_ONLY
+                          - RLE
+                          - FIXED
+                          type: string
+                        memoryLevel:
+                          description: |-
+                            MemoryLevel controls the amount of internal memory used by zlib. Higher values
+                            use more memory, but are faster and produce better compression results.
+                            Valid values are 1-9. Default is 5.
+                          format: int32
+                          maximum: 9
+                          minimum: 1
+                          type: integer
+                        windowBits:
+                          description: |-
+                            WindowBits represents the base two logarithmic of the compressor's window size.
+                            Larger window results in better compression at the expense of memory usage.
+                            Valid values are 9-15. Default is 12 (4096 bytes window).
+                          format: int32
+                          maximum: 15
+                          minimum: 9
+                          type: integer
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     minContentLength:
                       allOf:
                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -198,7 +458,45 @@ spec:
                       type: string
                     zstd:
                       description: The configuration for Zstd compressor.
+                      properties:
+                        chunkSize:
+                          description: |-
+                            ChunkSize is the size of the output buffer.
+                            Default is 4096.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        compressionLevel:
+                          description: |-
+                            CompressionLevel sets compression parameters according to pre-defined compression level table.
+                            Valid values start from 1. Default is 3.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        enableChecksum:
+                          description: |-
+                            EnableChecksum controls whether a 32-bit checksum is written at end of frame.
+                            Default is false.
+                          type: boolean
+                        strategy:
+                          description: |-
+                            Strategy affects compression ratio and speed. Higher values result in stronger but slower compression.
+                            Valid values: DEFAULT, FAST, DFAST, GREEDY, LAZY, LAZY2, BTLAZY2, BTOPT, BTULTRA, BTULTRA2.
+                            Default is DEFAULT.
+                          enum:
+                          - DEFAULT
+                          - FAST
+                          - DFAST
+                          - GREEDY
+                          - LAZY
+                          - LAZY2
+                          - BTLAZY2
+                          - BTOPT
+                          - BTULTRA
+                          - BTULTRA2
+                          type: string
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                   required:
                   - type
                   type: object
