@@ -23193,8 +23193,8 @@ spec:
                     description: ConnectionKeepalive configures HTTP/2 connection
                       keepalive using PING frames.
                     properties:
-                      connectionIdleInterval:
-                        description: ConnectionIdleInterval specifies how long a connection
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
                           must be idle before a PING is sent.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
@@ -26468,8 +26468,8 @@ spec:
                     description: ConnectionKeepalive configures HTTP/2 connection
                       keepalive using PING frames.
                     properties:
-                      connectionIdleInterval:
-                        description: ConnectionIdleInterval specifies how long a connection
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
                           must be idle before a PING is sent.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
@@ -28413,10 +28413,9 @@ spec:
                               description: ConnectionKeepalive configures HTTP/2 connection
                                 keepalive using PING frames.
                               properties:
-                                connectionIdleInterval:
-                                  description: ConnectionIdleInterval specifies how
-                                    long a connection must be idle before a PING is
-                                    sent.
+                                idleInterval:
+                                  description: IdleInterval specifies how long a connection
+                                    must be idle before a PING is sent.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                                 interval:
@@ -42505,11 +42504,10 @@ spec:
                                                   HTTP/2 connection keepalive using
                                                   PING frames.
                                                 properties:
-                                                  connectionIdleInterval:
-                                                    description: ConnectionIdleInterval
-                                                      specifies how long a connection
-                                                      must be idle before a PING is
-                                                      sent.
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   interval:
@@ -43873,11 +43871,10 @@ spec:
                                                   HTTP/2 connection keepalive using
                                                   PING frames.
                                                 properties:
-                                                  connectionIdleInterval:
-                                                    description: ConnectionIdleInterval
-                                                      specifies how long a connection
-                                                      must be idle before a PING is
-                                                      sent.
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                   interval:
@@ -45402,10 +45399,10 @@ spec:
                                             HTTP/2 connection keepalive using PING
                                             frames.
                                           properties:
-                                            connectionIdleInterval:
-                                              description: ConnectionIdleInterval
-                                                specifies how long a connection must
-                                                be idle before a PING is sent.
+                                            idleInterval:
+                                              description: IdleInterval specifies
+                                                how long a connection must be idle
+                                                before a PING is sent.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                             interval:
@@ -46844,10 +46841,10 @@ spec:
                                     description: ConnectionKeepalive configures HTTP/2
                                       connection keepalive using PING frames.
                                     properties:
-                                      connectionIdleInterval:
-                                        description: ConnectionIdleInterval specifies
-                                          how long a connection must be idle before
-                                          a PING is sent.
+                                      idleInterval:
+                                        description: IdleInterval specifies how long
+                                          a connection must be idle before a PING
+                                          is sent.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                       interval:
@@ -49691,10 +49688,9 @@ spec:
                                 description: ConnectionKeepalive configures HTTP/2
                                   connection keepalive using PING frames.
                                 properties:
-                                  connectionIdleInterval:
-                                    description: ConnectionIdleInterval specifies
-                                      how long a connection must be idle before a
-                                      PING is sent.
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
@@ -50938,10 +50934,9 @@ spec:
                                 description: ConnectionKeepalive configures HTTP/2
                                   connection keepalive using PING frames.
                                 properties:
-                                  connectionIdleInterval:
-                                    description: ConnectionIdleInterval specifies
-                                      how long a connection must be idle before a
-                                      PING is sent.
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
@@ -52440,9 +52435,9 @@ spec:
                                       description: ConnectionKeepalive configures
                                         HTTP/2 connection keepalive using PING frames.
                                       properties:
-                                        connectionIdleInterval:
-                                          description: ConnectionIdleInterval specifies
-                                            how long a connection must be idle before
+                                        idleInterval:
+                                          description: IdleInterval specifies how
+                                            long a connection must be idle before
                                             a PING is sent.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
@@ -53964,10 +53959,9 @@ spec:
                                 description: ConnectionKeepalive configures HTTP/2
                                   connection keepalive using PING frames.
                                 properties:
-                                  connectionIdleInterval:
-                                    description: ConnectionIdleInterval specifies
-                                      how long a connection must be idle before a
-                                      PING is sent.
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                   interval:
