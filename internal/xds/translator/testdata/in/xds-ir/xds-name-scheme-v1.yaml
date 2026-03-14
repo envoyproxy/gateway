@@ -100,7 +100,6 @@ http:
   hostnames:
   - '*'
   http3: {}
-  isHTTP2: false
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true

@@ -1895,7 +1895,7 @@ spec:
                           required:
                           - limit
                           type: object
-                        maxItems: 128
+                        maxItems: 256
                         type: array
                     required:
                     - rules
@@ -3740,9 +3740,10 @@ spec:
                         format: int64
                         minimum: 1
                         type: integer
-                    required:
-                    - value
                     type: object
+                    x-kubernetes-validations:
+                    - message: closeDelay can only be configured when value is set
+                      rule: '!has(self.closeDelay) || has(self.value)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-
@@ -3775,6 +3776,21 @@ spec:
 
                   Deprecated: Use ProxyProtocol instead.
                 type: boolean
+              grpc:
+                description: GRPC provides gRPC configuration on the listener.
+                properties:
+                  enableWeb:
+                    description: |-
+                      EnableWeb configures the gRPC-web filter on the listener.
+                      The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+                      using HTTP/1.1 or HTTP/2.
+
+                      This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                      In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                      users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                      Therefore, we enable this behavior only when it is explicitly opted in.
+                    type: boolean
+                type: object
               headers:
                 description: HeaderSettings provides configuration for header management.
                 properties:
@@ -7203,7 +7219,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -7261,9 +7276,8 @@ spec:
                             Note that the image must be accessible from the Envoy Gateway.
                           properties:
                             pullSecretRef:
-                              description: |-
-                                PullSecretRef is a reference to the secret containing the credentials to pull the image.
-                                Only support Kubernetes Secret resource from the same namespace.
+                              description: PullSecretRef is a reference to the secret
+                                containing the credentials to pull the image.
                               properties:
                                 group:
                                   default: ""
@@ -7328,7 +7342,6 @@ spec:
                                     as a trust anchor to validate the certificates presented by the Wasm code source.
 
                                     Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
-                                    Note: The ConfigMap or Secret must be in the same namespace as the EnvoyExtensionPolicy.
                                   properties:
                                     group:
                                       default: ""
@@ -8644,15 +8657,6 @@ spec:
                         state that should not be destroyed on configuration updates.
                         Defaults to false.
                       type: boolean
-                    libraryName:
-                      description: |-
-                        LibraryName is the name of the shared library file that Envoy will load.
-                        Envoy searches for lib${libraryName}.so in the path specified by the
-                        ENVOY_DYNAMIC_MODULES_SEARCH_PATH environment variable.
-                        If not specified, defaults to the value of Name.
-                      maxLength: 253
-                      pattern: ^[a-zA-Z0-9_]([a-zA-Z0-9_.-]*[a-zA-Z0-9_])?$
-                      type: string
                     loadGlobally:
                       default: false
                       description: |-
@@ -8670,8 +8674,47 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                       type: string
+                    source:
+                      description: Source defines where the dynamic module code is
+                        loaded from.
+                      properties:
+                        local:
+                          description: |-
+                            Local specifies a module loaded from the proxy's local filesystem
+                            by absolute path.
+                          properties:
+                            path:
+                              description: Path is the absolute filesystem path to
+                                the dynamic module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - path
+                          type: object
+                        remote:
+                          description: |-
+                            Remote specifies a module fetched from a remote source.
+                            The module binary is downloaded and cached by Envoy.
+                          type: object
+                        type:
+                          default: Local
+                          description: |-
+                            Type is the type of the source of the dynamic module code.
+                            Defaults to Local.
+                          enum:
+                          - Local
+                          - Remote
+                          type: string
+                      type: object
+                      x-kubernetes-validations:
+                      - message: If type is Remote, remote field needs to be set.
+                        rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
+                      - message: If type is Local, local field needs to be set.
+                        rule: self.type != 'Local' || has(self.local)
                   required:
                   - name
+                  - source
                   type: object
                 maxItems: 16
                 type: array
@@ -8846,6 +8889,130 @@ spec:
                     rule: (has(self.before) && !has(self.after)) || (!has(self.before)
                       && has(self.after))
                 type: array
+              geoIP:
+                description: GeoIP defines shared GeoIP provider configuration for
+                  this EnvoyProxy fleet.
+                properties:
+                  provider:
+                    description: Provider defines the GeoIP provider configuration
+                      used by GeoIP filter instances.
+                    properties:
+                      maxMind:
+                        description: MaxMind configures the MaxMind provider.
+                        properties:
+                          anonymousIpDbSource:
+                            description: AnonymousIPDBSource configures the Anonymous
+                              IP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          asnDbSource:
+                            description: ASNDBSource configures the ASN database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          cityDbSource:
+                            description: CityDBSource configures the City database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          countryDbSource:
+                            description: CountryDBSource configures the Country database
+                              source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                          ispDbSource:
+                            description: ISPDBSource configures the ISP database source.
+                            properties:
+                              local:
+                                description: Local is a database source from a local
+                                  file.
+                                properties:
+                                  path:
+                                    description: Path is the path to the database
+                                      file.
+                                    pattern: ^.*\\.mmdb$
+                                    type: string
+                                required:
+                                - path
+                                type: object
+                            required:
+                            - local
+                            type: object
+                        type: object
+                        x-kubernetes-validations:
+                        - message: at least one MaxMind database source must be specified
+                          rule: has(self.cityDbSource) || has(self.countryDbSource)
+                            || has(self.asnDbSource) || has(self.ispDbSource) || has(self.anonymousIpDbSource)
+                      type:
+                        description: GeoIPProviderType enumerates GeoIP providers
+                          supported by Envoy Gateway.
+                        enum:
+                        - MaxMind
+                        type: string
+                    required:
+                    - type
+                    type: object
+                    x-kubernetes-validations:
+                    - message: maxMind must be set when type is MaxMind
+                      rule: 'self.type == ''MaxMind'' ? has(self.maxMind) : true'
+                required:
+                - provider
+                type: object
               ipFamily:
                 description: |-
                   IPFamily specifies the IP family for the EnvoyProxy fleet.
@@ -25433,7 +25600,6 @@ spec:
                           "credential", and the value should be the credential to be injected.
                           For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
                           for bearer token, the value should be "Bearer <token>".
-                          Note: The secret must be in the same namespace as the HTTPRouteFilter.
                         properties:
                           group:
                             default: ""
@@ -26127,6 +26293,85 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
+                            clientIPGeoLocations:
+                              description: |-
+                                ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+                              items:
+                                description: ClientIPGeoLocation specifies geolocation-based
+                                  match criteria for authorization.
+                                properties:
+                                  anonymous:
+                                    description: Anonymous matches anonymous network
+                                      detection signals.
+                                    properties:
+                                      isAnonymous:
+                                        description: IsAnonymous matches whether the
+                                          client IP is considered anonymous.
+                                        type: boolean
+                                      isHosting:
+                                        description: IsHosting matches whether the
+                                          client IP belongs to a hosting provider.
+                                        type: boolean
+                                      isProxy:
+                                        description: IsProxy matches whether the client
+                                          IP belongs to a public proxy.
+                                        type: boolean
+                                      isTor:
+                                        description: IsTor matches whether the client
+                                          IP belongs to a Tor exit node.
+                                        type: boolean
+                                      isVPN:
+                                        description: IsVPN matches whether the client
+                                          IP is detected as VPN.
+                                        type: boolean
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of isAnonymous, isVPN,
+                                        isHosting, isTor, or isProxy must be specified
+                                      rule: has(self.isAnonymous) || has(self.isVPN)
+                                        || has(self.isHosting) || has(self.isTor)
+                                        || has(self.isProxy)
+                                  asn:
+                                    description: ASN is the autonomous system number
+                                      associated with the client IP.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  city:
+                                    description: City is the city associated with
+                                      the client IP.
+                                    maxLength: 128
+                                    minLength: 1
+                                    type: string
+                                  country:
+                                    description: Country is the country ISO code associated
+                                      with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
+                                    type: string
+                                  isp:
+                                    description: ISP is the internet service provider
+                                      associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
+                                    type: string
+                                  region:
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: at least one of country, region, city,
+                                    asn, isp, or anonymous must be specified
+                                  rule: has(self.country) || has(self.region) || has(self.city)
+                                    || has(self.asn) || has(self.isp) || has(self.anonymous)
+                              minItems: 1
+                              type: array
                             headers:
                               description: |-
                                 Headers authorize the request based on user identity extracted from custom headers.
@@ -26244,34 +26489,12 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
-                            sourceCIDRs:
-                              description: |-
-                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
-                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-
-                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
-                                the source IP for the rule to match.
-
-                                The source IP is the IP address of the peer that connected to Envoy.
-                                This IP is obtained from the TCP connection's peer address and is not
-                                affected by X-Forwarded-For or other IP detection headers.
-                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
-                                the original client IP will only be available if the intermediary
-                                preserves the source address (for example by enabling the PROXY protocol
-                                or avoiding SNAT).
-                              items:
-                                description: |-
-                                  CIDR defines a CIDR Address range.
-                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
-                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
-                                type: string
-                              minItems: 1
-                              type: array
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, or headers
-                              must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers))
+                          - message: at least one of clientCIDRs, jwt, headers, or
+                              clientIPGeoLocations must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
+                              || has(self.clientIPGeoLocations))
                       required:
                       - action
                       - principal
@@ -26301,8 +26524,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
@@ -28959,6 +29180,51 @@ spec:
                       route matching decisions. If the recomputation selects a new route, features targeting
                       the new matched route will be applied.
                     type: boolean
+                  statusOnError:
+                    description: |-
+                      Sets the HTTP status that is returned when the authorization service returns an error
+                      or cannot be reached. Defaults to 403 Forbidden.
+                      Only 4xx and 5xx status codes are supported.
+                    enum:
+                    - 400
+                    - 401
+                    - 402
+                    - 403
+                    - 404
+                    - 405
+                    - 406
+                    - 407
+                    - 408
+                    - 409
+                    - 410
+                    - 411
+                    - 412
+                    - 413
+                    - 414
+                    - 415
+                    - 416
+                    - 417
+                    - 421
+                    - 422
+                    - 423
+                    - 424
+                    - 426
+                    - 428
+                    - 429
+                    - 431
+                    - 500
+                    - 501
+                    - 502
+                    - 503
+                    - 504
+                    - 505
+                    - 506
+                    - 507
+                    - 508
+                    - 510
+                    - 511
+                    format: int32
+                    type: integer
                   timeout:
                     description: |-
                       Timeout defines the timeout for requests to the external authorization service.
@@ -30389,6 +30655,14 @@ spec:
                 required:
                 - providers
                 type: object
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing SecurityPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.

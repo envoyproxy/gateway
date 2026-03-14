@@ -29,6 +29,7 @@ const (
 
 type CollectOptions struct {
 	namespaces []string
+	selector   []string
 	bundlePath string
 	// enableSDS indicates whether to remove the SDS section from the config dump
 	// to avoid collecting sensitive information.
@@ -49,6 +50,12 @@ func WithBundlePath(path string) CollectOption {
 func WithCollectedNamespaces(ns []string) CollectOption {
 	return func(opts *CollectOptions) {
 		opts.namespaces = ns
+	}
+}
+
+func WithSelector(selector ...string) CollectOption {
+	return func(opts *CollectOptions) {
+		opts.selector = selector
 	}
 }
 
@@ -120,6 +127,7 @@ func CollectResult(ctx context.Context, restConfig *rest.Config, opts ...Collect
 					Collector: &troubleshootv1b2.Logs{
 						Name:      "pod-logs",
 						Namespace: ns,
+						Selector:  collectorOpts.selector,
 					},
 					ClientConfig: restConfig,
 					BundlePath:   bundlePath,

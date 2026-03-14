@@ -4,7 +4,6 @@ http:
     externalPort: 80
     hostnames:
       - domain1.example.com
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: external-gateway
@@ -61,7 +60,6 @@ http:
     externalPort: 80
     hostnames:
       - domain2.example.com
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: external-gateway

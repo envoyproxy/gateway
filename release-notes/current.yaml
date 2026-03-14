@@ -13,10 +13,12 @@ security updates: |
 new features: |
   Added support for configuring optional health check configuration.
   Added support for shadow mode in local rate limiting.
+  Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
   Added `egctl config envoy-gateway` commands to retrieve Envoy Gateway admin config dumps.
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators for more details.
   Implement RoutingType field for BackendTrafficPolicy
   Support for configuring weights for locality zones.
+  Added support for settings of gRPC web in ClientTrafficPolicy.
   Added support for Envoy Dynamic Modules.
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
   Added support for removing headers based on matching criteria (Exact, Prefix, Suffix, RegularExpression) in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders.
@@ -27,6 +29,7 @@ new features: |
   Added support for URLRewrite filter on individual backendRefs.
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
+  Added support for configuring statusOnError in ExtAuth settings
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
 
 bug fixes: |
@@ -37,9 +40,13 @@ bug fixes: |
   Fixed standalone mode emitting non-actionable error logs for missing secrets and unsupported ratelimit deletion on every startup.
   Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
   Fixed xPolicy resources being processed from all namespaces when NamespaceSelector watch mode is configured in the Kubernetes provider.
+  Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
+  Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
+  Fixed endpoint hostname is not respected when doing active health check.
 
 # Enhancements that improve performance.
 performance improvements: |
+  Reduce chances of listener drain due to Lua policy updates by migrating to LuaPerRoute.
 
 # Deprecated features or APIs.
 deprecations: |
@@ -47,3 +54,4 @@ deprecations: |
 # Other notable changes not covered by the above sections.
 Other changes: |
   Moved Envoy Gateway CRDs into a sub-chart to avoid the Helm release secret exceeding the 1MB size limit when adding new API fields. Upgrade/Install behavior is unchanged for users.
+  The maximum number of rules in a RateLimit policy is increased from 128 to 256.

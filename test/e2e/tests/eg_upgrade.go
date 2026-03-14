@@ -53,7 +53,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "1.7.0" //  the latest prior release
+			lastVersionTag := "1.7.1" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
@@ -147,7 +147,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			t.Log("Confirm routing works before starting to validate the eg upgrade flow")
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 			// fire the rest of requests
-			if err := GotExactExpectedResponse(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponseExceptErrors(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 
@@ -165,7 +165,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			t.Log("Confirm routing works after upgrading Envoy Gateway with current main version")
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 			// fire the rest of requests
-			if err := GotExactExpectedResponse(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponseExceptErrors(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 		})

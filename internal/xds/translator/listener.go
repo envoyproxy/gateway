@@ -421,8 +421,14 @@ func (t *Translator) addHCMToXDSListener(
 	// Add the proxy protocol filter if needed
 	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
-	if irListener.IsHTTP2 {
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb, xdsfilters.GRPCStats)
+	// Add gRPC specific filters if needed
+	if irListener.GRPC != nil {
+		if ptr.Deref(irListener.GRPC.EnableGRPCWeb, false) {
+			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
+		}
+		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
+			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+		}
 	}
 
 	if http3Listener {
@@ -450,11 +456,13 @@ func (t *Translator) addHCMToXDSListener(
 			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
 		}
 
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
+		if connLimit.Value != nil {
+			cl := buildConnectionLimitFilter(statPrefix, connection)
+			if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+				filters = append(filters, clf)
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -715,7 +723,7 @@ func buildTCPFilterChain(
 	}
 
 	// Connection limit (if configured)
-	if connection != nil && connection.ConnectionLimit != nil {
+	if connection != nil && connection.ConnectionLimit != nil && connection.ConnectionLimit.Value != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
