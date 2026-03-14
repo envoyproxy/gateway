@@ -202,8 +202,6 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 80
-      hostnames:
-      - foo.com
       metadata:
         kind: Gateway
         name: gateway-1

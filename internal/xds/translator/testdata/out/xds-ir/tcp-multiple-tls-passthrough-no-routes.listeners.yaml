@@ -3,40 +3,13 @@
       address: 0.0.0.0
       portValue: 10443
   filterChains:
-  - filterChainMatch:
-      serverNames:
-      - app1.example.com
-    filters:
+  - filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: EmptyCluster-tls-passthrough-1
-        statPrefix: tls-passthrough-10443
-    name: EmptyCluster-tls-passthrough-1
-  - filterChainMatch:
-      serverNames:
-      - app2.example.com
-    filters:
-    - name: envoy.filters.network.tcp_proxy
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: EmptyCluster-tls-passthrough-2
-        statPrefix: tls-passthrough-10443
-    name: EmptyCluster-tls-passthrough-2
-  - filterChainMatch:
-      serverNames:
-      - app3.example.com
-    filters:
-    - name: envoy.filters.network.tcp_proxy
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: EmptyCluster-tls-passthrough-3
-        statPrefix: tls-passthrough-10443
-    name: EmptyCluster-tls-passthrough-3
-  listenerFilters:
-  - name: envoy.filters.listener.tls_inspector
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+        cluster: EmptyCluster
+        statPrefix: tcp-10443
+    name: EmptyCluster
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tls-passthrough-1
   perConnectionBufferLimitBytes: 32768

@@ -247,8 +247,6 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 90
-      hostnames:
-      - '*.example.com'
       metadata:
         kind: Gateway
         name: gateway-1
@@ -347,8 +345,6 @@ xdsIR:
     tcp:
     - address: 0.0.0.0
       externalPort: 90
-      hostnames:
-      - '*.com'
       metadata:
         kind: Gateway
         name: gateway-2

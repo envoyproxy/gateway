@@ -852,71 +852,43 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
-			// Check if this is a TLS passthrough listener (traffic forwarded without termination)
-			isTLSPassthrough := tcpListener.Passthrough
-
-			clusterName := emptyClusterName
-			var route *ir.TCPRoute
-
-			if isTLSPassthrough {
-				// TLS passthrough listeners must not share EmptyCluster
-				clusterName = fmt.Sprintf("%s-%s", emptyClusterName, tcpListener.Name)
-
-				if findXdsCluster(tCtx, clusterName) == nil {
-					if err := tCtx.AddXdsResource(
-						resourcev3.ClusterType,
-						&clusterv3.Cluster{
-							Name:                 clusterName,
-							ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
-						},
-					); err != nil {
-						errs = errors.Join(errs, err)
-					}
+			// Reuse shared EmptyCluster across all listeners without routes
+			if findXdsCluster(tCtx, emptyClusterName) == nil {
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
+					errs = errors.Join(errs, err)
 				}
-
-				// Create TLS config with SNIs from listener hostnames for filter chain matching
-				tlsConfig := &ir.TLS{
-					TLSInspectorConfig: &ir.TLSInspectorConfig{
-						SNIs: tcpListener.Hostnames,
-					},
-				}
-
-				route = &ir.TCPRoute{
-					Name: clusterName,
-					Destination: &ir.RouteDestination{
-						Name: clusterName,
-					},
-					TLS: tlsConfig,
-				}
-			} else {
-				// Non-TLS-passthrough: reuse shared EmptyCluster
-				if findXdsCluster(tCtx, emptyClusterName) == nil {
-					if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
-						errs = errors.Join(errs, err)
-					}
-				}
-
-				if sharedEmptyTCPRoute == nil {
-					sharedEmptyTCPRoute = &ir.TCPRoute{
-						Name: emptyClusterName,
-						Destination: &ir.RouteDestination{
-							Name: emptyClusterName,
-						},
-					}
-				}
-				route = sharedEmptyTCPRoute
 			}
 
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				route,
-				clusterName,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
-			); err != nil {
-				errs = errors.Join(errs, err)
+			if sharedEmptyTCPRoute == nil {
+				sharedEmptyTCPRoute = &ir.TCPRoute{
+					Name: emptyClusterName,
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+				}
+			}
+
+			// Only add the filter chain once per Envoy listener; multiple IR listeners may share
+			// the same address/port and map to the same xDS listener.
+			filterChainExists := false
+			for _, fc := range xdsListener.FilterChains {
+				if fc.Name == emptyClusterName {
+					filterChainExists = true
+					break
+				}
+			}
+			if !filterChainExists {
+				if err := t.addXdsTCPFilterChain(
+					xdsListener,
+					sharedEmptyTCPRoute,
+					emptyClusterName,
+					accesslog,
+					tcpListener.Timeout,
+					tcpListener.Connection,
+					tcpListener.TLS,
+				); err != nil {
+					errs = errors.Join(errs, err)
+				}
 			}
 		}
 	}

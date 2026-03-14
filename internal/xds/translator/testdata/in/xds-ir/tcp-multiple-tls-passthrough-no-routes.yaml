@@ -2,24 +2,18 @@ tcp:
 - name: tls-passthrough-1
   address: 0.0.0.0
   port: 10443
-  hostnames:
-  - "app1.example.com"
   passthrough: true
   tls: {}
   routes: []
 - name: tls-passthrough-2
   address: 0.0.0.0
   port: 10443
-  hostnames:
-  - "app2.example.com"
   passthrough: true
   tls: {}
   routes: []
 - name: tls-passthrough-3
   address: 0.0.0.0
   port: 10443
-  hostnames:
-  - "app3.example.com"
   passthrough: true
   tls: {}
   routes: []
