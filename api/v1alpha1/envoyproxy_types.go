@@ -204,6 +204,11 @@ type EnvoyProxySpec struct {
 	// +optional
 	// +notImplementedHide
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+
+	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
