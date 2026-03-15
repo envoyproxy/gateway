@@ -889,6 +889,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 					}
 
+					if hrf.Spec.URLRewrite.AppendXForwardedHost != nil {
+						if filterContext.URLRewrite == nil {
+							filterContext.URLRewrite = &ir.URLRewrite{}
+						}
+						filterContext.URLRewrite.AppendXForwardedHost = hrf.Spec.URLRewrite.AppendXForwardedHost
+					}
+
 				}
 
 				if hrf.Spec.DirectResponse != nil {

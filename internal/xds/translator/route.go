@@ -579,7 +579,9 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 			}
 		}
 
-		routeAction.AppendXForwardedHost = true
+		if urlRewrite.AppendXForwardedHost == nil || *urlRewrite.AppendXForwardedHost {
+			routeAction.AppendXForwardedHost = true
+		}
 	}
 
 	return routeAction
