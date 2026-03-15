@@ -14,10 +14,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.admission_control
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.admission_control.v3.AdmissionControl
-            successCriteria: {}
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

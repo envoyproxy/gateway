@@ -104,8 +104,6 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 1
 	case isFilterType(filter, egv1a1.EnvoyFilterFault):
 		order = 2
-	case isFilterType(filter, egv1a1.EnvoyFilterAdmissionControl):
-		order = 3
 	case isFilterType(filter, egv1a1.EnvoyFilterCORS):
 		order = 4
 	case isFilterType(filter, egv1a1.EnvoyFilterHeaderMutation):

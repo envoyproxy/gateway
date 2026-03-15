@@ -74,6 +74,7 @@ type xdsClusterArgs struct {
 	metrics           *ir.Metrics
 	backendConnection *ir.BackendConnection
 	dns               *ir.DNS
+	admissionControl  *ir.AdmissionControl
 	useClientProtocol bool
 	ipFamily          *egv1a1.IPFamily
 	metadata          *ir.ResourceMetadata
@@ -967,7 +968,8 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTP1Options := args.http1Settings != nil &&
 		(args.http1Settings.EnableTrailers || args.http1Settings.PreserveHeaderCase || args.http1Settings.HTTP10 != nil)
 
-	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
+	requiresHTTPFilters := (len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil) ||
+		args.admissionControl != nil
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
 		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI
@@ -1075,8 +1077,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	return extensionOptions, secrets, nil
 }
 
-// buildClusterHTTPFilters builds the HTTP filters for the cluster.
-// EG only supports credential injector filter for now, more filters can be added in the future.
+// buildClusterHTTPFilters builds the upstream HTTP filters for the cluster.
 func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv3.Secret, error) {
 	filters := make([]*hcmv3.HttpFilter, 0)
 	secrets := make([]*tlsv3.Secret, 0)
@@ -1095,6 +1096,14 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		}
 	}
 
+	if args.admissionControl != nil {
+		filter, err := buildUpstreamAdmissionControlFilter(args.admissionControl)
+		if err != nil {
+			return nil, nil, err
+		}
+		filters = append(filters, filter)
+	}
+
 	// UpstreamCodec filter is required as the terminal filter for the upstream HTTP filters.
 	if len(filters) > 0 {
 		upstreamCodec, err := buildUpstreamCodecFilter()
@@ -1103,7 +1112,6 @@ func buildClusterHTTPFilters(args *xdsClusterArgs) ([]*hcmv3.HttpFilter, []*tlsv
 		}
 		filters = append(filters, upstreamCodec)
 	}
-	// We may need to add more Cluster filters in the future, so we return a slice of filters.
 	return filters, secrets, nil
 }
 
@@ -1364,6 +1372,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		clusterArgs.tcpkeepalive = bt.TCPKeepalive
 		clusterArgs.backendConnection = bt.BackendConnection
 		clusterArgs.dns = bt.DNS
+		clusterArgs.admissionControl = bt.AdmissionControl
 	}
 
 	return clusterArgs
