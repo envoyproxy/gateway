@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -1248,6 +1249,7 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR resource.XdsIRMap) bool {
 	// need to check hostname intersection if there are listeners
 	hasHostnameIntersection := len(parentRef.listeners) == 0
+
 	for _, listener := range parentRef.listeners {
 		hosts := computeHosts(GetHostnames(route), listener)
 		if len(hosts) == 0 {
@@ -1301,11 +1303,209 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				irListener.GRPC.EnableGRPCWeb = ptr.To(true)
 				irListener.GRPC.EnableGRPCStats = ptr.To(true)
 			}
+
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 	}
 
 	return hasHostnameIntersection
+}
+
+// checkRouteOverlaps detects overlapping route matches across all IR listeners
+// and sets a warning Overlap condition on the affected HTTPRoutes.
+// routeKey returns a "namespace/name" key for a route resource metadata.
+func routeKey(namespace, name string) string {
+	return namespace + "/" + name
+}
+
+// checkRouteOverlaps detects overlapping route matches across all IR listeners
+// and sets a warning Overlap condition on the affected HTTPRoutes and GRPCRoutes.
+func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
+	// Build a combined lookup from "namespace/name" to RouteContext and its ParentRefs.
+	type routeInfo struct {
+		route      RouteContext
+		parentRefs map[gwapiv1.ParentReference]*RouteParentContext
+	}
+	routeByKey := make(map[string]*routeInfo, len(httpRoutes)+len(grpcRoutes))
+	for _, hr := range httpRoutes {
+		routeByKey[routeKey(hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
+	}
+	for _, gr := range grpcRoutes {
+		routeByKey[routeKey(gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
+	}
+
+	// overlaps tracks per IR listener which routes overlap with which others.
+	// Key: IR listener name -> route key -> set of conflicting route keys.
+	type listenerOverlaps map[string]map[string]struct{}
+	overlaps := make(map[string]listenerOverlaps)
+
+	for _, xds := range xdsIR {
+		for _, httpListener := range xds.HTTP {
+			routes := httpListener.Routes
+			for i := 0; i < len(routes); i++ {
+				if routes[i].Metadata == nil {
+					continue
+				}
+				aKey := routeKey(routes[i].Metadata.Namespace, routes[i].Metadata.Name)
+				for j := i + 1; j < len(routes); j++ {
+					if routes[j].Metadata == nil {
+						continue
+					}
+					bKey := routeKey(routes[j].Metadata.Namespace, routes[j].Metadata.Name)
+					if aKey == bKey {
+						continue
+					}
+					if routeMatchesOverlap(routes[i], routes[j]) {
+						if overlaps[httpListener.Name] == nil {
+							overlaps[httpListener.Name] = make(listenerOverlaps)
+						}
+						lo := overlaps[httpListener.Name]
+						if lo[aKey] == nil {
+							lo[aKey] = make(map[string]struct{})
+						}
+						if lo[bKey] == nil {
+							lo[bKey] = make(map[string]struct{})
+						}
+						lo[aKey][bKey] = struct{}{}
+						lo[bKey][aKey] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	// Set the Overlap warning condition only on parentRefs whose listeners
+	// match an IR listener where the overlap was detected.
+	for rKey, info := range routeByKey {
+		// Collect all conflicts for this route across the parentRefs that have overlaps.
+		for _, parentRef := range info.parentRefs {
+			var conflicts map[string]struct{}
+			for _, listener := range parentRef.listeners {
+				irKey := t.getIRKey(listener.gateway.Gateway)
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				if irListener == nil {
+					continue
+				}
+				lo, ok := overlaps[irListener.Name]
+				if !ok {
+					continue
+				}
+				routeConflicts, ok := lo[rKey]
+				if !ok {
+					continue
+				}
+				if conflicts == nil {
+					conflicts = make(map[string]struct{})
+				}
+				for c := range routeConflicts {
+					conflicts[c] = struct{}{}
+				}
+			}
+			if len(conflicts) == 0 {
+				continue
+			}
+
+			conflictNames := make([]string, 0, len(conflicts))
+			for name := range conflicts {
+				conflictNames = append(conflictNames, name)
+			}
+			sort.Strings(conflictNames)
+
+			msg := fmt.Sprintf("Overlapping match conditions with route(s): %s", strings.Join(conflictNames, ", "))
+
+			routeStatus := GetRouteStatus(info.route)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRef.routeParentStatusIdx,
+				info.route.GetGeneration(),
+				status.RouteConditionOverlap,
+				metav1.ConditionTrue,
+				status.RouteReasonOverlap,
+				msg,
+			)
+		}
+	}
+}
+
+// routeMatchesOverlap checks if two IR HTTP routes have identical match conditions,
+// indicating that they match the same set of requests.
+// This detects routes with the same hostname and identical exact path, header, query param,
+// and cookie match conditions. Only routes with explicit exact path matches are checked;
+// prefix path matches can intentionally overlap across HTTPRoute resources
+// and are resolved through precedence ordering.
+func routeMatchesOverlap(a, b *ir.HTTPRoute) bool {
+	if a.Hostname != b.Hostname {
+		return false
+	}
+	// Only detect overlap for routes with explicit exact path matches.
+	if a.PathMatch == nil || b.PathMatch == nil {
+		return false
+	}
+	if a.PathMatch.Exact == nil || b.PathMatch.Exact == nil {
+		return false
+	}
+	if !stringMatchEqual(a.PathMatch, b.PathMatch) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.HeaderMatches, b.HeaderMatches) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.QueryParamMatches, b.QueryParamMatches) {
+		return false
+	}
+	if !stringMatchSliceEqual(a.CookieMatches, b.CookieMatches) {
+		return false
+	}
+	return true
+}
+
+func stringMatchEqual(a, b *ir.StringMatch) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	if !ptrStringEqual(a.Exact, b.Exact) {
+		return false
+	}
+	if !ptrStringEqual(a.Prefix, b.Prefix) {
+		return false
+	}
+	if !ptrStringEqual(a.Suffix, b.Suffix) {
+		return false
+	}
+	if !ptrStringEqual(a.SafeRegex, b.SafeRegex) {
+		return false
+	}
+	if a.Name != b.Name {
+		return false
+	}
+	if a.Distinct != b.Distinct {
+		return false
+	}
+	return true
+}
+
+func stringMatchSliceEqual(a, b []*ir.StringMatch) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if !stringMatchEqual(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func ptrStringEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
 }
 
 func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
