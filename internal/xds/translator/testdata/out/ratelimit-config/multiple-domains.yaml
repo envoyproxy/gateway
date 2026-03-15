@@ -15,9 +15,15 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false
 ---
 name: test-namespace/test-policy-1
 domain: test-namespace/test-policy-1
@@ -36,6 +42,12 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false
