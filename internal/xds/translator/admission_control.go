@@ -11,65 +11,29 @@ import (
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	admissioncontrolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/admission_control/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func init() {
-	registerHTTPFilter(&admissionControl{})
-}
-
-type admissionControl struct{}
-
-var _ httpFilter = &admissionControl{}
-
-// patchHCM builds and appends the admission control filter to the HTTP Connection Manager
-// if applicable, and it does not already exist.
-func (*admissionControl) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	if mgr == nil {
-		return errors.New("hcm is nil")
-	}
-
-	if irListener == nil {
-		return errors.New("ir listener is nil")
-	}
-
-	if !listenerContainsAdmissionControl(irListener) {
-		return nil
-	}
-
-	// Return early if the admission control filter already exists.
-	for _, existingFilter := range mgr.HttpFilters {
-		if existingFilter.Name == string(egv1a1.EnvoyFilterAdmissionControl) {
-			return nil
-		}
-	}
-
-	admissionControlFilter, err := buildHCMAdmissionControlFilter()
+// buildUpstreamAdmissionControlFilter builds an admission control filter for use
+// as an upstream HTTP filter on a cluster. Envoy's admission_control filter is a
+// "dual filter" that supports both the downstream (HCM) and upstream (cluster)
+// extension categories, but does not support per-route typedPerFilterConfig.
+// Placing it as an upstream filter gives per-cluster success-rate tracking.
+func buildUpstreamAdmissionControlFilter(ac *ir.AdmissionControl) (*hcmv3.HttpFilter, error) {
+	config, err := buildAdmissionControlConfig(ac)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	mgr.HttpFilters = append(mgr.HttpFilters, admissionControlFilter)
 
-	return nil
-}
-
-// buildHCMAdmissionControlFilter returns a basic admission control HTTP filter.
-func buildHCMAdmissionControlFilter() (*hcmv3.HttpFilter, error) {
-	// Create a basic admission control configuration
-	admissionControlProto := &admissioncontrolv3.AdmissionControl{}
-
-	admissionControlAny, err := proto.ToAnyWithValidation(admissionControlProto)
+	configAny, err := proto.ToAnyWithValidation(config)
 	if err != nil {
 		return nil, err
 	}
@@ -77,48 +41,9 @@ func buildHCMAdmissionControlFilter() (*hcmv3.HttpFilter, error) {
 	return &hcmv3.HttpFilter{
 		Name: string(egv1a1.EnvoyFilterAdmissionControl),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: admissionControlAny,
+			TypedConfig: configAny,
 		},
 	}, nil
-}
-
-// patchRoute patches the provided route with the admission control config if applicable.
-func (*admissionControl) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
-	if route == nil || irRoute == nil {
-		return nil
-	}
-
-	// Check if admission control is configured for this route
-	if irRoute.Traffic == nil || irRoute.Traffic.AdmissionControl == nil {
-		return nil
-	}
-
-	admissionControlConfig := irRoute.Traffic.AdmissionControl
-
-	// Skip if admission control is explicitly disabled
-	if admissionControlConfig.Enabled != nil && !*admissionControlConfig.Enabled {
-		return nil
-	}
-
-	// Build the admission control configuration
-	routeCfgProto, err := buildAdmissionControlConfig(admissionControlConfig)
-	if err != nil {
-		return err
-	}
-
-	// Add the admission control filter to the route
-	if route.TypedPerFilterConfig == nil {
-		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-	}
-
-	routeCfgAny, err := proto.ToAnyWithValidation(routeCfgProto)
-	if err != nil {
-		return err
-	}
-
-	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterAdmissionControl)] = routeCfgAny
-
-	return nil
 }
 
 // buildAdmissionControlConfig builds the admission control configuration from the IR.
@@ -138,8 +63,6 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		DefaultValue: &wrapperspb.BoolValue{Value: enabled},
 	}
 
-	// Only set fields the user explicitly configured; Envoy applies its own defaults
-	// (sampling_window=30s, sr_threshold=95%, aggression=1.0, rps_threshold=0, max_rejection_probability=80%).
 	if admissionControl.SamplingWindow != nil {
 		duration, err := parseDuration(admissionControl.SamplingWindow.Duration.String())
 		if err != nil {
@@ -172,10 +95,10 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		}
 	}
 
+	successCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria{}
+
 	// Set success criteria (part of EvaluationCriteria oneof)
 	if admissionControl.SuccessCriteria != nil {
-		successCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria{}
-
 		// HTTP success criteria: each individual status code becomes a single-element range [code, code+1)
 		if admissionControl.SuccessCriteria.HTTP != nil && len(admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus) > 0 {
 			httpCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_HttpCriteria{}
@@ -188,7 +111,6 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 			successCriteria.HttpCriteria = httpCriteria
 		}
 
-		// gRPC success criteria: map string enum names to numeric codes
 		if admissionControl.SuccessCriteria.GRPC != nil && len(admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus) > 0 {
 			grpcCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_GrpcCriteria{}
 			for _, status := range admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
@@ -208,7 +130,6 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 	return config, nil
 }
 
-// parseDuration parses a duration string and returns a time.Duration.
 func parseDuration(s string) (time.Duration, error) {
 	return time.ParseDuration(s)
 }
@@ -237,29 +158,4 @@ func grpcStatusCodeToUint32(name string) (uint32, bool) {
 	}
 	code, ok := codes[name]
 	return code, ok
-}
-
-// patchResources adds all the other needed resources referenced by this filter.
-func (*admissionControl) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
-	// Admission control filter doesn't require additional resources
-	return nil
-}
-
-// listenerContainsAdmissionControl returns true if the provided listener contains
-// any route with admission control configured.
-func listenerContainsAdmissionControl(irListener *ir.HTTPListener) bool {
-	if irListener == nil {
-		return false
-	}
-
-	for _, route := range irListener.Routes {
-		if route.Traffic != nil && route.Traffic.AdmissionControl != nil {
-			// Check if enabled (defaults to true)
-			if route.Traffic.AdmissionControl.Enabled == nil || *route.Traffic.AdmissionControl.Enabled {
-				return true
-			}
-		}
-	}
-
-	return false
 }
