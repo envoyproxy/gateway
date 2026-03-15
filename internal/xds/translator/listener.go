@@ -427,7 +427,7 @@ func (t *Translator) addHCMToXDSListener(
 		if ptr.Deref(irListener.GRPC.EnableGRPCWeb, false) {
 			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		}
-		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) || (metrics != nil && metrics.EnableGRPCStats) {
+		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
 			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
 		}
 	}

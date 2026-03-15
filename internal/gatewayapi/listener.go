@@ -141,6 +141,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
 				irListener.RequestID = getRequestIDExtensionAction(gateway.envoyProxy)
+				t.processProxyGRPCSettings(irListener, gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
@@ -922,8 +923,24 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
 		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
 		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
-		EnableGRPCStats:                 ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableGRPCStats, false),
 	}, resolvedSinks, nil
+}
+
+func (t *Translator) processProxyGRPCSettings(
+	irListener *ir.HTTPListener,
+	envoyProxy *egv1a1.EnvoyProxy,
+) {
+	if envoyProxy == nil {
+		return
+	}
+
+	if envoyProxy.Spec.Telemetry != nil && envoyProxy.Spec.Telemetry.Metrics != nil &&
+		envoyProxy.Spec.Telemetry.Metrics.EnableGRPCStats != nil {
+		if irListener.GRPC == nil {
+			irListener.GRPC = &ir.GRPCSettings{}
+		}
+		irListener.GRPC.EnableGRPCStats = envoyProxy.Spec.Telemetry.Metrics.EnableGRPCStats
+	}
 }
 
 func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
