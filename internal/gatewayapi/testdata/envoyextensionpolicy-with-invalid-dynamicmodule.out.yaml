@@ -128,8 +128,10 @@ infraIR:
           namespace: envoy-gateway
         spec:
           dynamicModules:
-          - libraryName: allowed
-            name: allowed-module
+          - name: allowed-module
+            source:
+              local:
+                path: /opt/modules/allowed.so
           logging: {}
         status: {}
       listeners:
@@ -179,7 +181,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

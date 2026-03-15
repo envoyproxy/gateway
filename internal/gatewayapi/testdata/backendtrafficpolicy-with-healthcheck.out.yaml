@@ -378,6 +378,26 @@ backendTrafficPolicies:
         status: "True"
         type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-1
+    namespace: default
+  spec:
+    endpoints:
+    - hostname: example.com
+      ip:
+        address: 1.1.1.1
+        port: 3001
+      zone: zone1
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -719,6 +739,9 @@ httpRoutes:
     - backendRefs:
       - name: service-4
         port: 8080
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-1
       matches:
       - path:
           value: /v5
@@ -806,9 +829,11 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -986,7 +1011,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -1172,6 +1196,19 @@ xdsIR:
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-5/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          - addressType: IP
+            endpoints:
+            - host: 1.1.1.1
+              hostname: example.com
+              port: 3001
+              zone: zone1
+            metadata:
+              kind: Backend
+              name: backend-1
+              namespace: default
+            name: httproute/default/httproute-5/rule/0/backend/1
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io

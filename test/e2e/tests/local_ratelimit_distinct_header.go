@@ -71,7 +71,7 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 		t.Run("requests with x-user-id header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-header-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-header-and-exact-header"
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			expectedResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: path,
 					Headers: map[string]string{
@@ -86,14 +86,15 @@ var LocalRateLimitDistinctHeaderTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCodes: []int{200},
+					StatusCodes: []int{429},
 					Headers: map[string]string{
 						RatelimitLimitHeaderName:     "10", // this means it hit the default bucket
-						RatelimitRemainingHeaderName: "4",
+						RatelimitRemainingHeaderName: "0",  // this means the default bucket is exhausted, with 429 response.
 					},
 				},
 				Namespace: ns,
-			})
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp)
 		})
 	},
 }
