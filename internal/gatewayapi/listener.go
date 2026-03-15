@@ -161,10 +161,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					// refers to the Listener TLS.
 					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
 				}
-				// Set Passthrough flag for TLS passthrough mode
-				if listener.Protocol == gwapiv1.TLSProtocolType && listener.TLS != nil && listener.TLS.Mode != nil {
-					irListener.Passthrough = *listener.TLS.Mode == gwapiv1.TLSModePassthrough
-				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{

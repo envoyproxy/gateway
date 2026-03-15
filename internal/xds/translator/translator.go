@@ -762,6 +762,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// errors and return them at the end.
 	var errs, err error
 	var sharedEmptyTCPRoute *ir.TCPRoute
+	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -868,16 +869,9 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				}
 			}
 
-			// Only add the filter chain once per Envoy listener; multiple IR listeners may share
+			// Only add the filter chain once per xDS listener; multiple IR listeners may share
 			// the same address/port and map to the same xDS listener.
-			filterChainExists := false
-			for _, fc := range xdsListener.FilterChains {
-				if fc.Name == emptyClusterName {
-					filterChainExists = true
-					break
-				}
-			}
-			if !filterChainExists {
+			if !emptyFilterChainAdded[xdsListener.Name] {
 				if err := t.addXdsTCPFilterChain(
 					xdsListener,
 					sharedEmptyTCPRoute,
@@ -889,6 +883,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				); err != nil {
 					errs = errors.Join(errs, err)
 				}
+				emptyFilterChainAdded[xdsListener.Name] = true
 			}
 		}
 	}
