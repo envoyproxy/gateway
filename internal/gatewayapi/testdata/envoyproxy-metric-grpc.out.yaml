@@ -163,7 +163,7 @@ infraIR:
           logging: {}
           telemetry:
             metrics:
-              enableGRPCStats: false
+              enableGRPCStats: true
         status: {}
       listeners:
       - name: envoy-gateway/gateway-2/http
@@ -290,7 +290,7 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       grpc:
-        enableGRPCStats: false
+        enableGRPCStats: true
       hostnames:
       - '*'
       metadata:
