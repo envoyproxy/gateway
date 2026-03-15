@@ -321,7 +321,6 @@ func (t *Translator) addHCMToXDSListener(
 	irListener *ir.HTTPListener,
 	accesslog *ir.AccessLog,
 	tracing *ir.Tracing,
-	metrics *ir.Metrics,
 	http3Listener bool,
 	connection *ir.ClientConnection,
 ) error {
