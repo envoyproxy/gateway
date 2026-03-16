@@ -4,7 +4,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: envoy-gateway
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -17,7 +17,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: envoy-gateway-config
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -38,7 +38,7 @@ data:
       kubernetes:
         rateLimitDeployment:
           container:
-            image: private.registry/envoyproxy/ratelimit:master
+            image: docker.io/envoyproxy/ratelimit:master
           patch:
             type: StrategicMerge
             value:
@@ -48,12 +48,8 @@ data:
                     containers:
                     - imagePullPolicy: IfNotPresent
                       name: envoy-ratelimit
-          pod:
-            imagePullSecrets:
-            - key1: value1
-            - key2: value2
         shutdownManager:
-          image: private.registry/envoy/gateway:abcdef
+          image: docker.io/envoyproxy/gateway-dev:latest
       type: Kubernetes
 ---
 # Source: gateway-helm/templates/envoy-gateway-rbac.yaml
@@ -202,14 +198,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
 ---
 # Source: gateway-helm/templates/infra-manager-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-infra-manager
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -268,7 +264,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-leader-election-role
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -313,7 +309,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-infra-manager
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -327,14 +323,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
 ---
 # Source: gateway-helm/templates/leader-election-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-leader-election-rolebinding
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -348,14 +344,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
 ---
 # Source: gateway-helm/templates/envoy-gateway-service.yaml
 apiVersion: v1
 kind: Service
 metadata:
   name: envoy-gateway
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -391,7 +387,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     control-plane: envoy-gateway
     helm.sh/chart: gateway-helm-v0.0.0-latest
@@ -428,7 +424,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private.registry/envoy/gateway:abcdef
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
@@ -478,9 +474,7 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      imagePullSecrets:
-      - key1: value1
-      - key2: value2
+      imagePullSecrets: []
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
@@ -497,7 +491,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: gateway-helm-certgen
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -512,7 +506,7 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: 'gateway-helm-certgen:envoy-gateway-system'
+  name: 'gateway-helm-certgen:custom-namespace'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -536,7 +530,7 @@ rules:
     resources:
       - mutatingwebhookconfigurations
     resourceNames:
-      - 'envoy-gateway-topology-injector.envoy-gateway-system'
+      - 'envoy-gateway-topology-injector.custom-namespace'
     verbs:
       - update
       - patch
@@ -545,7 +539,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: 'gateway-helm-certgen:envoy-gateway-system'
+  name: 'gateway-helm-certgen:custom-namespace'
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -558,18 +552,18 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: 'gateway-helm-certgen:envoy-gateway-system'
+  name: 'gateway-helm-certgen:custom-namespace'
 subjects:
   - kind: ServiceAccount
     name: 'gateway-helm-certgen'
-    namespace: envoy-gateway-system
+    namespace: custom-namespace
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gateway-helm-certgen
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -594,7 +588,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: gateway-helm-certgen
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -611,14 +605,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'gateway-helm-certgen'
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
 ---
 # Source: gateway-helm/templates/certgen.yaml
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: gateway-helm-certgen
-  namespace: envoy-gateway-system
+  namespace: custom-namespace
   labels:
     helm.sh/chart: gateway-helm-v0.0.0-latest
     app.kubernetes.io/name: gateway-helm
@@ -648,7 +642,7 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
-        image: private.registry/envoy/gateway:abcdef
+        image: docker.io/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         name: envoy-gateway-certgen
         securityContext:
@@ -663,9 +657,7 @@ spec:
           runAsUser: 65532
           seccompProfile:
             type: RuntimeDefault
-      imagePullSecrets:
-      - key1: value1
-      - key2: value2
+      imagePullSecrets: []
       restartPolicy: Never
       serviceAccountName: gateway-helm-certgen
   ttlSecondsAfterFinished: 30
@@ -674,7 +666,7 @@ spec:
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: 'envoy-gateway-topology-injector.envoy-gateway-system'
+  name: 'envoy-gateway-topology-injector.custom-namespace'
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
     "helm.sh/hook-weight": "-1"
@@ -692,7 +684,7 @@ webhooks:
     clientConfig:
       service:
         name: envoy-gateway
-        namespace: envoy-gateway-system
+        namespace: custom-namespace
         path: "/inject-pod-topology"
         port: 9443
     failurePolicy: Ignore
@@ -706,4 +698,4 @@ webhooks:
         - key: kubernetes.io/metadata.name
           operator: In
           values:
-            - envoy-gateway-system
+            - custom-namespace
