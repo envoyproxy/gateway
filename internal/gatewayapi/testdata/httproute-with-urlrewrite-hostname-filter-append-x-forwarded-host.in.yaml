@@ -65,6 +65,31 @@ httpRoutes:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
           name: header-host-with-append
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-only-append-flag
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/only-append-flag"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: only-append-flag
 httpFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: HTTPRouteFilter
@@ -88,3 +113,11 @@ httpFilters:
         type: Header
         header: my-host
       appendXForwardedHost: true
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    name: only-append-flag
+    namespace: default
+  spec:
+    urlRewrite:
+      appendXForwardedHost: false
