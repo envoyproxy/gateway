@@ -948,7 +948,7 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			}
 			result = append(result, ds)
 		case resource.KindBackend:
-			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns); err != nil {
 				return nil, nil, err
 			}
 			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
