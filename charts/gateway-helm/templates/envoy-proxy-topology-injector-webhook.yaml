@@ -34,7 +34,7 @@ webhooks:
     clientConfig:
       service:
         name: envoy-gateway
-        namespace: '{{ include "eg.namespace" . }}'
+        namespace: {{ include "eg.namespace" . }}
         path: "/inject-pod-topology"
         port: 9443
     failurePolicy: Ignore

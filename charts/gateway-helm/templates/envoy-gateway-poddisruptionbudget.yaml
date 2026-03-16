@@ -3,7 +3,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: envoy-gateway
-  namespace: '{{ include "eg.namespace" . }}'
+  namespace: {{ include "eg.namespace" . }}
 spec:
   {{- if and .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
