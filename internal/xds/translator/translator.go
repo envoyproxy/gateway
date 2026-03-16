@@ -19,6 +19,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	protobuf "google.golang.org/protobuf/proto"
@@ -984,95 +985,131 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 	return nil
 }
 
-// findXdsListener finds a xds listener with the same name and returns nil if there is no match.
-func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.Listener {
+// findXdsListeners finds a xds listener with the same name and returns nil if there is no match.
+func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
 
+	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener := r.(*listenerv3.Listener)
-		if listener.Name == name {
-			return listener
+		listener, ok := r.(*listenerv3.Listener)
+		if !ok {
+			continue
+		}
+		if name == "" || (listener != nil && listener.Name == name) {
+			result = append(result, r)
 		}
 	}
 
-	return nil
+	return result
 }
 
 // findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
 func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
+	resources := findXdsRouteConfigs(tCtx, name)
+	if len(resources) > 0 {
+		return resources[0].(*routev3.RouteConfiguration)
+	}
+	return nil
+}
+
+// findXdsRouteConfigs finds a xds route with the name and returns nil if there is no match.
+func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
 	}
 
+	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
-		route := r.(*routev3.RouteConfiguration)
-		if route.Name == name {
-			return route
+		route, ok := r.(*routev3.RouteConfiguration)
+		if !ok {
+			continue
+		}
+		if name == "" || (route != nil && route.Name == name) {
+			result = append(result, r)
 		}
 	}
 
-	return nil
+	return result
 }
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
+	resources := findXdsClusters(tCtx, name)
+	if len(resources) > 0 {
+		return resources[0].(*clusterv3.Cluster)
+	}
+	return nil
+}
+
+// findXdsClusters finds a xds cluster with the same name, and returns nil if there is no match.
+func findXdsClusters(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
 	}
 
+	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster := r.(*clusterv3.Cluster)
-		if cluster.Name == name {
-			return cluster
+		cluster, ok := r.(*clusterv3.Cluster)
+		if !ok {
+			continue
+		}
+		if name == "" || (cluster != nil && cluster.Name == name) {
+			result = append(result, r)
 		}
 	}
 
-	return nil
+	return result
 }
 
-// findXdsEndpoint finds a xds endpoint with the same cluster name, and returns nil if there is no match.
-func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.ClusterLoadAssignment {
+// findXdsEndpoints finds a xds endpoint with the same cluster name, and returns nil if there is no match.
+func findXdsEndpoints(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
 		return nil
 	}
 
+	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
-		endpoint := r.(*endpointv3.ClusterLoadAssignment)
-		if endpoint.ClusterName == name {
-			return endpoint
+		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
+		if !ok {
+			continue
+		}
+		if name == "" || (endpoint != nil && endpoint.ClusterName == name) {
+			result = append(result, r)
 		}
 	}
 
-	return nil
-}
-
-// processXdsCluster processes xds cluster with args per route.
-func processXdsCluster(tCtx *types.ResourceVersionTable,
-	name string,
-	settings []*ir.DestinationSetting,
-	route clusterArgs,
-	extras *ExtraArgs,
-	metadata *ir.ResourceMetadata,
-) error {
-	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
+	return result
 }
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
 func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
+	resources := findXdsSecrets(tCtx, name)
+	if len(resources) > 0 {
+		return resources[0].(*tlsv3.Secret)
+	}
+	return nil
+}
+
+// findXdsSecrets finds a xds secret with the same name, and returns nil if there is no match.
+func findXdsSecrets(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
 		return nil
 	}
 
+	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
-		secret := r.(*tlsv3.Secret)
-		if secret.Name == name {
-			return secret
+		secret, ok := r.(*tlsv3.Secret)
+		if !ok {
+			continue
+		}
+		if name == "" || (secret != nil && secret.Name == name) {
+			result = append(result, r)
 		}
 	}
 
-	return nil
+	return result
 }
 
 // addXdsSecret adds a xds secret with args.
@@ -1087,6 +1124,17 @@ func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error 
 		return err
 	}
 	return nil
+}
+
+// processXdsCluster processes xds cluster with args per route.
+func processXdsCluster(tCtx *types.ResourceVersionTable,
+	name string,
+	settings []*ir.DestinationSetting,
+	route clusterArgs,
+	extras *ExtraArgs,
+	metadata *ir.ResourceMetadata,
+) error {
+	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
 }
 
 // addXdsCluster adds a xds cluster with args.
