@@ -6,10 +6,15 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -114,7 +119,21 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 				existingSecrets = append(existingSecrets, fmt.Sprintf("%s/%s", secret.Namespace, secret.Name))
 				continue
 			}
-			fmt.Println()
+
+			// Bundle the old CA with the new CA for backwards-compatible rotation.
+			// Pods pick up updated secrets at different times, so during the rotation
+			// window some pods may still present leaf certs signed by the old CA.
+			// Keeping both CAs in the trust bundle prevents mTLS failures while all
+			// components converge to the new certificates.
+			if oldCA := current.Data[caCertificateKey]; len(oldCA) > 0 {
+				if newCA := secret.Data[caCertificateKey]; len(newCA) > 0 {
+					if bundled := bundleCACerts(newCA, oldCA); !bytes.Equal(bundled, newCA) {
+						newData := maps.Clone(secret.Data)
+						newData[caCertificateKey] = bundled
+						secret.Data = newData
+					}
+				}
+			}
 
 			if !reflect.DeepEqual(secret.Data, current.Data) {
 				if err := client.Update(ctx, &secret); err != nil {
@@ -132,4 +151,59 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 	}
 
 	return tidySecrets, nil
+}
+
+// bundleCACerts returns a PEM bundle containing all certificates from newCA
+// followed by any non-expired, non-duplicate certificates from oldCA. This
+// allows components that haven't yet reloaded to continue trusting leaf certs
+// signed by the previous CA while simultaneously trusting the new CA.
+func bundleCACerts(newCA, oldCA []byte) []byte {
+	if bytes.Equal(newCA, oldCA) {
+		return newCA
+	}
+
+	// Index the certs already present in newCA by their raw DER bytes.
+	existing := make(map[string]struct{})
+	for rest := newCA; ; {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type == "CERTIFICATE" {
+			if cert, err := x509.ParseCertificate(block.Bytes); err == nil {
+				existing[string(cert.Raw)] = struct{}{}
+			}
+		}
+	}
+
+	// Append only the first non-expired, non-duplicate cert from oldCA.
+	// This is always the CA that was active at the last rotation. Carrying
+	// forward only one previous CA keeps the bundle at a maximum of two
+	// entries regardless of rotation frequency: by the time a second rotation
+	// occurs all components should have converged on the previous rotation's
+	// certs, so earlier CAs are no longer needed.
+	result := make([]byte, len(newCA))
+	copy(result, newCA)
+	now := time.Now()
+	for rest := oldCA; ; {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		if block.Type != "CERTIFICATE" {
+			continue
+		}
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil || cert.NotAfter.Before(now) {
+			continue
+		}
+		if _, dup := existing[string(cert.Raw)]; dup {
+			continue
+		}
+		result = append(result, pem.EncodeToMemory(block)...)
+		break // only carry forward one previous CA
+	}
+	return result
 }
