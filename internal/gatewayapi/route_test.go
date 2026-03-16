@@ -376,6 +376,37 @@ func TestValidateDestinationSettings(t *testing.T) {
 			wantErr:                 true,
 			wantReason:              status.RouteReasonUnsupportedAddressType,
 		},
+		{
+			name: "mixed FQDN address type rejected for Backend",
+			ds: &ir.DestinationSetting{
+				Name:        "mixed-fqdn",
+				Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				AddressType: ptr.To(ir.MIXED),
+			},
+			kind:       ptr.To(gwapiv1.Kind(egv1a1.KindBackend)),
+			wantErr:    true,
+			wantReason: status.RouteReasonUnsupportedAddressType,
+		},
+		{
+			name: "IP address type allowed for Backend",
+			ds: &ir.DestinationSetting{
+				Name:        "ip-only",
+				Endpoints:   []*ir.DestinationEndpoint{{Host: "10.0.0.1"}},
+				AddressType: ptr.To(ir.IP),
+			},
+			kind:    ptr.To(gwapiv1.Kind(egv1a1.KindBackend)),
+			wantErr: false,
+		},
+		{
+			name: "UDS address type allowed for Backend",
+			ds: &ir.DestinationSetting{
+				Name:        "uds-only",
+				Endpoints:   []*ir.DestinationEndpoint{{Path: ptr.To("/var/run/backend.sock")}},
+				AddressType: ptr.To(ir.UDS),
+			},
+			kind:    ptr.To(gwapiv1.Kind(egv1a1.KindBackend)),
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
