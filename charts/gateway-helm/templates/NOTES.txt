@@ -8,7 +8,7 @@ Thank you for installing Envoy Gateway! 🎉
 
 Your release is named: {{ .Release.Name }}. 🎉
 
-Your release is in namespace: {{ .Release.Namespace }}. 🎉
+Your release is in namespace: {{ include "eg.namespace" . }}. 🎉
 
 To learn more about the release, try:
 
