@@ -988,6 +988,32 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
+			name: "extensionManagers with invalid individual extension manager",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "good-ext",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+						},
+						{
+							Name: "bad-ext",
+							// Missing hooks → should fail individual validation
+							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "valid extensionManagers plural config",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
