@@ -279,6 +279,7 @@ xdsIR:
               - cidrMatch:
                   cidr: 0.0.0.0/0
                   distinct: true
+                  invert: false
                   ip: 0.0.0.0
                   isIPv6: false
                   maskLen: 0
