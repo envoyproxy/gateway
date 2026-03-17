@@ -176,12 +176,12 @@ type Xds struct {
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
 	// SDS
-	SDS *SDS `json:"sds,omitempty" yaml:"sds,omitempty"`
+	SDS *SDSProvider `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
 // +k8s:deepcopy-gen=true
-type SDS struct {
-	Destination RouteDestination `json:"destination,omitempty"`
+type SDSProvider struct {
+	Destination RouteDestination `json:"destination" yaml:"destination"`
 }
 
 // Validate the fields within the Xds structure.

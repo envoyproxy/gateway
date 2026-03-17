@@ -13,7 +13,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func processSDSCluster(tCtx *types.ResourceVersionTable, sds *ir.SDS) error {
+func processSDSCluster(tCtx *types.ResourceVersionTable, sds *ir.SDSProvider) error {
 	if sds == nil {
 		return nil
 	}

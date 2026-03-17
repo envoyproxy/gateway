@@ -518,7 +518,7 @@ func (t *Translator) processProxySDS(xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, r
 				d.Protocol = ir.GRPC
 			}
 
-			xdsIR.SDS = &ir.SDS{
+			xdsIR.SDS = &ir.SDSProvider{
 				Destination: ir.RouteDestination{
 					Name:     destinationName,
 					Settings: ds,
