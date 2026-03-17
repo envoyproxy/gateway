@@ -45,6 +45,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	t.validateConflictedProtocolsListeners(gateways)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
 	}
