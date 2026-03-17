@@ -48,15 +48,20 @@ gateways:
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "True"
-        type: Programmed
+        type: Conflicted
       - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
+        type: Programmed
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
@@ -143,9 +148,9 @@ udpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: Multiple routes on the same UDP listener
+        reason: UnsupportedValue
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -243,24 +248,3 @@ xdsIR:
         sectionName: udp
       name: envoy-gateway/gateway-1/udp
       port: 10080
-      route:
-        destination:
-          metadata:
-            kind: UDPRoute
-            name: udproute-1
-            namespace: default
-          name: udproute/default/udproute-1/rule/-1
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8162
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8162"
-            name: udproute/default/udproute-1/rule/-1/backend/0
-            protocol: UDP
-            weight: 1
-        name: udproute/default/udproute-1

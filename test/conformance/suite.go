@@ -47,7 +47,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{
 		tests.GatewayStaticAddresses,
 		// TODO: fix following conformance tests
-		tests.ListenerSetProtocolConflict,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	}
 

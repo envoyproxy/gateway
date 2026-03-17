@@ -77,15 +77,20 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
         status: "True"
-        type: Programmed
+        type: Conflicted
       - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a unique hostname
+        reason: ProtocolConflict
+        status: "False"
+        type: Programmed
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
