@@ -218,7 +218,6 @@ type EnvoyProxySpec struct {
 // such as the SPIRE or others.
 type SDSProvider struct {
 	// BackendObjectReference references a Kubernetes object that represents the backend.
-	// Only Service kind is supported for now.
 	gwapiv1.BackendObjectReference `json:",inline"`
 
 	// TODO: Add support for ClusterSettings

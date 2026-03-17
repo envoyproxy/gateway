@@ -179,6 +179,8 @@ type Xds struct {
 	SDS *SDSProvider `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
+// SDSProvider holds the configuration for the Secret Discovery Service (SDS) provider.
+//
 // +k8s:deepcopy-gen=true
 type SDSProvider struct {
 	Destination RouteDestination `json:"destination" yaml:"destination"`
