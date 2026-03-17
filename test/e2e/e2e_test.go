@@ -59,6 +59,7 @@ func TestE2E(t *testing.T) {
 			tests.RateLimitCIDRMatchTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+			tests.AuthorizationGeoIPCountryTest.ShortName,
 		)
 	}
 
