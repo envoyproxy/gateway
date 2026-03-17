@@ -11,7 +11,7 @@ require (
 	google.golang.org/protobuf v1.36.11
 	k8s.io/apimachinery v0.35.2
 	sigs.k8s.io/controller-runtime v0.23.3
-	sigs.k8s.io/gateway-api v1.5.0
+	sigs.k8s.io/gateway-api v1.5.1
 	sigs.k8s.io/gateway-api-inference-extension v1.4.0
 )
 
