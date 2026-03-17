@@ -59,6 +59,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
+		t.processProxySDS(xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -491,6 +492,42 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+}
+
+func (t *Translator) processProxySDS(xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
+	envoyProxy := proxyInfra.Config
+	if envoyProxy == nil {
+		return
+	}
+	if sds := envoyProxy.Spec.SDS; sds != nil {
+		destinationName := "sds-grpc"
+		settingName := irDestinationSettingName(destinationName, -1)
+		ds, _, err := t.processBackendRefs(settingName, egv1a1.BackendCluster{
+			BackendRefs: []egv1a1.BackendRef{
+				{
+					BackendObjectReference: gwapiv1.BackendObjectReference{
+						Kind:      sds.Kind,
+						Name:      sds.Name,
+						Namespace: sds.Namespace,
+					},
+				},
+			},
+		}, envoyProxy.Namespace, resources, envoyProxy)
+		if err == nil {
+			for _, d := range ds {
+				d.Protocol = ir.GRPC
+			}
+
+			xdsIR.SDS = &ir.SDS{
+				Destination: ir.RouteDestination{
+					Name:     destinationName,
+					Settings: ds,
+				},
+			}
+		} else {
+			t.Logger.Info("Failed to resolve SDS backend", "EnvoyProxy", envoyProxy.Namespace+"/"+envoyProxy.Name, "error", err)
+		}
+	}
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {

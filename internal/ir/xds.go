@@ -470,7 +470,7 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name    string `json:"name" yaml:"name"`
-	FromSDS *bool  `json:"fromSDS" yaml:"fromSDS"`
+	FromSDS *bool  `json:"fromSDS,omitempty" yaml:"fromSDS,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.

@@ -257,19 +257,25 @@ func (t *Translator) processServerValidationTLSSettings(
 
 	if !tlsConfig.InsecureSkipVerify {
 		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
-
 		if tlsConfig.UseSystemTrustStore {
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-			caCert, err := t.getCaCertsFromCARefs(backend.Namespace, backend.Spec.TLS.CACertificateRefs)
+			caCert, fromSDS, err := t.getCaCertsFromCARefs(backend.Namespace, backend.Spec.TLS.CACertificateRefs)
 			if err != nil {
 				return nil, err
 			}
-			tlsConfig.CACertificate = &ir.TLSCACertificate{
-				Certificate: caCert,
-				Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+			if fromSDS {
+				tlsConfig.CACertificate = &ir.TLSCACertificate{
+					Name:    string(caCert),
+					FromSDS: ptr.To(true),
+				}
+			} else {
+				tlsConfig.CACertificate = &ir.TLSCACertificate{
+					Certificate: caCert,
+					Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+				}
 			}
 		}
 	}
@@ -375,31 +381,42 @@ func (t *Translator) processClientTLSSettings(
 		} else {
 			ownerResource = "Backend"
 		}
-
 		ns := NamespaceDerefOr(clientTLS.ClientCertificateRef.Namespace, ownerNs)
-		if ns != ownerNs {
-			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
-			return tlsConfig, err
+		switch ptr.Deref(clientTLS.ClientCertificateRef.Kind, resource.KindSecret) {
+		case resource.KindSecret:
+			if ns != ownerNs {
+				err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, ownerNs)
+				return tlsConfig, err
+			}
+			secret := t.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
+			if secret == nil {
+				err = fmt.Errorf(
+					"failed to locate TLS secret for client auth: %s specified in %s %s",
+					types.NamespacedName{
+						Namespace: ownerNs,
+						Name:      string(clientTLS.ClientCertificateRef.Name),
+					}.String(),
+					ownerResource,
+					types.NamespacedName{
+						Namespace: ownerNs,
+						Name:      ownerName,
+					}.String(),
+				)
+				return tlsConfig, err
+			}
+			tlsConf := irTLSConfigs(secret)
+			tlsConfig.ClientCertificates = tlsConf.Certificates
+		case "SDS":
+			tlsConfig.ClientCertificates = []ir.TLSCertificate{
+				{
+					Name:    string(clientTLS.ClientCertificateRef.Name),
+					FromSDS: ptr.To(true),
+				},
+			}
+
 		}
-		secret := t.GetSecret(ns, string(clientTLS.ClientCertificateRef.Name))
-		if secret == nil {
-			err = fmt.Errorf(
-				"failed to locate TLS secret for client auth: %s specified in %s %s",
-				types.NamespacedName{
-					Namespace: ownerNs,
-					Name:      string(clientTLS.ClientCertificateRef.Name),
-				}.String(),
-				ownerResource,
-				types.NamespacedName{
-					Namespace: ownerNs,
-					Name:      ownerName,
-				}.String(),
-			)
-			return tlsConfig, err
-		}
-		tlsConf := irTLSConfigs(secret)
-		tlsConfig.ClientCertificates = tlsConf.Certificates
 	}
+
 	return tlsConfig, nil
 }
 
@@ -463,22 +480,29 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		return tlsBundle, nil
 	}
 
-	caCert, err := t.getCaCertsFromCARefs(
+	caCert, fromSDS, err := t.getCaCertsFromCARefs(
 		backendTLSPolicy.Namespace, backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	if err != nil {
 		return nil, err
 	}
-	tlsBundle.CACertificate = &ir.TLSCACertificate{
-		Certificate: caCert,
-		Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+	if caCert != nil {
+		if fromSDS {
+			tlsBundle.CACertificate = &ir.TLSCACertificate{
+				Name:    string(caCert),
+				FromSDS: ptr.To(true),
+			}
+		} else {
+			tlsBundle.CACertificate = &ir.TLSCACertificate{
+				Certificate: caCert,
+				Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+			}
+		}
 	}
+
 	return tlsBundle, nil
 }
 
-func (t *Translator) getCaCertsFromCARefs(
-	namespace string,
-	caCertificates []gwapiv1.LocalObjectReference,
-) ([]byte, error) {
+func (t *Translator) getCaCertsFromCARefs(namespace string, caCertificates []gwapiv1.LocalObjectReference) ([]byte, bool, error) {
 	ca := ""
 	foundSupportedRef := false
 	for _, caRef := range caCertificates {
@@ -495,10 +519,10 @@ func (t *Translator) getCaCertsFromCARefs(
 					}
 					ca += crt
 				} else {
-					return nil, fmt.Errorf("no ca found in configmap %s", cm.Name)
+					return nil, false, fmt.Errorf("no ca found in configmap %s", cm.Name)
 				}
 			} else {
-				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
+				return nil, false, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindSecret:
 			foundSupportedRef = true
@@ -510,10 +534,10 @@ func (t *Translator) getCaCertsFromCARefs(
 					}
 					ca += string(crt)
 				} else {
-					return nil, fmt.Errorf("no ca found in secret %s", secret.Name)
+					return nil, false, fmt.Errorf("no ca found in secret %s", secret.Name)
 				}
 			} else {
-				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
+				return nil, false, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, namespace)
 			}
 		case resource.KindClusterTrustBundle:
 			foundSupportedRef = true
@@ -524,18 +548,21 @@ func (t *Translator) getCaCertsFromCARefs(
 				}
 				ca += ctb.Spec.TrustBundle
 			} else {
-				return nil, fmt.Errorf("cluster trust bundle %s not found", caRef.Name)
+				return nil, false, fmt.Errorf("cluster trust bundle %s not found", caRef.Name)
 			}
+		case "SDS":
+			// for SDS kind, we just need the name.
+			return []byte(caRef.Name), true, nil
 		}
 	}
 
 	if ca == "" {
 		if !foundSupportedRef {
-			return nil, ErrBackendTLSPolicyInvalidKind
+			return nil, false, ErrBackendTLSPolicyInvalidKind
 		}
-		return nil, ErrBackendTLSPolicyNoValidCACertificate
+		return nil, false, ErrBackendTLSPolicyNoValidCACertificate
 	}
-	return []byte(ca), nil
+	return []byte(ca), false, nil
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {
