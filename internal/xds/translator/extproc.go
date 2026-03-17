@@ -106,6 +106,10 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 
 	config.ProcessingMode = buildProcessingMode(extProc)
 
+	if extProc.ObservabilityMode != nil {
+		config.ObservabilityMode = *extProc.ObservabilityMode
+	}
+
 	if extProc.FailOpen != nil {
 		config.FailureModeAllow = *extProc.FailOpen
 	}

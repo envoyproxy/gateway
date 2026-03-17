@@ -64,6 +64,7 @@ envoyExtensionPolicies:
         port: 9002
         weight: 1
       failOpen: false
+      observabilityMode: false
       processingMode:
         request: {}
         response:

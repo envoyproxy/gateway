@@ -851,6 +851,10 @@ func (t *Translator) buildExtProc(
 		extProcIR.MessageTimeout = ir.MetaV1DurationPtr(d)
 	}
 
+	if extProc.ObservabilityMode != nil {
+		extProcIR.ObservabilityMode = extProc.ObservabilityMode
+	}
+
 	if extProc.FailOpen != nil {
 		extProcIR.FailOpen = extProc.FailOpen
 	}
