@@ -175,6 +175,13 @@ type Xds struct {
 	GlobalResources *GlobalResources `json:"globalResources,omitempty" yaml:"globalResources,omitempty"`
 	// ExtensionServerPolicies is the intermediate representation of the ExtensionServerPolicy resource
 	ExtensionServerPolicies []*UnstructuredRef `json:"extensionServerPolicies,omitempty" yaml:"extensionServerPolicies,omitempty"`
+	// SDS
+	SDS *SDS `json:"sds,omitempty" yaml:"sds,omitempty"`
+}
+
+// +k8s:deepcopy-gen=true
+type SDS struct {
+	Destination RouteDestination `json:"destination,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -462,7 +469,8 @@ type TLSConfig struct {
 // +k8s:deepcopy-gen=true
 type TLSCertificate struct {
 	// Name of the Secret object.
-	Name string `json:"name" yaml:"name"`
+	Name    string `json:"name" yaml:"name"`
+	FromSDS *bool  `json:"fromSDS" yaml:"fromSDS"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
@@ -489,6 +497,8 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+
+	FromSDS *bool `json:"fromSDS,omitempty" yaml:"fromSDS,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
