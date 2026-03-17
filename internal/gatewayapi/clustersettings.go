@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
@@ -239,59 +240,63 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	var cb *ir.CircuitBreaker
 	pcb := policy.CircuitBreaker
 
-	if pcb != nil {
-		cb = &ir.CircuitBreaker{}
+	if pcb == nil {
+		return nil, nil
+	}
 
-		if pcb.MaxConnections != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
-				cb.MaxConnections = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
-			}
-		}
+	cb = &ir.CircuitBreaker{}
 
-		if pcb.MaxParallelRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
-				cb.MaxParallelRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
-			}
-		}
-
-		if pcb.MaxPendingRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
-				cb.MaxPendingRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
-			}
-		}
-
-		if pcb.MaxParallelRetries != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
-				cb.MaxParallelRetries = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
-			}
-		}
-
-		if pcb.MaxRequestsPerConnection != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
-				cb.MaxRequestsPerConnection = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
-			}
-		}
-
-		if pcb.PerEndpoint != nil {
-			perEndpoint := &ir.PerEndpointCircuitBreakers{}
-			if pcb.PerEndpoint.MaxConnections != nil {
-				if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
-					perEndpoint.MaxConnections = &ui32
-				}
-			}
-			cb.PerEndpoint = perEndpoint
+	if pcb.MaxConnections != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+			cb.MaxConnections = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
 		}
 	}
+
+	if pcb.MaxParallelRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+			cb.MaxParallelRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
+		}
+	}
+
+	if pcb.MaxPendingRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+			cb.MaxPendingRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
+		}
+	}
+
+	if pcb.MaxParallelRetries != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+			cb.MaxParallelRetries = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
+		}
+	}
+
+	if pcb.MaxRequestsPerConnection != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+			cb.MaxRequestsPerConnection = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
+		}
+	}
+
+	if pcb.PerEndpoint != nil {
+		perEndpoint := &ir.PerEndpointCircuitBreakers{}
+		if pcb.PerEndpoint.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+				perEndpoint.MaxConnections = &ui32
+			}
+		}
+		cb.PerEndpoint = perEndpoint
+	}
+
+	cb.RetryBudget = buildRetryBudget(policy.CircuitBreaker.RetryBudget)
 
 	return cb, nil
 }
@@ -731,4 +736,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	}
 
 	return rt, nil
+}
+
+func buildRetryBudget(r *egv1a1.RetryBudget) *ir.RetryBudget {
+	if r == nil {
+		return nil
+	}
+
+	rb := &ir.RetryBudget{
+		Percent:             fractionalpercent.ToPercent(&r.Percent),
+		MinRetryConcurrency: ptr.Deref(r.MinRetryConcurrency, 3),
+	}
+	return rb
 }

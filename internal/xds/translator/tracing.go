@@ -138,29 +138,18 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 		return nil
 	}
 
-	traffic := tracing.Traffic
-	// Make sure that there are safe defaults for the traffic
-	if traffic == nil {
-		traffic = &ir.TrafficFeatures{}
+	args := &xdsClusterArgs{
+		name:         tracing.Destination.Name,
+		settings:     tracing.Destination.Settings,
+		tSocket:      nil,
+		endpointType: buildEndpointType(tracing.Destination.Settings),
+		metrics:      metrics,
+		metadata:     tracing.Destination.Metadata,
 	}
 
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:              tracing.Destination.Name,
-		settings:          tracing.Destination.Settings,
-		tSocket:           nil,
-		endpointType:      buildEndpointType(tracing.Destination.Settings),
-		metrics:           metrics,
-		loadBalancer:      traffic.LoadBalancer,
-		proxyProtocol:     traffic.ProxyProtocol,
-		circuitBreaker:    traffic.CircuitBreaker,
-		healthCheck:       traffic.HealthCheck,
-		timeout:           traffic.Timeout,
-		tcpkeepalive:      traffic.TCPKeepalive,
-		backendConnection: traffic.BackendConnection,
-		dns:               traffic.DNS,
-		http2Settings:     traffic.HTTP2,
-		metadata:          tracing.Destination.Metadata,
-	})
+	applyTraffic(args, tracing.Traffic)
+
+	return addXdsCluster(tCtx, args)
 }
 
 func buildTracingTags(customTags []ir.CustomTagMapEntry, tags []ir.MapEntry) ([]*tracingtype.CustomTag, error) {
