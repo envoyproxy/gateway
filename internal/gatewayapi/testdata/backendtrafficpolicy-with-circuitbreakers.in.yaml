@@ -95,3 +95,7 @@ backendTrafficPolicies:
       maxParallelRequests: 42
       maxParallelRetries: 24
       maxRequestsPerConnection: 42
+      retryBudget:
+        percent:
+          numerator: 10
+        minRetryConcurrency: 1

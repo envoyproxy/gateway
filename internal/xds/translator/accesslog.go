@@ -513,56 +513,32 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
-		traffic := als.Traffic
-		// Make sure that there are safe defaults for the traffic
-		if traffic == nil {
-			traffic = &ir.TrafficFeatures{}
+		args := &xdsClusterArgs{
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(als.Destination.Settings),
+			metadata:     als.Destination.Metadata,
 		}
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:              als.Destination.Name,
-			settings:          als.Destination.Settings,
-			tSocket:           nil,
-			endpointType:      buildEndpointType(als.Destination.Settings),
-			loadBalancer:      traffic.LoadBalancer,
-			proxyProtocol:     traffic.ProxyProtocol,
-			circuitBreaker:    traffic.CircuitBreaker,
-			healthCheck:       traffic.HealthCheck,
-			timeout:           traffic.Timeout,
-			tcpkeepalive:      traffic.TCPKeepalive,
-			backendConnection: traffic.BackendConnection,
-			dns:               traffic.DNS,
-			http2Settings:     traffic.HTTP2,
-			metadata:          als.Destination.Metadata,
-		}); err != nil {
+		applyTraffic(args, als.Traffic)
+
+		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}
 	}
 
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
-		traffic := otel.Traffic
-		// Make sure that there are safe defaults for the traffic
-		if traffic == nil {
-			traffic = &ir.TrafficFeatures{}
+		args := &xdsClusterArgs{
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(otel.Destination.Settings),
+			metrics:      metrics,
+			metadata:     otel.Destination.Metadata,
 		}
-
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:              otel.Destination.Name,
-			settings:          otel.Destination.Settings,
-			tSocket:           nil,
-			endpointType:      buildEndpointType(otel.Destination.Settings),
-			metrics:           metrics,
-			loadBalancer:      traffic.LoadBalancer,
-			proxyProtocol:     traffic.ProxyProtocol,
-			circuitBreaker:    traffic.CircuitBreaker,
-			healthCheck:       traffic.HealthCheck,
-			timeout:           traffic.Timeout,
-			tcpkeepalive:      traffic.TCPKeepalive,
-			backendConnection: traffic.BackendConnection,
-			dns:               traffic.DNS,
-			http2Settings:     traffic.HTTP2,
-			metadata:          otel.Destination.Metadata,
-		}); err != nil {
+		applyTraffic(args, otel.Traffic)
+		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}
 	}
