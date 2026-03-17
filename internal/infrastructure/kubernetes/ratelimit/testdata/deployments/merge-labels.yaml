@@ -102,6 +102,9 @@ spec:
         - containerPort: 8081
           name: grpc
           protocol: TCP
+        - containerPort: 19001
+          name: metrics
+          protocol: TCP
         readinessProbe:
           failureThreshold: 1
           httpGet:

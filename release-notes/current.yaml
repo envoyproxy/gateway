@@ -16,6 +16,7 @@ new features: |
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
   Added `egctl config envoy-gateway` commands to retrieve Envoy Gateway admin config dumps.
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. See https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators for more details.
+  Added HTTP/2 connection keepalive support to ClientTrafficPolicy and BackendTrafficPolicy.
   Implement RoutingType field for BackendTrafficPolicy
   Support for configuring weights for locality zones.
   Added support for settings of gRPC web in ClientTrafficPolicy.
@@ -30,6 +31,7 @@ new features: |
   Added support for custom headers on OTLP exports (metrics, tracing, access logs).
   Added support for custom TLS configuration when pulling WASM code via HTTP or OCI in EnvoyExtensionPolicy.
   Added support for stream idle timeout in BackendTrafficPolicy.
+  Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
 
 bug fixes: |
@@ -43,6 +45,7 @@ bug fixes: |
   Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
   Fixed endpoint hostname is not respected when doing active health check.
+  Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
 
 # Enhancements that improve performance.
 performance improvements: |
