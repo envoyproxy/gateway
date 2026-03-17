@@ -153,22 +153,18 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:              rd.Name,
-		settings:          rd.Settings,
-		tSocket:           tSocket,
-		loadBalancer:      traffic.LoadBalancer,
-		proxyProtocol:     traffic.ProxyProtocol,
-		circuitBreaker:    traffic.CircuitBreaker,
-		healthCheck:       traffic.HealthCheck,
-		timeout:           traffic.Timeout,
-		tcpkeepalive:      traffic.TCPKeepalive,
-		backendConnection: traffic.BackendConnection,
-		endpointType:      endpointType,
-		dns:               traffic.DNS,
-		http2Settings:     traffic.HTTP2,
-		metadata:          rd.Metadata,
-	})
+
+	args := &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+		metadata:     rd.Metadata,
+	}
+
+	applyTraffic(args, traffic)
+
+	return addXdsCluster(tCtx, args)
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
@@ -206,19 +202,24 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 		clusterArgs.tSocket = tSocket
 	}
 
-	if traffic != nil {
-		clusterArgs.loadBalancer = traffic.LoadBalancer
-		clusterArgs.proxyProtocol = traffic.ProxyProtocol
-		clusterArgs.circuitBreaker = traffic.CircuitBreaker
-		clusterArgs.healthCheck = traffic.HealthCheck
-		clusterArgs.timeout = traffic.Timeout
-		clusterArgs.tcpkeepalive = traffic.TCPKeepalive
-		clusterArgs.backendConnection = traffic.BackendConnection
-		clusterArgs.dns = traffic.DNS
-		clusterArgs.http2Settings = traffic.HTTP2
-	}
+	applyTraffic(clusterArgs, traffic)
 
 	return addXdsCluster(tCtx, clusterArgs)
+}
+
+func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
+	if traffic == nil {
+		return
+	}
+	args.loadBalancer = traffic.LoadBalancer
+	args.proxyProtocol = traffic.ProxyProtocol
+	args.circuitBreaker = traffic.CircuitBreaker
+	args.healthCheck = traffic.HealthCheck
+	args.timeout = traffic.Timeout
+	args.tcpkeepalive = traffic.TCPKeepalive
+	args.backendConnection = traffic.BackendConnection
+	args.dns = traffic.DNS
+	args.http2Settings = traffic.HTTP2
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings
