@@ -8,7 +8,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -1431,7 +1431,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1951,7 +1951,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -5285,7 +5285,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -7569,7 +7569,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -9402,6 +9402,8 @@ spec:
                                 or httpRouteFilterRequestRewrite, but not both
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
+                            - message: CORS filter cannot be repeated
+                              rule: self.filter(f, f.type == 'CORS').size() <= 1
                             - message: RequestHeaderModifier filter cannot be repeated
                               rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                                 <= 1
@@ -10921,6 +10923,8 @@ spec:
                           or httpRouteFilterRequestRewrite, but not both
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
+                      - message: CORS filter cannot be repeated
+                        rule: self.filter(f, f.type == 'CORS').size() <= 1
                       - message: RequestHeaderModifier filter cannot be repeated
                         rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                           <= 1
@@ -13663,6 +13667,8 @@ spec:
                                 or httpRouteFilterRequestRewrite, but not both
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
+                            - message: CORS filter cannot be repeated
+                              rule: self.filter(f, f.type == 'CORS').size() <= 1
                             - message: RequestHeaderModifier filter cannot be repeated
                               rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                                 <= 1
@@ -15182,6 +15188,8 @@ spec:
                           or httpRouteFilterRequestRewrite, but not both
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
+                      - message: CORS filter cannot be repeated
+                        rule: self.filter(f, f.type == 'CORS').size() <= 1
                       - message: RequestHeaderModifier filter cannot be repeated
                         rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                           <= 1
@@ -16121,7 +16129,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: listenersets.gateway.networking.k8s.io
 spec:
@@ -16906,7 +16914,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -17264,7 +17272,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: tcproutes.gateway.networking.k8s.io
 spec:
@@ -18025,7 +18033,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -20400,7 +20408,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: udproutes.gateway.networking.k8s.io
 spec:
@@ -21161,7 +21169,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -21774,7 +21782,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: xmeshes.gateway.networking.x-k8s.io
 spec:
@@ -23189,6 +23197,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -26432,6 +26472,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -28345,6 +28417,39 @@ spec:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
                           properties:
+                            connectionKeepalive:
+                              description: ConnectionKeepalive configures HTTP/2 connection
+                                keepalive using PING frames.
+                              properties:
+                                idleInterval:
+                                  description: IdleInterval specifies how long a connection
+                                    must be idle before a PING is sent.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                interval:
+                                  description: Interval specifies how often to send
+                                    HTTP/2 PING frames to keep the connection alive.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                intervalJitter:
+                                  description: |-
+                                    IntervalJitter specifies a random jitter percentage added to each interval.
+                                    Defaults to 15% if not specified.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                timeout:
+                                  description: Timeout specifies how long to wait
+                                    for a PING response before considering the connection
+                                    dead.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                              - message: timeout must be less than interval
+                                rule: '!has(self.timeout) || !has(self.interval) ||
+                                  duration(self.timeout) < duration(self.interval)'
                             initialConnectionWindowSize:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -42402,6 +42507,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -43730,6 +43874,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -45219,6 +45402,42 @@ spec:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
                                       properties:
+                                        connectionKeepalive:
+                                          description: ConnectionKeepalive configures
+                                            HTTP/2 connection keepalive using PING
+                                            frames.
+                                          properties:
+                                            idleInterval:
+                                              description: IdleInterval specifies
+                                                how long a connection must be idle
+                                                before a PING is sent.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            interval:
+                                              description: Interval specifies how
+                                                often to send HTTP/2 PING frames to
+                                                keep the connection alive.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            intervalJitter:
+                                              description: |-
+                                                IntervalJitter specifies a random jitter percentage added to each interval.
+                                                Defaults to 15% if not specified.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
+                                            timeout:
+                                              description: Timeout specifies how long
+                                                to wait for a PING response before
+                                                considering the connection dead.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: timeout must be less than interval
+                                            rule: '!has(self.timeout) || !has(self.interval)
+                                              || duration(self.timeout) < duration(self.interval)'
                                         initialConnectionWindowSize:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -46626,6 +46845,41 @@ spec:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
                                 properties:
+                                  connectionKeepalive:
+                                    description: ConnectionKeepalive configures HTTP/2
+                                      connection keepalive using PING frames.
+                                    properties:
+                                      idleInterval:
+                                        description: IdleInterval specifies how long
+                                          a connection must be idle before a PING
+                                          is sent.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      interval:
+                                        description: Interval specifies how often
+                                          to send HTTP/2 PING frames to keep the connection
+                                          alive.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      intervalJitter:
+                                        description: |-
+                                          IntervalJitter specifies a random jitter percentage added to each interval.
+                                          Defaults to 15% if not specified.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
+                                      timeout:
+                                        description: Timeout specifies how long to
+                                          wait for a PING response before considering
+                                          the connection dead.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: timeout must be less than interval
+                                      rule: '!has(self.timeout) || !has(self.interval)
+                                        || duration(self.timeout) < duration(self.interval)'
                                   initialConnectionWindowSize:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -49438,6 +49692,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -50651,6 +50938,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -52119,6 +52439,41 @@ spec:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
                                   properties:
+                                    connectionKeepalive:
+                                      description: ConnectionKeepalive configures
+                                        HTTP/2 connection keepalive using PING frames.
+                                      properties:
+                                        idleInterval:
+                                          description: IdleInterval specifies how
+                                            long a connection must be idle before
+                                            a PING is sent.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        interval:
+                                          description: Interval specifies how often
+                                            to send HTTP/2 PING frames to keep the
+                                            connection alive.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        intervalJitter:
+                                          description: |-
+                                            IntervalJitter specifies a random jitter percentage added to each interval.
+                                            Defaults to 15% if not specified.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
+                                        timeout:
+                                          description: Timeout specifies how long
+                                            to wait for a PING response before considering
+                                            the connection dead.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: timeout must be less than interval
+                                        rule: '!has(self.timeout) || !has(self.interval)
+                                          || duration(self.timeout) < duration(self.interval)'
                                     initialConnectionWindowSize:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -53608,6 +53963,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
