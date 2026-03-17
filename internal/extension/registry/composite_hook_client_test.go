@@ -94,7 +94,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		input := &route.Route{Name: "test"}
 		result, err := composite.PostRouteModifyHook(input, nil, nil)
 		require.NoError(t, err)
-		assert.Equal(t, "test-ext1-ext2", result.Name)
+		require.Equal(t, "test-ext1-ext2", result.Name)
 	})
 
 	t.Run("failOpen skips erroring extension", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		input := &route.Route{Name: "test"}
 		result, err := composite.PostRouteModifyHook(input, nil, nil)
 		require.NoError(t, err)
-		assert.Equal(t, "test-ext2", result.Name)
+		require.Equal(t, "test-ext2", result.Name)
 	})
 
 	t.Run("failClosed stops chain", func(t *testing.T) {
@@ -129,113 +129,41 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 				return nil, fmt.Errorf("extension error")
 			},
 		}
+		client2Called := false
+		client2 := &mockXDSHookClient{
+			postRouteModifyHook: func(r *route.Route, _ []string, _ []*unstructured.Unstructured) (*route.Route, error) {
+				client2Called = true
+				r.Name += "-ext2"
+				return r, nil
+			},
+		}
 
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{name: "ext1", client: clientErr, failOpen: false},
+				{name: "ext2", client: client2, failOpen: false},
 			},
 		}
 
 		input := &route.Route{Name: "test"}
 		_, err := composite.PostRouteModifyHook(input, nil, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), `extension "ext1"`)
+		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
+		require.False(t, client2Called)
 	})
 }
 
 func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
-	client1 := &mockXDSHookClient{
-		postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
-			vh.Name += "-ext1"
-			return vh, nil
-		},
-	}
-	client2 := &mockXDSHookClient{
-		postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
-			vh.Name += "-ext2"
-			return vh, nil
-		},
-	}
-
-	composite := &compositeXDSHookClient{
-		entries: []hookClientEntry{
-			{name: "ext1", client: client1},
-			{name: "ext2", client: client2},
-		},
-	}
-
-	input := &route.VirtualHost{Name: "test"}
-	result, err := composite.PostVirtualHostModifyHook(input)
-	require.NoError(t, err)
-	assert.Equal(t, "test-ext1-ext2", result.Name)
-}
-
-func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
-	client1 := &mockXDSHookClient{
-		postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
-			l.Name += "-ext1"
-			return l, nil
-		},
-	}
-	client2 := &mockXDSHookClient{
-		postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
-			l.Name += "-ext2"
-			return l, nil
-		},
-	}
-
-	composite := &compositeXDSHookClient{
-		entries: []hookClientEntry{
-			{name: "ext1", client: client1},
-			{name: "ext2", client: client2},
-		},
-	}
-
-	input := &listener.Listener{Name: "test"}
-	result, err := composite.PostHTTPListenerModifyHook(input, nil)
-	require.NoError(t, err)
-	assert.Equal(t, "test-ext1-ext2", result.Name)
-}
-
-func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
-	client1 := &mockXDSHookClient{
-		postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
-			c.Name += "-ext1"
-			return c, nil
-		},
-	}
-	client2 := &mockXDSHookClient{
-		postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
-			c.Name += "-ext2"
-			return c, nil
-		},
-	}
-
-	composite := &compositeXDSHookClient{
-		entries: []hookClientEntry{
-			{name: "ext1", client: client1},
-			{name: "ext2", client: client2},
-		},
-	}
-
-	input := &cluster.Cluster{Name: "test"}
-	result, err := composite.PostClusterModifyHook(input, nil)
-	require.NoError(t, err)
-	assert.Equal(t, "test-ext1-ext2", result.Name)
-}
-
-func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
-	t.Run("chains resource lists", func(t *testing.T) {
+	t.Run("chains two clients", func(t *testing.T) {
 		client1 := &mockXDSHookClient{
-			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
-				clusters = append(clusters, &cluster.Cluster{Name: "from-ext1"})
-				return clusters, secrets, listeners, routes, nil
+			postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
+				vh.Name += "-ext1"
+				return vh, nil
 			},
 		}
 		client2 := &mockXDSHookClient{
-			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
-				clusters = append(clusters, &cluster.Cluster{Name: "from-ext2"})
-				return clusters, secrets, listeners, routes, nil
+			postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
+				vh.Name += "-ext2"
+				return vh, nil
 			},
 		}
 
@@ -246,11 +174,257 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 			},
 		}
 
-		rc, _, _, _, err := composite.PostTranslateModifyHook(nil, nil, nil, nil, nil)
+		input := &route.VirtualHost{Name: "test"}
+		result, err := composite.PostVirtualHostModifyHook(input)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext1-ext2", result.Name)
+	})
+
+	t.Run("failOpen skips erroring extension", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(_ *route.VirtualHost) (*route.VirtualHost, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
+						vh.Name += "-ext2"
+						return vh, nil
+					},
+				}},
+			},
+		}
+
+		result, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		require.NoError(t, err)
+		require.Equal(t, "test-ext2", result.Name)
+	})
+
+	t.Run("failClosed stops chain", func(t *testing.T) {
+		client2Called := false
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(_ *route.VirtualHost) (*route.VirtualHost, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext2", client: &mockXDSHookClient{
+					postVirtualHostModifyHook: func(vh *route.VirtualHost) (*route.VirtualHost, error) {
+						client2Called = true
+						vh.Name += "-ext2"
+						return vh, nil
+					},
+				}},
+			},
+		}
+
+		_, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
+		require.False(t, client2Called)
+	})
+}
+
+func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
+	t.Run("chains two clients", func(t *testing.T) {
+		client1 := &mockXDSHookClient{
+			postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+				l.Name += "-ext1"
+				return l, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+				l.Name += "-ext2"
+				return l, nil
+			},
+		}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client1},
+				{name: "ext2", client: client2},
+			},
+		}
+
+		input := &listener.Listener{Name: "test"}
+		result, err := composite.PostHTTPListenerModifyHook(input, nil)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext1-ext2", result.Name)
+	})
+
+	t.Run("failOpen skips erroring extension", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(_ *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						l.Name += "-ext2"
+						return l, nil
+					},
+				}},
+			},
+		}
+
+		result, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext2", result.Name)
+	})
+
+	t.Run("failClosed stops chain", func(t *testing.T) {
+		client2Called := false
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(_ *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext2", client: &mockXDSHookClient{
+					postHTTPListenerModifyHook: func(l *listener.Listener, _ []*unstructured.Unstructured) (*listener.Listener, error) {
+						client2Called = true
+						l.Name += "-ext2"
+						return l, nil
+					},
+				}},
+			},
+		}
+
+		_, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, nil)
+		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
+		require.False(t, client2Called)
+	})
+}
+
+func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
+	t.Run("chains two clients", func(t *testing.T) {
+		client1 := &mockXDSHookClient{
+			postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+				c.Name += "-ext1"
+				return c, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+				c.Name += "-ext2"
+				return c, nil
+			},
+		}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client1},
+				{name: "ext2", client: client2},
+			},
+		}
+
+		input := &cluster.Cluster{Name: "test"}
+		result, err := composite.PostClusterModifyHook(input, nil)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext1-ext2", result.Name)
+	})
+
+	t.Run("failOpen skips erroring extension", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postClusterModifyHook: func(_ *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{
+					postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+						c.Name += "-ext2"
+						return c, nil
+					},
+				}},
+			},
+		}
+
+		result, err := composite.PostClusterModifyHook(&cluster.Cluster{Name: "test"}, nil)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext2", result.Name)
+	})
+
+	t.Run("failClosed stops chain", func(t *testing.T) {
+		client2Called := false
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postClusterModifyHook: func(_ *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext2", client: &mockXDSHookClient{
+					postClusterModifyHook: func(c *cluster.Cluster, _ []*unstructured.Unstructured) (*cluster.Cluster, error) {
+						client2Called = true
+						c.Name += "-ext2"
+						return c, nil
+					},
+				}},
+			},
+		}
+
+		_, err := composite.PostClusterModifyHook(&cluster.Cluster{Name: "test"}, nil)
+		require.Error(t, err)
+		require.False(t, client2Called)
+	})
+}
+
+func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
+	t.Run("chains resource lists", func(t *testing.T) {
+		client1 := &mockXDSHookClient{
+			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+				clusters = append(clusters, &cluster.Cluster{Name: "from-ext1"})
+				secrets = append(secrets, &tls.Secret{Name: "from-ext1"})
+				listeners = append(listeners, &listener.Listener{Name: "from-ext1"})
+				routes = append(routes, &route.RouteConfiguration{Name: "from-ext1"})
+				return clusters, secrets, listeners, routes, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+				clusters = append(clusters, &cluster.Cluster{Name: "from-ext2"})
+				secrets = append(secrets, &tls.Secret{Name: "from-ext2"})
+				listeners = append(listeners, &listener.Listener{Name: "from-ext2"})
+				routes = append(routes, &route.RouteConfiguration{Name: "from-ext2"})
+				return clusters, secrets, listeners, routes, nil
+			},
+		}
+
+		translationConfig := &egv1a1.TranslationConfig{
+			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
+			Route:    &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)},
+			Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)},
+			Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(true)},
+		}
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client1, translationConfig: translationConfig},
+				{name: "ext2", client: client2, translationConfig: translationConfig},
+			},
+		}
+
+		rc, rs, rl, rr, err := composite.PostTranslateModifyHook(nil, nil, nil, nil, nil)
 		require.NoError(t, err)
 		require.Len(t, rc, 2)
 		assert.Equal(t, "from-ext1", rc[0].Name)
 		assert.Equal(t, "from-ext2", rc[1].Name)
+		require.Len(t, rs, 2)
+		assert.Equal(t, "from-ext1", rs[0].Name)
+		assert.Equal(t, "from-ext2", rs[1].Name)
+		require.Len(t, rl, 2)
+		assert.Equal(t, "from-ext1", rl[0].Name)
+		assert.Equal(t, "from-ext2", rl[1].Name)
+		require.Len(t, rr, 2)
+		assert.Equal(t, "from-ext1", rr[0].Name)
+		assert.Equal(t, "from-ext2", rr[1].Name)
 	})
 
 	t.Run("per-extension policy filtering", func(t *testing.T) {
@@ -382,6 +556,127 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		require.Len(t, rl, 2)
 		assert.Equal(t, "original-listener", rl[0].Name)
 		assert.Equal(t, "from-ext2", rl[1].Name)
+	})
+
+	t.Run("failOpen skips erroring extension in PostTranslateModifyHook", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postTranslateModifyHook: func(_ []*cluster.Cluster, _ []*tls.Secret, _ []*listener.Listener, _ []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+						return nil, nil, nil, nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{
+					postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+						clusters = append(clusters, &cluster.Cluster{Name: "from-ext2"})
+						return clusters, secrets, listeners, routes, nil
+					},
+				}},
+			},
+		}
+
+		rc, _, _, _, err := composite.PostTranslateModifyHook(nil, nil, nil, nil, nil)
+		require.NoError(t, err)
+		require.Len(t, rc, 1)
+		assert.Equal(t, "from-ext2", rc[0].Name)
+	})
+
+	t.Run("failClosed stops chain in PostTranslateModifyHook", func(t *testing.T) {
+		client2Called := false
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postTranslateModifyHook: func(_ []*cluster.Cluster, _ []*tls.Secret, _ []*listener.Listener, _ []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+						return nil, nil, nil, nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext2", client: &mockXDSHookClient{
+					postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+						client2Called = true
+						clusters = append(clusters, &cluster.Cluster{Name: "from-ext2"})
+						return clusters, secrets, listeners, routes, nil
+					},
+				}},
+			},
+		}
+
+		_, _, _, _, err := composite.PostTranslateModifyHook(nil, nil, nil, nil, nil)
+		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
+		require.False(t, client2Called)
+	})
+
+	t.Run("per-extension secrets and routes gating", func(t *testing.T) {
+		// ext1 wants secrets only, ext2 wants routes only
+		client1 := &mockXDSHookClient{
+			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+				assert.NotNil(t, secrets)
+				assert.Nil(t, routes)
+				secrets = append(secrets, &tls.Secret{Name: "from-ext1"})
+				return clusters, secrets, listeners, routes, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postTranslateModifyHook: func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, _ []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
+				assert.Nil(t, secrets)
+				assert.NotNil(t, routes)
+				routes = append(routes, &route.RouteConfiguration{Name: "from-ext2"})
+				return clusters, secrets, listeners, routes, nil
+			},
+		}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:   "ext1",
+					client: client1,
+					translationConfig: &egv1a1.TranslationConfig{
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(true)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
+					},
+				},
+				{
+					name:   "ext2",
+					client: client2,
+					translationConfig: &egv1a1.TranslationConfig{
+						Route:   &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+					},
+				},
+			},
+		}
+
+		initialSecrets := []*tls.Secret{{Name: "original-secret"}}
+		initialRoutes := []*route.RouteConfiguration{{Name: "original-route"}}
+
+		_, rs, _, rr, err := composite.PostTranslateModifyHook(nil, initialSecrets, nil, initialRoutes, nil)
+		require.NoError(t, err)
+
+		require.Len(t, rs, 2)
+		assert.Equal(t, "original-secret", rs[0].Name)
+		assert.Equal(t, "from-ext1", rs[1].Name)
+
+		require.Len(t, rr, 2)
+		assert.Equal(t, "original-route", rr[0].Name)
+		assert.Equal(t, "from-ext2", rr[1].Name)
+	})
+
+	t.Run("filterPoliciesByGVK skips nil entries", func(t *testing.T) {
+		gvkSet := map[string]struct{}{
+			"foo.io/v1/FooPolicy": {},
+		}
+		policies := []*ir.UnstructuredRef{
+			nil,
+			{Object: nil},
+			{Object: &unstructured.Unstructured{Object: map[string]interface{}{
+				"apiVersion": "foo.io/v1",
+				"kind":       "FooPolicy",
+			}}},
+		}
+
+		filtered := filterPoliciesByGVK(policies, gvkSet)
+		require.Len(t, filtered, 1)
+		assert.Equal(t, "FooPolicy", filtered[0].Object.GetKind())
 	})
 
 	t.Run("no policyGVKSet passes all policies", func(t *testing.T) {
