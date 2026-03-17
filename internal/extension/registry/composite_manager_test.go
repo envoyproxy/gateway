@@ -6,6 +6,7 @@
 package registry
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -168,6 +169,32 @@ func TestCompositeManager_GetTranslationHookConfig(t *testing.T) {
 	})
 }
 
+func TestCompositeManager_GetTranslationHookConfig_MixedNilAndNonNil(t *testing.T) {
+	// One manager has nil config, the other has a non-nil config.
+	// The nil config's ShouldInclude* methods default to true for clusters/secrets.
+	mgr1 := &mockManager{
+		translationConfig: nil, // nil → ShouldInclude* returns default (clusters/secrets=true, listeners/routes=false)
+	}
+	mgr2 := &mockManager{
+		translationConfig: &egv1a1.TranslationConfig{
+			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
+		},
+	}
+
+	composite := NewCompositeManager([]namedManager{
+		{name: "mgr1", manager: mgr1},
+		{name: "mgr2", manager: mgr2},
+	})
+
+	tc := composite.GetTranslationHookConfig()
+	require.NotNil(t, tc)
+	// mgr2 explicitly enables listeners
+	assert.NotNil(t, tc.Listener)
+	// nil config defaults: clusters and secrets are true
+	assert.NotNil(t, tc.Cluster)
+	assert.NotNil(t, tc.Secret)
+}
+
 func TestCompositeManager_GetPreXDSHookClient(t *testing.T) {
 	t.Run("nil when no children have hooks", func(t *testing.T) {
 		composite := NewCompositeManager([]namedManager{
@@ -188,6 +215,16 @@ func TestCompositeManager_GetPreXDSHookClient(t *testing.T) {
 		require.NotNil(t, client)
 		_, ok := client.(*compositeXDSHookClient)
 		assert.True(t, ok)
+	})
+
+	t.Run("returns error when child errors", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{preHookErr: fmt.Errorf("connection failed")}},
+		})
+		client, err := composite.GetPreXDSHookClient(egv1a1.XDSRoute)
+		require.Error(t, err)
+		assert.Nil(t, client)
+		assert.Contains(t, err.Error(), "connection failed")
 	})
 }
 
@@ -214,6 +251,16 @@ func TestCompositeManager_GetPostXDSHookClient(t *testing.T) {
 		assert.True(t, ok)
 		assert.Len(t, compositeClient.entries, 2)
 	})
+}
+
+func TestCompositeManager_GetPostXDSHookClient_Error(t *testing.T) {
+	composite := NewCompositeManager([]namedManager{
+		{name: "mgr1", manager: &mockManager{postHookErr: fmt.Errorf("connection failed")}},
+	})
+	client, err := composite.GetPostXDSHookClient(egv1a1.XDSRoute)
+	require.Error(t, err)
+	assert.Nil(t, client)
+	assert.Contains(t, err.Error(), "connection failed")
 }
 
 func TestCompositeManager_CleanupHookConns(t *testing.T) {

@@ -37,10 +37,115 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
+
+func TestNewManager(t *testing.T) {
+	t.Run("zero extensions returns no-op Manager", func(t *testing.T) {
+		cfg := &config.Server{
+			EnvoyGateway:        &egv1a1.EnvoyGateway{},
+			ControllerNamespace: "test-ns",
+		}
+
+		mgr, err := NewManager(cfg, false)
+		require.NoError(t, err)
+		require.NotNil(t, mgr)
+
+		// Should be a plain Manager, not a CompositeManager
+		_, isPlain := mgr.(*Manager)
+		require.True(t, isPlain, "expected *Manager for 0 extensions")
+		// No-op manager should not have extensions
+		require.False(t, mgr.HasExtension("foo.io", "Foo"))
+	})
+
+	t.Run("single extension returns plain Manager", func(t *testing.T) {
+		cfg := &config.Server{
+			EnvoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Name: "ext1",
+						Resources: []egv1a1.GroupVersionKind{
+							{Group: "foo.io", Version: "v1", Kind: "Foo"},
+						},
+						Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+					},
+				},
+			},
+			ControllerNamespace: "test-ns",
+		}
+
+		mgr, err := NewManager(cfg, false)
+		require.NoError(t, err)
+		require.NotNil(t, mgr)
+
+		_, isPlain := mgr.(*Manager)
+		require.True(t, isPlain, "expected *Manager for 1 extension")
+		require.True(t, mgr.HasExtension("foo.io", "Foo"))
+		require.False(t, mgr.HasExtension("bar.io", "Bar"))
+	})
+
+	t.Run("multiple extensions returns CompositeManager", func(t *testing.T) {
+		cfg := &config.Server{
+			EnvoyGateway: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ext1",
+							Resources: []egv1a1.GroupVersionKind{
+								{Group: "foo.io", Version: "v1", Kind: "Foo"},
+							},
+							PolicyResources: []egv1a1.GroupVersionKind{
+								{Group: "foo.io", Version: "v1", Kind: "FooPolicy"},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
+						},
+						{
+							Name: "ext2",
+							Resources: []egv1a1.GroupVersionKind{
+								{Group: "bar.io", Version: "v1", Kind: "Bar"},
+							},
+							PolicyResources: []egv1a1.GroupVersionKind{
+								{Group: "bar.io", Version: "v1", Kind: "BarPolicy"},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
+						},
+					},
+				},
+			},
+			ControllerNamespace: "test-ns",
+		}
+
+		mgr, err := NewManager(cfg, false)
+		require.NoError(t, err)
+		require.NotNil(t, mgr)
+
+		composite, isComposite := mgr.(*CompositeManager)
+		require.True(t, isComposite, "expected *CompositeManager for 2+ extensions")
+		require.Len(t, composite.managers, 2)
+
+		// Union semantics: both extensions' resources are visible
+		require.True(t, mgr.HasExtension("foo.io", "Foo"))
+		require.True(t, mgr.HasExtension("bar.io", "Bar"))
+		require.False(t, mgr.HasExtension("baz.io", "Baz"))
+
+		// Verify named managers have correct policyGVKSets
+		require.Equal(t, "ext1", composite.managers[0].name)
+		require.Contains(t, composite.managers[0].policyGVKSet, "foo.io/v1/FooPolicy")
+		require.Equal(t, "ext2", composite.managers[1].name)
+		require.Contains(t, composite.managers[1].policyGVKSet, "bar.io/v1/BarPolicy")
+	})
+}
+
+func TestNewK8sClient(t *testing.T) {
+	t.Run("not in k8s returns nil client", func(t *testing.T) {
+		cli, err := newK8sClient(false)
+		require.NoError(t, err)
+		require.Nil(t, cli)
+	})
+}
 
 func TestGetExtensionServerAddress(t *testing.T) {
 	tests := []struct {
