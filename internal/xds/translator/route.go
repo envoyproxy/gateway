@@ -409,9 +409,17 @@ func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
 }
 
 func idleTimeout(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) *durationpb.Duration {
-	// When a user-configured stream idle timeout exists at the listener level, avoid overriding it at the route level
-	// and allow the user-configured listener-level timeout to take effect.
-	// TODO: we may need to support route-level idle timeout in the BackendTrafficPolicy
+	// When a user-configured stream idle timeout exists at the route level (Configured via BackendTrafficPolicy), use it
+	if httpRoute != nil &&
+		httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Timeout != nil &&
+		httpRoute.Traffic.Timeout.HTTP != nil &&
+		httpRoute.Traffic.Timeout.HTTP.StreamIdleTimeout != nil {
+		return durationpb.New(httpRoute.Traffic.Timeout.HTTP.StreamIdleTimeout.Duration)
+	}
+
+	// When a user-configured stream idle timeout exists at the listener level (Configured via ClientTrafficPolicy),
+	// don't override it at the route level with the HTTPRoute's request timeout.
 	if httpListener != nil &&
 		httpListener.Timeout != nil &&
 		httpListener.Timeout.HTTP != nil &&
@@ -419,8 +427,8 @@ func idleTimeout(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) *durati
 		return nil
 	}
 
-	// When a user-configured request timeout exists at the route level, and no user-configured stream idle timeout exists
-	// at the listener level, set a route-level idle timeout to avoid stream timeout before request timeout.
+	// Fallback to the HTTPRoute's request timeout when no user-configured stream idle timeout exists at both the route
+	// and listener levels. This is to avoid stream timeout before request timeout.
 	requestTimeout := getEffectiveRequestTimeout(httpRoute)
 	idleTimeout := time.Hour // Default to 1 hour
 	if requestTimeout != nil {

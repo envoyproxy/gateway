@@ -720,6 +720,10 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 			Value: uint32(1024),
 		},
 	}
+	if circuitBreaker != nil {
+		cbt.RetryBudget = buildCircuitBreakerRetryBudget(circuitBreaker.RetryBudget)
+	}
+
 	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
 
 	if circuitBreaker != nil {
@@ -766,6 +770,22 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	}
 
 	return ecb
+}
+
+func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreakers_Thresholds_RetryBudget {
+	if rb == nil {
+		return nil
+	}
+
+	trb := &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
+		BudgetPercent: &xdstype.Percent{
+			Value: rb.Percent,
+		},
+	}
+	if rb.MinRetryConcurrency != 3 {
+		trb.MinRetryConcurrency = wrapperspb.UInt32(rb.MinRetryConcurrency)
+	}
+	return trb
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
@@ -1387,17 +1407,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	// Populate traffic features.
-	bt := httpRoute.Traffic
-	if bt != nil {
-		clusterArgs.loadBalancer = bt.LoadBalancer
-		clusterArgs.proxyProtocol = bt.ProxyProtocol
-		clusterArgs.circuitBreaker = bt.CircuitBreaker
-		clusterArgs.healthCheck = bt.HealthCheck
-		clusterArgs.timeout = bt.Timeout
-		clusterArgs.tcpkeepalive = bt.TCPKeepalive
-		clusterArgs.backendConnection = bt.BackendConnection
-		clusterArgs.dns = bt.DNS
-	}
+	applyTraffic(clusterArgs, httpRoute.Traffic)
 
 	return clusterArgs
 }
@@ -1451,6 +1461,23 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
 			Value: *opts.ResetStreamOnError,
 		}
+	}
+
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &xdstype.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.IdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.IdleInterval.Duration)
+		}
+		out.ConnectionKeepalive = keepalive
 	}
 
 	return out
