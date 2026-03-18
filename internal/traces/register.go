@@ -8,9 +8,9 @@ package traces
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -20,16 +20,20 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils/fraction"
 )
 
 type Runner struct {
 	cfg *config.Server
 	tp  *trace.TracerProvider
+	log logging.Logger
 }
 
 func New(cfg *config.Server) *Runner {
 	return &Runner{
 		cfg: cfg,
+		log: cfg.Logger.WithName("traces-runner"),
 	}
 }
 
@@ -43,7 +47,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	sinkConfig := tracesConfig.Sink
 	configObj := sinkConfig.OpenTelemetry
 
-	endpoint := fmt.Sprintf("%s:%d", sinkConfig.OpenTelemetry.Host, sinkConfig.OpenTelemetry.Port)
+	endpoint := net.JoinHostPort(sinkConfig.OpenTelemetry.Host, fmt.Sprint(sinkConfig.OpenTelemetry.Port))
 
 	// Create resource
 	res, err := resource.New(ctx,
@@ -57,7 +61,10 @@ func (r *Runner) Start(ctx context.Context) error {
 
 	// Get sampler configuration
 	sampler := r.getSampler(tracesConfig)
-
+	r.log.Info("start tracer",
+		"endpoint", endpoint,
+		"sampler", sampler.Description(),
+	)
 	// Get batch span processor options
 	batchOptions := r.getBatchSpanProcessorOptions(tracesConfig)
 
