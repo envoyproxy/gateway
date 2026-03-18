@@ -1430,6 +1430,21 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 			}},
 		},
 		{
+			name: "Backend ref without namespace, no TLS, no BackendTLSPolicy",
+			backendCluster: egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+				BackendObjectReference: gwapiv1.BackendObjectReference{
+					Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")), Kind: ptr.To(gwapiv1.Kind("Backend")),
+					Name: gwapiv1.ObjectName(backendName),
+				},
+			}}},
+			context:   &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackend}},
+			resources: &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}},
+			expected: []*ir.DestinationSetting{{
+				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
+				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata,
+			}},
+		},
+		{
 			name:           "BackendTLSPolicy overrides Backend TLS SNI",
 			backendCluster: backendBackendCluster,
 			context:        &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackendWithTLS}},
