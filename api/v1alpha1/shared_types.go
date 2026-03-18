@@ -718,6 +718,33 @@ type HTTP2Settings struct {
 	// Default: TerminateConnection
 	// +optional
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+
+	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
+	// +optional
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.interval) || duration(self.timeout) < duration(self.interval)",message="timeout must be less than interval"
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// Timeout specifies how long to wait for a PING response before considering the connection dead.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// IntervalJitter specifies a random jitter percentage added to each interval.
+	// Defaults to 15% if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty"`
+
+	// IdleInterval specifies how long a connection must be idle before a PING is sent.
+	// +optional
+	IdleInterval *gwapiv1.Duration `json:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration for listeners.

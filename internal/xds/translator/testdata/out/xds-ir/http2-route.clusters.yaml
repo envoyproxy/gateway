@@ -27,6 +27,12 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions:
+          connectionKeepalive:
+            connectionIdleInterval: 30s
+            interval: 60s
+            intervalJitter:
+              value: 20
+            timeout: 10s
           initialConnectionWindowSize: 524288000
           initialStreamWindowSize: 1048576
           maxConcurrentStreams: 200

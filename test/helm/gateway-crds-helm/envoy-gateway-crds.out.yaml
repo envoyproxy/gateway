@@ -613,6 +613,44 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  retryBudget:
+                    description: |-
+                      RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                      RetryBudget take precedence over maxParallelRetries.
+                    properties:
+                      minRetryConcurrency:
+                        description: |-
+                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                          For example, a budget of 20% with a minimum retry concurrency of 3
+                          will allow 5 active retries while there are 25 active requests.
+                          If there are 2 active requests, there are still 3 active retries
+                          allowed because of the minimum retry concurrency.
+                          Defaults to 3.
+                        format: int32
+                        type: integer
+                      percent:
+                        description: |-
+                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                          the sum of active requests and active pending requests.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                    required:
+                    - percent
+                    type: object
                 type: object
               compression:
                 description: |-
@@ -1170,6 +1208,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -3180,6 +3250,12 @@ spec:
                           response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -4413,6 +4489,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -5899,6 +6007,45 @@ spec:
                                   minimum: 0
                                   type: integer
                               type: object
+                            retryBudget:
+                              description: |-
+                                RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                RetryBudget take precedence over maxParallelRetries.
+                              properties:
+                                minRetryConcurrency:
+                                  description: |-
+                                    MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                    For example, a budget of 20% with a minimum retry concurrency of 3
+                                    will allow 5 active retries while there are 25 active requests.
+                                    If there are 2 active requests, there are still 3 active retries
+                                    allowed because of the minimum retry concurrency.
+                                    Defaults to 3.
+                                  format: int32
+                                  type: integer
+                                percent:
+                                  description: |-
+                                    Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                    the sum of active requests and active pending requests.
+                                  properties:
+                                    denominator:
+                                      default: 100
+                                      format: int32
+                                      minimum: 1
+                                      type: integer
+                                    numerator:
+                                      format: int32
+                                      minimum: 0
+                                      type: integer
+                                  required:
+                                  - numerator
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: numerator must be less than or equal
+                                      to denominator
+                                    rule: self.numerator <= self.denominator
+                              required:
+                              - percent
+                              type: object
                           type: object
                         connection:
                           description: Connection includes backend connection settings.
@@ -6326,6 +6473,39 @@ spec:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
                           properties:
+                            connectionKeepalive:
+                              description: ConnectionKeepalive configures HTTP/2 connection
+                                keepalive using PING frames.
+                              properties:
+                                idleInterval:
+                                  description: IdleInterval specifies how long a connection
+                                    must be idle before a PING is sent.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                interval:
+                                  description: Interval specifies how often to send
+                                    HTTP/2 PING frames to keep the connection alive.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                intervalJitter:
+                                  description: |-
+                                    IntervalJitter specifies a random jitter percentage added to each interval.
+                                    Defaults to 15% if not specified.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                timeout:
+                                  description: Timeout specifies how long to wait
+                                    for a PING response before considering the connection
+                                    dead.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                              - message: timeout must be less than interval
+                                rule: '!has(self.timeout) || !has(self.interval) ||
+                                  duration(self.timeout) < duration(self.interval)'
                             initialConnectionWindowSize:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -6797,6 +6977,12 @@ spec:
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                streamIdleTimeout:
+                                  description: |2-
+                                     The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                     If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
@@ -19918,6 +20104,45 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: |-
+                                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                                  RetryBudget take precedence over maxParallelRetries.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -20383,6 +20608,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -20889,6 +21153,12 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -21246,6 +21516,45 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: |-
+                                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                                  RetryBudget take precedence over maxParallelRetries.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -21711,6 +22020,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -22217,6 +22565,12 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -22755,6 +23109,45 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        retryBudget:
+                                          description: |-
+                                            RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                            RetryBudget take precedence over maxParallelRetries.
+                                          properties:
+                                            minRetryConcurrency:
+                                              description: |-
+                                                MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                For example, a budget of 20% with a minimum retry concurrency of 3
+                                                will allow 5 active retries while there are 25 active requests.
+                                                If there are 2 active requests, there are still 3 active retries
+                                                allowed because of the minimum retry concurrency.
+                                                Defaults to 3.
+                                              format: int32
+                                              type: integer
+                                            percent:
+                                              description: |-
+                                                Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                the sum of active requests and active pending requests.
+                                              properties:
+                                                denominator:
+                                                  default: 100
+                                                  format: int32
+                                                  minimum: 1
+                                                  type: integer
+                                                numerator:
+                                                  format: int32
+                                                  minimum: 0
+                                                  type: integer
+                                              required:
+                                              - numerator
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: numerator must be less than
+                                                  or equal to denominator
+                                                rule: self.numerator <= self.denominator
+                                          required:
+                                          - percent
+                                          type: object
                                       type: object
                                     connection:
                                       description: Connection includes backend connection
@@ -23200,6 +23593,42 @@ spec:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
                                       properties:
+                                        connectionKeepalive:
+                                          description: ConnectionKeepalive configures
+                                            HTTP/2 connection keepalive using PING
+                                            frames.
+                                          properties:
+                                            idleInterval:
+                                              description: IdleInterval specifies
+                                                how long a connection must be idle
+                                                before a PING is sent.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            interval:
+                                              description: Interval specifies how
+                                                often to send HTTP/2 PING frames to
+                                                keep the connection alive.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            intervalJitter:
+                                              description: |-
+                                                IntervalJitter specifies a random jitter percentage added to each interval.
+                                                Defaults to 15% if not specified.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
+                                            timeout:
+                                              description: Timeout specifies how long
+                                                to wait for a PING response before
+                                                considering the connection dead.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: timeout must be less than interval
+                                            rule: '!has(self.timeout) || !has(self.interval)
+                                              || duration(self.timeout) < duration(self.interval)'
                                         initialConnectionWindowSize:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -23692,6 +24121,12 @@ spec:
                                                 from the upstream.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
+                                            streamIdleTimeout:
+                                              description: |2-
+                                                 The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                 If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
                                           type: object
                                         tcp:
                                           description: Timeout settings for TCP.
@@ -24163,6 +24598,45 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  retryBudget:
+                                    description: |-
+                                      RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                      RetryBudget take precedence over maxParallelRetries.
+                                    properties:
+                                      minRetryConcurrency:
+                                        description: |-
+                                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                          For example, a budget of 20% with a minimum retry concurrency of 3
+                                          will allow 5 active retries while there are 25 active requests.
+                                          If there are 2 active requests, there are still 3 active retries
+                                          allowed because of the minimum retry concurrency.
+                                          Defaults to 3.
+                                        format: int32
+                                        type: integer
+                                      percent:
+                                        description: |-
+                                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                          the sum of active requests and active pending requests.
+                                        properties:
+                                          denominator:
+                                            default: 100
+                                            format: int32
+                                            minimum: 1
+                                            type: integer
+                                          numerator:
+                                            format: int32
+                                            minimum: 0
+                                            type: integer
+                                        required:
+                                        - numerator
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: numerator must be less than or
+                                            equal to denominator
+                                          rule: self.numerator <= self.denominator
+                                    required:
+                                    - percent
+                                    type: object
                                 type: object
                               connection:
                                 description: Connection includes backend connection
@@ -24607,6 +25081,41 @@ spec:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
                                 properties:
+                                  connectionKeepalive:
+                                    description: ConnectionKeepalive configures HTTP/2
+                                      connection keepalive using PING frames.
+                                    properties:
+                                      idleInterval:
+                                        description: IdleInterval specifies how long
+                                          a connection must be idle before a PING
+                                          is sent.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      interval:
+                                        description: Interval specifies how often
+                                          to send HTTP/2 PING frames to keep the connection
+                                          alive.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      intervalJitter:
+                                        description: |-
+                                          IntervalJitter specifies a random jitter percentage added to each interval.
+                                          Defaults to 15% if not specified.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
+                                      timeout:
+                                        description: Timeout specifies how long to
+                                          wait for a PING response before considering
+                                          the connection dead.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: timeout must be less than interval
+                                      rule: '!has(self.timeout) || !has(self.interval)
+                                        || duration(self.timeout) < duration(self.interval)'
                                   initialConnectionWindowSize:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -25087,6 +25596,12 @@ spec:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
                                           upstream.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      streamIdleTimeout:
+                                        description: |2-
+                                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
@@ -26988,6 +27503,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -27419,6 +27973,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -27895,6 +28482,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -28201,6 +28794,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -28632,6 +29264,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -29108,6 +29773,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -29656,6 +30327,45 @@ spec:
                                           minimum: 0
                                           type: integer
                                       type: object
+                                    retryBudget:
+                                      description: |-
+                                        RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                        RetryBudget take precedence over maxParallelRetries.
+                                      properties:
+                                        minRetryConcurrency:
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            For example, a budget of 20% with a minimum retry concurrency of 3
+                                            will allow 5 active retries while there are 25 active requests.
+                                            If there are 2 active requests, there are still 3 active retries
+                                            allowed because of the minimum retry concurrency.
+                                            Defaults to 3.
+                                          format: int32
+                                          type: integer
+                                        percent:
+                                          description: |-
+                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                            the sum of active requests and active pending requests.
+                                          properties:
+                                            denominator:
+                                              default: 100
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            numerator:
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                          required:
+                                          - numerator
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: numerator must be less than or
+                                              equal to denominator
+                                            rule: self.numerator <= self.denominator
+                                      required:
+                                      - percent
+                                      type: object
                                   type: object
                                 connection:
                                   description: Connection includes backend connection
@@ -30100,6 +30810,41 @@ spec:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
                                   properties:
+                                    connectionKeepalive:
+                                      description: ConnectionKeepalive configures
+                                        HTTP/2 connection keepalive using PING frames.
+                                      properties:
+                                        idleInterval:
+                                          description: IdleInterval specifies how
+                                            long a connection must be idle before
+                                            a PING is sent.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        interval:
+                                          description: Interval specifies how often
+                                            to send HTTP/2 PING frames to keep the
+                                            connection alive.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        intervalJitter:
+                                          description: |-
+                                            IntervalJitter specifies a random jitter percentage added to each interval.
+                                            Defaults to 15% if not specified.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
+                                        timeout:
+                                          description: Timeout specifies how long
+                                            to wait for a PING response before considering
+                                            the connection dead.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: timeout must be less than interval
+                                        rule: '!has(self.timeout) || !has(self.interval)
+                                          || duration(self.timeout) < duration(self.interval)'
                                     initialConnectionWindowSize:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -30581,6 +31326,12 @@ spec:
                                           description: RequestTimeout is the time
                                             until which entire response is received
                                             from the upstream.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
                                       type: object
@@ -31158,6 +31909,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -31589,6 +32379,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -32065,6 +32888,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object

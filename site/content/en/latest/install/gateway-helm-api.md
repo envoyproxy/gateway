@@ -84,6 +84,7 @@ The Helm chart for Envoy Gateway
 | hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |
