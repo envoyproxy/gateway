@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -149,6 +151,79 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		_, err := composite.PostRouteModifyHook(input, nil, nil)
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
+	})
+
+	t.Run("per-extension resource filtering", func(t *testing.T) {
+		var ext1Resources, ext2Resources []*unstructured.Unstructured
+
+		client1 := &mockXDSHookClient{
+			postRouteModifyHook: func(r *route.Route, _ []string, resources []*unstructured.Unstructured) (*route.Route, error) {
+				ext1Resources = resources
+				return r, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postRouteModifyHook: func(r *route.Route, _ []string, resources []*unstructured.Unstructured) (*route.Route, error) {
+				ext2Resources = resources
+				return r, nil
+			},
+		}
+
+		fooV1FooFilterGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooFilter"}
+		barV1BarBackendGVK := schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarBackend"}
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:           "ext1",
+					client:         client1,
+					resourceGVKSet: sets.New(fooV1FooFilterGVK),
+				},
+				{
+					name:           "ext2",
+					client:         client2,
+					resourceGVKSet: sets.New(barV1BarBackendGVK),
+				},
+			},
+		}
+
+		allResources := []*unstructured.Unstructured{
+			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
+			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+		}
+
+		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources)
+		require.NoError(t, err)
+
+		require.Len(t, ext1Resources, 1)
+		assert.Equal(t, fooV1FooFilterGVK, ext1Resources[0].GetObjectKind().GroupVersionKind())
+
+		require.Len(t, ext2Resources, 1)
+		assert.Equal(t, barV1BarBackendGVK, ext2Resources[0].GetObjectKind().GroupVersionKind())
+	})
+
+	t.Run("no resourceGVKSet passes all resources", func(t *testing.T) {
+		var receivedResources []*unstructured.Unstructured
+		client := &mockXDSHookClient{
+			postRouteModifyHook: func(r *route.Route, _ []string, resources []*unstructured.Unstructured) (*route.Route, error) {
+				receivedResources = resources
+				return r, nil
+			},
+		}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client},
+			},
+		}
+
+		allResources := []*unstructured.Unstructured{
+			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooFilter"}},
+			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+		}
+
+		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, allResources)
+		require.NoError(t, err)
+		assert.Len(t, receivedResources, 2)
 	})
 }
 
@@ -300,6 +375,54 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
 	})
+
+	t.Run("per-extension policy filtering", func(t *testing.T) {
+		var ext1Resources, ext2Resources []*unstructured.Unstructured
+
+		client1 := &mockXDSHookClient{
+			postHTTPListenerModifyHook: func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error) {
+				ext1Resources = resources
+				return l, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postHTTPListenerModifyHook: func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error) {
+				ext2Resources = resources
+				return l, nil
+			},
+		}
+
+		fooV1FooPolicyGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooPolicy"}
+		barV1BarPolicyGVK := schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarPolicy"}
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:         "ext1",
+					client:       client1,
+					policyGVKSet: sets.New(fooV1FooPolicyGVK),
+				},
+				{
+					name:         "ext2",
+					client:       client2,
+					policyGVKSet: sets.New(barV1BarPolicyGVK),
+				},
+			},
+		}
+
+		allResources := []*unstructured.Unstructured{
+			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooPolicy"}},
+			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarPolicy"}},
+		}
+
+		_, err := composite.PostHTTPListenerModifyHook(&listener.Listener{Name: "test"}, allResources)
+		require.NoError(t, err)
+
+		require.Len(t, ext1Resources, 1)
+		assert.Equal(t, fooV1FooPolicyGVK, ext1Resources[0].GetObjectKind().GroupVersionKind())
+
+		require.Len(t, ext2Resources, 1)
+		assert.Equal(t, barV1BarPolicyGVK, ext2Resources[0].GetObjectKind().GroupVersionKind())
+	})
 }
 
 func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
@@ -375,6 +498,54 @@ func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
 		require.Error(t, err)
 		require.False(t, client2Called)
 	})
+
+	t.Run("per-extension resource filtering", func(t *testing.T) {
+		var ext1Resources, ext2Resources []*unstructured.Unstructured
+
+		client1 := &mockXDSHookClient{
+			postClusterModifyHook: func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error) {
+				ext1Resources = resources
+				return c, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postClusterModifyHook: func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error) {
+				ext2Resources = resources
+				return c, nil
+			},
+		}
+
+		fooV1FooBackendGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooBackend"}
+		barV1BarBackend := schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarBackend"}
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{
+					name:           "ext1",
+					client:         client1,
+					resourceGVKSet: sets.New(fooV1FooBackendGVK),
+				},
+				{
+					name:           "ext2",
+					client:         client2,
+					resourceGVKSet: sets.New(barV1BarBackend),
+				},
+			},
+		}
+
+		allResources := []*unstructured.Unstructured{
+			{Object: map[string]interface{}{"apiVersion": "foo.io/v1", "kind": "FooBackend"}},
+			{Object: map[string]interface{}{"apiVersion": "bar.io/v1", "kind": "BarBackend"}},
+		}
+
+		_, err := composite.PostClusterModifyHook(&cluster.Cluster{Name: "test"}, allResources)
+		require.NoError(t, err)
+
+		require.Len(t, ext1Resources, 1)
+		assert.Equal(t, fooV1FooBackendGVK, ext1Resources[0].GetObjectKind().GroupVersionKind())
+
+		require.Len(t, ext2Resources, 1)
+		assert.Equal(t, barV1BarBackend, ext2Resources[0].GetObjectKind().GroupVersionKind())
+	})
 }
 
 func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
@@ -443,21 +614,19 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 			},
 		}
 
+		fooV1FooPolicyGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooPolicy"}
+		barV1BarPolicyGVK := schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarPolicy"}
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:   "ext1",
-					client: client1,
-					policyGVKSet: map[string]struct{}{
-						"foo.io/v1/FooPolicy": {},
-					},
+					name:         "ext1",
+					client:       client1,
+					policyGVKSet: sets.New(fooV1FooPolicyGVK),
 				},
 				{
-					name:   "ext2",
-					client: client2,
-					policyGVKSet: map[string]struct{}{
-						"bar.io/v1/BarPolicy": {},
-					},
+					name:         "ext2",
+					client:       client2,
+					policyGVKSet: sets.New(barV1BarPolicyGVK),
 				},
 			},
 		}
@@ -485,11 +654,11 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 
 		// ext1 should only see FooPolicy
 		require.Len(t, ext1Policies, 1)
-		assert.Equal(t, "FooPolicy", ext1Policies[0].Object.GetKind())
+		assert.Equal(t, fooV1FooPolicyGVK, ext1Policies[0].Object.GetObjectKind().GroupVersionKind())
 
 		// ext2 should only see BarPolicy
 		require.Len(t, ext2Policies, 1)
-		assert.Equal(t, "BarPolicy", ext2Policies[0].Object.GetKind())
+		assert.Equal(t, barV1BarPolicyGVK, ext2Policies[0].Object.GetObjectKind().GroupVersionKind())
 	})
 
 	t.Run("per-extension resource-type gating", func(t *testing.T) {
@@ -662,9 +831,8 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 	})
 
 	t.Run("filterPoliciesByGVK skips nil entries", func(t *testing.T) {
-		gvkSet := map[string]struct{}{
-			"foo.io/v1/FooPolicy": {},
-		}
+		fooV1FooPolicyGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooPolicy"}
+		gvkSet := sets.New(fooV1FooPolicyGVK)
 		policies := []*ir.UnstructuredRef{
 			nil,
 			{Object: nil},
@@ -676,7 +844,7 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 
 		filtered := filterPoliciesByGVK(policies, gvkSet)
 		require.Len(t, filtered, 1)
-		assert.Equal(t, "FooPolicy", filtered[0].Object.GetKind())
+		assert.Equal(t, fooV1FooPolicyGVK, filtered[0].Object.GetObjectKind().GroupVersionKind())
 	})
 
 	t.Run("no policyGVKSet passes all policies", func(t *testing.T) {
