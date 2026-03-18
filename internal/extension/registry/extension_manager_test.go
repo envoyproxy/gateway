@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -100,6 +101,9 @@ func TestNewManager(t *testing.T) {
 							PolicyResources: []egv1a1.GroupVersionKind{
 								{Group: "foo.io", Version: "v1", Kind: "FooPolicy"},
 							},
+							BackendResources: []egv1a1.GroupVersionKind{
+								{Group: "foo.io", Version: "v1", Kind: "FooBackend"},
+							},
 							Service: &egv1a1.ExtensionService{Host: "foo.svc", Port: 8080},
 						},
 						{
@@ -109,6 +113,9 @@ func TestNewManager(t *testing.T) {
 							},
 							PolicyResources: []egv1a1.GroupVersionKind{
 								{Group: "bar.io", Version: "v1", Kind: "BarPolicy"},
+							},
+							BackendResources: []egv1a1.GroupVersionKind{
+								{Group: "bar.io", Version: "v1", Kind: "BarBackend"},
 							},
 							Service: &egv1a1.ExtensionService{Host: "bar.svc", Port: 8080},
 						},
@@ -128,14 +135,27 @@ func TestNewManager(t *testing.T) {
 
 		// Union semantics: both extensions' resources are visible
 		require.True(t, mgr.HasExtension("foo.io", "Foo"))
+		require.True(t, mgr.HasExtension("foo.io", "FooBackend"))
+		require.False(t, mgr.HasExtension("foo.io", "FooPolicy"))
 		require.True(t, mgr.HasExtension("bar.io", "Bar"))
+		require.True(t, mgr.HasExtension("bar.io", "BarBackend"))
+		require.False(t, mgr.HasExtension("bar.io", "BarPolicy"))
 		require.False(t, mgr.HasExtension("baz.io", "Baz"))
 
-		// Verify named managers have correct policyGVKSets
+		// Verify named managers have the correct policyGVKSets and resourceGVKSets
 		require.Equal(t, "ext1", composite.managers[0].name)
-		require.Contains(t, composite.managers[0].policyGVKSet, "foo.io/v1/FooPolicy")
+		require.Len(t, composite.managers[0].policyGVKSet, 1)
+		require.Contains(t, composite.managers[0].policyGVKSet, schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooPolicy"})
+		require.Len(t, composite.managers[0].resourceGVKSet, 2)
+		require.Contains(t, composite.managers[0].resourceGVKSet, schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "Foo"})
+		require.Contains(t, composite.managers[0].resourceGVKSet, schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooBackend"})
+
 		require.Equal(t, "ext2", composite.managers[1].name)
-		require.Contains(t, composite.managers[1].policyGVKSet, "bar.io/v1/BarPolicy")
+		require.Len(t, composite.managers[1].policyGVKSet, 1)
+		require.Contains(t, composite.managers[1].policyGVKSet, schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarPolicy"})
+		require.Len(t, composite.managers[1].resourceGVKSet, 2)
+		require.Contains(t, composite.managers[1].resourceGVKSet, schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "Bar"})
+		require.Contains(t, composite.managers[1].resourceGVKSet, schema.GroupVersionKind{Group: "bar.io", Version: "v1", Kind: "BarBackend"})
 	})
 }
 

@@ -24,6 +24,8 @@ import (
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -103,15 +105,23 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 				extension: *ext,
 			}
 
-			policyGVKSet := make(map[string]struct{})
+			resourceGVKSet := sets.New[schema.GroupVersionKind]()
+			for _, gvk := range ext.Resources {
+				resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+			}
+			for _, gvk := range ext.BackendResources {
+				resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+			}
+
+			policyGVKSet := sets.New[schema.GroupVersionKind]()
 			for _, gvk := range ext.PolicyResources {
-				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
-				policyGVKSet[key] = struct{}{}
+				policyGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
 			}
 
 			named = append(named, namedManager{
 				name:            ext.Name,
 				manager:         mgr,
+				resourceGVKSet:  resourceGVKSet,
 				policyGVKSet:    policyGVKSet,
 				cleanupHookConn: mgr.CleanupHookConns,
 			})
