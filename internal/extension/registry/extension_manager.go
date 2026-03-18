@@ -17,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -35,6 +34,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
