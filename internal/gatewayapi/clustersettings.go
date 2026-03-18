@@ -153,11 +153,22 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			}
 		}
 
+		var sit *metav1.Duration
+		if pto.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamIdleTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
+			} else {
+				sit = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
 			MaxStreamDuration:     msd,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs

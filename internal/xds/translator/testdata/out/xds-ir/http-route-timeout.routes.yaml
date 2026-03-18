@@ -14,9 +14,9 @@
       name: first-route
       route:
         cluster: first-route-dest
-        idleTimeout: 3600s
+        idleTimeout: 20s
         maxStreamDuration:
-          maxStreamDuration: 10s
+          maxStreamDuration: 30s
         timeout: 5s
         upgradeConfigs:
         - upgradeType: websocket
