@@ -31398,7 +31398,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
