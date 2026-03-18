@@ -54,7 +54,8 @@ const (
 	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
 	JWKSConfigMapKey = "jwks"
 
-	spFieldBasicAuth                FieldPath = "spec.basicAuth"
+	spFieldBasicAuth FieldPath = "spec.basicAuth"
+	// nolint: gosec
 	spFieldAPIKeyAuthCreds          FieldPath = "spec.apiKeyAuth.credentialRefs"
 	spFieldAuthRules                FieldPath = "spec.authorization.rules"
 	spFieldExtAuth                  FieldPath = "spec.extAuth"
@@ -66,8 +67,9 @@ const (
 	spFieldOIDC                     FieldPath = "spec.oidc"
 	spFieldOIDCProviderBackendRefs  FieldPath = "spec.oidc.provider.backendRefs"
 	spFieldOIDCClientIDRef          FieldPath = "spec.oidc.clientIDRef"
-	spFieldOIDCClientSecret         FieldPath = "spec.oidc.clientSecret"
-	spFieldJwtProviders             FieldPath = "spec.jwt.providers"
+	// nolint: gosec
+	spFieldOIDCClientSecret FieldPath = "spec.oidc.clientSecret"
+	spFieldJwtProviders     FieldPath = "spec.jwt.providers"
 )
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.

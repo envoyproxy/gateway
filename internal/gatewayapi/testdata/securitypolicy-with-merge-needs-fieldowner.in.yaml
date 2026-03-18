@@ -106,10 +106,10 @@ securityPolicies:
     oidc:
       provider:
         backendRefs:
-          - group: gateway.envoyproxy.io
-            kind: Backend
-            name: backend-ip
-            port: 3000
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
+          port: 3000
         issuer: "https://oauth.foo.com"
         authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
         tokenEndpoint: "https://oauth.foo.com/token"
