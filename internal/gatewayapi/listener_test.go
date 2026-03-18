@@ -1300,7 +1300,7 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 				}},
 			}
 
-			ds, _, err := translator.processBackendRefs("test", backendCluster, ns, resources, nil)
+			ds, _, err := translator.processBackendRefs("test", backendCluster, ns, resources, &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}})
 			require.NoError(t, err)
 			require.Len(t, ds, 1)
 
@@ -1311,6 +1311,164 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 			} else {
 				require.NotNil(t, ds[0].TLS)
 				require.Equal(t, tc.expectedSNI, ds[0].TLS.SNI)
+			}
+		})
+	}
+}
+
+func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
+	ns := "test-ns"
+	backendName := "otel-collector"
+	serviceName := "otel-svc"
+	envoyProxy := &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}}
+
+	backendBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+		BackendObjectReference: gwapiv1.BackendObjectReference{
+			Group: ptr.To(gwapiv1.Group("gateway.envoyproxy.io")), Kind: ptr.To(gwapiv1.Kind("Backend")),
+			Name: gwapiv1.ObjectName(backendName), Namespace: ptr.To(gwapiv1.Namespace(ns)),
+		},
+	}}}
+	otelBackend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: backendName},
+		Spec:       egv1a1.BackendSpec{Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}}},
+	}
+	otelBackendWithTLS := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: backendName},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{{FQDN: &egv1a1.FQDNEndpoint{Hostname: "otel.example.com", Port: 443}}},
+			TLS: &egv1a1.BackendTLSSettings{
+				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+				SNI:                     ptr.To(gwapiv1.PreciseHostname("backend-sni.example.com")),
+			},
+		},
+	}
+	otelBackendPolicy := &gwapiv1.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "otel-tls"},
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+					Group: "gateway.envoyproxy.io", Kind: "Backend", Name: gwapiv1.ObjectName(backendName),
+				},
+			}},
+			Validation: gwapiv1.BackendTLSPolicyValidation{
+				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+				Hostname:                "otel.example.com",
+			},
+		},
+	}
+	backendEndpoints := []*ir.DestinationEndpoint{{Host: "otel.example.com", Port: 443}}
+	backendMetadata := &ir.ResourceMetadata{Name: backendName, Namespace: ns}
+	backendPolicyTLS := &ir.TLSUpstreamConfig{
+		SNI: ptr.To("otel.example.com"), UseSystemTrustStore: true,
+		CACertificate: &ir.TLSCACertificate{Name: "otel-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+	}
+
+	serviceBackendCluster := egv1a1.BackendCluster{BackendRefs: []egv1a1.BackendRef{{
+		BackendObjectReference: gwapiv1.BackendObjectReference{
+			Name: gwapiv1.ObjectName(serviceName), Namespace: ptr.To(gwapiv1.Namespace(ns)),
+			Port: ptr.To(gwapiv1.PortNumber(4317)),
+		},
+	}}}
+	otelService := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: serviceName},
+		Spec: corev1.ServiceSpec{ClusterIP: "7.7.7.7", Ports: []corev1.ServicePort{{
+			Name: "grpc", Port: 4317, TargetPort: intstr.IntOrString{IntVal: 4317}, Protocol: corev1.ProtocolTCP,
+		}}},
+	}
+	otelEndpointSlice := &discoveryv1.EndpointSlice{
+		ObjectMeta:  metav1.ObjectMeta{Namespace: ns, Name: serviceName, Labels: map[string]string{"kubernetes.io/service-name": serviceName}},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints:   []discoveryv1.Endpoint{{Addresses: []string{"7.7.7.7"}, Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)}}},
+		Ports:       []discoveryv1.EndpointPort{{Name: ptr.To("grpc"), Port: ptr.To(int32(4317)), Protocol: ptr.To(corev1.ProtocolTCP)}},
+	}
+	otelServicePolicy := &gwapiv1.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "otel-svc-tls"},
+		Spec: gwapiv1.BackendTLSPolicySpec{
+			TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{{
+				LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Kind: "Service", Name: gwapiv1.ObjectName(serviceName)},
+				SectionName:                ptr.To(gwapiv1.SectionName("grpc")),
+			}},
+			Validation: gwapiv1.BackendTLSPolicyValidation{
+				WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+				Hostname:                "otel-svc.example.com",
+			},
+		},
+	}
+	serviceEndpoints := []*ir.DestinationEndpoint{{Host: "7.7.7.7", Port: 4317}}
+	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
+	servicePolicyTLS := &ir.TLSUpstreamConfig{
+		SNI: ptr.To("otel-svc.example.com"), UseSystemTrustStore: true,
+		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
+	}
+
+	tests := []struct {
+		name           string
+		backendCluster egv1a1.BackendCluster
+		context        *TranslatorContext
+		resources      *resource.Resources
+		expected       []*ir.DestinationSetting
+		expectedErr    string
+	}{
+		{
+			name:           "BackendTLSPolicy without Backend TLS",
+			backendCluster: backendBackendCluster,
+			context:        &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackend}},
+			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}, BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelBackendPolicy}},
+			expected: []*ir.DestinationSetting{{
+				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
+				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
+			}},
+		},
+		{
+			name:           "no BackendTLSPolicy and no Backend TLS",
+			backendCluster: backendBackendCluster,
+			context:        &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackend}},
+			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackend}},
+			expected: []*ir.DestinationSetting{{
+				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
+				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata,
+			}},
+		},
+		{
+			name:           "BackendTLSPolicy overrides Backend TLS SNI",
+			backendCluster: backendBackendCluster,
+			context:        &TranslatorContext{BackendMap: map[types.NamespacedName]*egv1a1.Backend{{Namespace: ns, Name: backendName}: otelBackendWithTLS}},
+			resources:      &resource.Resources{Backends: []*egv1a1.Backend{otelBackendWithTLS}, BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelBackendPolicy}},
+			expected: []*ir.DestinationSetting{{
+				Name: "test", Protocol: ir.TCP, Endpoints: backendEndpoints,
+				AddressType: ptr.To(ir.FQDN), Metadata: backendMetadata, TLS: backendPolicyTLS,
+			}},
+		},
+		{
+			name:           "BackendTLSPolicy for Service",
+			backendCluster: serviceBackendCluster,
+			context: &TranslatorContext{
+				ServiceMap: map[types.NamespacedName]*corev1.Service{{Namespace: ns, Name: serviceName}: otelService},
+				EndpointSliceMap: map[backendServiceKey][]*discoveryv1.EndpointSlice{
+					{kind: resource.KindService, namespace: ns, name: serviceName}: {otelEndpointSlice},
+				},
+			},
+			resources: &resource.Resources{BackendTLSPolicies: []*gwapiv1.BackendTLSPolicy{otelServicePolicy}},
+			expected: []*ir.DestinationSetting{{
+				Name: "test", Protocol: ir.TCP, Endpoints: serviceEndpoints,
+				AddressType: ptr.To(ir.IP), Metadata: serviceMetadata, TLS: servicePolicyTLS,
+			}},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			translator := &Translator{
+				TranslatorContext:     tc.context,
+				BackendEnabled:        true,
+				GatewayControllerName: egv1a1.GatewayControllerName,
+			}
+			ds, _, err := translator.processBackendRefs("test", tc.backendCluster, ns, tc.resources, envoyProxy)
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expected, ds)
 			}
 		})
 	}
