@@ -981,6 +981,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -1921,6 +1960,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -2227,6 +2272,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -3167,6 +3251,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -3714,6 +3804,45 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
+                                      type: object
+                                    retryBudget:
+                                      description: |-
+                                        RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                        RetryBudget take precedence over maxParallelRetries.
+                                      properties:
+                                        minRetryConcurrency:
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            For example, a budget of 20% with a minimum retry concurrency of 3
+                                            will allow 5 active retries while there are 25 active requests.
+                                            If there are 2 active requests, there are still 3 active retries
+                                            allowed because of the minimum retry concurrency.
+                                            Defaults to 3.
+                                          format: int32
+                                          type: integer
+                                        percent:
+                                          description: |-
+                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                            the sum of active requests and active pending requests.
+                                          properties:
+                                            denominator:
+                                              default: 100
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            numerator:
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                          required:
+                                          - numerator
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: numerator must be less than or
+                                              equal to denominator
+                                            rule: self.numerator <= self.denominator
+                                      required:
+                                      - percent
                                       type: object
                                   type: object
                                 connection:
@@ -4677,6 +4806,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -4735,7 +4870,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
@@ -5251,6 +5386,45 @@ spec:
                                     maximum: 4294967295
                                     minimum: 0
                                     type: integer
+                                type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
                                 type: object
                             type: object
                           connection:
@@ -6192,6 +6366,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
