@@ -14,6 +14,7 @@ import (
 	"reflect"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -95,6 +96,35 @@ func processExtensionPostClusterHook(cluster *clusterv3.Cluster, extensionResour
 	// If the extension returned a modified cluster, then copy its to the one that was passed in as a reference
 	if modifiedCluster != nil {
 		if err = deepCopyPtr(modifiedCluster, cluster); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func processExtensionPostEndpointsHook(loadAssignment *endpointv3.ClusterLoadAssignment, em *extensionTypes.Manager) error {
+	// Do nothing unless there is an extension manager
+	if em == nil {
+		return nil
+	}
+
+	// Check if an extension want to modify the endpoints
+	extManager := *em
+	extEndpointsHookClient, err := extManager.GetPostXDSHookClient(egv1a1.XDSEndpoints)
+	if err != nil {
+		return err
+	}
+	if extEndpointsHookClient == nil {
+		return nil
+	}
+
+	modifiedLoadAssignment, err := extEndpointsHookClient.PostEndpointsModifyHook(loadAssignment)
+	if err != nil {
+		return err
+	}
+	if modifiedLoadAssignment != nil {
+		if err = deepCopyPtr(modifiedLoadAssignment, loadAssignment); err != nil {
 			return err
 		}
 	}

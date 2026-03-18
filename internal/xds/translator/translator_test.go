@@ -370,6 +370,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
 							egv1a1.XDSCluster,
+							egv1a1.XDSEndpoints,
 							egv1a1.XDSTranslation,
 						},
 						// Enable listeners and routes for PostTranslateModifyHook for these tests
@@ -511,6 +512,7 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
+							egv1a1.XDSEndpoints,
 							egv1a1.XDSTranslation,
 						},
 						// Enable listeners and routes for PostTranslateModifyHook for these tests

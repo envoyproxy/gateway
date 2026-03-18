@@ -7,6 +7,10 @@
             address: s3.amazonaws.com
             portValue: 443
       loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
     loadBalancingWeight: 1
     locality:
       region: custom-backend-dest/backend/0
