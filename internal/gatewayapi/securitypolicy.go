@@ -1986,9 +1986,6 @@ func (t *Translator) buildAPIKeyAuth(
 	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
 	resources *resource.Resources,
 ) (*ir.APIKeyAuth, error) {
-	// SecurityPolicy Spec.APIKeyAuth.CredentialRefs does not define patchStrategy/patchMergeKey.
-	// Therefore both JSONMerge and StrategicMerge replace the whole list, so all credential refs
-	// can be treated as owned by a single policy.
 	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldAPIKeyAuthCreds, policy)
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
@@ -2362,9 +2359,7 @@ func (t *Translator) buildAuthorization(
 		// The default action is Deny if not specified
 		defaultAction = egv1a1.AuthorizationActionDeny
 	)
-	// SecurityPolicy Spec.Authorization.AuthorizationRule does not define patchStrategy/patchMergeKey.
-	// Therefore both JSONMerge and StrategicMerge replace the whole list, so all AuthorizationRules
-	// can be treated as owned by a single policy.
+
 	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldAuthRules, policy)
 
 	if authorization.DefaultAction != nil {

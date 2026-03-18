@@ -636,8 +636,10 @@ type FieldPath string
 
 type PolicyFieldOwners[T client.Object] map[FieldPath]T
 
-func resolvePolicyFieldOwner[T client.Object](owners PolicyFieldOwners[T], field FieldPath, def T) T {
-	ownerPolicy := def
+// resolvePolicyFieldOwner returns the owner for a policy spec field.
+// If owners is nil or does not contain the field key, defaultOwner is returned as the owner.
+func resolvePolicyFieldOwner[T client.Object](owners PolicyFieldOwners[T], field FieldPath, defaultOwner T) T {
+	ownerPolicy := defaultOwner
 	if owners != nil {
 		if owner, ok := owners[field]; ok {
 			ownerPolicy = owner
