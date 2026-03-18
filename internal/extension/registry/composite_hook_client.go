@@ -13,6 +13,8 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/types"
@@ -26,8 +28,9 @@ type hookClientEntry struct {
 	name              string
 	client            types.XDSHookClient
 	failOpen          bool
-	policyGVKSet      map[string]struct{}       // used for per-extension policy filtering in PostTranslateModifyHook
-	translationConfig *egv1a1.TranslationConfig // used for per-extension resource-type gating in PostTranslateModifyHook
+	resourceGVKSet    sets.Set[schema.GroupVersionKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
+	policyGVKSet      sets.Set[schema.GroupVersionKind] // used for per-extension policy filtering in PostHTTPListenerModifyHook, PostTranslateModifyHook
+	translationConfig *egv1a1.TranslationConfig         // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
 // compositeXDSHookClient chains multiple XDSHookClient calls sequentially.
@@ -39,7 +42,8 @@ type compositeXDSHookClient struct {
 func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
 	current := r
 	for _, entry := range c.entries {
-		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, extensionResources)
+		filtered := filterResourcesByGVK(extensionResources, entry.resourceGVKSet)
+		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, filtered)
 		if err != nil {
 			if entry.failOpen {
 				continue
@@ -69,7 +73,8 @@ func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost
 func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
 	current := l
 	for _, entry := range c.entries {
-		result, err := entry.client.PostHTTPListenerModifyHook(current, extensionResources)
+		filtered := filterResourcesByGVK(extensionResources, entry.policyGVKSet)
+		result, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
 		if err != nil {
 			if entry.failOpen {
 				continue
@@ -84,7 +89,8 @@ func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener
 func (c *compositeXDSHookClient) PostClusterModifyHook(cl *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {
 	current := cl
 	for _, entry := range c.entries {
-		result, err := entry.client.PostClusterModifyHook(current, extensionResources)
+		filtered := filterResourcesByGVK(extensionResources, entry.resourceGVKSet)
+		result, err := entry.client.PostClusterModifyHook(current, filtered)
 		if err != nil {
 			if entry.failOpen {
 				continue
@@ -169,10 +175,28 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 	return currentClusters, currentSecrets, currentListeners, currentRoutes, nil
 }
 
+// filterResourcesByGVK returns only those unstructured resources whose GVK matches the given set.
+// If the set is nil or empty, all resources are returned (for backward compatibility).
+func filterResourcesByGVK(resources []*unstructured.Unstructured, gvkSet sets.Set[schema.GroupVersionKind]) []*unstructured.Unstructured {
+	if gvkSet.Len() == 0 {
+		return resources
+	}
+	var filtered []*unstructured.Unstructured
+	for _, r := range resources {
+		if r == nil {
+			continue
+		}
+		if gvkSet.Has(r.GroupVersionKind()) {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
 // filterPoliciesByGVK returns only those policies whose GVK matches the given set.
 // If the set is nil or empty, all policies are returned (for backward compatibility).
-func filterPoliciesByGVK(policies []*ir.UnstructuredRef, gvkSet map[string]struct{}) []*ir.UnstructuredRef {
-	if len(gvkSet) == 0 {
+func filterPoliciesByGVK(policies []*ir.UnstructuredRef, gvkSet sets.Set[schema.GroupVersionKind]) []*ir.UnstructuredRef {
+	if gvkSet.Len() == 0 {
 		return policies
 	}
 	var filtered []*ir.UnstructuredRef
@@ -180,9 +204,7 @@ func filterPoliciesByGVK(policies []*ir.UnstructuredRef, gvkSet map[string]struc
 		if p == nil || p.Object == nil {
 			continue
 		}
-		gvk := p.Object.GroupVersionKind()
-		key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
-		if _, ok := gvkSet[key]; ok {
+		if gvkSet.Has(p.Object.GroupVersionKind()) {
 			filtered = append(filtered, p)
 		}
 	}

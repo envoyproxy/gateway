@@ -6,6 +6,8 @@
 package registry
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -15,11 +17,12 @@ import (
 
 var _ extTypes.Manager = (*CompositeManager)(nil)
 
-// namedManager pairs a Manager with its name and declared policy GVKs.
+// namedManager pairs a Manager with its name and declared resource/policy GVKs.
 type namedManager struct {
 	name            string
 	manager         extTypes.Manager
-	policyGVKSet    map[string]struct{}
+	resourceGVKSet  sets.Set[schema.GroupVersionKind] // Resources + BackendResources GVKs
+	policyGVKSet    sets.Set[schema.GroupVersionKind] // PolicyResources GVKs
 	cleanupHookConn func()
 }
 
@@ -119,9 +122,11 @@ func (c *CompositeManager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorH
 		}
 		if client != nil {
 			entries = append(entries, hookClientEntry{
-				name:     nm.name,
-				client:   client,
-				failOpen: nm.manager.FailOpen(),
+				name:           nm.name,
+				client:         client,
+				failOpen:       nm.manager.FailOpen(),
+				resourceGVKSet: nm.resourceGVKSet,
+				policyGVKSet:   nm.policyGVKSet,
 			})
 		}
 	}
@@ -145,6 +150,7 @@ func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslator
 				name:              nm.name,
 				client:            client,
 				failOpen:          nm.manager.FailOpen(),
+				resourceGVKSet:    nm.resourceGVKSet,
 				policyGVKSet:      nm.policyGVKSet,
 				translationConfig: nm.manager.GetTranslationHookConfig(),
 			})
