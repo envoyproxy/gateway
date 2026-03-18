@@ -1873,8 +1873,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
-| `disable` | _boolean_ |  false  |  | Disable disables the traces. |
-| `samplingRate` | _float_ |  false  |  | SamplingRate controls the rate at which traces are sampled.<br />Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.<br />0.0 means no sampling, 1.0 means all traces are sampled. |
+| `samplingRate` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingRate controls the rate at which traces are sampled.<br />Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.<br />0.0 means no sampling, 1.0 means all traces are sampled. |
 | `batchSpanProcessor` | _[BatchSpanProcessorConfig](#batchspanprocessorconfig)_ |  false  |  | BatchSpanProcessorConfig defines the configuration for the batch span processor.<br />This processor batches spans before exporting them to the configured sink. |
 
 

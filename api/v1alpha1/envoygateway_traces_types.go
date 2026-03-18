@@ -11,18 +11,12 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 type EnvoyGatewayTraces struct {
 	// Sink defines the trace sink where traces are sent to.
 	Sink EnvoyGatewayTraceSink `json:"sink,omitempty"`
-	// Disable disables the traces.
-	//
-	// +optional
-	Disable bool `json:"disable,omitempty"`
 	// SamplingRate controls the rate at which traces are sampled.
 	// Defaults to 1.0 (100% sampling). Valid values are between 0.0 and 1.0.
 	// 0.0 means no sampling, 1.0 means all traces are sampled.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0.0
-	// +kubebuilder:validation:Maximum=1.0
-	SamplingRate *float64 `json:"samplingRate,omitempty"`
+	SamplingRate *gwapiv1.Fraction `json:"samplingRate,omitempty"`
 	// BatchSpanProcessorConfig defines the configuration for the batch span processor.
 	// This processor batches spans before exporting them to the configured sink.
 	//

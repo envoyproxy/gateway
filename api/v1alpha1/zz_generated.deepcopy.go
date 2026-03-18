@@ -2698,8 +2698,8 @@ func (in *EnvoyGatewayTraces) DeepCopyInto(out *EnvoyGatewayTraces) {
 	in.Sink.DeepCopyInto(&out.Sink)
 	if in.SamplingRate != nil {
 		in, out := &in.SamplingRate, &out.SamplingRate
-		*out = new(float64)
-		**out = **in
+		*out = new(v1.Fraction)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.BatchSpanProcessorConfig != nil {
 		in, out := &in.BatchSpanProcessorConfig, &out.BatchSpanProcessorConfig

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -33,7 +34,8 @@ func New(cfg *config.Server) *Runner {
 }
 
 func (r *Runner) Start(ctx context.Context) error {
-	if r.cfg.EnvoyGateway.DisableTraces() {
+	if r.cfg.EnvoyGateway.Telemetry == nil ||
+		r.cfg.EnvoyGateway.Telemetry.Traces == nil {
 		return nil
 	}
 
@@ -110,7 +112,8 @@ func (r *Runner) Start(ctx context.Context) error {
 // getSampler returns the configured sampler or a default sampler
 func (r *Runner) getSampler(tracesConfig *egv1a1.EnvoyGatewayTraces) trace.Sampler {
 	if tracesConfig.SamplingRate != nil {
-		return trace.TraceIDRatioBased(*tracesConfig.SamplingRate)
+		rate := fraction.Deref(tracesConfig.SamplingRate, 1.0)
+		return trace.TraceIDRatioBased(rate)
 	}
 	// Default to always sample (100%)
 	return trace.AlwaysSample()
