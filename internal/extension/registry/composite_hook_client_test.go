@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -29,6 +30,7 @@ import (
 type mockXDSHookClient struct {
 	postRouteModifyHook        func(r *route.Route, hostnames []string, resources []*unstructured.Unstructured) (*route.Route, error)
 	postVirtualHostModifyHook  func(vh *route.VirtualHost) (*route.VirtualHost, error)
+	postEndpointsModifyHook    func(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error)
 	postHTTPListenerModifyHook func(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error)
 	postClusterModifyHook      func(c *cluster.Cluster, resources []*unstructured.Unstructured) (*cluster.Cluster, error)
 	postTranslateModifyHook    func(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, policies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error)
@@ -48,6 +50,13 @@ func (m *mockXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*r
 		return m.postVirtualHostModifyHook(vh)
 	}
 	return vh, nil
+}
+
+func (m *mockXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+	if m.postEndpointsModifyHook != nil {
+		return m.postEndpointsModifyHook(loadAssignment)
+	}
+	return loadAssignment, nil
 }
 
 func (m *mockXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, resources []*unstructured.Unstructured) (*listener.Listener, error) {
@@ -297,6 +306,81 @@ func TestCompositeHookClient_PostVirtualHostModifyHook(t *testing.T) {
 		}
 
 		_, err := composite.PostVirtualHostModifyHook(&route.VirtualHost{Name: "test"})
+		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
+		require.False(t, client2Called)
+	})
+}
+
+func TestCompositeHookClient_PostEndpointsModifyHook(t *testing.T) {
+	t.Run("chains two clients", func(t *testing.T) {
+		client1 := &mockXDSHookClient{
+			postEndpointsModifyHook: func(la *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+				la.ClusterName += "-ext1"
+				return la, nil
+			},
+		}
+		client2 := &mockXDSHookClient{
+			postEndpointsModifyHook: func(la *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+				la.ClusterName += "-ext2"
+				return la, nil
+			},
+		}
+
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client1},
+				{name: "ext2", client: client2},
+			},
+		}
+
+		input := &endpoint.ClusterLoadAssignment{ClusterName: "test"}
+		result, err := composite.PostEndpointsModifyHook(input)
+		require.NoError(t, err)
+		require.Equal(t, "test-ext1-ext2", result.ClusterName)
+	})
+
+	t.Run("failOpen skips erroring extension", func(t *testing.T) {
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postEndpointsModifyHook: func(_ *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: true},
+				{name: "ext2", client: &mockXDSHookClient{
+					postEndpointsModifyHook: func(la *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+						la.ClusterName += "-ext2"
+						return la, nil
+					},
+				}},
+			},
+		}
+
+		result, err := composite.PostEndpointsModifyHook(&endpoint.ClusterLoadAssignment{ClusterName: "test"})
+		require.NoError(t, err)
+		require.Equal(t, "test-ext2", result.ClusterName)
+	})
+
+	t.Run("failClosed stops chain", func(t *testing.T) {
+		client2Called := false
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: &mockXDSHookClient{
+					postEndpointsModifyHook: func(_ *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+						return nil, fmt.Errorf("extension error")
+					},
+				}, failOpen: false},
+				{name: "ext2", client: &mockXDSHookClient{
+					postEndpointsModifyHook: func(la *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+						client2Called = true
+						la.ClusterName += "-ext2"
+						return la, nil
+					},
+				}},
+			},
+		}
+
+		_, err := composite.PostEndpointsModifyHook(&endpoint.ClusterLoadAssignment{ClusterName: "test"})
 		require.Equal(t, fmt.Errorf(`extension "ext1": %w`, fmt.Errorf("extension error")), err)
 		require.False(t, client2Called)
 	})

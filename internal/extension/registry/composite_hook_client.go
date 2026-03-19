@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -59,6 +60,21 @@ func (c *compositeXDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost
 	current := vh
 	for _, entry := range c.entries {
 		result, err := entry.client.PostVirtualHostModifyHook(current)
+		if err != nil {
+			if entry.failOpen {
+				continue
+			}
+			return nil, fmt.Errorf("extension %q: %w", entry.name, err)
+		}
+		current = result
+	}
+	return current, nil
+}
+
+func (c *compositeXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+	current := loadAssignment
+	for _, entry := range c.entries {
+		result, err := entry.client.PostEndpointsModifyHook(current)
 		if err != nil {
 			if entry.failOpen {
 				continue
