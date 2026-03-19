@@ -36,6 +36,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -698,6 +699,18 @@ func (t *Translator) addRouteToRouteConfig(
 						Match: &routev3.RouteMatch{
 							PathSpecifier: &routev3.RouteMatch_Prefix{
 								Prefix: "/",
+							},
+							FilterState: []*matcherv3.FilterStateMatcher{
+								{
+									Key: filters.DownstreamProtocolKey,
+									Matcher: &matcherv3.FilterStateMatcher_StringMatch{
+										StringMatch: &matcherv3.StringMatcher{
+											MatchPattern: &matcherv3.StringMatcher_Exact{
+												Exact: "HTTP/2",
+											},
+										},
+									},
+								},
 							},
 						},
 						Action: &routev3.Route_DirectResponse{

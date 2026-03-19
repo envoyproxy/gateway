@@ -36,6 +36,10 @@
     - directResponse:
         status: 421
       match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
         prefix: /
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/https-with-hostname
@@ -73,6 +77,10 @@
     - directResponse:
         status: 421
       match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
         prefix: /
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/https-with-wildcard-hostname
@@ -111,6 +119,10 @@
     - directResponse:
         status: 421
       match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
         prefix: /
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard
@@ -149,4 +161,8 @@
     - directResponse:
         status: 421
       match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
         prefix: /
