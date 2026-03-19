@@ -510,20 +510,6 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - hostname-conflict-with-gateway-listener.com
-      metadata:
-        kind: Gateway
-        name: gateway-with-listenerset-hostname-conflict
-        namespace: envoy-gateway
-        sectionName: hostname-conflict-with-gateway-listener
-      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-gateway-1/hostname-conflict-with-gateway-listener
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
       - hostname-conflict-with-listener-set-listener.com
       metadata:
         kind: Gateway
@@ -538,20 +524,6 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - hostname-conflict-with-gateway-listener.com
-      metadata:
-        kind: Gateway
-        name: gateway-with-listenerset-hostname-conflict
-        namespace: envoy-gateway
-        sectionName: hostname-conflict-with-gateway-listener
-      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-gateway-2/hostname-conflict-with-gateway-listener
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
       - listener-set-2-listener.com
       metadata:
         kind: Gateway
@@ -559,34 +531,6 @@ xdsIR:
         namespace: envoy-gateway
         sectionName: listener-set-2-listener
       name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-listener-set-1/listener-set-2-listener
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - hostname-conflict-with-listener-set-listener.com
-      metadata:
-        kind: Gateway
-        name: gateway-with-listenerset-hostname-conflict
-        namespace: envoy-gateway
-        sectionName: hostname-conflict-with-listener-set-listener
-      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-listener-set-1/hostname-conflict-with-listener-set-listener
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - hostname-conflict-with-listener-set-listener.com
-      metadata:
-        kind: Gateway
-        name: gateway-with-listenerset-hostname-conflict
-        namespace: envoy-gateway
-        sectionName: hostname-conflict-with-listener-set-listener
-      name: envoy-gateway/gateway-with-listenerset-hostname-conflict/envoy-gateway/listenerset-with-hostname-conflict-with-listener-set-2/hostname-conflict-with-listener-set-listener
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
