@@ -67,7 +67,7 @@ infraIR:
                   sampler:
                     samplingPercentage:
                       numerator: 50
-                    type: ParentBasedTraceIdRatioBased
+                    type: ParentBasedTraceIdRatio
                 type: OpenTelemetry
               samplingRate: 100
         status: {}
@@ -162,11 +162,7 @@ xdsIR:
           sampler:
             samplingPercentage:
               numerator: 50
-            type: ParentBasedTraceIdRatioBased
+            type: ParentBasedTraceIdRatio
         type: OpenTelemetry
-      sampler:
-        samplingPercentage:
-          numerator: 50
-        type: ParentBasedTraceIdRatioBased
       samplingRate: 100
       serviceName: gateway-1.envoy-gateway

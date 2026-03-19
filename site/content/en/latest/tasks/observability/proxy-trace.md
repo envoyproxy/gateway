@@ -358,12 +358,12 @@ The sampler `type` maps to the standard [OTEL_TRACES_SAMPLER](https://openteleme
 |--------------------------------|-----------------------------------------|
 | `AlwaysOn`                     | —                                       |
 | `AlwaysOff`                    | —                                       |
-| `TraceIdRatioBased`            | `samplingPercentage` (default 100%)     |
+| `TraceIdRatio`            | `samplingPercentage` (default 100%)     |
 | `ParentBasedAlwaysOn`          | —                                       |
 | `ParentBasedAlwaysOff`         | —                                       |
-| `ParentBasedTraceIdRatioBased` | `samplingPercentage` (default 100%)     |
+| `ParentBasedTraceIdRatio` | `samplingPercentage` (default 100%)     |
 
-The following configuration uses `ParentBasedTraceIdRatioBased` to respect the parent span's sampling
+The following configuration uses `ParentBasedTraceIdRatio` to respect the parent span's sampling
 decision and drop all root spans:
 
 ```yaml
@@ -383,7 +383,7 @@ spec:
         type: OpenTelemetry
         openTelemetry:
           sampler:
-            type: ParentBasedTraceIdRatioBased
+            type: ParentBasedTraceIdRatio
             samplingPercentage:
               numerator: 0
 ```

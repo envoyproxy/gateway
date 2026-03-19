@@ -16,7 +16,7 @@ envoyProxyForGatewayClass:
           type: OpenTelemetry
           openTelemetry:
             sampler:
-              type: ParentBasedTraceIdRatioBased
+              type: ParentBasedTraceIdRatio
               samplingPercentage:
                 numerator: 50
     provider:

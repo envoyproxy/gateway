@@ -4076,10 +4076,10 @@ _Appears in:_
 | ----- | ----------- |
 | `AlwaysOn` | OTelSamplerTypeAlwaysOn exports all spans.<br /> | 
 | `AlwaysOff` | OTelSamplerTypeAlwaysOff drops all spans.<br /> | 
-| `TraceIdRatioBased` | OTelSamplerTypeTraceIDRatioBased exports a percentage of spans based on trace ID.<br /> | 
+| `TraceIdRatio` | OTelSamplerTypeTraceIDRatioBased exports a percentage of spans based on trace ID.<br /> | 
 | `ParentBasedAlwaysOn` | OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.<br /> | 
 | `ParentBasedAlwaysOff` | OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.<br /> | 
-| `ParentBasedTraceIdRatioBased` | OTelSamplerTypeParentBasedTraceIDRatioBased respects the parent span's sampling decision, using trace ID ratio when no parent exists.<br /> | 
+| `ParentBasedTraceIdRatio` | OTelSamplerTypeParentBasedTraceIDRatioBased respects the parent span's sampling decision, using trace ID ratio when no parent exists.<br /> | 
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
