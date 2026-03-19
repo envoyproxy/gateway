@@ -80,6 +80,9 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 
 			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
+				if portValidation.TLS.Validation == nil {
+					continue
+				}
 				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
 					Group:     gwapiv1.GroupVersion.Group,
 					Kind:      resource.KindGateway,
@@ -90,7 +93,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
 					resolvedRefsSuccess = false
-
+					// should we fallback to the default validation if per-port validation is invalid? The spec doesn't explicitly say, but it seems safer to not fallback to default validation if per-port validation is specified but invalid, as it could lead to unexpected successful TLS handshakes. Instead, we will treat it as a separate validation error.
 					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
 						ValidateError: err,
 					}
@@ -99,10 +102,10 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 						TLSCACertificate: &ir.TLSCACertificate{
 							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
 							Certificate: caCert,
-							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
+							Mode:        ptr.To(portValidation.TLS.Validation.Mode),
 						},
 					}
-					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+					if portValidation.TLS.Validation.Mode == gwapiv1.AllowInsecureFallback {
 						allowInsecureFallback = true
 					}
 				}
@@ -122,6 +125,8 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 				if perPortConfig, exits := gtwPerPortCaCertificate[listener.Port]; exits {
 					listener.tls.frontendTLSValidation = perPortConfig
 				} else {
+					// Listeners without a specific per-port validation configuration
+					// will use the default validation configuration, if specified.
 					listener.tls.frontendTLSValidation = gtwDefaultTLSCACertificate
 				}
 			}

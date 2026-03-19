@@ -382,7 +382,9 @@ func (t *Translator) processClientTLSSettings(
 		ownerResource := owner.Kind
 
 		ns := NamespaceDerefOr(clientTLS.ClientCertificateRef.Namespace, owner.Namespace)
-		if ns != owner.Namespace {
+		// cross-namespace Gateway.spec.tls.backend.clientCertificateRef is validated,
+		// we didn't to check again here.
+		if owner.Kind != resource.KindGateway && ns != owner.Namespace {
 			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, owner.Namespace)
 			return tlsConfig, err
 		}
