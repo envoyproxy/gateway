@@ -73,6 +73,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		// Create OTLP HTTP exporter
 		exporter, err := otlptracehttp.New(ctx,
 			otlptracehttp.WithEndpoint(endpoint),
+			// TODO: support TLS configuration for OTLP exporter
 			otlptracehttp.WithInsecure(),
 		)
 		if err != nil {
@@ -94,6 +95,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		// use GRPC protocol by default
 		exporter, err := otlptracegrpc.New(ctx,
 			otlptracegrpc.WithEndpoint(endpoint),
+			// TODO: support TLS configuration for OTLP exporter
 			otlptracegrpc.WithInsecure(),
 		)
 		if err != nil {
