@@ -17,9 +17,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
   status:
     ancestors:
@@ -58,8 +56,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
   status:
@@ -99,8 +96,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
   status:
@@ -142,8 +138,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
   status:
@@ -187,8 +182,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ConfigMap
+        - kind: ConfigMap
           name: ca-configmap
           namespace: envoy-gateway
   status:
@@ -227,9 +221,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
     - allowedRoutes:
@@ -302,9 +294,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -348,9 +338,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -394,9 +382,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -440,9 +426,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -602,7 +586,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -633,7 +616,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -683,7 +665,6 @@ xdsIR:
           mode: ForwardOnly
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -747,7 +728,6 @@ xdsIR:
           mode: AppendForward
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3
@@ -813,7 +793,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-4
@@ -881,7 +860,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-5

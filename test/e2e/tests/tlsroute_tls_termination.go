@@ -9,14 +9,12 @@ package tests
 
 import (
 	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	tlsutils "sigs.k8s.io/gateway-api/conformance/utils/tls"
 )
 
 func init() {
@@ -38,7 +36,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -54,20 +52,8 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
-			// Use the CA cert to verify server certificate, cert is self-signed so it's also the CA
-			WaitForConsistentResponseWithCA(
-				t,
-				suite.RoundTripper,
-				&req,
-				&expected,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
-				cPem,
-				keyPem,
-				caCertPem,
-				"foo.example.com")
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, nil, nil, "foo.example.com", expected)
 		})
 
 		t.Run("TLSRoute with TLS termination - route 2 (bar.example.com)", func(t *testing.T) {
@@ -75,7 +61,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -91,19 +77,8 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
-			WaitForConsistentResponseWithCA(
-				t,
-				suite.RoundTripper,
-				&req,
-				&expected,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
-				cPem,
-				keyPem,
-				caCertPem,
-				"bar.example.com")
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, nil, nil, "baz.example.com", expected)
 		})
 
 		t.Run("TLSRoute with TLS termination - route 3 (baz.example.com)", func(t *testing.T) {
@@ -111,7 +86,7 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 			gwAddr, _ := kubernetes.GatewayAndTLSRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "tls"), routeNN)
 
 			certNN := types.NamespacedName{Name: "tls-termination-certificate", Namespace: ns}
-			cPem, keyPem, caCertPem, err := GetTLSSecret(suite.Client, certNN)
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
@@ -127,51 +102,8 @@ var TLSRouteTLSTerminationTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
-			WaitForConsistentResponseWithCA(
-				t,
-				suite.RoundTripper,
-				&req,
-				&expected,
-				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-				suite.TimeoutConfig.MaxTimeToConsistency,
-				cPem,
-				keyPem,
-				caCertPem,
-				"baz.example.com")
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, nil, nil, "baz.example.com", expected)
 		})
 	},
-}
-
-// WaitForConsistentResponseWithCA makes requests with TLS using a CA certificate to verify the server
-func WaitForConsistentResponseWithCA(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *http.ExpectedResponse, threshold int, maxTimeToConsistency time.Duration, _, keyPem, caCertPem []byte, serverName string) {
-	if req == nil {
-		t.Fatalf("request cannot be nil")
-	}
-	if expected == nil {
-		t.Fatalf("expected response cannot be nil")
-	}
-
-	http.AwaitConvergence(t, threshold, maxTimeToConsistency, func(elapsed time.Duration) bool {
-		updatedReq := *req
-		updatedReq.Server = serverName
-		// Use the certificate and key for TLS setup, CA cert for validation (self-signed cert)
-		updatedReq.CertPem = caCertPem
-		updatedReq.KeyPem = keyPem
-
-		cReq, cRes, err := r.CaptureRoundTrip(updatedReq)
-		if err != nil {
-			tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-			return false
-		}
-
-		if err := http.CompareRoundTrip(t, &updatedReq, cReq, cRes, *expected); err != nil {
-			tlog.Logf(t, "Response expectation failed for request: %+v not ready yet: %v (after %v)", updatedReq, err, elapsed)
-			return false
-		}
-
-		return true
-	})
-	tlog.Logf(t, "Request passed")
 }

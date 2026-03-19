@@ -21,6 +21,7 @@
             localityWeightedLbConfig: {}
   name: dest-1
   outlierDetection:
+    alwaysEjectOneHost: true
     baseEjectionTime: 30s
     consecutive5xx: 5
     consecutiveGatewayFailure: 0

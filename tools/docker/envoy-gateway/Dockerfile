@@ -4,7 +4,7 @@ RUN mkdir -p /var/lib/eg && chmod -R 0777 /var/lib/eg
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/base-nossl:nonroot@sha256:d90f132a368246c5dcd65a2de958a86a99891945ffbf0005996bb7597eec2a2a
+FROM gcr.io/distroless/base-nossl:nonroot@sha256:ae8c000510097a434f40312990f5a2fabe10e6bcb3343d4bb962ea1c867e3428
 ARG TARGETPLATFORM
 COPY $TARGETPLATFORM/envoy-gateway /usr/local/bin/
 COPY --from=source /var/lib /var/lib

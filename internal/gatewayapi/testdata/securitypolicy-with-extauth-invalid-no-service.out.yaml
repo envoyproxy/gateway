@@ -446,8 +446,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     extAuth:
       failOpen: true
@@ -527,8 +525,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     extAuth:
       failOpen: true
@@ -591,7 +587,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -735,7 +730,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -813,7 +807,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3

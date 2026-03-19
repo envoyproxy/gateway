@@ -2,7 +2,7 @@
 title: "Response Override"
 ---
 
-Response Override allows you to override the response from the backend with a custom one. This can be useful for scenarios such as returning a custom 404 page when the requested resource is not found or a custom 500 error message when the backend is failing.
+Response Override allows you to override the response from the backend with a custom one. This can be useful for scenarios such as returning a custom 404 page when the requested resource is not found, a custom 500 error message when the backend is failing, or redirecting the client when the backend returns a 403 Forbidden. When using redirect, Envoy applies it internally: Envoy follows the redirect to the new URL, obtains the response from that URL, and sends that response to the client.
 
 ## Installation
 
@@ -39,6 +39,17 @@ spec:
         body:
           type: Inline
           inline: "Oops! Your request is not found."
+    - match:
+        statusCodes:
+          - type: Value
+            value: 403 # status from backend when envoy will execute the redirect
+      redirect:
+        statusCode: 302 # status envoy should respond to client
+        scheme: https
+        hostname: www.example.com
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: "/get"
     - match:
         statusCodes:
           - type: Value
@@ -93,6 +104,17 @@ spec:
     - match:
         statusCodes:
           - type: Value
+            value: 403 # status from backend when envoy will execute the redirect
+      redirect:
+        statusCode: 302 # status envoy should respond to client
+        scheme: https
+        hostname: www.example.com
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: "/get"
+    - match:
+        statusCodes:
+          - type: Value
             value: 500
           - type: Range
             range:
@@ -138,6 +160,65 @@ curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/status/404
 * Connection #0 to host 172.18.0.200 left intact
 Oops! Your request is not found.
 ```
+
+For 403, the policy redirects to `https://www.example.com/get`. Envoy follows the redirect internally and sends that response to the client:
+
+```shell
+curl -L -v --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/status/403
+```
+
+```console
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying [::1]:5000...
+* Connected to localhost (::1) port 5000
+> GET /status/403 HTTP/1.1
+> Host: www.example.com
+> User-Agent: curl/8.7.1
+> Accept: */*
+>
+* Request completely sent off
+< HTTP/1.1 302 Found
+< content-type: application/json
+< x-content-type-options: nosniff
+< date: Thu, 26 Feb 2026 14:36:01 GMT
+< content-length: 467
+<
+{
+ "path": "/get",
+ "host": "www.example.com",
+ "method": "GET",
+ "proto": "HTTP/1.1",
+ "headers": {
+  "Accept": [
+   "*/*"
+  ],
+  "User-Agent": [
+   "curl/8.7.1"
+  ],
+  "X-Envoy-External-Address": [
+   "127.0.0.1"
+  ],
+  "X-Forwarded-For": [
+   "10.244.2.2"
+  ],
+  "X-Forwarded-Proto": [
+   "http"
+  ],
+  "X-Request-Id": [
+   "d69f627e-c454-46b2-86e1-25d4c18b68e4"
+  ]
+ },
+ "namespace": "default",
+ "ingress": "",
+ "service": "",
+ "pod": "backend-869c8646c5-xfm84"
+* Connection #0 to host localhost left intact
+}
+```
+
+You receive the response body from the redirect target. Then verify the 500 override:
 
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/status/500

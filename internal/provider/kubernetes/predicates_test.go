@@ -22,7 +22,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -422,6 +421,7 @@ func TestValidateConfigMapForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc).
 			WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
 			WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
@@ -932,7 +932,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
@@ -1351,17 +1351,15 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:    egv1a1.GatewayControllerName,
-		log:                logger,
-		mergeGateways:      sets.New[string]("test-mg"),
-		resources:          &message.ProviderResources{},
-		grpcRouteCRDExists: true,
-		tcpRouteCRDExists:  true,
-		udpRouteCRDExists:  true,
-		tlsRouteCRDExists:  true,
-		spCRDExists:        true,
-		eepCRDExists:       true,
-		epCRDExists:        true,
+		classController:   egv1a1.GatewayControllerName,
+		log:               logger,
+		mergeGateways:     sets.New("test-mg"),
+		resources:         &message.ProviderResources{},
+		tcpRouteCRDExists: true,
+		udpRouteCRDExists: true,
+		spCRDExists:       true,
+		eepCRDExists:      true,
+		epCRDExists:       true,
 	}
 
 	for _, tc := range testCases {
@@ -1370,7 +1368,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a3.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
@@ -1472,7 +1470,7 @@ func TestValidateObjectForReconcile(t *testing.T) {
 	r := gatewayAPIReconciler{
 		classController: egv1a1.GatewayControllerName,
 		log:             logger,
-		mergeGateways:   sets.New[string]("test-mg"),
+		mergeGateways:   sets.New("test-mg"),
 		resources:       &message.ProviderResources{},
 	}
 
@@ -1501,6 +1499,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 		reconcileLabels string
 		ns              *corev1.Namespace
 		expect          bool
+		expectErr       bool
 	}{
 		{
 			name: "matching labels of namespace of the object is a subset of namespaceLabels",
@@ -1551,7 +1550,7 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 			expect:          false,
 		},
 		{
-			name: "non-matching labels of namespace of the cluster-level object is a subset of namespaceLabels",
+			name: "cluster-scoped resources are not filtered",
 			object: &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "foo-1",
@@ -1569,23 +1568,41 @@ func TestCheckObjectNamespaceLabels(t *testing.T) {
 				},
 			},
 			reconcileLabels: "label-1",
+			expect:          true,
+		},
+		{
+			name: "namespace not found returns false without error",
+			object: test.GetHTTPRoute(
+				types.NamespacedName{
+					Name:      "orphan-route",
+					Namespace: "non-existent-ns",
+				},
+				"eg",
+				test.GetServiceBackendRef(types.NamespacedName{
+					Name:      "orphan-svc",
+					Namespace: "non-existent-ns",
+				}, 8080),
+				""),
+			ns:              nil, // namespace doesn't exist
+			reconcileLabels: "label-1",
 			expect:          false,
+			expectErr:       false,
 		},
 	}
 
-	// Create the reconciler.
-	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
-
-	r := gatewayAPIReconciler{
-		classController: egv1a1.GatewayControllerName,
-		log:             logger,
-	}
-
 	for _, tc := range testCases {
-		r.client = fakeclient.NewClientBuilder().WithObjects(tc.ns).Build()
-		r.namespaceLabel = &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
-		ok, err := r.checkObjectNamespaceLabels(tc.object)
-		require.NoError(t, err)
+		builder := fakeclient.NewClientBuilder()
+		if tc.ns != nil {
+			builder = builder.WithObjects(tc.ns)
+		}
+		c := builder.Build()
+		namespaceLabel := &metav1.LabelSelector{MatchExpressions: matchExpressions(tc.reconcileLabels, metav1.LabelSelectorOpExists, []string{})}
+		ok, err := checkObjectNamespaceLabels(context.Background(), c, namespaceLabel, tc.object)
+		if tc.expectErr {
+			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
+		}
 		require.Equal(t, tc.expect, ok)
 	}
 }
@@ -1849,11 +1866,10 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 
 	r := gatewayAPIReconciler{
-		classController:     egv1a1.GatewayControllerName,
-		log:                 logger,
-		backendCRDExists:    true,
-		bTLSPolicyCRDExists: true,
-		ctpCRDExists:        true,
+		classController:  egv1a1.GatewayControllerName,
+		log:              logger,
+		backendCRDExists: true,
+		ctpCRDExists:     true,
 		envoyGateway: &egv1a1.EnvoyGateway{
 			EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
 				ExtensionAPIs: &egv1a1.ExtensionAPISettings{

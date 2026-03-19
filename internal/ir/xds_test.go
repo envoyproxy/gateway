@@ -1434,7 +1434,7 @@ func TestRedaction(t *testing.T) {
 				`"basicAuth":{"name":"","users":"[redacted]"},` +
 				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +
-				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
+				`"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
 				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
@@ -1674,6 +1674,48 @@ func TestValidateHealthCheck(t *testing.T) {
 				ptr.To[uint32](10),
 			},
 			want: ErrHTTPStatusInvalid,
+		},
+		{
+			name: "http-health-check: invalid retriable-statuses range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:              "*",
+						Path:              "/healthz",
+						Method:            ptr.To(http.MethodHead),
+						ExpectedStatuses:  []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatus{503, 600},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHTTPStatusInvalid,
+		},
+		{
+			name: "http-health-check: valid retriable-statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:              "*",
+						Path:              "/healthz",
+						Method:            ptr.To(http.MethodGet),
+						ExpectedStatuses:  []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatus{503, 429},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
 		},
 		{
 			name: "http-health-check: invalid expected-responses",

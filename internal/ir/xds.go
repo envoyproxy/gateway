@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	httputils "github.com/envoyproxy/gateway/internal/utils/http"
 )
 
 const (
@@ -51,7 +52,7 @@ var (
 	ErrStringMatchInvertDistinctInvalid         = errors.New("only one of the Invert or Distinct fields can be set")
 	ErrStringMatchNameIsEmpty                   = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid              = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
-	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
+	ErrRedirectUnsupportedStatus                = errors.New("only HTTP status codes 301, 302, 303, 307 and 308 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme                = errors.New("only http and https are supported for the scheme in redirect filters")
 	ErrHTTPPathModifierDoubleReplace            = errors.New("redirect filter cannot have a path modifier that supplies more than one of fullPathReplace, prefixMatchReplace and regexMatchReplace")
 	ErrHTTPPathModifierNoReplace                = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace, prefixMatchReplace or regexMatchReplace")
@@ -303,9 +304,6 @@ type HTTPListener struct {
 	TLSOverlaps bool `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
-	// grpc-web and grpc-stats are also enabled if this is set.
-	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
@@ -325,6 +323,9 @@ type HTTPListener struct {
 	// HTTP3 provides HTTP/3 configuration on the listener.
 	// +optional
 	HTTP3 *HTTP3Settings `json:"http3,omitempty"`
+	// GRPC provides gRPC configuration on the listener.
+	// +optional
+	GRPC *GRPCSettings `json:"grpc,omitempty" yaml:"grpc,omitempty"`
 	// HealthCheck provides configuration for determining whether the HTTP/HTTPS listener is healthy.
 	HealthCheck *HealthCheckSettings `json:"healthCheck,omitempty" yaml:"healthCheck,omitempty"`
 	// ClientTimeout sets the timeout configuration for downstream connections
@@ -627,6 +628,28 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +k8s:deepcopy-gen=true
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
+	// IdleInterval specifies idle time before sending a PING.
+	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
+}
+
+// GRPCSettings provides gRPC configuration on the listener.
+// +k8s:deepcopy-gen=true
+type GRPCSettings struct {
+	EnableGRPCWeb   *bool `json:"enableGRPCWeb,omitempty" yaml:"enableGRPCWeb,omitempty"`
+	EnableGRPCStats *bool `json:"enableGRPCStats,omitempty" yaml:"enableGRPCStats,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
@@ -1081,6 +1104,8 @@ type EnvoyExtensionFeatures struct {
 	Wasms []Wasm `json:"wasms,omitempty" yaml:"wasms,omitempty"`
 	// Lua extensions
 	Luas []Lua `json:"luas,omitempty" yaml:"luas,omitempty"`
+	// Dynamic Module extensions
+	DynamicModules []DynamicModule `json:"dynamicModules,omitempty" yaml:"dynamicModules,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1442,6 +1467,11 @@ type ExtAuth struct {
 	// context in the filter chain.
 	// +optional
 	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -2003,7 +2033,7 @@ func (r Redirect) Validate() error {
 	}
 
 	if r.StatusCode != nil {
-		if *r.StatusCode != 301 && *r.StatusCode != 302 {
+		if !httputils.SupportedRedirectCodes.Has(*r.StatusCode) {
 			errs = errors.Join(errs, ErrRedirectUnsupportedStatus)
 		}
 	}
@@ -2833,6 +2863,9 @@ type CircuitBreaker struct {
 
 	// PerEndpoint defines per-endpoint Circuit Breakers
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+
+	// RetryBudget defines the retry budget configuration.
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
@@ -2871,6 +2904,8 @@ type OutlierDetection struct {
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty" yaml:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines active health check settings
@@ -2987,6 +3022,8 @@ type HTTPHealthChecker struct {
 	Method *string `json:"method,omitempty" yaml:"method,omitempty"`
 	// ExpectedStatuses defines a list of HTTP response statuses considered healthy.
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	ExpectedResponse *HealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponses,omitempty"`
 }
@@ -3019,6 +3056,11 @@ func (c *HTTPHealthChecker) Validate() error {
 		errs = errors.Join(errs, ErrHCHTTPExpectedStatusesInvalid)
 	}
 	for _, r := range c.ExpectedStatuses {
+		if err := r.Validate(); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+	for _, r := range c.RetriableStatuses {
 		if err := r.Validate(); err != nil {
 			errs = errors.Join(errs, err)
 		}
@@ -3140,6 +3182,10 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+
+	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -3158,6 +3204,15 @@ type Retry struct {
 
 	// PerRetry is the retry policy to be applied per retry attempt.
 	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+// RetryBudget defines the retry budget configuration.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// Percent is the percentage of requests that can be retried within a given time window.
+	Percent float64 `json:"percent"`
+	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
+	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }
 
 type TriggerEnum egv1a1.TriggerEnum
@@ -3418,6 +3473,32 @@ type HTTPWasmCode struct {
 	// OriginalURL is the original downloading URL of the Wasm code.
 	// Note: This field is just used for testing. It's not used to generate the Envoy configuration.
 	OriginalURL string `json:"originalDownloadingURL"`
+}
+
+// DynamicModule holds the information associated with a dynamic module HTTP filter.
+// +k8s:deepcopy-gen=true
+type DynamicModule struct {
+	// Name is a unique name for this dynamic module filter configuration.
+	// The xds translator generates one filter for each unique name.
+	Name string `json:"name"`
+
+	// Path is the absolute filesystem path to the dynamic module shared library.
+	Path string `json:"path"`
+
+	// FilterName identifies the filter implementation within the module.
+	FilterName string `json:"filterName,omitempty"`
+
+	// Config is the JSON configuration for the filter.
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+
+	// DoNotClose prevents the module from being unloaded.
+	DoNotClose bool `json:"doNotClose"`
+
+	// LoadGlobally loads with RTLD_GLOBAL flag.
+	LoadGlobally bool `json:"loadGlobally"`
+
+	// TerminalFilter indicates the module handles requests without upstream.
+	TerminalFilter bool `json:"terminalFilter"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

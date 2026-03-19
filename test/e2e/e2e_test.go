@@ -77,6 +77,10 @@ func TestE2E(t *testing.T) {
 		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
 		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
 	}
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if *flags.RunTest != "" {
+		skipTests = nil
+	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
@@ -86,12 +90,14 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
 		Hook:              Hook,
+		FailFast:          true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)

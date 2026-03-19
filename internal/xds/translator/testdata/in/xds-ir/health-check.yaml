@@ -57,6 +57,9 @@ http:
             expectedStatuses:
             - 200
             - 201
+            retriableStatuses:
+            - 503
+            - 429
         passive:
           baseEjectionTime: 180s
           interval: 1s
@@ -146,6 +149,7 @@ http:
       settings:
       - endpoints:
         - host: "1.2.3.4"
+          hostname: example.com
           port: 50000
         protocol: GRPC
         name: "fifth-route-dest/backend/0"
