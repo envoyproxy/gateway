@@ -68,29 +68,8 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Get batch span processor options
 	batchOptions := r.getBatchSpanProcessorOptions(tracesConfig)
 
-	if configObj.Protocol == egv1a1.GRPCProtocol {
-		exporter, err := otlptracegrpc.New(ctx,
-			otlptracegrpc.WithEndpoint(endpoint),
-			otlptracegrpc.WithInsecure(),
-		)
-		if err != nil {
-			return err
-		}
-
-		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
-		tp := trace.NewTracerProvider(
-			trace.WithSpanProcessor(bsp),
-			trace.WithResource(res),
-			trace.WithSampler(sampler),
-		)
-
-		otel.SetTracerProvider(tp)
-		r.tp = tp
-
-		return nil
-	}
-
-	if configObj.Protocol == egv1a1.HTTPProtocol {
+	switch configObj.Protocol {
+	case egv1a1.HTTPProtocol:
 		// Create OTLP HTTP exporter
 		exporter, err := otlptracehttp.New(ctx,
 			otlptracehttp.WithEndpoint(endpoint),
@@ -111,9 +90,28 @@ func (r *Runner) Start(ctx context.Context) error {
 		r.tp = tp
 
 		return nil
-	}
+	default:
+		// use GRPC protocol by default
+		exporter, err := otlptracegrpc.New(ctx,
+			otlptracegrpc.WithEndpoint(endpoint),
+			otlptracegrpc.WithInsecure(),
+		)
+		if err != nil {
+			return err
+		}
 
-	return nil
+		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
+		tp := trace.NewTracerProvider(
+			trace.WithSpanProcessor(bsp),
+			trace.WithResource(res),
+			trace.WithSampler(sampler),
+		)
+
+		otel.SetTracerProvider(tp)
+		r.tp = tp
+
+		return nil
+	}
 }
 
 // getSampler returns the configured sampler or a default sampler

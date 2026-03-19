@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,7 +24,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"github.com/envoyproxy/gateway/test/utils/tracing"
-	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -99,7 +99,6 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			})
 
 			require.NoError(t, err, "failed to get control-plane trace from tempo within timeout")
-
 		})
 	},
 }
