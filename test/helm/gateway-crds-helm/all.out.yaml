@@ -48181,19 +48181,19 @@ spec:
                                     enum:
                                     - AlwaysOn
                                     - AlwaysOff
-                                    - TraceIdRatioBased
+                                    - TraceIdRatio
                                     - ParentBasedAlwaysOn
                                     - ParentBasedAlwaysOff
-                                    - ParentBasedTraceIdRatioBased
+                                    - ParentBasedTraceIdRatio
                                     type: string
                                 required:
                                 - type
                                 type: object
                                 x-kubernetes-validations:
                                 - message: samplingPercentage can only be set with
-                                    TraceIdRatioBased or ParentBasedTraceIdRatioBased
+                                    TraceIdRatio or ParentBasedTraceIdRatio
                                   rule: 'has(self.samplingPercentage) ? (self.type
-                                    == ''TraceIdRatioBased'' || self.type == ''ParentBasedTraceIdRatioBased'')
+                                    == ''TraceIdRatio'' || self.type == ''ParentBasedTraceIdRatio'')
                                     : true'
                             type: object
                           port:

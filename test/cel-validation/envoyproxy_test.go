@@ -1795,7 +1795,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
 			},
 		},
 		{
@@ -1829,7 +1829,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
 			},
 		},
 		{
@@ -1863,7 +1863,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
 			},
 		},
 		{
@@ -1897,7 +1897,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				"samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
 			},
 		},
 		{
