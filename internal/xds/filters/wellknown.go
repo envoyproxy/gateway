@@ -6,8 +6,6 @@
 package filters
 
 import (
-	"time"
-
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	grpcstats "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
@@ -17,7 +15,6 @@ import (
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/utils/proto"
@@ -54,16 +51,10 @@ func init() {
 	}
 }
 
-func GenerateRouterFilter(enableEnvoyHeaders bool, accessLogs []*accesslogv3.AccessLog) (*hcm.HttpFilter, error) {
+func GenerateRouterFilter(enableEnvoyHeaders bool, upstreamAccessLogs []*accesslogv3.AccessLog) (*hcm.HttpFilter, error) {
 	routerFilter := &httprouter.Router{
 		SuppressEnvoyHeaders: !enableEnvoyHeaders,
-		UpstreamLog:          accessLogs,
-	}
-	if len(accessLogs) > 0 {
-		routerFilter.UpstreamLogOptions = &httprouter.Router_UpstreamAccessLogOptions{
-			FlushUpstreamLogOnUpstreamStream: true,                            // TODO: make this configurable?
-			UpstreamLogFlushInterval:         durationpb.New(5 * time.Second), // TODO: make this configurable?
-		}
+		UpstreamLog:          upstreamAccessLogs,
 	}
 	anyCfg, err := proto.ToAnyWithValidation(routerFilter)
 	if err != nil {

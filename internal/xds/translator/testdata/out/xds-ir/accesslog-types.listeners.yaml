@@ -341,9 +341,6 @@
                     inlineString: |
                       Upstream access log: [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%\n
                 path: /dev/stdout
-            upstreamLogOptions:
-              flushUpstreamLogOnUpstreamStream: true
-              upstreamLogFlushInterval: 5s
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
