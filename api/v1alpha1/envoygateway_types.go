@@ -242,6 +242,12 @@ type EnvoyGatewayLogging struct {
 	//
 	// +optional
 	Encoder *EnvoyGatewayLogEncoder `json:"encoder,omitempty"`
+	// UseProductionEncoderConfig determines if the production encoder configuration should be used.
+	// If true, the JSON output will use abbreviated field keys.
+	// If unspecified, defaults to false.
+	//
+	// +optional
+	UseProductionEncoderConfig *bool `json:"useProductionEncoderConfig,omitempty"`
 }
 
 type EnvoyGatewayLogEncoder string
