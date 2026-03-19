@@ -7,11 +7,15 @@ package filters
 
 import (
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	setfilterstatev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/common/set_filter_state/v3"
 	grpcstats "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
 	grpcweb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	healthcheck "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
+	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	httprouter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
+	setfilterstate "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/set_filter_state/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -71,6 +75,59 @@ func GenerateRouterFilter(enableEnvoyHeaders bool, upstreamAccessLogs []*accessl
 			TypedConfig: anyCfg,
 		},
 	}, nil
+}
+
+const DownstreamProtocolKey = "eg.downstream_protocol"
+
+func GenerateSetDownstreamProtocolFilter() *hcm.HttpFilter {
+	anyCfg, _ := proto.ToAnyWithValidation(&setfilterstate.Config{
+		OnRequestHeaders: []*setfilterstatev3.FilterStateValue{
+			{
+				Key: &setfilterstatev3.FilterStateValue_ObjectKey{
+					ObjectKey: DownstreamProtocolKey,
+				},
+				FactoryKey:         "envoy.string",
+				SkipIfEmpty:        true,
+				SharedWithUpstream: setfilterstatev3.FilterStateValue_ONCE,
+				Value: &setfilterstatev3.FilterStateValue_FormatString{
+					FormatString: &corev3.SubstitutionFormatString{
+						Format: &corev3.SubstitutionFormatString_TextFormatSource{
+							TextFormatSource: &corev3.DataSource{
+								Specifier: &corev3.DataSource_InlineString{
+									InlineString: "%PROTOCOL%",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	return &hcm.HttpFilter{
+		Name: "set downstream protocol",
+		ConfigType: &hcm.HttpFilter_TypedConfig{
+			TypedConfig: anyCfg,
+		},
+	}
+}
+
+func GenerateClearRouteCacheFilter() *hcm.HttpFilter {
+	anyCfg, _ := proto.ToAnyWithValidation(&luafilterv3.Lua{
+		DefaultSourceCode: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
+				InlineString: `function envoy_on_request(handle)
+  handle:clearRouteCache()
+end
+`,
+			},
+		},
+	})
+	return &hcm.HttpFilter{
+		Name: "clear route cache",
+		ConfigType: &hcm.HttpFilter_TypedConfig{
+			TypedConfig: anyCfg,
+		},
+	}
 }
 
 func GenerateHealthCheckFilter(checkPath string) (*hcm.HttpFilter, error) {
