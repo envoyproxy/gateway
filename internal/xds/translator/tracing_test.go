@@ -25,12 +25,12 @@ func TestBuildSampler(t *testing.T) {
 		{name: "nil", sampler: nil, expected: ""},
 		{name: "AlwaysOn", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOn}, expected: "envoy.tracers.opentelemetry.samplers.always_on"},
 		{name: "AlwaysOff", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOff}, expected: "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based"},
-		{name: "TraceIdRatioBased default arg", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeTraceIDRatioBased}, expected: "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based"},
-		{name: "TraceIdRatioBased explicit config", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeTraceIDRatioBased, SamplingPercentage: &gwapiv1.Fraction{Numerator: 50}}, expected: "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based"},
+		{name: "TraceIdRatioBased default arg", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeTraceIDRatio}, expected: "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based"},
+		{name: "TraceIdRatioBased explicit config", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeTraceIDRatio, SamplingPercentage: &gwapiv1.Fraction{Numerator: 50}}, expected: "envoy.tracers.opentelemetry.samplers.trace_id_ratio_based"},
 		{name: "ParentBasedAlwaysOn", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedAlwaysOn}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
 		{name: "ParentBasedAlwaysOff", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedAlwaysOff}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
-		{name: "ParentBasedTraceIdRatioBased default arg", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
-		{name: "ParentBasedTraceIdRatioBased zero", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased, SamplingPercentage: &gwapiv1.Fraction{Numerator: 0}}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
+		{name: "ParentBasedTraceIdRatioBased default arg", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedTraceIDRatio}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
+		{name: "ParentBasedTraceIdRatioBased zero", sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeParentBasedTraceIDRatio, SamplingPercentage: &gwapiv1.Fraction{Numerator: 0}}, expected: "envoy.tracers.opentelemetry.samplers.parent_based"},
 		{name: "unknown type", sampler: &egv1a1.OTelSampler{Type: "Invalid"}, expectedError: "unknown sampler type: Invalid"},
 	}
 	for _, tc := range testCases {

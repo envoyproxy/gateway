@@ -1723,7 +1723,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								},
 								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
 									Sampler: &egv1a1.OTelSampler{
-										Type:               egv1a1.OTelSamplerTypeTraceIDRatioBased,
+										Type:               egv1a1.OTelSamplerTypeTraceIDRatio,
 										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
 									},
 								},
@@ -1754,7 +1754,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 								},
 								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
 									Sampler: &egv1a1.OTelSampler{
-										Type:               egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased,
+										Type:               egv1a1.OTelSamplerTypeParentBasedTraceIDRatio,
 										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
 									},
 								},
