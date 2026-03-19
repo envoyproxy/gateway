@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-to-backend-mixed-ip-uds
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend-mixed-ip-uds
+    backendRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-mixed-ip-uds
