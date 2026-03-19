@@ -279,7 +279,7 @@ func buildSampler(sampler *egv1a1.OTelSampler) (*corev3.TypedExtensionConfig, er
 		return buildAlwaysOnSampler()
 	case egv1a1.OTelSamplerTypeAlwaysOff:
 		return buildTraceIDRatioSampler(zero)
-	case egv1a1.OTelSamplerTypeTraceIDRatioBased:
+	case egv1a1.OTelSamplerTypeTraceIDRatio:
 		return buildTraceIDRatioSampler(sampler.SamplingPercentage)
 	case egv1a1.OTelSamplerTypeParentBasedAlwaysOn:
 		wrapped, err := buildAlwaysOnSampler()
@@ -293,7 +293,7 @@ func buildSampler(sampler *egv1a1.OTelSampler) (*corev3.TypedExtensionConfig, er
 			return nil, err
 		}
 		return buildParentBasedSampler(wrapped)
-	case egv1a1.OTelSamplerTypeParentBasedTraceIDRatioBased:
+	case egv1a1.OTelSamplerTypeParentBasedTraceIDRatio:
 		wrapped, err := buildTraceIDRatioSampler(sampler.SamplingPercentage)
 		if err != nil {
 			return nil, err
