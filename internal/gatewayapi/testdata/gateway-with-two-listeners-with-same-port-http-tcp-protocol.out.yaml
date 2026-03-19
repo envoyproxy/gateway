@@ -142,8 +142,8 @@ tcpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Multiple routes on the same TCP listener
-        reason: UnsupportedValue
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null
