@@ -145,9 +145,9 @@ tlsRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
