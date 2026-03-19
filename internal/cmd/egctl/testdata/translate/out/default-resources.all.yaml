@@ -172,7 +172,18 @@ envoyProxyForGatewayClass:
               "@type": type.googleapis.com/envoy.extensions.resource_monitors.downstream_connections.v3.DownstreamConnectionsConfig
               max_active_downstream_connections: 50000
     logging: {}
-  status: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: ""
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
