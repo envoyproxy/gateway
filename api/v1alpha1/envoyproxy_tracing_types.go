@@ -169,14 +169,14 @@ const (
 	OTelSamplerTypeAlwaysOn OTelSamplerType = "AlwaysOn"
 	// OTelSamplerTypeAlwaysOff drops all spans.
 	OTelSamplerTypeAlwaysOff OTelSamplerType = "AlwaysOff"
-	// OTelSamplerTypeTraceIDRatioBased exports a percentage of spans based on trace ID.
-	OTelSamplerTypeTraceIDRatioBased OTelSamplerType = "TraceIdRatio"
+	// OTelSamplerTypeTraceIDRatio exports a percentage of spans based on trace ID.
+	OTelSamplerTypeTraceIDRatio OTelSamplerType = "TraceIdRatio"
 	// OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.
 	OTelSamplerTypeParentBasedAlwaysOn OTelSamplerType = "ParentBasedAlwaysOn"
 	// OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.
 	OTelSamplerTypeParentBasedAlwaysOff OTelSamplerType = "ParentBasedAlwaysOff"
-	// OTelSamplerTypeParentBasedTraceIDRatioBased respects the parent span's sampling decision, using trace ID ratio when no parent exists.
-	OTelSamplerTypeParentBasedTraceIDRatioBased OTelSamplerType = "ParentBasedTraceIdRatio"
+	// OTelSamplerTypeParentBasedTraceIDRatio respects the parent span's sampling decision, using trace ID ratio when no parent exists.
+	OTelSamplerTypeParentBasedTraceIDRatio OTelSamplerType = "ParentBasedTraceIdRatio"
 )
 
 // OTelSampler configures the OpenTelemetry sampler.
