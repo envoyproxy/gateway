@@ -889,9 +889,12 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
+		// If the mode is not set to AllowInsecureFallback, require client certificate by default.
+		if tlsConfig.CACertificate.Mode != nil && ptr.Deref(tlsConfig.CACertificate.Mode, gwapiv1.AllowValidOnly) == gwapiv1.AllowValidOnly {
+			tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
+		}
 		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
-
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
