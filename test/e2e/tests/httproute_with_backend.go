@@ -29,6 +29,7 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 		"testdata/httproute-to-backend-ip.yaml",
 		"testdata/httproute-to-backend-fqdn-http2.yaml",
 		"testdata/httproute-to-backend-fqdn-tls.yaml",
+		"testdata/httproute-to-backend-mixed-ip-uds.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("of type FQDN", func(t *testing.T) {
@@ -109,6 +110,36 @@ var EnvoyGatewayBackendTest = suite.ConformanceTest{
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("of type mixed IP and UDS", func(t *testing.T) {
+			svcNN := types.NamespacedName{
+				Name:      "infra-backend-v1-clusterip",
+				Namespace: "gateway-conformance-infra",
+			}
+			svc, err := GetService(suite.Client, svcNN)
+			if err != nil {
+				t.Fatalf("failed to get service %s: %v", svcNN, err)
+			}
+
+			backendName := "backend-mixed-ip-uds"
+			ns := "gateway-conformance-infra"
+			err = CreateMixedBackend(suite.Client, types.NamespacedName{Name: backendName, Namespace: ns}, svc.Spec.ClusterIP, 8080, "/var/run/mixed-backend/backend.sock")
+			if err != nil {
+				t.Fatalf("failed to create backend %s: %v", backendName, err)
+			}
+			t.Cleanup(func() {
+				if err := DeleteBackend(suite.Client, types.NamespacedName{Name: backendName, Namespace: ns}); err != nil {
+					t.Fatalf("failed to delete backend %s: %v", backendName, err)
+				}
+			})
+
+			routeNN := types.NamespacedName{Name: "httproute-to-backend-mixed-ip-uds", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			// Verify the Gateway, Route, and Backend are all accepted.
+			// This validates that mixed IP+UDS backends are no longer rejected as unsupported MIXED address type.
+			kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: backendName, Namespace: ns})
 		})
 
 		t.Run("of type FQDN with a backend TLS Policy", func(t *testing.T) {
