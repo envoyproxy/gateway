@@ -235,13 +235,3 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
-    tcp:
-    - address: 0.0.0.0
-      externalPort: 80
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: tls-1
-      name: envoy-gateway/gateway-1/tls-1
-      port: 10080
