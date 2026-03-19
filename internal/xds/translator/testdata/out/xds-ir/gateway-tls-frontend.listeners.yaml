@@ -38,22 +38,19 @@
           alpnProtocols:
           - h2
           - http/1.1
-          combinedValidationContext:
-            defaultValidationContext:
-              trustChainVerification: ACCEPT_UNTRUSTED
-            validationContextSdsSecretConfig:
-              name: gateway/envoy-gateway/client-validation-insecure-fallback/default/ca.crt
-              sdsConfig:
-                ads: {}
-                resourceApiVersion: V3
           tlsCertificateSdsSecretConfigs:
           - name: envoy-gateway/tls-validity-checks-certificate
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
+          validationContextSdsSecretConfig:
+            name: gateway/envoy-gateway/client-validation-insecure-fallback/default/ca.crt
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
-        requireClientCertificate: false
+        requireClientCertificate: true
   maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/client-validation-insecure-fallback/https
   perConnectionBufferLimitBytes: 32768
