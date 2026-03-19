@@ -24,3 +24,13 @@ data:
     runtimeFlags:
       enabled:
       - XDSNameSchemeV2
+    telemetry:
+      traces:
+        sink:
+          type: OpenTelemetry
+          openTelemetry:
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+            protocol: grpc
+        samplingRate:
+          numerator: 100
