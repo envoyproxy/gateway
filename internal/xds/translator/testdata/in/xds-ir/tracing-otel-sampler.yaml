@@ -2,10 +2,6 @@ tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 100
   authority: "otel-collector.default.svc.cluster.local"
-  sampler:
-    type: ParentBasedTraceIdRatioBased
-    samplingPercentage:
-      numerator: 0
   destination:
     name: "tracing-0"
     settings:
@@ -19,6 +15,11 @@ tracing:
     host: otel-collector.monitoring.svc.cluster.local
     port: 4317
     type: OpenTelemetry
+    openTelemetry:
+      sampler:
+        type: ParentBasedTraceIdRatio
+        samplingPercentage:
+          numerator: 0
 http:
 - name: "first-listener"
   address: "::"

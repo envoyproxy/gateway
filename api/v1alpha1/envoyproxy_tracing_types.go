@@ -161,7 +161,7 @@ type OpenTelemetryTracingProvider struct {
 
 // OTelSamplerType specifies the sampler type.
 // Values correspond to the OTEL_TRACES_SAMPLER environment variable.
-// +kubebuilder:validation:Enum=AlwaysOn;AlwaysOff;TraceIdRatioBased;ParentBasedAlwaysOn;ParentBasedAlwaysOff;ParentBasedTraceIdRatioBased
+// +kubebuilder:validation:Enum=AlwaysOn;AlwaysOff;TraceIdRatio;ParentBasedAlwaysOn;ParentBasedAlwaysOff;ParentBasedTraceIdRatio
 type OTelSamplerType string
 
 const (
@@ -170,19 +170,19 @@ const (
 	// OTelSamplerTypeAlwaysOff drops all spans.
 	OTelSamplerTypeAlwaysOff OTelSamplerType = "AlwaysOff"
 	// OTelSamplerTypeTraceIDRatioBased exports a percentage of spans based on trace ID.
-	OTelSamplerTypeTraceIDRatioBased OTelSamplerType = "TraceIdRatioBased"
+	OTelSamplerTypeTraceIDRatioBased OTelSamplerType = "TraceIdRatio"
 	// OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.
 	OTelSamplerTypeParentBasedAlwaysOn OTelSamplerType = "ParentBasedAlwaysOn"
 	// OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.
 	OTelSamplerTypeParentBasedAlwaysOff OTelSamplerType = "ParentBasedAlwaysOff"
 	// OTelSamplerTypeParentBasedTraceIDRatioBased respects the parent span's sampling decision, using trace ID ratio when no parent exists.
-	OTelSamplerTypeParentBasedTraceIDRatioBased OTelSamplerType = "ParentBasedTraceIdRatioBased"
+	OTelSamplerTypeParentBasedTraceIDRatioBased OTelSamplerType = "ParentBasedTraceIdRatio"
 )
 
 // OTelSampler configures the OpenTelemetry sampler.
 // Type maps to OTEL_TRACES_SAMPLER.
 //
-// +kubebuilder:validation:XValidation:message="samplingPercentage can only be set with TraceIdRatioBased or ParentBasedTraceIdRatioBased",rule="has(self.samplingPercentage) ? (self.type == 'TraceIdRatioBased' || self.type == 'ParentBasedTraceIdRatioBased') : true"
+// +kubebuilder:validation:XValidation:message="samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",rule="has(self.samplingPercentage) ? (self.type == 'TraceIdRatio' || self.type == 'ParentBasedTraceIdRatio') : true"
 type OTelSampler struct {
 	// Type is the sampler type.
 	// +kubebuilder:default=AlwaysOn

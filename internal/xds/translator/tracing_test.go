@@ -57,8 +57,8 @@ func TestRandomSamplingValue(t *testing.T) {
 		expected float64
 	}{
 		{name: "no sampler uses SamplingRate", tracing: &ir.Tracing{SamplingRate: 50}, expected: 50},
-		{name: "sampler overrides to 100", tracing: &ir.Tracing{SamplingRate: 50, Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOn}}, expected: 100},
-		{name: "AlwaysOff sampler still 100", tracing: &ir.Tracing{SamplingRate: 50, Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOff}}, expected: 100},
+		{name: "sampler overrides to 100", tracing: &ir.Tracing{SamplingRate: 50, Provider: egv1a1.TracingProvider{OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOn}}}}, expected: 100},
+		{name: "AlwaysOff sampler still 100", tracing: &ir.Tracing{SamplingRate: 50, Provider: egv1a1.TracingProvider{OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOff}}}}, expected: 100},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

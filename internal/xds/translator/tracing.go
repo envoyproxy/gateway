@@ -59,7 +59,11 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 		providerName = envoyOpenTelemetry
 
 		providerConfig = func() (*anypb.Any, error) {
-			sampler, sErr := buildSampler(tracing.Sampler)
+			var otelSampler *egv1a1.OTelSampler
+			if tracing.Provider.OpenTelemetry != nil {
+				otelSampler = tracing.Provider.OpenTelemetry.Sampler
+			}
+			sampler, sErr := buildSampler(otelSampler)
 			if sErr != nil {
 				return nil, sErr
 			}
@@ -137,7 +141,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 // sampler is configured, this returns 100% so the sampler alone decides whether
 // to record spans. Otherwise, HCM would drop requests before the sampler runs.
 func randomSamplingValue(tracing *ir.Tracing) float64 {
-	if tracing.Sampler != nil {
+	if tracing.Provider.OpenTelemetry != nil && tracing.Provider.OpenTelemetry.Sampler != nil {
 		return 100.0
 	}
 	return tracing.SamplingRate
