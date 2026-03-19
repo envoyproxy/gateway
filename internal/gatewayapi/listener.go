@@ -106,8 +106,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Process conditions and check if the listener is ready
 			isReady := t.validateListenerConditions(listener)
+			if !isReady {
+				// Don't process further or add to the Xds IR if the listener is not ready.
+				continue
+			}
 
-			if listener.isFromListenerSet() && isReady {
+			if listener.isFromListenerSet() {
 				lsKey := types.NamespacedName{
 					Namespace: listener.listenerSet.Namespace,
 					Name:      listener.listenerSet.Name,
