@@ -49,7 +49,7 @@ func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *Resou
 		return g.backendTLS, &ResourceMetadata{
 			Namespace: g.Namespace,
 			Name:      g.Name,
-			Kind:      "Gateway",
+			Kind:      resource.KindGateway,
 		}
 	}
 	return g.envoyProxy.Spec.BackendTLS, &ResourceMetadata{
