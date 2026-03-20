@@ -328,8 +328,7 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 		httpFilters = append(httpFilters, setDownstreamProtocolFilter)
 		// reset the cached route
 		clearRouteCacheFilter := filters.GenerateClearRouteCacheFilter()
-		httpFilters = append(httpFilters, clearRouteCacheFilter)
-		httpFilters = append(httpFilters, mgr.HttpFilters[len(mgr.HttpFilters)-1])
+		httpFilters = append(httpFilters, clearRouteCacheFilter, mgr.HttpFilters[len(mgr.HttpFilters)-1])
 		mgr.HttpFilters = httpFilters
 	}
 	return nil
