@@ -56,6 +56,11 @@ func GenerateRouterFilter(enableEnvoyHeaders bool, upstreamAccessLogs []*accessl
 		SuppressEnvoyHeaders: !enableEnvoyHeaders,
 		UpstreamLog:          upstreamAccessLogs,
 	}
+	if len(upstreamAccessLogs) > 0 {
+		routerFilter.UpstreamLogOptions = &httprouter.Router_UpstreamAccessLogOptions{
+			FlushUpstreamLogOnUpstreamStream: true,
+		}
+	}
 	anyCfg, err := proto.ToAnyWithValidation(routerFilter)
 	if err != nil {
 		return nil, err
