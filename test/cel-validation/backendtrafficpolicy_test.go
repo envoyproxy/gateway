@@ -751,7 +751,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently ZoneAware is only supported for LeastRequest, Random, and RoundRobin load balancers.",
+				": ZoneAware routing is not supported for BackendUtilization load balancers. BackendUtilization only handles picking endpoints within a single locality.",
 			},
 		},
 		{
