@@ -385,7 +385,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 
 		// process envoy gateway secret refs
-		if err := r.processEnvoyProxySecretRef(ctx, gwcResource); err != nil {
+		if err := r.processEnvoyProxyClientCertificateRef(ctx, gwcResource, gwcResource.EnvoyProxyForGatewayClass); err != nil {
 			if isTransientError(err) {
 				gcLogger.Error(err, "transient error processing TLS SecretRef for EnvoyProxy")
 				return reconcile.Result{}, err
@@ -610,23 +610,32 @@ func (r *gatewayAPIReconciler) loadGatewayClassStatusToDelete() sets.Set[types.N
 	return res
 }
 
-func (r *gatewayAPIReconciler) processEnvoyProxySecretRef(ctx context.Context, gwcResource *resource.Resources) error {
-	if gwcResource.EnvoyProxyForGatewayClass == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS == nil || gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef == nil {
+func (r *gatewayAPIReconciler) processEnvoyProxyClientCertificateRef(ctx context.Context,
+	gwcResource *resource.Resources, ep *egv1a1.EnvoyProxy,
+) error {
+	if ep == nil ||
+		ep.Spec.BackendTLS == nil ||
+		ep.Spec.BackendTLS.ClientCertificateRef == nil {
 		return nil
 	}
-	certRef := gwcResource.EnvoyProxyForGatewayClass.Spec.BackendTLS.ClientCertificateRef
-	if refsSecret(certRef) {
-		if err := r.processSecretRef(
-			ctx,
-			newResourceMapping(),
-			gwcResource,
-			resource.KindGateway,
-			gwcResource.EnvoyProxyForGatewayClass.Namespace,
-			resource.KindEnvoyProxy,
-			*certRef); err != nil {
-			return err
+
+	certRef := ep.Spec.BackendTLS.ClientCertificateRef
+	ns := ep.Namespace
+	if ptr.Deref(certRef.Kind, resource.KindSecret) == resource.KindSecret {
+		if refsSecret(certRef) {
+			if err := r.processSecretRef(
+				ctx,
+				newResourceMapping(),
+				gwcResource,
+				resource.KindGateway,
+				ns,
+				resource.KindEnvoyProxy,
+				*certRef); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
 }
 
@@ -2692,20 +2701,11 @@ func (r *gatewayAPIReconciler) processGatewayParamsRef(ctx context.Context, gtw 
 		return fmt.Errorf("failed to find envoyproxy %s/%s for Gateway %s: %w", gtw.Namespace, ref.Name, gtw.Name, err)
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	r.processEnvoyProxyBackendRef(ep, resourceMap)
 
 	// Missing secret shouldn't stop the Gateway infrastructure from coming up
-	if ep.Spec.BackendTLS != nil && ep.Spec.BackendTLS.ClientCertificateRef != nil {
-		certRef := ep.Spec.BackendTLS.ClientCertificateRef
-		if refsSecret(certRef) {
-			if err := r.processSecretRef(ctx,
-				resourceMap, resourceTree, resource.KindGateway,
-				gtw.Namespace, gtw.Name, *certRef); err != nil {
-				r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
-			}
-		}
+	if err := r.processEnvoyProxyClientCertificateRef(ctx, resourceTree, ep); err != nil {
+		r.log.Error(err, "failed to process ClientCertificateRef for EnvoyProxy", "namespace", gtw.Namespace, "name", gtw.Name)
 	}
 
 	resourceTree.EnvoyProxiesForGateways = append(resourceTree.EnvoyProxiesForGateways, ep)
@@ -2730,19 +2730,17 @@ func (r *gatewayAPIReconciler) processGatewayClassParamsRef(ctx context.Context,
 		return errors.New("using Merged Gateways with Gateway Namespace Mode is not supported")
 	}
 
-	if err := r.processEnvoyProxy(ep, resourceMap); err != nil {
-		return err
-	}
+	r.processEnvoyProxyBackendRef(ep, resourceMap)
 	resourceTree.EnvoyProxyForGatewayClass = ep
 	return nil
 }
 
 // processEnvoyProxy processes the parametersRef of the provided GatewayClass.
-func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) error {
+func (r *gatewayAPIReconciler) processEnvoyProxyBackendRef(ep *egv1a1.EnvoyProxy, resourceMap *resourceMappings) {
 	key := utils.NamespacedName(ep).String()
 	if resourceMap.allAssociatedEnvoyProxies.Has(key) {
 		r.log.Info("current EnvoyProxy has been processed already", "namespace", ep.Namespace, "name", ep.Name)
-		return nil
+		return
 	}
 
 	r.log.Info("processing EnvoyProxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -2789,8 +2787,20 @@ func (r *gatewayAPIReconciler) processEnvoyProxy(ep *egv1a1.EnvoyProxy, resource
 		}
 	}
 
+	if ep.Spec.SDS != nil {
+		sds := ep.Spec.SDS
+		backendNamespace := gatewayapi.NamespaceDerefOr(sds.Namespace, ep.Namespace)
+		normalizedRef := gwapiv1.BackendObjectReference{
+			Group:     sds.Group,
+			Kind:      sds.Kind,
+			Namespace: gatewayapi.NamespacePtr(backendNamespace),
+			Name:      sds.Name,
+			Port:      sds.Port,
+		}
+		resourceMap.insertBackendRef(normalizedRef)
+	}
+
 	resourceMap.allAssociatedEnvoyProxies.Insert(key)
-	return nil
 }
 
 // crdExists checks for the existence of the CRD in k8s APIServer before watching it.
