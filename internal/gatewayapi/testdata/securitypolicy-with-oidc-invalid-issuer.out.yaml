@@ -42,8 +42,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/http
+      - name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -69,8 +68,6 @@ securityPolicies:
     oidc:
       clientID: client1.apps.foo.bar.com
       clientSecret:
-        group: null
-        kind: null
         name: client1-secret
       provider:
         issuer: https://gateway.envoyproxy.io
@@ -124,7 +121,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

@@ -17,9 +17,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
   status:
     ancestors:
@@ -58,8 +56,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ClusterTrustBundle
+        - kind: ClusterTrustBundle
           name: ca-cluster-trust-bundle
   status:
     ancestors:
@@ -98,8 +95,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ClusterTrustBundle
+        - kind: ClusterTrustBundle
           name: ca-cluster-trust-bundle
   status:
     ancestors:
@@ -140,8 +136,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ClusterTrustBundle
+        - kind: ClusterTrustBundle
           name: ca-cluster-trust-bundle
   status:
     ancestors:
@@ -184,8 +179,7 @@ clientTrafficPolicies:
     tls:
       clientValidation:
         caCertificateRefs:
-        - group: null
-          kind: ClusterTrustBundle
+        - kind: ClusterTrustBundle
           name: ca-cluster-trust-bundle
   status:
     ancestors:
@@ -223,9 +217,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
     - allowedRoutes:
@@ -298,9 +290,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -344,9 +334,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -390,9 +378,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -436,9 +422,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
           namespace: envoy-gateway
         mode: Terminate
   status:
@@ -470,15 +454,13 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http-1
+      - name: envoy-gateway/gateway-1/http-1
         ports:
         - containerPort: 10443
           name: https-443
           protocol: HTTPS
           servicePort: 443
-      - address: null
-        name: envoy-gateway/gateway-1/http-2
+      - name: envoy-gateway/gateway-1/http-2
         ports:
         - containerPort: 8080
           name: http-8080
@@ -496,8 +478,7 @@ infraIR:
   envoy-gateway/gateway-2:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-2/http-1
+      - name: envoy-gateway/gateway-2/http-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -515,8 +496,7 @@ infraIR:
   envoy-gateway/gateway-3:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-3/http-1
+      - name: envoy-gateway/gateway-3/http-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -534,8 +514,7 @@ infraIR:
   envoy-gateway/gateway-4:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-4/http-1
+      - name: envoy-gateway/gateway-4/http-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -553,8 +532,7 @@ infraIR:
   envoy-gateway/gateway-5:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-5/http-1
+      - name: envoy-gateway/gateway-5/http-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -604,7 +582,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -635,7 +612,6 @@ xdsIR:
           mode: Sanitize
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -685,7 +661,6 @@ xdsIR:
           mode: ForwardOnly
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -749,7 +724,6 @@ xdsIR:
           mode: AppendForward
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-3
@@ -815,7 +789,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-4
@@ -883,7 +856,6 @@ xdsIR:
           mode: SanitizeSet
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-5

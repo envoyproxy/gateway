@@ -1,0 +1,151 @@
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-xls
+    labels:
+      allow-xls: "true"
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: cross-allowed
+    labels:
+      allow-xls: "true"
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: cross-denied
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: gateway-xls
+    name: composite-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    allowedListeners:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            allow-xls: "true"
+    listeners:
+    - name: core-http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+listenerSets:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: cross-allowed
+    name: cross-namespace-allowed
+  spec:
+    parentRef:
+      namespace: gateway-xls
+      name: composite-gateway
+    listeners:
+    - name: cross-http-allowed
+      protocol: HTTP
+      port: 8083
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: cross-allowed
+    name: cross-namespace-same
+  spec:
+    parentRef:
+      namespace: gateway-xls
+      name: composite-gateway
+    listeners:
+    - name: cross-http-same
+      protocol: HTTP
+      port: 8085
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    namespace: cross-denied
+    name: cross-namespace-denied
+  spec:
+    parentRef:
+      namespace: gateway-xls
+      name: composite-gateway
+    listeners:
+    - name: cross-http-denied
+      protocol: HTTP
+      port: 8084
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-cross-http-allowed
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      namespace: cross-allowed
+      name: cross-namespace-allowed
+      sectionName: cross-http-allowed
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: cross-allowed
+    name: route-same-namespace
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      namespace: cross-allowed
+      name: cross-namespace-same
+      sectionName: cross-http-same
+    rules:
+    - backendRefs:
+      - name: service-1
+        namespace: default
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: route-cross-http-denied
+  spec:
+    parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: ListenerSet
+      namespace: cross-denied
+      name: cross-namespace-denied
+      sectionName: cross-http-denied
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: ReferenceGrant
+  metadata:
+    namespace: default
+    name: allow-cross-allowed
+  spec:
+    from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: cross-allowed
+    to:
+    - group: ""
+      kind: Service

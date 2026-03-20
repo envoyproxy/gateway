@@ -65,8 +65,6 @@ envoyExtensionPolicies:
     - code:
         image:
           pullSecretRef:
-            group: null
-            kind: null
             name: my-pull-secret
           sha256: 314100af781b98a8ca175d5bf90a8bf76576e20a2f397a88223404edc6ebfd46
           url: oci://www.example.com/wasm-filter-2:v1.0.0
@@ -226,8 +224,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -277,7 +274,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

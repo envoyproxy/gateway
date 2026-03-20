@@ -16,9 +16,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-example-com
+        - name: tls-secret-example-com
         mode: Terminate
   status:
     listeners:
@@ -70,9 +68,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-example-com
+        - name: tls-secret-example-com
         mode: Terminate
     - allowedRoutes:
         namespaces:
@@ -83,9 +79,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-foo-bar-com
+        - name: tls-secret-foo-bar-com
         mode: Terminate
   status:
     listeners:
@@ -191,8 +185,7 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/https-1
+      - name: envoy-gateway/gateway-1/https-1
         ports:
         - containerPort: 10443
           name: https-443
@@ -237,7 +230,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -290,7 +282,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - '*.example.com'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -312,7 +303,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.bar.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2

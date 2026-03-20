@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,6 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -633,9 +633,80 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		name                 string
 		envoyExtensionPolicy *egv1a1.EnvoyExtensionPolicy
 		backend              *egv1a1.Backend
+		configMap            *corev1.ConfigMap
+		secret               *corev1.Secret
+		clusterTrustBundle   *certificatesv1b1.ClusterTrustBundle
 		referenceGrant       *gwapiv1b1.ReferenceGrant
 		shouldBeAdded        bool
 	}{
+		{
+			name: "valid wasm configmap ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Name: "ca-cert",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cert",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm secret ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindSecret)),
+											Name: "ca-cert",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cert",
+				},
+			},
+			shouldBeAdded: true,
+		},
 		{
 			name: "valid envoy extension policy with proper ref grant to backend",
 			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
@@ -748,6 +819,159 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 			},
 			shouldBeAdded: false,
 		},
+		{
+			name: "valid wasm http with ClusterTrustBundle ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm image with ClusterTrustBundle ca cert ref",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb-image",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb-image",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "valid wasm image with Secret ca cert ref (default kind)",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											// Kind is nil, should default to Secret
+											Name: "ca-secret-default",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			secret: &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-secret-default",
+				},
+			},
+			shouldBeAdded: true,
+		},
+		{
+			name: "wasm with multiple sources (HTTP with ConfigMap, Image with ClusterTrustBundle)",
+			envoyExtensionPolicy: &egv1a1.EnvoyExtensionPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "test-policy",
+				},
+				Spec: egv1a1.EnvoyExtensionPolicySpec{
+					Wasm: []egv1a1.Wasm{
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.HTTPWasmCodeSourceType,
+								HTTP: &egv1a1.HTTPWasmCodeSource{
+									URL: "https://example.com/test1.wasm",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Name: "ca-cm-multi",
+										},
+									},
+								},
+							},
+						},
+						{
+							Code: egv1a1.WasmCodeSource{
+								Type: egv1a1.ImageWasmCodeSourceType,
+								Image: &egv1a1.ImageWasmCodeSource{
+									URL: "oci://example.com/test2.wasm:v1.0.0",
+									TLS: &egv1a1.WasmCodeSourceTLSConfig{
+										CACertificateRef: gwapiv1.SecretObjectReference{
+											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Name: "ca-ctb-multi",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			configMap: &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns-1",
+					Name:      "ca-cm-multi",
+				},
+			},
+			clusterTrustBundle: &certificatesv1b1.ClusterTrustBundle{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ca-ctb-multi",
+				},
+			},
+			shouldBeAdded: true,
+		},
 	}
 
 	for i := range testCases {
@@ -755,18 +979,53 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 		// Run the test cases.
 		t.Run(tc.name, func(t *testing.T) {
 			// Add objects referenced by test cases.
-			objs := []client.Object{tc.envoyExtensionPolicy, tc.backend, tc.referenceGrant}
+			var objs []client.Object
+			if tc.envoyExtensionPolicy != nil {
+				objs = append(objs, tc.envoyExtensionPolicy)
+			}
+			if tc.backend != nil {
+				objs = append(objs, tc.backend)
+			}
+			if tc.configMap != nil {
+				objs = append(objs, tc.configMap)
+			}
+			if tc.secret != nil {
+				objs = append(objs, tc.secret)
+			}
+			if tc.referenceGrant != nil {
+				objs = append(objs, tc.referenceGrant)
+			}
+			if tc.clusterTrustBundle != nil {
+				objs = append(objs, tc.clusterTrustBundle)
+			}
 			r := setupReferenceGrantReconciler(objs)
 
 			ctx := context.Background()
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 
-			err := r.processEnvoyExtensionPolicies(ctx, resourceTree, resourceMap)
+			// need to add the policy to resourceTree for processEnvoyExtensionPolicyObjectRefs to find it
+			if tc.envoyExtensionPolicy != nil {
+				resourceTree.EnvoyExtensionPolicies = append(resourceTree.EnvoyExtensionPolicies, tc.envoyExtensionPolicy)
+			}
+
+			err := r.processEnvoyExtensionPolicyObjectRefs(ctx, resourceTree, resourceMap)
 			require.NoError(t, err)
+
 			if tc.shouldBeAdded {
-				require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
-			} else {
+				if tc.referenceGrant != nil {
+					require.Contains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
+				}
+				if tc.configMap != nil {
+					require.Contains(t, resourceTree.ConfigMaps, tc.configMap)
+				}
+				if tc.secret != nil {
+					require.Contains(t, resourceTree.Secrets, tc.secret)
+				}
+				if tc.clusterTrustBundle != nil {
+					require.Contains(t, resourceTree.ClusterTrustBundles, tc.clusterTrustBundle)
+				}
+			} else if tc.referenceGrant != nil {
 				require.NotContains(t, resourceTree.ReferenceGrants, tc.referenceGrant)
 			}
 		})
@@ -1806,13 +2065,13 @@ func TestProcessBackendRefs(t *testing.T) {
 	}
 }
 
-func TestProcessXListenerSets(t *testing.T) {
+func TestProcessListenerSets(t *testing.T) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	scheme := envoygateway.GetScheme()
 
 	testCases := []struct {
 		name             string
-		xls              *gwapixv1a1.XListenerSet
+		xls              *gwapiv1.ListenerSet
 		secret           *corev1.Secret
 		referenceGrant   *gwapiv1b1.ReferenceGrant
 		gatewayNamespace string
@@ -1821,22 +2080,22 @@ func TestProcessXListenerSets(t *testing.T) {
 	}{
 		{
 			name: "matching gateway with TLS secret and XLS in same namespace",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "default",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("default")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
@@ -1859,22 +2118,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS in different namespace",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1898,22 +2157,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces with valid ReferenceGrant",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("https"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8443),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("https"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8443),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1938,8 +2197,8 @@ func TestProcessXListenerSets(t *testing.T) {
 				Spec: gwapiv1b1.ReferenceGrantSpec{
 					From: []gwapiv1b1.ReferenceGrantFrom{
 						{
-							Group:     gwapiv1.Group(gwapixv1a1.GroupName),
-							Kind:      gwapiv1.Kind(resource.KindXListenerSet),
+							Group:     gwapiv1.Group(gwapiv1.GroupName),
+							Kind:      gwapiv1.Kind(resource.KindListenerSet),
 							Namespace: gwapiv1.Namespace("xls"),
 						},
 					},
@@ -1958,22 +2217,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "matching gateway with TLS secret and XLS all in different namespaces",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "xls",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("test-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("test-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("https"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8443),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("https"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8443),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
@@ -1997,22 +2256,22 @@ func TestProcessXListenerSets(t *testing.T) {
 
 		{
 			name: "non-matching gateway",
-			xls: &gwapixv1a1.XListenerSet{
+			xls: &gwapiv1.ListenerSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-xls",
 					Namespace: "default",
 				},
-				Spec: gwapixv1a1.ListenerSetSpec{
-					ParentRef: gwapixv1a1.ParentGatewayReference{
-						Name:      gwapixv1a1.ObjectName("other-gateway"),
+				Spec: gwapiv1.ListenerSetSpec{
+					ParentRef: gwapiv1.ParentGatewayReference{
+						Name:      gwapiv1.ObjectName("other-gateway"),
 						Namespace: ptr.To(gwapiv1.Namespace("default")),
 					},
-					Listeners: []gwapixv1a1.ListenerEntry{
+					Listeners: []gwapiv1.ListenerEntry{
 						{
-							Name:     gwapixv1a1.SectionName("http"),
-							Protocol: gwapixv1a1.ProtocolType("HTTPS"),
-							Port:     gwapixv1a1.PortNumber(8080),
-							TLS: &gwapixv1a1.ListenerTLSConfig{
+							Name:     gwapiv1.SectionName("http"),
+							Protocol: gwapiv1.ProtocolType("HTTPS"),
+							Port:     gwapiv1.PortNumber(8080),
+							TLS: &gwapiv1.ListenerTLSConfig{
 								Mode: ptr.To(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
@@ -2041,7 +2300,7 @@ func TestProcessXListenerSets(t *testing.T) {
 			fakeClient := fakeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(objs...).
-				WithIndex(&gwapixv1a1.XListenerSet{}, gatewayXListenerSetIndex, gatewayXListenerSetIndexFunc).
+				WithIndex(&gwapiv1.ListenerSet{}, gatewayListenerSetIndex, gatewayListenerSetIndexFunc).
 				WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 				Build()
 
@@ -2053,14 +2312,14 @@ func TestProcessXListenerSets(t *testing.T) {
 			resourceTree := resource.NewResources()
 			resourceMap := newResourceMapping()
 			gatewayNamespaceName := tc.gatewayNamespace + "/test-gateway"
-			err := r.processXListenerSets(
+			err := r.processListenerSets(
 				context.Background(),
 				gatewayNamespaceName,
 				resourceMap,
 				resourceTree)
 			require.NoError(t, err)
 
-			require.Len(t, resourceTree.XListenerSets, tc.expectXLSCount)
+			require.Len(t, resourceTree.ListenerSets, tc.expectXLSCount)
 			if tc.expectSecretRef {
 				require.Contains(t, resourceTree.Secrets, tc.secret)
 			}

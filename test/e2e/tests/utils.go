@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -75,6 +76,17 @@ const (
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
 
+// TimeoutConfig returns the default TimeoutConfig for E2E tests.
+// We need this to reduce the logs in CI because of https://github.com/kubernetes-sigs/gateway-api/pull/4630
+func TimeoutConfig() config.TimeoutConfig {
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
+	return timeout
+}
+
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
 func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
@@ -108,6 +120,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 
 			for _, c := range p.Status.Conditions {
 				if c.Type == condition.Type && c.Status == condition.Status {
+					tlog.Logf(t, "pod %s/%s matches the status: %v ip: %v", p.Namespace, p.Name, condition.Status, p.Status.PodIPs)
 					continue checkPods // pod is ready, check next pod
 				}
 			}
@@ -143,6 +156,28 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
+}
+
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
 func SecurityPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
@@ -168,6 +203,29 @@ func SecurityPolicyMustFail(
 		})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
+}
+
+// SecurityPolicyMustBeMerged waits for the specified SecurityPolicy to have Merged condition.
+func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
@@ -310,6 +368,19 @@ func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controll
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
 				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionMerged) && condition.Status == metav1.ConditionTrue {
 					return true
 				}
 			}
@@ -635,21 +706,34 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
 		return
 	}
-
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	opts := []tb.CollectOption{
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
+	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+}
 
+func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s", data)
+		tlog.Logf(t, "\ndata: \n%s\n", data)
 	}
+}
+
+func consistentHashDump(t *testing.T, rest *rest.Config) {
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
+		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
+	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
@@ -748,6 +832,10 @@ func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, g
 
 func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
+}
+
+func UseStandardChannel() bool {
+	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
 }
 
 // TODO(zhaohuabing) remove this after the feature flag is removed.

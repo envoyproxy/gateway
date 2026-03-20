@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
@@ -152,11 +153,22 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			}
 		}
 
+		var sit *metav1.Duration
+		if pto.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamIdleTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
+			} else {
+				sit = ptr.To(metav1.Duration{Duration: d})
+			}
+		}
+
 		to.HTTP = &ir.HTTPTimeout{
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
 			MaxStreamDuration:     msd,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs
@@ -239,59 +251,63 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	var cb *ir.CircuitBreaker
 	pcb := policy.CircuitBreaker
 
-	if pcb != nil {
-		cb = &ir.CircuitBreaker{}
+	if pcb == nil {
+		return nil, nil
+	}
 
-		if pcb.MaxConnections != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
-				cb.MaxConnections = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
-			}
-		}
+	cb = &ir.CircuitBreaker{}
 
-		if pcb.MaxParallelRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
-				cb.MaxParallelRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
-			}
-		}
-
-		if pcb.MaxPendingRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
-				cb.MaxPendingRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
-			}
-		}
-
-		if pcb.MaxParallelRetries != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
-				cb.MaxParallelRetries = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
-			}
-		}
-
-		if pcb.MaxRequestsPerConnection != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
-				cb.MaxRequestsPerConnection = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
-			}
-		}
-
-		if pcb.PerEndpoint != nil {
-			perEndpoint := &ir.PerEndpointCircuitBreakers{}
-			if pcb.PerEndpoint.MaxConnections != nil {
-				if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
-					perEndpoint.MaxConnections = &ui32
-				}
-			}
-			cb.PerEndpoint = perEndpoint
+	if pcb.MaxConnections != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+			cb.MaxConnections = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
 		}
 	}
+
+	if pcb.MaxParallelRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+			cb.MaxParallelRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
+		}
+	}
+
+	if pcb.MaxPendingRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+			cb.MaxPendingRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
+		}
+	}
+
+	if pcb.MaxParallelRetries != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+			cb.MaxParallelRetries = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
+		}
+	}
+
+	if pcb.MaxRequestsPerConnection != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+			cb.MaxRequestsPerConnection = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
+		}
+	}
+
+	if pcb.PerEndpoint != nil {
+		perEndpoint := &ir.PerEndpointCircuitBreakers{}
+		if pcb.PerEndpoint.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+				perEndpoint.MaxConnections = &ui32
+			}
+		}
+		cb.PerEndpoint = perEndpoint
+	}
+
+	cb.RetryBudget = buildRetryBudget(policy.CircuitBreaker.RetryBudget)
 
 	return cb, nil
 }
@@ -391,6 +407,17 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		if preferLocal.Force != nil {
 			lb.PreferLocal.Force = &ir.ForceLocalZone{
 				MinEndpointsInZoneThreshold: preferLocal.Force.MinEndpointsInZoneThreshold,
+			}
+		}
+	}
+
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
 			}
 		}
 	}
@@ -509,6 +536,7 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
 		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
+		AlwaysEjectOneEndpoint:         hc.AlwaysEjectOneEndpoint,
 	}
 
 	if hc.Interval != nil {
@@ -601,6 +629,19 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 		irStatuses = append(irStatuses, ir.HTTPStatus(r))
 	}
 	irHTTP.ExpectedStatuses = irStatuses
+
+	// deduplicate retriable http statuses
+	retriableStatusSet := sets.NewInt()
+	for _, r := range h.RetriableStatuses {
+		retriableStatusSet.Insert(int(r))
+	}
+	if retriableStatusSet.Len() > 0 {
+		irRetriableStatuses := make([]ir.HTTPStatus, 0, retriableStatusSet.Len())
+		for _, r := range retriableStatusSet.List() {
+			irRetriableStatuses = append(irRetriableStatuses, ir.HTTPStatus(r))
+		}
+		irHTTP.RetriableStatuses = irRetriableStatuses
+	}
 
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
@@ -744,4 +785,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	}
 
 	return rt, nil
+}
+
+func buildRetryBudget(r *egv1a1.RetryBudget) *ir.RetryBudget {
+	if r == nil {
+		return nil
+	}
+
+	rb := &ir.RetryBudget{
+		Percent:             fractionalpercent.ToPercent(&r.Percent),
+		MinRetryConcurrency: ptr.Deref(r.MinRetryConcurrency, 3),
+	}
+	return rb
 }

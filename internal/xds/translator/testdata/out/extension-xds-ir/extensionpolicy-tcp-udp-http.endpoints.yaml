@@ -7,6 +7,10 @@
             address: 1.2.3.4
             portValue: 50000
       loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy-gateway.extension:
+            hook: applied
     loadBalancingWeight: 1
     locality:
       region: http-route-dest/backend/0

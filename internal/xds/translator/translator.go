@@ -160,7 +160,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		t.Logger.Error(err, "Failed to process JSON patches")
 	}
 
-	// Check if an extension want to inject any clusters/secrets
+	// Check if an extension want to modify the generated xDS resources
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies); err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -842,6 +842,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -869,6 +870,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				accesslog,
 				tcpListener.Timeout,
 				tcpListener.Connection,
+				tcpListener.TLS,
 			); err != nil {
 				errs = errors.Join(errs, err)
 			}
@@ -1103,8 +1105,8 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	xdsCluster := result.cluster
-	preferLocal := ptr.Deref(args.loadBalancer, ir.LoadBalancer{}).PreferLocal
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, preferLocal)
+	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {
@@ -1118,6 +1120,15 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	// Use EDS for static endpoints
 	switch args.endpointType {
 	case EndpointTypeStatic:
+		// Only process the PostEndpoints hook for EDS endpoints
+		// DNS endpoints can be modified by the PostCluster hook if needed
+		if err := processExtensionPostEndpointsHook(xdsEndpoints, args.extensionMgr); err != nil {
+			if args.extensionMgr != nil && !(*args.extensionMgr).FailOpen() {
+				return err
+			} else {
+				args.logger.Error(err, "Extension Manager PostEndpoints failure")
+			}
+		}
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}

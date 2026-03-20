@@ -75,7 +75,7 @@ type HTTPDirectResponseFilter struct {
 	ContentType *string `json:"contentType,omitempty"`
 
 	// Body of the direct response.
-	//
+	// Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
 	// +optional
 	Body *CustomResponseBody `json:"body,omitempty"`
 
@@ -188,7 +188,6 @@ type InjectedCredential struct {
 	// "credential", and the value should be the credential to be injected.
 	// For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
 	// for bearer token, the value should be "Bearer <token>".
-	// Note: The secret must be in the same namespace as the HTTPRouteFilter.
 	ValueRef gwapiv1.SecretObjectReference `json:"valueRef"`
 
 	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.

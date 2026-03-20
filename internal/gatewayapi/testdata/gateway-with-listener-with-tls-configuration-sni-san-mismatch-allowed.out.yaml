@@ -16,9 +16,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
         mode: Terminate
   status:
     listeners:
@@ -83,8 +81,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/tls
+      - name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
           name: https-443
@@ -130,7 +127,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

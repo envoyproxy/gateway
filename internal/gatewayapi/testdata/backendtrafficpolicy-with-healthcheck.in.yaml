@@ -166,6 +166,22 @@ httpRoutes:
       backendRefs:
       - name: service-4
         port: 8080
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-1
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-1
+    namespace: default
+  spec:
+    endpoints:
+    - hostname: "example.com"
+      ip:
+        address: 1.1.1.1
+        port: 3001
+      zone: zone1
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -225,6 +241,9 @@ backendTrafficPolicies:
           expectedStatuses:
           - 200
           - 201
+          retriableStatuses:
+          - 503
+          - 429
           expectedResponse:
             type: Text
             text: pong

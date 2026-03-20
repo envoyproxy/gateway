@@ -60,7 +60,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil)
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
 }
@@ -112,7 +112,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 				Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: 8080}},
 			}}
 
-			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil)
+			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil, nil)
 
 			require.Len(t, clusterLoadAssignment.GetEndpoints(), 1)
 			require.Len(t, clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints(), 1)
@@ -193,6 +193,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:             ptr.To[int32](10),
 				FailurePercentageThreshold:     ptr.To[uint32](85),
+				AlwaysEjectOneEndpoint:         ptr.To(true),
 			},
 			expected: &clusterv3.OutlierDetection{
 				SplitExternalLocalOriginErrors:     true,
@@ -205,6 +206,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				MaxEjectionPercent:                 wrapperspb.UInt32(10),
 				FailurePercentageThreshold:         wrapperspb.UInt32(85),
 				EnforcingFailurePercentage:         wrapperspb.UInt32(100),
+				AlwaysEjectOneHost:                 wrapperspb.Bool(true),
 			},
 		},
 	}

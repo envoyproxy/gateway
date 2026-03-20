@@ -272,6 +272,85 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
+                            clientIPGeoLocations:
+                              description: |-
+                                ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+                              items:
+                                description: ClientIPGeoLocation specifies geolocation-based
+                                  match criteria for authorization.
+                                properties:
+                                  anonymous:
+                                    description: Anonymous matches anonymous network
+                                      detection signals.
+                                    properties:
+                                      isAnonymous:
+                                        description: IsAnonymous matches whether the
+                                          client IP is considered anonymous.
+                                        type: boolean
+                                      isHosting:
+                                        description: IsHosting matches whether the
+                                          client IP belongs to a hosting provider.
+                                        type: boolean
+                                      isProxy:
+                                        description: IsProxy matches whether the client
+                                          IP belongs to a public proxy.
+                                        type: boolean
+                                      isTor:
+                                        description: IsTor matches whether the client
+                                          IP belongs to a Tor exit node.
+                                        type: boolean
+                                      isVPN:
+                                        description: IsVPN matches whether the client
+                                          IP is detected as VPN.
+                                        type: boolean
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: at least one of isAnonymous, isVPN,
+                                        isHosting, isTor, or isProxy must be specified
+                                      rule: has(self.isAnonymous) || has(self.isVPN)
+                                        || has(self.isHosting) || has(self.isTor)
+                                        || has(self.isProxy)
+                                  asn:
+                                    description: ASN is the autonomous system number
+                                      associated with the client IP.
+                                    format: int32
+                                    minimum: 1
+                                    type: integer
+                                  city:
+                                    description: City is the city associated with
+                                      the client IP.
+                                    maxLength: 128
+                                    minLength: 1
+                                    type: string
+                                  country:
+                                    description: Country is the country ISO code associated
+                                      with the client IP.
+                                    maxLength: 2
+                                    minLength: 2
+                                    pattern: ^[A-Za-z]{2}$
+                                    type: string
+                                  isp:
+                                    description: ISP is the internet service provider
+                                      associated with the client IP.
+                                    maxLength: 256
+                                    minLength: 1
+                                    type: string
+                                  region:
+                                    description: Region is the region ISO code associated
+                                      with the client IP.
+                                    maxLength: 16
+                                    minLength: 1
+                                    pattern: ^[A-Za-z0-9-]+$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: at least one of country, region, city,
+                                    asn, isp, or anonymous must be specified
+                                  rule: has(self.country) || has(self.region) || has(self.city)
+                                    || has(self.asn) || has(self.isp) || has(self.anonymous)
+                              minItems: 1
+                              type: array
                             headers:
                               description: |-
                                 Headers authorize the request based on user identity extracted from custom headers.
@@ -389,34 +468,12 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
-                            sourceCIDRs:
-                              description: |-
-                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
-                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-
-                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
-                                the source IP for the rule to match.
-
-                                The source IP is the IP address of the peer that connected to Envoy.
-                                This IP is obtained from the TCP connection's peer address and is not
-                                affected by X-Forwarded-For or other IP detection headers.
-                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
-                                the original client IP will only be available if the intermediary
-                                preserves the source address (for example by enabling the PROXY protocol
-                                or avoiding SNAT).
-                              items:
-                                description: |-
-                                  CIDR defines a CIDR Address range.
-                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
-                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
-                                type: string
-                              minItems: 1
-                              type: array
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, or headers
-                              must be specified
-                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers))
+                          - message: at least one of clientCIDRs, jwt, headers, or
+                              clientIPGeoLocations must be specified
+                            rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
+                              || has(self.clientIPGeoLocations))
                       required:
                       - action
                       - principal
@@ -446,8 +503,6 @@ spec:
                       Right now, only SHA hash algorithm is supported.
                       Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
                       for more details.
-
-                      Note: The secret must be in the same namespace as the SecurityPolicy.
                     properties:
                       group:
                         default: ""
@@ -920,6 +975,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -1111,6 +1205,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -1236,9 +1343,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -1270,6 +1379,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -1330,6 +1445,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -1649,6 +1797,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -1666,10 +1844,15 @@ spec:
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
-                                ? !has(self.zoneAware) : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -1831,6 +2014,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -2137,6 +2326,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -2328,6 +2556,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -2453,9 +2694,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -2487,6 +2730,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -2547,6 +2796,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -2866,6 +3148,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -2883,10 +3195,15 @@ spec:
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
-                                ? !has(self.zoneAware) : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -3050,6 +3367,12 @@ spec:
                                       which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -3112,6 +3435,51 @@ spec:
                       route matching decisions. If the recomputation selects a new route, features targeting
                       the new matched route will be applied.
                     type: boolean
+                  statusOnError:
+                    description: |-
+                      Sets the HTTP status that is returned when the authorization service returns an error
+                      or cannot be reached. Defaults to 403 Forbidden.
+                      Only 4xx and 5xx status codes are supported.
+                    enum:
+                    - 400
+                    - 401
+                    - 402
+                    - 403
+                    - 404
+                    - 405
+                    - 406
+                    - 407
+                    - 408
+                    - 409
+                    - 410
+                    - 411
+                    - 412
+                    - 413
+                    - 414
+                    - 415
+                    - 416
+                    - 417
+                    - 421
+                    - 422
+                    - 423
+                    - 424
+                    - 426
+                    - 428
+                    - 429
+                    - 431
+                    - 500
+                    - 501
+                    - 502
+                    - 503
+                    - 504
+                    - 505
+                    - 506
+                    - 507
+                    - 508
+                    - 510
+                    - 511
+                    format: int32
+                    type: integer
                   timeout:
                     description: |-
                       Timeout defines the timeout for requests to the external authorization service.
@@ -3551,6 +3919,45 @@ spec:
                                           minimum: 0
                                           type: integer
                                       type: object
+                                    retryBudget:
+                                      description: |-
+                                        RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                        RetryBudget take precedence over maxParallelRetries.
+                                      properties:
+                                        minRetryConcurrency:
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            For example, a budget of 20% with a minimum retry concurrency of 3
+                                            will allow 5 active retries while there are 25 active requests.
+                                            If there are 2 active requests, there are still 3 active retries
+                                            allowed because of the minimum retry concurrency.
+                                            Defaults to 3.
+                                          format: int32
+                                          type: integer
+                                        percent:
+                                          description: |-
+                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                            the sum of active requests and active pending requests.
+                                          properties:
+                                            denominator:
+                                              default: 100
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            numerator:
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                          required:
+                                          - numerator
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: numerator must be less than or
+                                              equal to denominator
+                                            rule: self.numerator <= self.denominator
+                                      required:
+                                      - percent
+                                      type: object
                                   type: object
                                 connection:
                                   description: Connection includes backend connection
@@ -3747,6 +4154,19 @@ spec:
                                               maxLength: 1024
                                               minLength: 1
                                               type: string
+                                            retriableStatuses:
+                                              description: |-
+                                                RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                                Responses matching these statuses count towards the unhealthy threshold but
+                                                do not result in the host being considered immediately unhealthy.
+                                                The expected statuses take precedence for any range overlaps with this field.
+                                              items:
+                                                description: HTTPStatus defines the
+                                                  http status code.
+                                                maximum: 599
+                                                minimum: 100
+                                                type: integer
+                                              type: array
                                           required:
                                           - path
                                           type: object
@@ -3878,10 +4298,11 @@ spec:
                                           type: string
                                         unhealthyThreshold:
                                           default: 3
-                                          description: UnhealthyThreshold defines
-                                            the number of unhealthy health checks
-                                            required before a backend host is marked
-                                            unhealthy.
+                                          description: |-
+                                            UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                            Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                            considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                            up to this threshold before the host is marked unhealthy.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -3914,6 +4335,12 @@ spec:
                                     passive:
                                       description: Passive passive check configuration
                                       properties:
+                                        alwaysEjectOneEndpoint:
+                                          default: false
+                                          description: |-
+                                            AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                            regardless of MaxEjectionPercent.
+                                          type: boolean
                                         baseEjectionTime:
                                           default: 30s
                                           description: BaseEjectionTime defines the
@@ -3975,6 +4402,41 @@ spec:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
                                   properties:
+                                    connectionKeepalive:
+                                      description: ConnectionKeepalive configures
+                                        HTTP/2 connection keepalive using PING frames.
+                                      properties:
+                                        idleInterval:
+                                          description: IdleInterval specifies how
+                                            long a connection must be idle before
+                                            a PING is sent.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        interval:
+                                          description: Interval specifies how often
+                                            to send HTTP/2 PING frames to keep the
+                                            connection alive.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        intervalJitter:
+                                          description: |-
+                                            IntervalJitter specifies a random jitter percentage added to each interval.
+                                            Defaults to 15% if not specified.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
+                                        timeout:
+                                          description: Timeout specifies how long
+                                            to wait for a PING response before considering
+                                            the connection dead.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: timeout must be less than interval
+                                        rule: '!has(self.timeout) || !has(self.interval)
+                                          || duration(self.timeout) < duration(self.interval)'
                                     initialConnectionWindowSize:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -4299,6 +4761,36 @@ spec:
                                               minimum: 0
                                               type: integer
                                           type: object
+                                        weightedZones:
+                                          description: |-
+                                            WeightedZones configures weight-based traffic distribution across locality zones.
+                                            Traffic is distributed proportionally based on the sum of all zone weights.
+                                          items:
+                                            description: WeightedZoneConfig defines
+                                              the weight for a specific locality zone.
+                                            properties:
+                                              weight:
+                                                description: |-
+                                                  Weight defines the weight for this locality.
+                                                  Higher values receive more traffic. The actual traffic distribution
+                                                  is proportional to this value relative to other localities.
+                                                format: int32
+                                                type: integer
+                                              zone:
+                                                description: |-
+                                                  Zone specifies the topology zone this weight applies to.
+                                                  The value should match the topology.kubernetes.io/zone label
+                                                  of the nodes where endpoints are running.
+                                                  Zones not listed in the configuration receive a default weight of 1.
+                                                type: string
+                                            required:
+                                            - weight
+                                            - zone
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-map-keys:
+                                          - zone
+                                          x-kubernetes-list-type: map
                                       type: object
                                   required:
                                   - type
@@ -4317,11 +4809,15 @@ spec:
                                       load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
-                                  - message: Currently ZoneAware is only supported
-                                      for LeastRequest, Random, and RoundRobin load
-                                      balancers.
-                                    rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
-                                      ? !has(self.zoneAware) : true '
+                                  - message: PreferLocal zone-aware routing is not
+                                      supported for ConsistentHash load balancers.
+                                      Use weightedZones instead.
+                                    rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                      ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware PreferLocal and WeightedZones
+                                      cannot be specified together.
+                                    rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                      && has(self.zoneAware.weightedZones)) : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -4486,6 +4982,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -4544,12 +5046,20 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
                 - providers
                 type: object
+              mergeType:
+                description: |-
+                  MergeType determines how this configuration is merged with existing SecurityPolicy
+                  configurations targeting a parent resource. When set, this configuration will be merged
+                  into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+                  This field cannot be set when targeting a parent resource (Gateway).
+                  If unset, no merging occurs, and only the most specific configuration takes effect.
+                type: string
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
@@ -5053,6 +5563,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -5244,6 +5793,19 @@ spec:
                                         maxLength: 1024
                                         minLength: 1
                                         type: string
+                                      retriableStatuses:
+                                        description: |-
+                                          RetriableStatuses defines a list of HTTP response statuses considered retriable.
+                                          Responses matching these statuses count towards the unhealthy threshold but
+                                          do not result in the host being considered immediately unhealthy.
+                                          The expected statuses take precedence for any range overlaps with this field.
+                                        items:
+                                          description: HTTPStatus defines the http
+                                            status code.
+                                          maximum: 599
+                                          minimum: 100
+                                          type: integer
+                                        type: array
                                     required:
                                     - path
                                     type: object
@@ -5369,9 +5931,11 @@ spec:
                                     type: string
                                   unhealthyThreshold:
                                     default: 3
-                                    description: UnhealthyThreshold defines the number
-                                      of unhealthy health checks required before a
-                                      backend host is marked unhealthy.
+                                    description: |-
+                                      UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+                                      Without RetriableStatuses configured, any health check failure results in the host being immediately
+                                      considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+                                      up to this threshold before the host is marked unhealthy.
                                     format: int32
                                     minimum: 1
                                     type: integer
@@ -5403,6 +5967,12 @@ spec:
                               passive:
                                 description: Passive passive check configuration
                                 properties:
+                                  alwaysEjectOneEndpoint:
+                                    default: false
+                                    description: |-
+                                      AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+                                      regardless of MaxEjectionPercent.
+                                    type: boolean
                                   baseEjectionTime:
                                     default: 30s
                                     description: BaseEjectionTime defines the base
@@ -5463,6 +6033,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -5782,6 +6385,36 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  weightedZones:
+                                    description: |-
+                                      WeightedZones configures weight-based traffic distribution across locality zones.
+                                      Traffic is distributed proportionally based on the sum of all zone weights.
+                                    items:
+                                      description: WeightedZoneConfig defines the
+                                        weight for a specific locality zone.
+                                      properties:
+                                        weight:
+                                          description: |-
+                                            Weight defines the weight for this locality.
+                                            Higher values receive more traffic. The actual traffic distribution
+                                            is proportional to this value relative to other localities.
+                                          format: int32
+                                          type: integer
+                                        zone:
+                                          description: |-
+                                            Zone specifies the topology zone this weight applies to.
+                                            The value should match the topology.kubernetes.io/zone label
+                                            of the nodes where endpoints are running.
+                                            Zones not listed in the configuration receive a default weight of 1.
+                                          type: string
+                                      required:
+                                      - weight
+                                      - zone
+                                      type: object
+                                    type: array
+                                    x-kubernetes-list-map-keys:
+                                    - zone
+                                    x-kubernetes-list-type: map
                                 type: object
                             required:
                             - type
@@ -5799,10 +6432,15 @@ spec:
                                 LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
-                            - message: Currently ZoneAware is only supported for LeastRequest,
-                                Random, and RoundRobin load balancers.
-                              rule: 'self.type in [''ConsistentHash'', ''BackendUtilization'']
-                                ? !has(self.zoneAware) : true '
+                            - message: PreferLocal zone-aware routing is not supported
+                                for ConsistentHash load balancers. Use weightedZones
+                                instead.
+                              rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware PreferLocal and WeightedZones cannot
+                                be specified together.
+                              rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
+                                && has(self.zoneAware.weightedZones)) : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -5964,6 +6602,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object

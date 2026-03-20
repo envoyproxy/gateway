@@ -232,8 +232,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/http
+      - name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -266,6 +265,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      statusOnError: 500
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -399,7 +399,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -468,6 +467,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
+            statusOnError: 500
       - destination:
           metadata:
             kind: HTTPRoute
@@ -525,6 +525,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
+            statusOnError: 500
       - destination:
           metadata:
             kind: HTTPRoute

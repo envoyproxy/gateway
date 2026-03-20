@@ -201,15 +201,13 @@ infraIR:
               samplingRate: 100
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - address: null
-        name: envoy-gateway/gateway-2/http-2
+      - name: envoy-gateway/gateway-2/http-2
         ports:
         - containerPort: 8888
           name: http-8888
@@ -254,7 +252,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -300,7 +297,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -315,7 +311,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
