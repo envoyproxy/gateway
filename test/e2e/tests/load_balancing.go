@@ -53,7 +53,7 @@ func init() {
 var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "BackendUtilizationLoadBalancing",
 	Description: "Test for backend utilization load balancing type",
-	Manifests:   []string{
+	Manifests: []string{
 		"testdata/load_balancing_backend_utilization.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
