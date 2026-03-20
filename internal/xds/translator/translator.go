@@ -8,7 +8,6 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -36,7 +35,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/cert"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
-	"github.com/envoyproxy/gateway/internal/xds/filters"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -673,56 +671,8 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
-	if httpListener.TLSOverlaps {
-		// add a route that matches all hosts and returns 421 to handle TLS overlapping scenario
-		domains := sets.NewString()
-		for _, h := range httpListener.TLSOverlapsHostnames {
-			domains.Insert(h)
-		}
-		out := domains.UnsortedList()
-		// sort the domains and make sure * is always at the end of the list since Envoy will match the domains in order and * should be the last one to be matched
-		sort.Slice(out, func(i, j int) bool {
-			if out[i] == "*" {
-				return false
-			}
-			if out[j] == "*" {
-				return true
-			}
-			return out[i] < out[j]
-		})
-		if len(out) != 0 {
-			xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, &routev3.VirtualHost{
-				Name:    virtualHostName(httpListener, "catch_all_tls_overlapping", t.xdsNameSchemeV2()),
-				Domains: out,
-				Routes: []*routev3.Route{
-					{
-						Match: &routev3.RouteMatch{
-							PathSpecifier: &routev3.RouteMatch_Prefix{
-								Prefix: "/",
-							},
-							FilterState: []*matcherv3.FilterStateMatcher{
-								{
-									Key: filters.DownstreamProtocolKey,
-									Matcher: &matcherv3.FilterStateMatcher_StringMatch{
-										StringMatch: &matcherv3.StringMatcher{
-											MatchPattern: &matcherv3.StringMatcher_Exact{
-												Exact: "HTTP/2",
-											},
-										},
-									},
-								},
-							},
-						},
-						Action: &routev3.Route_DirectResponse{
-							DirectResponse: &routev3.DirectResponseAction{
-								Status: 421,
-							},
-						},
-					},
-				},
-			})
-		}
-	}
+	t.mayPatchVirtualHostsForOverlaps(xdsRouteCfg, httpListener)
+
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.

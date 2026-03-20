@@ -97,6 +97,18 @@
             sectionName: https-with-wildcard-hostname
     name: envoy-gateway/gateway-1/https-with-wildcard-hostname/*_wildcard_org
     routes:
+    - directResponse:
+        status: 421
+      match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: fourth-example.wildcard.org
+        prefix: /
     - match:
         pathSeparatedPrefix: /detect-misdirected-requests
       metadata:
@@ -112,7 +124,6 @@
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
-    - fourth-example.wildcard.org
     - '*'
     name: envoy-gateway/gateway-1/https-with-wildcard-hostname/catch_all_tls_overlapping
     routes:
