@@ -8954,6 +8954,8 @@ spec:
 
                   - envoy.filters.http.dynamic_modules
 
+                  - envoy.filters.http.geoip
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -8998,6 +9000,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -9028,6 +9031,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -9056,6 +9060,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -9097,7 +9102,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -9115,7 +9120,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -9134,7 +9139,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -9153,7 +9158,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -9171,7 +9176,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -26803,7 +26808,13 @@ spec:
                             clientIPGeoLocations:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                This field is supported for HTTPRoute and GRPCRoute authorization.
+                                It is not supported for TCPRoute targets.
+
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+
+                                The client IP is inferred from the X-Forwarded-For header or a custom header.
+                                You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
                               items:
                                 description: ClientIPGeoLocation specifies geolocation-based
                                   match criteria for authorization.
