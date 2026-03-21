@@ -7,6 +7,7 @@ package translator
 
 import (
 	"sort"
+	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
@@ -106,16 +107,9 @@ func (t *Translator) mayPatchVirtualHostsForOverlaps(xdsRouteCfg *routev3.RouteC
 		return
 	}
 	out := domains.UnsortedList()
-	// sort the domains and make sure * is always at the end of the list since Envoy will match the domains in order and * should be the last one to be matched
-	sort.Slice(out, func(i, j int) bool {
-		if out[i] == "*" {
-			return false
-		}
-		if out[j] == "*" {
-			return true
-		}
-		return out[i] < out[j]
-	})
+	// Sort for stable XDS output. Envoy uses specificity-based domain matching
+	// (exact > suffix wildcard > prefix wildcard > "*"), so order doesn't affect routing.
+	sort.Strings(out)
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, &routev3.VirtualHost{
 		Name:    virtualHostName(httpListener, "catch_all_tls_overlapping", t.xdsNameSchemeV2()),
 		Domains: out,
@@ -134,16 +128,22 @@ func domainsMatched(vhDomains []string, overlapsHostname string) bool {
 
 // domainMatchHostname checks if the hostname is matched the virtual host domain,
 // it returns true if the hostname is matched by any of the overlaps hostnames, otherwise returns false.
-// e.g. *.wildcard.com will match www.wildcard.com, but not match www.sub.wildcard.com; * will match any hostname.
+// Per Gateway API spec, wildcards match only a single DNS label:
+// - *.example.com matches foo.example.com but NOT foo.bar.example.com
+// - * matches any hostname
 func domainMatchHostname(vhDomain, overlapsHostname string) bool {
 	if vhDomain == "*" {
 		return true
 	}
 	if len(vhDomain) > 2 && vhDomain[:2] == "*." {
-		domainSuffix := vhDomain[1:] // remove the leading '*'
-		if len(overlapsHostname) > len(domainSuffix) && overlapsHostname[len(overlapsHostname)-len(domainSuffix):] == domainSuffix {
-			return true
+		domainSuffix := vhDomain[1:] // e.g., ".example.com"
+		// Check: hostname must have the suffix and exactly one more label (no dots in prefix)
+		if strings.HasSuffix(overlapsHostname, domainSuffix) {
+			prefix := overlapsHostname[:len(overlapsHostname)-len(domainSuffix)]
+			// Wildcard matches single label only - prefix must be non-empty and not contain dots
+			return prefix != "" && !strings.Contains(prefix, ".")
 		}
+		return false
 	}
 	if vhDomain == overlapsHostname {
 		return true

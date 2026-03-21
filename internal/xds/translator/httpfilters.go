@@ -316,19 +316,27 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters, t.FilterOrder)
 
-	// if irListener.TLSOverlaps is true,
-	// we need to add a set-filter-state filter to set the downstream protocol for each route,
-	// and add a clear-route-cache filter to clear the route cache for each request to make sure the correct route is selected based on the downstream protocol.
-	// these two filters should be add before the router filter to make sure the downstream protocol is set and the route cache is cleared before the route selection.
+	// For listeners with overlapping TLS configs, add filters to detect misdirected HTTP/2 requests.
+	// We inject two filters BEFORE the router filter (which is always last after sortHTTPFilters):
+	// 1. set-filter-state: captures downstream protocol (%PROTOCOL%) for route matching
+	// 2. clear-route-cache: ensures route selection re-evaluates with updated filter state
+	// These enable 421 Misdirected Request responses per RFC 7540 §9.1.2
 	if irListener.TLSOverlaps {
+		// Assumption: router filter is always last (enforced by sortHTTPFilters above)
+		lastIdx := len(mgr.HttpFilters) - 1
 		httpFilters := make([]*hcmv3.HttpFilter, 0, len(mgr.HttpFilters)+2)
-		copy(httpFilters, mgr.HttpFilters[:len(mgr.HttpFilters)-1])
-		// add a set-filter-state which set %PROTOCOL% to 'eg.downstream_protocol'
+		copy(httpFilters, mgr.HttpFilters[:lastIdx])
+		
+		// Add protocol detection filter
 		setDownstreamProtocolFilter := filters.GenerateSetDownstreamProtocolFilter()
 		httpFilters = append(httpFilters, setDownstreamProtocolFilter)
-		// reset the cached route
+		
+		// Add route cache clear filter (temporary workaround)
 		clearRouteCacheFilter := filters.GenerateClearRouteCacheFilter()
-		httpFilters = append(httpFilters, clearRouteCacheFilter, mgr.HttpFilters[len(mgr.HttpFilters)-1])
+		httpFilters = append(httpFilters, clearRouteCacheFilter)
+		
+		// Re-append router filter at the end
+		httpFilters = append(httpFilters, mgr.HttpFilters[lastIdx])
 		mgr.HttpFilters = httpFilters
 	}
 	return nil

@@ -165,8 +165,8 @@
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
-    - '*.wildcard.org'
     - '*'
+    - '*.wildcard.org'
     name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard/catch_all_tls_overlapping
     routes:
     - directResponse:

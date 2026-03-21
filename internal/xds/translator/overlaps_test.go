@@ -55,10 +55,10 @@ func TestDomainMatchHostname(t *testing.T) {
 			want:             true,
 		},
 		{
-			name:             "wildcard subdomain matches two levels (suffix match)",
+			name:             "wildcard subdomain does NOT match two levels (Gateway API spec)",
 			vhDomain:         "*.wildcard.com",
 			overlapsHostname: "www.sub.wildcard.com",
-			want:             true,
+			want:             false,
 		},
 		{
 			name:             "wildcard subdomain does not match base domain",
@@ -174,10 +174,10 @@ func TestDomainsMatched(t *testing.T) {
 			want:             true,
 		},
 		{
-			name:             "wildcard subdomain matches multi-level",
+			name:             "wildcard subdomain does not match multi-level",
 			vhDomains:        []string{"example.com", "*.wildcard.com"},
 			overlapsHostname: "www.sub.wildcard.com",
-			want:             true,
+			want:             false,
 		},
 		{
 			name:             "empty domains list",
