@@ -129,7 +129,7 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: backend
+          name: merged-backend
           port: 3000
           weight: 1
       matches:
@@ -150,7 +150,7 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: backend
+          name: merged-backend
           port: 3000
           weight: 1
       matches:
@@ -171,7 +171,7 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: backend
+          name: merged-backend
           port: 3000
           weight: 1
       matches:
