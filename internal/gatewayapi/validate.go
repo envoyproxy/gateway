@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
+	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -763,9 +764,8 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 			for _, listener := range info.listeners {
 				target := getProtocolForListener(listener)
 				if info.protocol != "" && info.protocol != target {
-					// TCP+UDP is allowed
-					if (info.protocol == "TCP" && target == "UDP") ||
-						(info.protocol == "UDP" && target == "TCP") {
+					// UDP could be use same port with TCP.
+					if slices.Contains([]string{info.protocol, target}, "UDP") {
 						continue
 					}
 					listener.SetCondition(
