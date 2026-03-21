@@ -432,7 +432,7 @@ func containsPort(ports []*protocolPort, port *protocolPort) bool {
 	return false
 }
 
-// layer4Protocol returns listener L4 protocol and listen protocol level
+// layer4Protocol returns listener L4 protocol
 func layer4Protocol(protocolPort *protocolPort) string {
 	switch protocolPort.protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
