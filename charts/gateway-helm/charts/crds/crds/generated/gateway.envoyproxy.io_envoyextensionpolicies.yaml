@@ -1396,6 +1396,11 @@ spec:
                               Envoy HTTP filter namespaces
                             rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
+                    observabilityMode:
+                      default: false
+                      description: ObservabilityMode sets if envoy gateway should
+                        treat this external processor as "send and go"
+                      type: boolean
                     processingMode:
                       description: |-
                         ProcessingMode defines how request and response body is processed
@@ -1476,6 +1481,13 @@ spec:
                       && self.processingMode.request.body == ''FullDuplexStreamed'')
                       || (has(self.processingMode.response) && has(self.processingMode.response.body)
                       && self.processingMode.response.body == ''FullDuplexStreamed'')))'
+                  - message: If observabilityMode is enabled, body processing mode
+                      must be Streamed or unset.
+                    rule: '!(has(self.observabilityMode) && self.observabilityMode
+                      == true && has(self.processingMode) && ((has(self.processingMode.request)
+                      && has(self.processingMode.request.body) && self.processingMode.request.body
+                      != ''Streamed'') || (has(self.processingMode.response) && has(self.processingMode.response.body)
+                      && self.processingMode.response.body != ''Streamed'')))'
                 maxItems: 16
                 type: array
               lua:
