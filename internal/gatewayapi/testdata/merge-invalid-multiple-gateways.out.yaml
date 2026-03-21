@@ -77,20 +77,15 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: All listeners for a given port must use a compatible protocol
-        reason: ProtocolConflict
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
         status: "True"
-        type: Conflicted
-      - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: ProtocolConflict
-        status: "False"
-        type: Accepted
-      - lastTransitionTime: null
-        message: All listeners for a given port must use a unique hostname
-        reason: ProtocolConflict
-        status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
       - lastTransitionTime: null
         message: Listener references have been resolved
         reason: ResolvedRefs
@@ -119,6 +114,12 @@ infraIR:
         - containerPort: 10080
           name: http-80
           protocol: HTTP
+          servicePort: 80
+      - name: envoy-gateway/gateway-2/udp
+        ports:
+        - containerPort: 10080
+          name: udp-80
+          protocol: UDP
           servicePort: 80
       metadata:
         labels:
@@ -174,3 +175,13 @@ xdsIR:
       ipFamily: IPv4
       path: /ready
       port: 19003
+    udp:
+    - address: 0.0.0.0
+      externalPort: 80
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: udp
+      name: envoy-gateway/gateway-2/udp
+      port: 10080
