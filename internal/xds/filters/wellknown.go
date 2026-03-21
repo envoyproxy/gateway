@@ -112,7 +112,8 @@ func GenerateSetDownstreamProtocolFilter() *hcm.HttpFilter {
 }
 
 // GenerateClearRouteCacheFilter creates a filter that clears the route cache for each request.
-// TODO: remove this after https://github.com/envoyproxy/envoy/issues/44035 fixed.
+// This is a TEMPORARY workaround for Envoy's route caching behavior with filter state changes.
+// TODO: Remove this filter entirely after https://github.com/envoyproxy/envoy/issues/44035 is fixed.
 func GenerateClearRouteCacheFilter() *hcm.HttpFilter {
 	anyCfg, _ := proto.ToAnyWithValidation(&luafilterv3.Lua{
 		DefaultSourceCode: &corev3.DataSource{
