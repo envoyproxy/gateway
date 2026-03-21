@@ -10,9 +10,9 @@
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
         http2ProtocolOptions:
-          initialConnectionWindowSize: 33554432
+          initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
-          maxConcurrentStreams: 200
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
@@ -28,6 +28,27 @@
           routeConfigName: first-listener
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-10080
+        tracing:
+          clientSampling:
+            value: 100
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.opentelemetry
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.default.svc.cluster.local
+                  clusterName: tracing-0
+              sampler:
+                name: envoy.tracers.opentelemetry.samplers.always_on
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.tracers.opentelemetry.samplers.v3.AlwaysOnSamplerConfig
+              serviceName: fake-name.fake-ns
+          randomSampling:
+            value: 100
+          spawnUpstreamSpan: true
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
