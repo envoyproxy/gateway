@@ -322,17 +322,13 @@ func (t *Translator) patchHCMWithFilters(
 		lastIdx := len(mgr.HttpFilters) - 1
 		httpFilters := make([]*hcmv3.HttpFilter, 0, len(mgr.HttpFilters)+2)
 		copy(httpFilters, mgr.HttpFilters[:lastIdx])
-		
-		// Add protocol detection filter
+
+		// 1. Add protocol detection filter
+		// 2. Add route cache clear filter (temporary workaround)
+		// 3. Re-append router filter at the end
 		setDownstreamProtocolFilter := filters.GenerateSetDownstreamProtocolFilter()
-		httpFilters = append(httpFilters, setDownstreamProtocolFilter)
-		
-		// Add route cache clear filter (temporary workaround)
 		clearRouteCacheFilter := filters.GenerateClearRouteCacheFilter()
-		httpFilters = append(httpFilters, clearRouteCacheFilter)
-		
-		// Re-append router filter at the end
-		httpFilters = append(httpFilters, mgr.HttpFilters[lastIdx])
+		httpFilters = append(httpFilters, setDownstreamProtocolFilter, clearRouteCacheFilter, mgr.HttpFilters[lastIdx])
 		mgr.HttpFilters = httpFilters
 	}
 	return nil
