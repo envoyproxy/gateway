@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -138,8 +139,13 @@ func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a
 	cfg := zap.NewDevelopmentEncoderConfig()
 	var encoder zapcore.Encoder
 	logEncoder := egv1a1.EnvoyGatewayLogEncoderText
-	if logging != nil && logging.Encoder != nil {
-		logEncoder = *logging.Encoder
+	if logging != nil {
+		if logging.Encoder != nil {
+			logEncoder = *logging.Encoder
+		}
+		if ptr.Deref(logging.UseProductionEncoderConfig, false) {
+			cfg = zap.NewProductionEncoderConfig()
+		}
 	}
 
 	switch logEncoder {

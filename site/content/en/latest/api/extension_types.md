@@ -1622,6 +1622,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `level` | _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ |  true  | \{ default:info \} | Level is the logging level. If unspecified, defaults to "info".<br />EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit.<br />LogLevel options: debug/info/error/warn. |
 | `encoder` | _[EnvoyGatewayLogEncoder](#envoygatewaylogencoder)_ |  false  |  | Encoder defines the log encoder format.<br />If unspecified, defaults to "Text". |
+| `useProductionEncoderConfig` | _boolean_ |  false  |  | UseProductionEncoderConfig determines if the production encoder configuration should be used.<br />If true, the JSON output will use abbreviated field keys.<br />If unspecified, defaults to false. |
 
 
 #### EnvoyGatewayMetricSink
