@@ -84,3 +84,8 @@ Curl the example app through Envoy proxy:
 ```shell
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)

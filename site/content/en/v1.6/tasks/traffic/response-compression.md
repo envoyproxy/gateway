@@ -135,3 +135,8 @@ curl --verbose --header "Host: www.example.com" --header "Accept-Encoding: br;q=
 < vary: Accept-Encoding
 < transfer-encoding: chunked
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)

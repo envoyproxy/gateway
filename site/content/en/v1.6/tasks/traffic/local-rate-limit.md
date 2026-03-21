@@ -1013,6 +1013,11 @@ server: envoy
 
 As you can see, POST requests are rate limited after the 3rd request (returning 429), while GET requests to the same path are not rate limited.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [Local rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/local_rate_limiting
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
