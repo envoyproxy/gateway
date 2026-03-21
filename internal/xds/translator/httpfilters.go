@@ -311,6 +311,26 @@ func (t *Translator) patchHCMWithFilters(
 
 	// Sort the filters in the correct order.
 	mgr.HttpFilters = sortHTTPFilters(mgr.HttpFilters, t.FilterOrder)
+
+	// For listeners with overlapping TLS configs, add filters to detect misdirected HTTP/2 requests.
+	// We inject two filters BEFORE the router filter (which is always last after sortHTTPFilters):
+	// 1. set-filter-state: captures downstream protocol (%PROTOCOL%) for route matching
+	// 2. clear-route-cache: ensures route selection re-evaluates with updated filter state
+	// These enable 421 Misdirected Request responses per RFC 7540 §9.1.2
+	if irListener.TLSOverlaps {
+		// Assumption: router filter is always last (enforced by sortHTTPFilters above)
+		lastIdx := len(mgr.HttpFilters) - 1
+		httpFilters := make([]*hcmv3.HttpFilter, 0, len(mgr.HttpFilters)+2)
+		copy(httpFilters, mgr.HttpFilters[:lastIdx])
+
+		// 1. Add protocol detection filter
+		// 2. Add route cache clear filter (temporary workaround)
+		// 3. Re-append router filter at the end
+		setDownstreamProtocolFilter := filters.GenerateSetDownstreamProtocolFilter()
+		clearRouteCacheFilter := filters.GenerateClearRouteCacheFilter()
+		httpFilters = append(httpFilters, setDownstreamProtocolFilter, clearRouteCacheFilter, mgr.HttpFilters[lastIdx])
+		mgr.HttpFilters = httpFilters
+	}
 	return nil
 }
 

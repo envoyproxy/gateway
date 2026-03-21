@@ -671,6 +671,8 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	t.mayPatchVirtualHostsForOverlaps(xdsRouteCfg, httpListener)
+
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
