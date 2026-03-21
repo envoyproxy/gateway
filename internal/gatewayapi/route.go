@@ -1957,7 +1957,7 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isS
 	case egv1a1.KindBackend:
 		if destinationSettings.AddressType != nil && *destinationSettings.AddressType == ir.MIXED {
 			return status.NewRouteStatusError(
-				fmt.Errorf("mixed FQDN and IP or Unix address type for the same backendRef is not supported"),
+				fmt.Errorf("mixed FQDN with IP or Unix address type for the same backendRef is not supported"),
 				status.RouteReasonUnsupportedAddressType)
 		}
 	case resource.KindService, resource.KindServiceImport:
@@ -2505,7 +2505,14 @@ func (t *Translator) processBackendDestinationSetting(
 	}
 
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = ptr.To(ir.MIXED)
+		// IP + UDS mixing is supported by Envoy (both are static endpoint types).
+		// Only classify as MIXED when FQDN is involved, which requires different
+		// cluster resolution and cannot share a cluster with IP/UDS endpoints.
+		if len(addrTypeMap) == 2 && addrTypeMap[ir.IP] > 0 && addrTypeMap[ir.UDS] > 0 {
+			dstAddrType = ptr.To(ir.IP)
+		} else {
+			dstAddrType = ptr.To(ir.MIXED)
+		}
 	}
 
 	ds.Endpoints = dstEndpoints

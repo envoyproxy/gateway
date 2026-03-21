@@ -23,8 +23,8 @@ For these reasons, the Backend API is disabled by default in Envoy Gateway confi
 ## Restrictions
 
 The Backend API is currently supported only in the following BackendReferences:
-- [HTTPRoute]: IP and FQDN endpoints
-- [TLSRoute]: IP and FQDN endpoints
+- [HTTPRoute]: IP, FQDN and unix domain socket endpoints
+- [TLSRoute]: IP, FQDN and unix domain socket endpoints
 - [Envoy Extension Policy] (ExtProc): IP, FQDN and unix domain socket endpoints
 - [Security Policy]: IP and FQDN endpoints for the OIDC providers
 - [EnvoyProxy]: IP, FQDN and unix domain socket endpoints

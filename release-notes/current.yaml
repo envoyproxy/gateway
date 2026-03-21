@@ -49,6 +49,8 @@ bug fixes: |
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
   Fixed endpoint hostname is not respected when doing active health check.
   Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
+  Fixed Backend resources with mixed IP and Unix Domain Socket endpoints being incorrectly rejected as unsupported mixed address types.
+  Fixed Unix Domain Socket endpoints not being allowed in route Backend references.
 
 # Enhancements that improve performance.
 performance improvements: |
