@@ -142,9 +142,9 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
-	if gtwBacknedTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBacknedTLSConfig != nil {
+	if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
 		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
-			gtwBacknedTLSConfig, owner); err != nil {
+			gtwBackendTLSConfig, owner); err != nil {
 			return nil, err
 		}
 	}
@@ -268,7 +268,7 @@ func (t *Translator) processServerValidationTLSSettings(
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
 			}
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
-			caRefs := getObjecReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
+			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
 			// Backend doesn't allow cross-namespace reference, so pass nil resources here.
 			caCert, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
 				Name:      backend.Name,
@@ -383,7 +383,7 @@ func (t *Translator) processClientTLSSettings(
 
 		ns := NamespaceDerefOr(clientTLS.ClientCertificateRef.Namespace, owner.Namespace)
 		// cross-namespace Gateway.spec.tls.backend.clientCertificateRef is validated,
-		// we didn't to check again here.
+		// we don't need to check again here.
 		if owner.Kind != resource.KindGateway && ns != owner.Namespace {
 			err = fmt.Errorf("ClientCertificateRef Secret is not located in the same namespace as %s. Secret namespace: %s does not match %s namespace: %s", ownerResource, ns, ownerResource, owner.Namespace)
 			return tlsConfig, err
@@ -469,7 +469,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		return tlsBundle, nil
 	}
 
-	caRefs := getObjecReferences(gwapiv1.Namespace(backendTLSPolicy.Namespace), backendTLSPolicy.Spec.Validation.CACertificateRefs)
+	caRefs := getObjectReferences(gwapiv1.Namespace(backendTLSPolicy.Namespace), backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	// BackendTLSPolicy doesn't allow cross-namespace reference,
 	// so pass nil resources here
 	caCert, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
@@ -488,7 +488,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	return tlsBundle, nil
 }
 
-func getObjecReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReference) []gwapiv1.ObjectReference {
+func getObjectReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReference) []gwapiv1.ObjectReference {
 	caRefs := make([]gwapiv1.ObjectReference, 0, len(refs))
 	for _, caRef := range refs {
 		caRefs = append(caRefs, gwapiv1.ObjectReference{
