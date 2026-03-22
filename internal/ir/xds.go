@@ -628,6 +628,21 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +k8s:deepcopy-gen=true
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
+	// IdleInterval specifies idle time before sending a PING.
+	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration on the listener.
@@ -1454,6 +1469,11 @@ type ExtAuth struct {
 	// context in the filter chain.
 	// +optional
 	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -2845,6 +2865,9 @@ type CircuitBreaker struct {
 
 	// PerEndpoint defines per-endpoint Circuit Breakers
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+
+	// RetryBudget defines the retry budget configuration.
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
@@ -3198,6 +3221,10 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+
+	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -3216,6 +3243,15 @@ type Retry struct {
 
 	// PerRetry is the retry policy to be applied per retry attempt.
 	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+// RetryBudget defines the retry budget configuration.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// Percent is the percentage of requests that can be retried within a given time window.
+	Percent float64 `json:"percent"`
+	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
+	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }
 
 type TriggerEnum egv1a1.TriggerEnum

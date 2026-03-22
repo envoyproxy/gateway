@@ -110,6 +110,23 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		}
 	}
 
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &typev3.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.IdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.IdleInterval.Duration)
+		}
+		out.ConnectionKeepalive = keepalive
+	}
+
 	return out
 }
 
@@ -456,11 +473,13 @@ func (t *Translator) addHCMToXDSListener(
 			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
 		}
 
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
+		if connLimit.Value != nil {
+			cl := buildConnectionLimitFilter(statPrefix, connection)
+			if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+				filters = append(filters, clf)
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -721,7 +740,7 @@ func buildTCPFilterChain(
 	}
 
 	// Connection limit (if configured)
-	if connection != nil && connection.ConnectionLimit != nil {
+	if connection != nil && connection.ConnectionLimit != nil && connection.ConnectionLimit.Value != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
