@@ -284,3 +284,173 @@ func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 	require.NotNil(t, cswrr.SlowStartConfig.SlowStartWindow)
 	require.Equal(t, window, cswrr.SlowStartConfig.SlowStartWindow.AsDuration())
 }
+
+func TestGetHealthCheckOverridesHostname(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		endpoint    *ir.DestinationEndpoint
+		expected    string
+	}{
+		{
+			name: "nil HTTP health checker",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HealthyThreshold: ptr.To[uint32](3),
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with empty host and endpoint has hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with wildcard host and endpoint has hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with explicit host",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "health.example.com",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with empty host but nil endpoint",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: nil,
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with empty host but endpoint has nil hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: nil,
+			},
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with wildcard host but nil endpoint",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: nil,
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with wildcard host but endpoint has nil hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: nil,
+			},
+			expected: "",
+		},
+		{
+			name: "TCP health checker with endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					TCP: &ir.TCPHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "GRPC health checker with endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
