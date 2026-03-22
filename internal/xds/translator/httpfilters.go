@@ -324,7 +324,7 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 	if irListener.TLSOverlaps {
 		// Assumption: router filter is always last (enforced by sortHTTPFilters above)
 		lastIdx := len(mgr.HttpFilters) - 1
-		httpFilters := make([]*hcmv3.HttpFilter, 0, len(mgr.HttpFilters)+2)
+		httpFilters := make([]*hcmv3.HttpFilter, lastIdx, len(mgr.HttpFilters)+2)
 		copy(httpFilters, mgr.HttpFilters[:lastIdx])
 
 		// 1. Add protocol detection filter
