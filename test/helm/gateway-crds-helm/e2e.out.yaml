@@ -561,8 +561,9 @@ spec:
                       Aggression controls the rejection probability curve. A value of 1.0 means a linear
                       increase in rejection probability as the success rate decreases. Higher values
                       result in more aggressive rejection at higher success rates.
+                      Envoy clamps values below 1.0 to 1.0.
                       Defaults to 1.0 if not specified.
-                    minimum: 0
+                    minimum: 1
                     type: number
                   maxRejectionProbability:
                     description: |-
