@@ -36,6 +36,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -880,9 +881,12 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 
 	if tlsConfig.CACertificate != nil {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
+		// If the mode is not set to AllowInsecureFallback, require client certificate by default.
+		if tlsConfig.CACertificate.Mode != nil && ptr.Deref(tlsConfig.CACertificate.Mode, gwapiv1.AllowValidOnly) == gwapiv1.AllowValidOnly {
+			tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
+		}
 		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
-
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
@@ -903,7 +907,14 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 		Name:      tlsConfig.CACertificate.Name,
 		SdsConfig: makeConfigSource(),
 	}
-	if len(tlsConfig.VerifyCertificateSpki) > 0 || len(tlsConfig.VerifyCertificateHash) > 0 || len(tlsConfig.MatchTypedSubjectAltNames) > 0 {
+
+	frontendValidateMode := gwapiv1.AllowValidOnly
+	if tlsConfig.CACertificate != nil {
+		frontendValidateMode = ptr.Deref(tlsConfig.CACertificate.Mode, gwapiv1.AllowValidOnly)
+	}
+
+	if len(tlsConfig.VerifyCertificateSpki) > 0 || len(tlsConfig.VerifyCertificateHash) > 0 ||
+		len(tlsConfig.MatchTypedSubjectAltNames) > 0 || frontendValidateMode != gwapiv1.AllowValidOnly {
 		validationContext := &tlsv3.CertificateValidationContext{}
 		validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
 		validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
@@ -935,6 +946,10 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 				DefaultValidationContext:         validationContext,
 				ValidationContextSdsSecretConfig: sdsSecretConfig,
 			},
+		}
+
+		if frontendValidateMode == gwapiv1.AllowInsecureFallback {
+			validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
 		}
 	} else {
 		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{

@@ -26,7 +26,17 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 	opts.SkipTests = internalSuite.SkipTests
 	opts.SupportedFeatures = internalSuite.SupportedFeatures
 	opts.ExemptFeatures = internalSuite.ExemptFeatures
-	if egtests.IPFamily == "dual" {
+	switch egtests.IPFamily {
+	case "ipv6":
+		opts.SkipTests = append(opts.SkipTests,
+			// https://github.com/kubernetes-sigs/gateway-api/pull/4629
+			// TODO: remove this after v1.5.1 released
+			tests.GatewayFrontendInvalidDefaultClientCertificateValidation.ShortName,
+			tests.GatewayFrontendClientCertificateValidationInsecureFallback.ShortName,
+			tests.GatewayFrontendClientCertificateValidation.ShortName,
+			tests.GatewayFrontendInvalidDefaultClientCertificateValidation.ShortName,
+		)
+	case "dual":
 		// I don't know why this happens, but the UDPRoute test failed on dual stack
 		// because on some VM(e.g. Ubuntu 22.04), the ipv4 address for UDP gateway is not
 		// reachable. There's a same test in our e2e test fixtures that passed, it's so odd.
@@ -49,12 +59,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.GatewayInvalidTLSBackendConfiguration,
-		tests.GatewayTLSBackendClientCertificate,
-		tests.GatewayFrontendClientCertificateValidation,
-		tests.GatewayInvalidFrontendClientCertificateValidation,
-		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
-		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	}
 
