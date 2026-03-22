@@ -364,19 +364,25 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		backendUtilization := policy.LoadBalancer.BackendUtilization
 		if backendUtilization != nil {
 			if backendUtilization.BlackoutPeriod != nil {
-				if d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod)); err == nil {
-					lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+				d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid BlackoutPeriod value %s: %w", *backendUtilization.BlackoutPeriod, err)
 				}
+				lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
 			}
 			if backendUtilization.WeightExpirationPeriod != nil {
-				if d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod)); err == nil {
-					lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+				d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightExpirationPeriod value %s: %w", *backendUtilization.WeightExpirationPeriod, err)
 				}
+				lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
 			}
 			if backendUtilization.WeightUpdatePeriod != nil {
-				if d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod)); err == nil {
-					lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+				d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightUpdatePeriod value %s: %w", *backendUtilization.WeightUpdatePeriod, err)
 				}
+				lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
 			}
 			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
 				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
