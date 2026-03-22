@@ -70,6 +70,7 @@ http:
       settings:
       - endpoints:
         - host: "1.2.3.4"
+          hostname: example.com
           port: 50000
         name: "second-route-dest/backend/0"
   - name: "third-route"

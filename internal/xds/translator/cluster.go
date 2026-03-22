@@ -887,7 +887,8 @@ func buildHealthCheckConfig(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) *end
 	// If Active Health Check has an explicit hostname override at the cluster level, skip per-endpoint config.
 	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
 	// so that Envoy can use it for health checking.
-	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" {
+	// Note: The "*" wildcard is not an explicit user-provided hostname
+	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
 		return nil
 	}
 	if ep == nil || ep.Hostname == nil {
