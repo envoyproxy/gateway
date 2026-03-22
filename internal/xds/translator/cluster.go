@@ -449,27 +449,26 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		}
 	case args.loadBalancer.BackendUtilization != nil:
 		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
-		if v := args.loadBalancer.BackendUtilization; v != nil {
-			if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
-				cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+		v := args.loadBalancer.BackendUtilization
+		if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
+			cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+		}
+		if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
+			cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
+		}
+		if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
+			cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
+		}
+		if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
+			cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
 			}
-			if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
-				cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
-			}
-			if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
-				cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
-			}
-			if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
-				cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
-					SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
-				}
-			}
-			if v.ErrorUtilizationPenaltyPercent != nil {
-				cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
-			}
-			if len(v.MetricNamesForComputingUtilization) > 0 {
-				cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
-			}
+		}
+		if v.ErrorUtilizationPenaltyPercent != nil {
+			cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
+		}
+		if len(v.MetricNamesForComputingUtilization) > 0 {
+			cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
 		}
 		typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
 		if err != nil {
