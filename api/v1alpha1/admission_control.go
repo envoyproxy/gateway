@@ -38,10 +38,11 @@ type AdmissionControl struct {
 	// Aggression controls the rejection probability curve. A value of 1.0 means a linear
 	// increase in rejection probability as the success rate decreases. Higher values
 	// result in more aggressive rejection at higher success rates.
+	// Envoy clamps values below 1.0 to 1.0.
 	// Defaults to 1.0 if not specified.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0.0
+	// +kubebuilder:validation:Minimum=1.0
 	Aggression *float64 `json:"aggression,omitempty"`
 
 	// RPSThreshold defines the minimum requests per second below which requests will
