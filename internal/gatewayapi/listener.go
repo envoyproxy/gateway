@@ -44,7 +44,8 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			continue
 		}
 
-		resolvedRefsSuccess := true
+		frontendResolvedRefsSuccess := true
+		backendResolvedRefsSuccess := true
 		if gtw.Spec.TLS.Frontend != nil {
 			var gtwDefaultTLSCACertificate *ListenerFrontendTLSValidation
 			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
@@ -60,7 +61,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters,
 						fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
-					resolvedRefsSuccess = false
+					frontendResolvedRefsSuccess = false
 					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
 						ValidateError: err,
 					}
@@ -92,7 +93,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 				if err != nil {
 					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
 					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
-					resolvedRefsSuccess = false
+					frontendResolvedRefsSuccess = false
 					// should we fallback to the default validation if per-port validation is invalid? The spec doesn't explicitly say, but it seems safer to not fallback to default validation if per-port validation is specified but invalid, as it could lead to unexpected successful TLS handshakes. Instead, we will treat it as a separate validation error.
 					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
 						ValidateError: err,
@@ -139,7 +140,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 					metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef,
 					fmt.Sprintf("Invalid backend client certificate reference for gateway: %v", validateErr),
 				)
-				resolvedRefsSuccess = false
+				backendResolvedRefsSuccess = false
 			} else {
 				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
 				if ns != gtw.Namespace {
@@ -164,22 +165,22 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 							metav1.ConditionFalse, gwapiv1.GatewayReasonRefNotPermitted,
 							err.Error(),
 						)
-						resolvedRefsSuccess = false
+						backendResolvedRefsSuccess = false
 					}
 				}
-				if resolvedRefsSuccess {
+				if backendResolvedRefsSuccess {
 					secret := t.GetSecret(ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
 					switch {
 					case secret == nil:
 						err := fmt.Errorf("failed to get backend client certs for gateway")
 						t.Logger.Error(err, "Failed to get backend client certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
-						resolvedRefsSuccess = false
+						backendResolvedRefsSuccess = false
 					case !isValidClientCertificateRef(secret):
 						err := fmt.Errorf("invalid backend client cert secret for gateway: secret %s/%s must contain 'tls.crt' and 'tls.key' fields", ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
 						t.Logger.Error(err, "Invalid backend client cert secret for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
 						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
-						resolvedRefsSuccess = false
+						backendResolvedRefsSuccess = false
 					default:
 						gtw.backendTLS = &egv1a1.BackendTLSConfig{
 							ClientCertificateRef: gtw.Spec.TLS.Backend.ClientCertificateRef,
@@ -190,7 +191,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			}
 		}
 
-		if resolvedRefsSuccess {
+		if frontendResolvedRefsSuccess && backendResolvedRefsSuccess {
 			status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionTrue, gwapiv1.GatewayReasonResolvedRefs, "Successfully resolved all TLS references for the gateway")
 		}
 	}
