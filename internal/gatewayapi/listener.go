@@ -118,8 +118,9 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			}
 
 			for _, listener := range gtw.listeners {
-				// HTTP listener doesn't have TLS validation, skip directly.
-				if listener.Protocol == gwapiv1.HTTPProtocolType {
+				// Frontend TLS validation only applies to HTTPS listeners, per the API contract.
+				// Skip HTTP, TCP, TLS, and UDP listeners.
+				if listener.Protocol != gwapiv1.HTTPSProtocolType {
 					continue
 				}
 
@@ -141,7 +142,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 					fmt.Sprintf("Invalid backend client certificate reference for gateway: %v", validateErr),
 				)
 				backendResolvedRefsSuccess = false
-			} else {
+			} else if gtw.Spec.TLS.Backend.ClientCertificateRef != nil {
 				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
 				if ns != gtw.Namespace {
 					// check reference grant

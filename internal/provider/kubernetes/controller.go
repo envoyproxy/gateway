@@ -1682,8 +1682,10 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 						if isTransientError(err) {
 							return err
 						}
-						r.log.Error(err, "failed to process default TLS Frontend CACertificateRefs for gateway",
-							"gateway", gtw, "caCertificateRef", certRef)
+						if err != nil {
+							r.log.Error(err, "failed to process default TLS Frontend CACertificateRefs for gateway",
+								"gateway", gtw, "caCertificateRef", certRef)
+						}
 					}
 				}
 				for _, perPort := range tls.Frontend.PerPort {
@@ -1707,8 +1709,10 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, managedGC *g
 							return err
 						}
 
-						r.log.Error(err, "failed to process perPort TLS Frontend CACertificateRefs for gateway",
-							"gateway", gtw, "port", perPort.Port, "caCertificateRef", certRef)
+						if err != nil {
+							r.log.Error(err, "failed to process perPort TLS Frontend CACertificateRefs for gateway",
+								"gateway", gtw, "port", perPort.Port, "caCertificateRef", certRef)
+						}
 					}
 				}
 			}
