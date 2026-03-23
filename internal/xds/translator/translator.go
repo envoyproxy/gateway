@@ -761,6 +761,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
+	var sharedEmptyTCPRoute *ir.TCPRoute
+	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -851,28 +853,37 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
+			// Reuse shared EmptyCluster across all listeners without routes
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
-			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
-				Destination: &ir.RouteDestination{
+			if sharedEmptyTCPRoute == nil {
+				sharedEmptyTCPRoute = &ir.TCPRoute{
 					Name: emptyClusterName,
-				},
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+				}
 			}
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				emptyRoute,
-				emptyClusterName,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
-			); err != nil {
-				errs = errors.Join(errs, err)
+
+			// Only add the filter chain once per xDS listener; multiple IR listeners may share
+			// the same address/port and map to the same xDS listener.
+			if !emptyFilterChainAdded[xdsListener.Name] {
+				if err := t.addXdsTCPFilterChain(
+					xdsListener,
+					sharedEmptyTCPRoute,
+					emptyClusterName,
+					accesslog,
+					tcpListener.Timeout,
+					tcpListener.Connection,
+					tcpListener.TLS,
+				); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				emptyFilterChainAdded[xdsListener.Name] = true
 			}
 		}
 	}
