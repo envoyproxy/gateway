@@ -204,6 +204,16 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		}
 	}
 
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorDirectResponseConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+
 	return httpFiltersContext, errs.GetAllErrors()
 }
 
