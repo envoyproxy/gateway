@@ -208,12 +208,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 // A listener is not ready if it has Accepted=False or Programmed=False.
 func isListenerReady(listener *ListenerContext) bool {
 	conditions := listener.GetConditions()
-	
+
 	// No conditions yet means it will be set to ready during validation.
 	if len(conditions) == 0 {
 		return true
 	}
-	
+
 	// Check if Accepted=False or Programmed=False exists.
 	for _, cond := range conditions {
 		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
@@ -223,7 +223,7 @@ func isListenerReady(listener *ListenerContext) bool {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
