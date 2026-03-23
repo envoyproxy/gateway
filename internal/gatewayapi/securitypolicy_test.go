@@ -719,6 +719,11 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:$apr1$hashed_user2_password",
 			wantError: true,
 		},
+		{
+			name:      "valid htpasswd with CRLF line endings",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\r\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\r\n",
+			wantError: false,
+		},
 	}
 
 	for _, tt := range tests {

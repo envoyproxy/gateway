@@ -25,6 +25,8 @@ bug fixes: |
   Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
+  Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
+
 
 # Enhancements that improve performance.
 performance improvements: |
