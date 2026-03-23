@@ -314,7 +314,7 @@ func deepCopyPtr(src, dest interface{}) error {
 		return errors.New("cannot deep copy nil pointer")
 	}
 	srcVal := reflect.ValueOf(src)
-	destVal := reflect.ValueOf(src)
+	destVal := reflect.ValueOf(dest)
 	if srcVal.Kind() == reflect.Ptr && destVal.Kind() == reflect.Ptr {
 		srcElem := srcVal.Elem()
 		destVal = reflect.New(srcElem.Type())
