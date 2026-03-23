@@ -218,7 +218,7 @@ func TestDeleteIsCalledWhenResourcesExistDaemonSetMode(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	assert.Greater(t, counts["*v1.Deployment"], 0,
+	assert.Positive(t, counts["*v1.Deployment"],
 		"DeleteAllOf should be called for Deployment when it exists (DaemonSet mode)")
 }
 
