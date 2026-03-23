@@ -307,7 +307,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
       tlsOverlapsHostnames:
       - bar.example.com
       - foo.example.com
@@ -365,7 +364,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
       tlsOverlapsHostnames:
       - '*.example.com'
     - address: 0.0.0.0
@@ -422,7 +420,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
       tlsOverlapsHostnames:
       - '*.example.com'
     readyListener:

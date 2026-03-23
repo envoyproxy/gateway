@@ -21,25 +21,6 @@
           maxConcurrentStreams: 100
         http3ProtocolOptions: {}
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -90,25 +71,6 @@
           maxConcurrentStreams: 100
         http3ProtocolOptions: {}
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -159,25 +121,6 @@
           maxConcurrentStreams: 100
         http3ProtocolOptions: {}
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -235,25 +178,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -302,25 +226,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -369,25 +274,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: set downstream protocol
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
-            onRequestHeaders:
-            - factoryKey: envoy.string
-              formatString:
-                textFormatSource:
-                  inlineString: '%PROTOCOL%'
-              objectKey: eg.downstream_protocol
-              sharedWithUpstream: ONCE
-              skipIfEmpty: true
-        - name: clear route cache
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: |
-                function envoy_on_request(handle)
-                  handle:clearRouteCache()
-                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
