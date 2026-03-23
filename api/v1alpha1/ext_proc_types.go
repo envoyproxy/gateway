@@ -101,7 +101,6 @@ type ExtProc struct {
 	// ObservabilityMode sets if envoy gateway should treat this external processor as "send and go"
 	//
 	// +optional
-	// +kubebuilder:default=false
 	ObservabilityMode *bool `json:"observabilityMode,omitempty"`
 
 	// Metadata defines options related to the sending and receiving of dynamic metadata.
