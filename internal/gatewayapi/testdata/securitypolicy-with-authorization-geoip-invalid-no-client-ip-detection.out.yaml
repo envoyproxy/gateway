@@ -76,7 +76,9 @@ httpRoutes:
         port: 8080
       matches:
       - path:
-          value: /geo
+          value: /geo1
+      - path:
+          value: /geo2
   status:
     parents:
     - conditions:
@@ -244,7 +246,51 @@ xdsIR:
         pathMatch:
           distinct: false
           name: ""
-          prefix: /geo
+          prefix: /geo1
+        security:
+          authorization:
+            defaultAction: Deny
+            rules:
+            - action: Allow
+              name: allow-us-seattle-proxy
+              principal:
+                clientIPGeoLocations:
+                - anonymous:
+                    isProxy: true
+                  city: Seattle
+                  country: US
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-geo
+            namespace: default
+          name: httproute/default/httproute-geo/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-geo/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: www.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-geo
+          namespace: default
+        name: httproute/default/httproute-geo/rule/0/match/1/www_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /geo2
         security:
           authorization:
             defaultAction: Deny

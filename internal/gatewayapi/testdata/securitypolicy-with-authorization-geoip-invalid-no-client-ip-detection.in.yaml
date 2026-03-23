@@ -58,7 +58,9 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: /geo
+          value: /geo1
+      - path:
+          value: /geo2
       backendRefs:
       - name: service-1
         port: 8080
