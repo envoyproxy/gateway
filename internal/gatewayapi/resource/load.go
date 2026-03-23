@@ -70,18 +70,20 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoy
 		extBackend
 	)
 	extGVKMap := map[string]extCategory{}
-	if envoyGateway != nil && envoyGateway.ExtensionManager != nil {
-		for _, gvk := range envoyGateway.ExtensionManager.Resources {
-			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
-			extGVKMap[key] = extFilter
-		}
-		for _, gvk := range envoyGateway.ExtensionManager.PolicyResources {
-			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
-			extGVKMap[key] = extPolicy
-		}
-		for _, gvk := range envoyGateway.ExtensionManager.BackendResources {
-			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
-			extGVKMap[key] = extBackend
+	if envoyGateway != nil {
+		for _, em := range envoyGateway.GetExtensionManagers() {
+			for _, gvk := range em.Resources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extFilter
+			}
+			for _, gvk := range em.PolicyResources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extPolicy
+			}
+			for _, gvk := range em.BackendResources {
+				key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+				extGVKMap[key] = extBackend
+			}
 		}
 	}
 
