@@ -1001,7 +1001,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 
 							// Validate GeoIP if clientIPGeoLocations is used in the Authorization.
 							// We have to validate GeoIP here because it reuses the listener-level ClientIPDetection configuration from CTP.
-							if authorization.UsesClientIPGeoLocations() && !geoIPValidated {
+							if r.Security.Authorization.UsesClientIPGeoLocations() && !geoIPValidated {
 								geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gtwCtx.envoyProxy, irListener.ClientIPDetection)
 								if geoIPErr != nil {
 									geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
@@ -1010,26 +1010,22 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								} else if geoIPProvider != nil {
 									irListener.GeoIPProvider = geoIPProvider
 								}
+								// We only need to validate GeoIP once per listener
 								geoIPValidated = true
 							}
 
-							var errorResponse *ir.CustomResponse
 							if geoIPErr != nil || errs != nil {
 								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 								// and allow the request to go through.
 								// Otherwise, return a 500 direct response to avoid unauthorized access.
 								shouldFailOpen := extAuthErr != nil && !listenerHasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
 								if !shouldFailOpen {
-									errorResponse = &ir.CustomResponse{
+									// Return a 500 direct response to avoid unauthorized access
+									r.DirectResponse = &ir.CustomResponse{
 										StatusCode: ptr.To(uint32(500)),
 									}
+									routesWithDirectResponse.Insert(r.Name)
 								}
-							}
-
-							if errorResponse != nil {
-								// Return a 500 direct response to avoid unauthorized access
-								r.DirectResponse = errorResponse
-								routesWithDirectResponse.Insert(r.Name)
 							}
 						}
 					}
