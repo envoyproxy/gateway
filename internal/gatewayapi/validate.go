@@ -274,7 +274,7 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) bool {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
@@ -287,7 +287,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
 				"No conflicts detected")
 		}
-		return
+		return true
 	}
 
 	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
@@ -298,7 +298,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		return
+		return true
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
@@ -334,8 +334,26 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			)
 		}
 		// skip computing IR
-		return
+		return false
 	}
+
+	return true
+}
+
+// hasInvalidCondition checks if a listener has been marked as invalid during per-listener validation.
+// A listener is considered invalid if it has Programmed=False or Accepted=False conditions.
+// This is used during conflict resolution to skip invalid listeners so they don't block valid ones.
+func hasInvalidCondition(listener *ListenerContext) bool {
+	conditions := listener.GetConditions()
+	for _, cond := range conditions {
+		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
@@ -717,6 +735,11 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	listenerSets := sets.Set[string]{}
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if hasInvalidCondition(listener) {
+				continue
+			}
 			hostname := new(gwapiv1.Hostname)
 			if listener.Hostname != nil {
 				hostname = listener.Hostname
@@ -742,6 +765,11 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 		portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
 			if listener.Protocol == gwapiv1.UDPProtocolType || listener.Protocol == gwapiv1.TCPProtocolType {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if hasInvalidCondition(listener) {
 				continue
 			}
 			if portListenerInfo[listener.Port] == nil {
@@ -806,6 +834,11 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 	for _, gateway := range gateways {
 		portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if hasInvalidCondition(listener) {
+				continue
+			}
 			for _, protocol := range protocols {
 				if listener.Protocol == protocol {
 					if portListenerInfo[listener.Port] == nil {
