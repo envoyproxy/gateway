@@ -68,11 +68,12 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 	}
 
 	// Handle wildcard hostnames appropriately
-	if hostname == "*" {
+	switch {
+	case hostname == "*":
 		// Wildcard matches all hostnames, no specific :authority check needed
 		// The virtual host domain matching will handle it
 		return route
-	} else if len(hostname) > 2 && hostname[:2] == "*." {
+	case len(hostname) > 2 && hostname[:2] == "*.":
 		// Wildcard prefix like *.example.com - use suffix match for .example.com
 		suffix := hostname[1:] // Remove the *, keep the dot
 		route.Match.Headers = []*routev3.HeaderMatcher{
@@ -87,7 +88,7 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 				},
 			},
 		}
-	} else {
+	default:
 		// Exact hostname - use exact match
 		route.Match.Headers = []*routev3.HeaderMatcher{
 			{
