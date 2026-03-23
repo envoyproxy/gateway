@@ -36,6 +36,7 @@ new features: |
   Added support for configuring statusOnError in ExtAuth settings
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
+  Added support for upstrean access log.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
