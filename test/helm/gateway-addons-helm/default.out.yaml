@@ -32,10 +32,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -197,10 +197,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 data:
   config.yaml: |
     
@@ -297,10 +297,10 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 data:
   runtime-config.yaml: |
     {}
@@ -9982,10 +9982,10 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   name: loki-clusterrole
 rules:
 - apiGroups: [""] # "" indicates the core API group
@@ -10086,10 +10086,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 subjects:
   - kind: ServiceAccount
     name: loki
@@ -10205,10 +10205,10 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   annotations:
 spec:
   type: ClusterIP
@@ -10230,10 +10230,10 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
     variant: headless
     prometheus.io/service-monitor: "false"
   annotations:
@@ -10255,10 +10255,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   annotations:
 spec:
   type: ClusterIP
@@ -10700,10 +10700,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10743,7 +10743,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:3.6.5
+          image: docker.io/grafana/loki:3.6.7
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml
@@ -10793,7 +10793,7 @@ spec:
           resources:
             {}
         - name: loki-sc-rules
-          image: docker.io/kiwigrid/k8s-sidecar:1.30.9
+          image: docker.io/kiwigrid/k8s-sidecar:2.5.0
           imagePullPolicy: IfNotPresent
           env:
             - name: METHOD
@@ -10817,6 +10817,8 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: sc-rules-volume
               mountPath: "/rules"
       affinity:

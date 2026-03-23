@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"bytes"
 	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
 	"crypto/sha1"
 	"crypto/tls"
@@ -2013,6 +2014,10 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
+	// Normalize CRLF to LF so the \r is not included in the hash,
+	// which would cause Envoy to reject it as an invalid SHA hash length.
+	usersSecretBytes = bytes.ReplaceAll(usersSecretBytes, []byte("\r\n"), []byte("\n"))
+
 	// Validate the htpasswd format
 	if err := validateHtpasswdFormat(usersSecretBytes); err != nil {
 		return nil, err
@@ -2148,6 +2153,7 @@ func (t *Translator) buildExtAuth(
 		Traffic:           traffic,
 		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
 		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		StatusOnError:     policy.Spec.ExtAuth.StatusOnError,
 	}
 
 	if http != nil {

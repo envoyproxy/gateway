@@ -1,0 +1,84 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/http-plain
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/http-plain/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-mtls-request
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/https-mtls-request/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-mtls-requireany
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/https-mtls-requireany/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-mtls-verifyifgiven
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/https-mtls-verifyifgiven/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-mtls-requireandverify
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/https-mtls-requireandverify/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-1/https-mtls-request-with-ca
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: envoy-gateway/gateway-1/https-mtls-request-with-ca/gateway_envoyproxy_io
+    routes:
+    - match:
+        prefix: /
+      name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket

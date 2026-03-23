@@ -430,6 +430,12 @@ type TLSConfig struct {
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequireClientCertificate to enforce client certificate
 	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
+	// ClientValidationEnabled indicates downstream client-certificate request/validation must be configured
+	// even when CACertificate is nil (e.g. Request/RequireAny modes).
+	ClientValidationEnabled bool `json:"clientValidationEnabled,omitempty" yaml:"clientValidationEnabled,omitempty"`
+	// AcceptUntrusted permits the connection even when client certificate verification fails.
+	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
+	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
@@ -628,6 +634,21 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +k8s:deepcopy-gen=true
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
+	// IdleInterval specifies idle time before sending a PING.
+	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration on the listener.
@@ -1452,6 +1473,11 @@ type ExtAuth struct {
 	// context in the filter chain.
 	// +optional
 	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -2487,6 +2513,7 @@ type ProxyAccessLogType egv1a1.ProxyAccessLogType
 const (
 	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
+	ProxyAccessLogTypeUpstream = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeUpstream)
 )
 
 // ReadyListener holds the configuration for ready listener.
@@ -2735,6 +2762,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// BackendUtilization load balancer policy
+	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty" yaml:"backendUtilization,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// WeightedZones defines explicit weight-based traffic distribution across locality zones.
@@ -2760,6 +2789,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if l.BackendUtilization != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -2788,6 +2820,18 @@ type LeastRequest struct {
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
 type Random struct{}
+
+// BackendUtilization load balancer settings
+// +k8s:deepcopy-gen=true
+type BackendUtilization struct {
+	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+}
 
 // ConsistentHash load balancer settings
 // +k8s:deepcopy-gen=true
@@ -2843,6 +2887,9 @@ type CircuitBreaker struct {
 
 	// PerEndpoint defines per-endpoint Circuit Breakers
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+
+	// RetryBudget defines the retry budget configuration.
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
@@ -3159,6 +3206,10 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+
+	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -3177,6 +3228,15 @@ type Retry struct {
 
 	// PerRetry is the retry policy to be applied per retry attempt.
 	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+// RetryBudget defines the retry budget configuration.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// Percent is the percentage of requests that can be retried within a given time window.
+	Percent float64 `json:"percent"`
+	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
+	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }
 
 type TriggerEnum egv1a1.TriggerEnum
@@ -3573,4 +3633,6 @@ const (
 	RandomLoadBalancer LoadBalancerType = "Random"
 	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+	// BackendUtilizationLoadBalancer is the backend utilization load balancer type.
+	BackendUtilizationLoadBalancer LoadBalancerType = "BackendUtilization"
 )

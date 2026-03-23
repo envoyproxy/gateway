@@ -8,7 +8,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -1431,7 +1431,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: gatewayclasses.gateway.networking.k8s.io
 spec:
@@ -1951,7 +1951,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: gateways.gateway.networking.k8s.io
 spec:
@@ -5285,7 +5285,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: grpcroutes.gateway.networking.k8s.io
 spec:
@@ -7569,7 +7569,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -9402,6 +9402,8 @@ spec:
                                 or httpRouteFilterRequestRewrite, but not both
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
+                            - message: CORS filter cannot be repeated
+                              rule: self.filter(f, f.type == 'CORS').size() <= 1
                             - message: RequestHeaderModifier filter cannot be repeated
                               rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                                 <= 1
@@ -10921,6 +10923,8 @@ spec:
                           or httpRouteFilterRequestRewrite, but not both
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
+                      - message: CORS filter cannot be repeated
+                        rule: self.filter(f, f.type == 'CORS').size() <= 1
                       - message: RequestHeaderModifier filter cannot be repeated
                         rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                           <= 1
@@ -13663,6 +13667,8 @@ spec:
                                 or httpRouteFilterRequestRewrite, but not both
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
+                            - message: CORS filter cannot be repeated
+                              rule: self.filter(f, f.type == 'CORS').size() <= 1
                             - message: RequestHeaderModifier filter cannot be repeated
                               rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                                 <= 1
@@ -15182,6 +15188,8 @@ spec:
                           or httpRouteFilterRequestRewrite, but not both
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
+                      - message: CORS filter cannot be repeated
+                        rule: self.filter(f, f.type == 'CORS').size() <= 1
                       - message: RequestHeaderModifier filter cannot be repeated
                         rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
                           <= 1
@@ -16121,7 +16129,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: listenersets.gateway.networking.k8s.io
 spec:
@@ -16906,7 +16914,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: referencegrants.gateway.networking.k8s.io
 spec:
@@ -17264,7 +17272,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: tcproutes.gateway.networking.k8s.io
 spec:
@@ -18025,7 +18033,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: tlsroutes.gateway.networking.k8s.io
 spec:
@@ -20400,7 +20408,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: udproutes.gateway.networking.k8s.io
 spec:
@@ -21161,7 +21169,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   labels:
     gateway.networking.k8s.io/policy: Direct
@@ -21774,7 +21782,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/4530
-    gateway.networking.k8s.io/bundle-version: v1.5.0
+    gateway.networking.k8s.io/bundle-version: v1.5.1
     gateway.networking.k8s.io/channel: experimental
   name: xmeshes.gateway.networking.x-k8s.io
 spec:
@@ -22632,6 +22640,44 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  retryBudget:
+                    description: |-
+                      RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                      RetryBudget take precedence over maxParallelRetries.
+                    properties:
+                      minRetryConcurrency:
+                        description: |-
+                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                          For example, a budget of 20% with a minimum retry concurrency of 3
+                          will allow 5 active retries while there are 25 active requests.
+                          If there are 2 active requests, there are still 3 active retries
+                          allowed because of the minimum retry concurrency.
+                          Defaults to 3.
+                        format: int32
+                        type: integer
+                      percent:
+                        description: |-
+                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                          the sum of active requests and active pending requests.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                    required:
+                    - percent
+                    type: object
                 type: object
               compression:
                 description: |-
@@ -23189,6 +23235,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -23263,6 +23341,59 @@ spec:
                   LoadBalancer policy to apply when routing traffic from the gateway to
                   the backend endpoints. Defaults to `LeastRequest`.
                 properties:
+                  backendUtilization:
+                    description: |-
+                      BackendUtilization defines the configuration when the load balancer type is
+                      set to BackendUtilization.
+                    properties:
+                      blackoutPeriod:
+                        description: |-
+                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                          Default is 10s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      errorUtilizationPenaltyPercent:
+                        description: |-
+                          ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                          This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                          For example:
+                          - 100 => 1.0x
+                          - 120 => 1.2x
+                          - 200 => 2.0x
+
+                          Note: In the internal IR/XDS configuration this value is converted back to a
+                          floating point multiplier (value / 100.0).
+
+                          Must be non-negative.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      keepResponseHeaders:
+                        default: false
+                        description: |-
+                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                          Defaults to false.
+                        type: boolean
+                      metricNamesForComputingUtilization:
+                        description: |-
+                          Metric names used to compute utilization if application_utilization is not set.
+                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                        items:
+                          type: string
+                        type: array
+                      weightExpirationPeriod:
+                        description: If a given endpoint has not reported load metrics
+                          in this long, stop using the reported weight. Defaults to
+                          3m.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      weightUpdatePeriod:
+                        description: How often endpoint weights are recalculated.
+                          Values less than 100ms are capped at 100ms. Default 1s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                   consistentHash:
                     description: |-
                       ConsistentHash defines the configuration when the load balancer type is
@@ -23409,7 +23540,7 @@ spec:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
                       If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                      Currently this is only supported for RoundRobin and LeastRequest load balancers
+                      Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                     properties:
                       window:
                         description: |-
@@ -23429,12 +23560,14 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin".
+                      "RoundRobin",
+                      "BackendUtilization".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
+                    - BackendUtilization
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -23510,14 +23643,23 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
-                - message: Currently SlowStart is only supported for RoundRobin and
-                    LeastRequest load balancers.
+                - message: If LoadBalancer type is BackendUtilization, backendUtilization
+                    field needs to be set.
+                  rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                    : !has(self.backendUtilization)'
+                - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
+                    and BackendUtilization load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware routing is not supported for BackendUtilization
+                    load balancers. BackendUtilization only handles picking endpoints
+                    within a single locality.
+                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                    : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
@@ -25199,6 +25341,12 @@ spec:
                           response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -25759,9 +25907,10 @@ spec:
                         format: int64
                         minimum: 1
                         type: integer
-                    required:
-                    - value
                     type: object
+                    x-kubernetes-validations:
+                    - message: closeDelay can only be configured when value is set
+                      rule: '!has(self.closeDelay) || has(self.value)'
                   maxAcceptPerSocketEvent:
                     default: 1
                     description: |-
@@ -26431,6 +26580,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -26956,10 +27137,22 @@ spec:
                         required:
                         - refs
                         type: object
+                      mode:
+                        description: |-
+                          Mode defines how the Gateway or Listener validates client certificates.
+                          If not specified, defaults to RequireAndVerify.
+                        enum:
+                        - Request
+                        - RequireAny
+                        - VerifyIfGiven
+                        - RequireAndVerify
+                        type: string
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
+
+                          Deprecated: Use Mode instead.
                         type: boolean
                       spkiHashes:
                         description: |-
@@ -27917,6 +28110,45 @@ spec:
                                   minimum: 0
                                   type: integer
                               type: object
+                            retryBudget:
+                              description: |-
+                                RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                RetryBudget take precedence over maxParallelRetries.
+                              properties:
+                                minRetryConcurrency:
+                                  description: |-
+                                    MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                    For example, a budget of 20% with a minimum retry concurrency of 3
+                                    will allow 5 active retries while there are 25 active requests.
+                                    If there are 2 active requests, there are still 3 active retries
+                                    allowed because of the minimum retry concurrency.
+                                    Defaults to 3.
+                                  format: int32
+                                  type: integer
+                                percent:
+                                  description: |-
+                                    Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                    the sum of active requests and active pending requests.
+                                  properties:
+                                    denominator:
+                                      default: 100
+                                      format: int32
+                                      minimum: 1
+                                      type: integer
+                                    numerator:
+                                      format: int32
+                                      minimum: 0
+                                      type: integer
+                                  required:
+                                  - numerator
+                                  type: object
+                                  x-kubernetes-validations:
+                                  - message: numerator must be less than or equal
+                                      to denominator
+                                    rule: self.numerator <= self.denominator
+                              required:
+                              - percent
+                              type: object
                           type: object
                         connection:
                           description: Connection includes backend connection settings.
@@ -28344,6 +28576,39 @@ spec:
                           description: HTTP2 provides HTTP/2 configuration for backend
                             connections.
                           properties:
+                            connectionKeepalive:
+                              description: ConnectionKeepalive configures HTTP/2 connection
+                                keepalive using PING frames.
+                              properties:
+                                idleInterval:
+                                  description: IdleInterval specifies how long a connection
+                                    must be idle before a PING is sent.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                interval:
+                                  description: Interval specifies how often to send
+                                    HTTP/2 PING frames to keep the connection alive.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                intervalJitter:
+                                  description: |-
+                                    IntervalJitter specifies a random jitter percentage added to each interval.
+                                    Defaults to 15% if not specified.
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 0
+                                  type: integer
+                                timeout:
+                                  description: Timeout specifies how long to wait
+                                    for a PING response before considering the connection
+                                    dead.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
+                              x-kubernetes-validations:
+                              - message: timeout must be less than interval
+                                rule: '!has(self.timeout) || !has(self.interval) ||
+                                  duration(self.timeout) < duration(self.interval)'
                             initialConnectionWindowSize:
                               allOf:
                               - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -28387,6 +28652,60 @@ spec:
                             LoadBalancer policy to apply when routing traffic from the gateway to
                             the backend endpoints. Defaults to `LeastRequest`.
                           properties:
+                            backendUtilization:
+                              description: |-
+                                BackendUtilization defines the configuration when the load balancer type is
+                                set to BackendUtilization.
+                              properties:
+                                blackoutPeriod:
+                                  description: |-
+                                    A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                    Default is 10s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                errorUtilizationPenaltyPercent:
+                                  description: |-
+                                    ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                    This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                    For example:
+                                    - 100 => 1.0x
+                                    - 120 => 1.2x
+                                    - 200 => 2.0x
+
+                                    Note: In the internal IR/XDS configuration this value is converted back to a
+                                    floating point multiplier (value / 100.0).
+
+                                    Must be non-negative.
+                                  format: int32
+                                  minimum: 0
+                                  type: integer
+                                keepResponseHeaders:
+                                  default: false
+                                  description: |-
+                                    KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                    Defaults to false.
+                                  type: boolean
+                                metricNamesForComputingUtilization:
+                                  description: |-
+                                    Metric names used to compute utilization if application_utilization is not set.
+                                    For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If a given endpoint has not reported
+                                    load metrics in this long, stop using the reported
+                                    weight. Defaults to 3m.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often endpoint weights are recalculated.
+                                    Values less than 100ms are capped at 100ms. Default
+                                    1s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
                             consistentHash:
                               description: |-
                                 ConsistentHash defines the configuration when the load balancer type is
@@ -28539,7 +28858,7 @@ spec:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
                                 If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                               properties:
                                 window:
                                   description: |-
@@ -28559,12 +28878,14 @@ spec:
                                 "ConsistentHash",
                                 "LeastRequest",
                                 "Random",
-                                "RoundRobin".
+                                "RoundRobin",
+                                "BackendUtilization".
                               enum:
                               - ConsistentHash
                               - LeastRequest
                               - Random
                               - RoundRobin
+                              - BackendUtilization
                               type: string
                             zoneAware:
                               description: ZoneAware defines the configuration related
@@ -28642,8 +28963,12 @@ spec:
                               field needs to be set.
                             rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                               : !has(self.consistentHash)'
-                          - message: Currently SlowStart is only supported for RoundRobin
-                              and LeastRequest load balancers.
+                          - message: If LoadBalancer type is BackendUtilization, backendUtilization
+                              field needs to be set.
+                            rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                              : !has(self.backendUtilization)'
+                          - message: Currently SlowStart is only supported for RoundRobin,
+                              LeastRequest, and BackendUtilization load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
                           - message: PreferLocal zone-aware routing is not supported
@@ -28651,6 +28976,11 @@ spec:
                               instead.
                             rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware routing is not supported for BackendUtilization
+                              load balancers. BackendUtilization only handles picking
+                              endpoints within a single locality.
+                            rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                              : true'
                           - message: ZoneAware PreferLocal and WeightedZones cannot
                               be specified together.
                             rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -28815,6 +29145,12 @@ spec:
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                streamIdleTimeout:
+                                  description: |2-
+                                     The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                     If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
@@ -41936,6 +42272,45 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: |-
+                                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                                  RetryBudget take precedence over maxParallelRetries.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -42401,6 +42776,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -42444,6 +42858,63 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              backendUtilization:
+                                                description: |-
+                                                  BackendUtilization defines the configuration when the load balancer type is
+                                                  set to BackendUtilization.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  errorUtilizationPenaltyPercent:
+                                                    description: |-
+                                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                      For example:
+                                                      - 100 => 1.0x
+                                                      - 120 => 1.2x
+                                                      - 200 => 2.0x
+
+                                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                                      floating point multiplier (value / 100.0).
+
+                                                      Must be non-negative.
+                                                    format: int32
+                                                    minimum: 0
+                                                    type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -42611,7 +43082,7 @@ spec:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                                 properties:
                                                   window:
                                                     description: |-
@@ -42631,12 +43102,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "BackendUtilization".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - BackendUtilization
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -42721,9 +43194,14 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is BackendUtilization,
+                                                backendUtilization field needs to
+                                                be set.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                             - message: Currently SlowStart is only
-                                                supported for RoundRobin and LeastRequest
-                                                load balancers.
+                                                supported for RoundRobin, LeastRequest,
+                                                and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
                                             - message: PreferLocal zone-aware routing
@@ -42733,6 +43211,12 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for BackendUtilization load balancers.
+                                                BackendUtilization only handles picking
+                                                endpoints within a single locality.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -42907,6 +43391,12 @@ spec:
                                                       the time until which entire
                                                       response is received from the
                                                       upstream.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
                                                 type: object
@@ -43264,6 +43754,45 @@ spec:
                                                     minimum: 0
                                                     type: integer
                                                 type: object
+                                              retryBudget:
+                                                description: |-
+                                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                                  RetryBudget take precedence over maxParallelRetries.
+                                                properties:
+                                                  minRetryConcurrency:
+                                                    description: |-
+                                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                                      will allow 5 active retries while there are 25 active requests.
+                                                      If there are 2 active requests, there are still 3 active retries
+                                                      allowed because of the minimum retry concurrency.
+                                                      Defaults to 3.
+                                                    format: int32
+                                                    type: integer
+                                                  percent:
+                                                    description: |-
+                                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                      the sum of active requests and active pending requests.
+                                                    properties:
+                                                      denominator:
+                                                        default: 100
+                                                        format: int32
+                                                        minimum: 1
+                                                        type: integer
+                                                      numerator:
+                                                        format: int32
+                                                        minimum: 0
+                                                        type: integer
+                                                    required:
+                                                    - numerator
+                                                    type: object
+                                                    x-kubernetes-validations:
+                                                    - message: numerator must be less
+                                                        than or equal to denominator
+                                                      rule: self.numerator <= self.denominator
+                                                required:
+                                                - percent
+                                                type: object
                                             type: object
                                           connection:
                                             description: Connection includes backend
@@ -43729,6 +44258,45 @@ spec:
                                             description: HTTP2 provides HTTP/2 configuration
                                               for backend connections.
                                             properties:
+                                              connectionKeepalive:
+                                                description: ConnectionKeepalive configures
+                                                  HTTP/2 connection keepalive using
+                                                  PING frames.
+                                                properties:
+                                                  idleInterval:
+                                                    description: IdleInterval specifies
+                                                      how long a connection must be
+                                                      idle before a PING is sent.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  interval:
+                                                    description: Interval specifies
+                                                      how often to send HTTP/2 PING
+                                                      frames to keep the connection
+                                                      alive.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  intervalJitter:
+                                                    description: |-
+                                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                                      Defaults to 15% if not specified.
+                                                    format: int32
+                                                    maximum: 100
+                                                    minimum: 0
+                                                    type: integer
+                                                  timeout:
+                                                    description: Timeout specifies
+                                                      how long to wait for a PING
+                                                      response before considering
+                                                      the connection dead.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
+                                                x-kubernetes-validations:
+                                                - message: timeout must be less than
+                                                    interval
+                                                  rule: '!has(self.timeout) || !has(self.interval)
+                                                    || duration(self.timeout) < duration(self.interval)'
                                               initialConnectionWindowSize:
                                                 allOf:
                                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -43772,6 +44340,63 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              backendUtilization:
+                                                description: |-
+                                                  BackendUtilization defines the configuration when the load balancer type is
+                                                  set to BackendUtilization.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  errorUtilizationPenaltyPercent:
+                                                    description: |-
+                                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                      For example:
+                                                      - 100 => 1.0x
+                                                      - 120 => 1.2x
+                                                      - 200 => 2.0x
+
+                                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                                      floating point multiplier (value / 100.0).
+
+                                                      Must be non-negative.
+                                                    format: int32
+                                                    minimum: 0
+                                                    type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -43939,7 +44564,7 @@ spec:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                                 properties:
                                                   window:
                                                     description: |-
@@ -43959,12 +44584,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "BackendUtilization".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - BackendUtilization
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -44049,9 +44676,14 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is BackendUtilization,
+                                                backendUtilization field needs to
+                                                be set.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                             - message: Currently SlowStart is only
-                                                supported for RoundRobin and LeastRequest
-                                                load balancers.
+                                                supported for RoundRobin, LeastRequest,
+                                                and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
                                             - message: PreferLocal zone-aware routing
@@ -44061,6 +44693,12 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for BackendUtilization load balancers.
+                                                BackendUtilization only handles picking
+                                                endpoints within a single locality.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -44237,6 +44875,12 @@ spec:
                                                       upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -44386,6 +45030,7 @@ spec:
                               enum:
                               - Listener
                               - Route
+                              - Upstream
                               type: string
                           required:
                           - sinks
@@ -44772,6 +45417,45 @@ spec:
                                               maximum: 4294967295
                                               minimum: 0
                                               type: integer
+                                          type: object
+                                        retryBudget:
+                                          description: |-
+                                            RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                            RetryBudget take precedence over maxParallelRetries.
+                                          properties:
+                                            minRetryConcurrency:
+                                              description: |-
+                                                MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                                For example, a budget of 20% with a minimum retry concurrency of 3
+                                                will allow 5 active retries while there are 25 active requests.
+                                                If there are 2 active requests, there are still 3 active retries
+                                                allowed because of the minimum retry concurrency.
+                                                Defaults to 3.
+                                              format: int32
+                                              type: integer
+                                            percent:
+                                              description: |-
+                                                Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                                the sum of active requests and active pending requests.
+                                              properties:
+                                                denominator:
+                                                  default: 100
+                                                  format: int32
+                                                  minimum: 1
+                                                  type: integer
+                                                numerator:
+                                                  format: int32
+                                                  minimum: 0
+                                                  type: integer
+                                              required:
+                                              - numerator
+                                              type: object
+                                              x-kubernetes-validations:
+                                              - message: numerator must be less than
+                                                  or equal to denominator
+                                                rule: self.numerator <= self.denominator
+                                          required:
+                                          - percent
                                           type: object
                                       type: object
                                     connection:
@@ -45218,6 +45902,42 @@ spec:
                                       description: HTTP2 provides HTTP/2 configuration
                                         for backend connections.
                                       properties:
+                                        connectionKeepalive:
+                                          description: ConnectionKeepalive configures
+                                            HTTP/2 connection keepalive using PING
+                                            frames.
+                                          properties:
+                                            idleInterval:
+                                              description: IdleInterval specifies
+                                                how long a connection must be idle
+                                                before a PING is sent.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            interval:
+                                              description: Interval specifies how
+                                                often to send HTTP/2 PING frames to
+                                                keep the connection alive.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            intervalJitter:
+                                              description: |-
+                                                IntervalJitter specifies a random jitter percentage added to each interval.
+                                                Defaults to 15% if not specified.
+                                              format: int32
+                                              maximum: 100
+                                              minimum: 0
+                                              type: integer
+                                            timeout:
+                                              description: Timeout specifies how long
+                                                to wait for a PING response before
+                                                considering the connection dead.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: timeout must be less than interval
+                                            rule: '!has(self.timeout) || !has(self.interval)
+                                              || duration(self.timeout) < duration(self.interval)'
                                         initialConnectionWindowSize:
                                           allOf:
                                           - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -45261,6 +45981,62 @@ spec:
                                         LoadBalancer policy to apply when routing traffic from the gateway to
                                         the backend endpoints. Defaults to `LeastRequest`.
                                       properties:
+                                        backendUtilization:
+                                          description: |-
+                                            BackendUtilization defines the configuration when the load balancer type is
+                                            set to BackendUtilization.
+                                          properties:
+                                            blackoutPeriod:
+                                              description: |-
+                                                A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                Default is 10s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            errorUtilizationPenaltyPercent:
+                                              description: |-
+                                                ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                For example:
+                                                - 100 => 1.0x
+                                                - 120 => 1.2x
+                                                - 200 => 2.0x
+
+                                                Note: In the internal IR/XDS configuration this value is converted back to a
+                                                floating point multiplier (value / 100.0).
+
+                                                Must be non-negative.
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                            keepResponseHeaders:
+                                              default: false
+                                              description: |-
+                                                KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                Defaults to false.
+                                              type: boolean
+                                            metricNamesForComputingUtilization:
+                                              description: |-
+                                                Metric names used to compute utilization if application_utilization is not set.
+                                                For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                              items:
+                                                type: string
+                                              type: array
+                                            weightExpirationPeriod:
+                                              description: If a given endpoint has
+                                                not reported load metrics in this
+                                                long, stop using the reported weight.
+                                                Defaults to 3m.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            weightUpdatePeriod:
+                                              description: How often endpoint weights
+                                                are recalculated. Values less than
+                                                100ms are capped at 100ms. Default
+                                                1s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
                                         consistentHash:
                                           description: |-
                                             ConsistentHash defines the configuration when the load balancer type is
@@ -45421,7 +46197,7 @@ spec:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
                                             If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                            Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                            Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                           properties:
                                             window:
                                               description: |-
@@ -45441,12 +46217,14 @@ spec:
                                             "ConsistentHash",
                                             "LeastRequest",
                                             "Random",
-                                            "RoundRobin".
+                                            "RoundRobin",
+                                            "BackendUtilization".
                                           enum:
                                           - ConsistentHash
                                           - LeastRequest
                                           - Random
                                           - RoundRobin
+                                          - BackendUtilization
                                           type: string
                                         zoneAware:
                                           description: ZoneAware defines the configuration
@@ -45530,8 +46308,13 @@ spec:
                                           consistentHash field needs to be set.
                                         rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                           : !has(self.consistentHash)'
+                                      - message: If LoadBalancer type is BackendUtilization,
+                                          backendUtilization field needs to be set.
+                                        rule: 'self.type == ''BackendUtilization''
+                                          ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                       - message: Currently SlowStart is only supported
-                                          for RoundRobin and LeastRequest load balancers.
+                                          for RoundRobin, LeastRequest, and BackendUtilization
+                                          load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
                                       - message: PreferLocal zone-aware routing is
@@ -45540,6 +46323,12 @@ spec:
                                         rule: 'self.type == ''ConsistentHash'' &&
                                           has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
+                                      - message: ZoneAware routing is not supported
+                                          for BackendUtilization load balancers. BackendUtilization
+                                          only handles picking endpoints within a
+                                          single locality.
+                                        rule: 'self.type == ''BackendUtilization''
+                                          ? !has(self.zoneAware) : true'
                                       - message: ZoneAware PreferLocal and WeightedZones
                                           cannot be specified together.
                                         rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -45708,6 +46497,12 @@ spec:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
                                                 from the upstream.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            streamIdleTimeout:
+                                              description: |2-
+                                                 The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                 If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
@@ -46181,6 +46976,45 @@ spec:
                                         minimum: 0
                                         type: integer
                                     type: object
+                                  retryBudget:
+                                    description: |-
+                                      RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                      RetryBudget take precedence over maxParallelRetries.
+                                    properties:
+                                      minRetryConcurrency:
+                                        description: |-
+                                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                          For example, a budget of 20% with a minimum retry concurrency of 3
+                                          will allow 5 active retries while there are 25 active requests.
+                                          If there are 2 active requests, there are still 3 active retries
+                                          allowed because of the minimum retry concurrency.
+                                          Defaults to 3.
+                                        format: int32
+                                        type: integer
+                                      percent:
+                                        description: |-
+                                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                          the sum of active requests and active pending requests.
+                                        properties:
+                                          denominator:
+                                            default: 100
+                                            format: int32
+                                            minimum: 1
+                                            type: integer
+                                          numerator:
+                                            format: int32
+                                            minimum: 0
+                                            type: integer
+                                        required:
+                                        - numerator
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: numerator must be less than or
+                                            equal to denominator
+                                          rule: self.numerator <= self.denominator
+                                    required:
+                                    - percent
+                                    type: object
                                 type: object
                               connection:
                                 description: Connection includes backend connection
@@ -46625,6 +47459,41 @@ spec:
                                 description: HTTP2 provides HTTP/2 configuration for
                                   backend connections.
                                 properties:
+                                  connectionKeepalive:
+                                    description: ConnectionKeepalive configures HTTP/2
+                                      connection keepalive using PING frames.
+                                    properties:
+                                      idleInterval:
+                                        description: IdleInterval specifies how long
+                                          a connection must be idle before a PING
+                                          is sent.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      interval:
+                                        description: Interval specifies how often
+                                          to send HTTP/2 PING frames to keep the connection
+                                          alive.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      intervalJitter:
+                                        description: |-
+                                          IntervalJitter specifies a random jitter percentage added to each interval.
+                                          Defaults to 15% if not specified.
+                                        format: int32
+                                        maximum: 100
+                                        minimum: 0
+                                        type: integer
+                                      timeout:
+                                        description: Timeout specifies how long to
+                                          wait for a PING response before considering
+                                          the connection dead.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: timeout must be less than interval
+                                      rule: '!has(self.timeout) || !has(self.interval)
+                                        || duration(self.timeout) < duration(self.interval)'
                                   initialConnectionWindowSize:
                                     allOf:
                                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -46668,6 +47537,60 @@ spec:
                                   LoadBalancer policy to apply when routing traffic from the gateway to
                                   the backend endpoints. Defaults to `LeastRequest`.
                                 properties:
+                                  backendUtilization:
+                                    description: |-
+                                      BackendUtilization defines the configuration when the load balancer type is
+                                      set to BackendUtilization.
+                                    properties:
+                                      blackoutPeriod:
+                                        description: |-
+                                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                          Default is 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      errorUtilizationPenaltyPercent:
+                                        description: |-
+                                          ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                          This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                          For example:
+                                          - 100 => 1.0x
+                                          - 120 => 1.2x
+                                          - 200 => 2.0x
+
+                                          Note: In the internal IR/XDS configuration this value is converted back to a
+                                          floating point multiplier (value / 100.0).
+
+                                          Must be non-negative.
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                      keepResponseHeaders:
+                                        default: false
+                                        description: |-
+                                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                          Defaults to false.
+                                        type: boolean
+                                      metricNamesForComputingUtilization:
+                                        description: |-
+                                          Metric names used to compute utilization if application_utilization is not set.
+                                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                        items:
+                                          type: string
+                                        type: array
+                                      weightExpirationPeriod:
+                                        description: If a given endpoint has not reported
+                                          load metrics in this long, stop using the
+                                          reported weight. Defaults to 3m.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often endpoint weights are
+                                          recalculated. Values less than 100ms are
+                                          capped at 100ms. Default 1s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     description: |-
                                       ConsistentHash defines the configuration when the load balancer type is
@@ -46824,7 +47747,7 @@ spec:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
                                       If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                      Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                      Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                     properties:
                                       window:
                                         description: |-
@@ -46844,12 +47767,14 @@ spec:
                                       "ConsistentHash",
                                       "LeastRequest",
                                       "Random",
-                                      "RoundRobin".
+                                      "RoundRobin",
+                                      "BackendUtilization".
                                     enum:
                                     - ConsistentHash
                                     - LeastRequest
                                     - Random
                                     - RoundRobin
+                                    - BackendUtilization
                                     type: string
                                   zoneAware:
                                     description: ZoneAware defines the configuration
@@ -46930,8 +47855,13 @@ spec:
                                     consistentHash field needs to be set.
                                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                     : !has(self.consistentHash)'
+                                - message: If LoadBalancer type is BackendUtilization,
+                                    backendUtilization field needs to be set.
+                                  rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                    : !has(self.backendUtilization)'
                                 - message: Currently SlowStart is only supported for
-                                    RoundRobin and LeastRequest load balancers.
+                                    RoundRobin, LeastRequest, and BackendUtilization
+                                    load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
                                 - message: PreferLocal zone-aware routing is not supported
@@ -46939,6 +47869,12 @@ spec:
                                     instead.
                                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
+                                - message: ZoneAware routing is not supported for
+                                    BackendUtilization load balancers. BackendUtilization
+                                    only handles picking endpoints within a single
+                                    locality.
+                                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                    : true'
                                 - message: ZoneAware PreferLocal and WeightedZones
                                     cannot be specified together.
                                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -47105,6 +48041,12 @@ spec:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
                                           upstream.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      streamIdleTimeout:
+                                        description: |2-
+                                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
@@ -48499,29 +49441,6 @@ spec:
                               - message: at least one of claims or scopes must be
                                   specified
                                 rule: (has(self.claims) || has(self.scopes))
-                            sourceCIDRs:
-                              description: |-
-                                SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
-                                Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-
-                                If multiple CIDR ranges are specified, one of the CIDR ranges must match
-                                the source IP for the rule to match.
-
-                                The source IP is the IP address of the peer that connected to Envoy.
-                                This IP is obtained from the TCP connection's peer address and is not
-                                affected by X-Forwarded-For or other IP detection headers.
-                                If intermediaries (load balancers, NAT) terminate or proxy TCP,
-                                the original client IP will only be available if the intermediary
-                                preserves the source address (for example by enabling the PROXY protocol
-                                or avoiding SNAT).
-                              items:
-                                description: |-
-                                  CIDR defines a CIDR Address range.
-                                  A CIDR can be an IPv4 address range such as "192.168.1.0/24" or an IPv6 address range such as "2001:0db8:11a3:09d7::/64".
-                                pattern: ((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]+))|((([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/([0-9]+))
-                                type: string
-                              minItems: 1
-                              type: array
                           type: object
                           x-kubernetes-validations:
                           - message: at least one of clientCIDRs, jwt, headers, or
@@ -49029,6 +49948,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -49460,6 +50418,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -49503,6 +50494,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -49657,7 +50702,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -49677,12 +50722,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -49762,8 +50809,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -49771,6 +50822,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -49936,6 +50992,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -50242,6 +51304,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -50673,6 +51774,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -50716,6 +51850,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -50870,7 +52058,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -50890,12 +52078,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -50975,8 +52165,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -50984,6 +52178,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -51151,6 +52350,12 @@ spec:
                                       which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -51213,6 +52418,51 @@ spec:
                       route matching decisions. If the recomputation selects a new route, features targeting
                       the new matched route will be applied.
                     type: boolean
+                  statusOnError:
+                    description: |-
+                      Sets the HTTP status that is returned when the authorization service returns an error
+                      or cannot be reached. Defaults to 403 Forbidden.
+                      Only 4xx and 5xx status codes are supported.
+                    enum:
+                    - 400
+                    - 401
+                    - 402
+                    - 403
+                    - 404
+                    - 405
+                    - 406
+                    - 407
+                    - 408
+                    - 409
+                    - 410
+                    - 411
+                    - 412
+                    - 413
+                    - 414
+                    - 415
+                    - 416
+                    - 417
+                    - 421
+                    - 422
+                    - 423
+                    - 424
+                    - 426
+                    - 428
+                    - 429
+                    - 431
+                    - 500
+                    - 501
+                    - 502
+                    - 503
+                    - 504
+                    - 505
+                    - 506
+                    - 507
+                    - 508
+                    - 510
+                    - 511
+                    format: int32
+                    type: integer
                   timeout:
                     description: |-
                       Timeout defines the timeout for requests to the external authorization service.
@@ -51651,6 +52901,45 @@ spec:
                                           maximum: 4294967295
                                           minimum: 0
                                           type: integer
+                                      type: object
+                                    retryBudget:
+                                      description: |-
+                                        RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                        RetryBudget take precedence over maxParallelRetries.
+                                      properties:
+                                        minRetryConcurrency:
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            For example, a budget of 20% with a minimum retry concurrency of 3
+                                            will allow 5 active retries while there are 25 active requests.
+                                            If there are 2 active requests, there are still 3 active retries
+                                            allowed because of the minimum retry concurrency.
+                                            Defaults to 3.
+                                          format: int32
+                                          type: integer
+                                        percent:
+                                          description: |-
+                                            Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                            the sum of active requests and active pending requests.
+                                          properties:
+                                            denominator:
+                                              default: 100
+                                              format: int32
+                                              minimum: 1
+                                              type: integer
+                                            numerator:
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                          required:
+                                          - numerator
+                                          type: object
+                                          x-kubernetes-validations:
+                                          - message: numerator must be less than or
+                                              equal to denominator
+                                            rule: self.numerator <= self.denominator
+                                      required:
+                                      - percent
                                       type: object
                                   type: object
                                 connection:
@@ -52096,6 +53385,41 @@ spec:
                                   description: HTTP2 provides HTTP/2 configuration
                                     for backend connections.
                                   properties:
+                                    connectionKeepalive:
+                                      description: ConnectionKeepalive configures
+                                        HTTP/2 connection keepalive using PING frames.
+                                      properties:
+                                        idleInterval:
+                                          description: IdleInterval specifies how
+                                            long a connection must be idle before
+                                            a PING is sent.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        interval:
+                                          description: Interval specifies how often
+                                            to send HTTP/2 PING frames to keep the
+                                            connection alive.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        intervalJitter:
+                                          description: |-
+                                            IntervalJitter specifies a random jitter percentage added to each interval.
+                                            Defaults to 15% if not specified.
+                                          format: int32
+                                          maximum: 100
+                                          minimum: 0
+                                          type: integer
+                                        timeout:
+                                          description: Timeout specifies how long
+                                            to wait for a PING response before considering
+                                            the connection dead.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: timeout must be less than interval
+                                        rule: '!has(self.timeout) || !has(self.interval)
+                                          || duration(self.timeout) < duration(self.interval)'
                                     initialConnectionWindowSize:
                                       allOf:
                                       - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -52139,6 +53463,61 @@ spec:
                                     LoadBalancer policy to apply when routing traffic from the gateway to
                                     the backend endpoints. Defaults to `LeastRequest`.
                                   properties:
+                                    backendUtilization:
+                                      description: |-
+                                        BackendUtilization defines the configuration when the load balancer type is
+                                        set to BackendUtilization.
+                                      properties:
+                                        blackoutPeriod:
+                                          description: |-
+                                            A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                            Default is 10s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        errorUtilizationPenaltyPercent:
+                                          description: |-
+                                            ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                            This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                            For example:
+                                            - 100 => 1.0x
+                                            - 120 => 1.2x
+                                            - 200 => 2.0x
+
+                                            Note: In the internal IR/XDS configuration this value is converted back to a
+                                            floating point multiplier (value / 100.0).
+
+                                            Must be non-negative.
+                                          format: int32
+                                          minimum: 0
+                                          type: integer
+                                        keepResponseHeaders:
+                                          default: false
+                                          description: |-
+                                            KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                            Defaults to false.
+                                          type: boolean
+                                        metricNamesForComputingUtilization:
+                                          description: |-
+                                            Metric names used to compute utilization if application_utilization is not set.
+                                            For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                          items:
+                                            type: string
+                                          type: array
+                                        weightExpirationPeriod:
+                                          description: If a given endpoint has not
+                                            reported load metrics in this long, stop
+                                            using the reported weight. Defaults to
+                                            3m.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        weightUpdatePeriod:
+                                          description: How often endpoint weights
+                                            are recalculated. Values less than 100ms
+                                            are capped at 100ms. Default 1s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
                                     consistentHash:
                                       description: |-
                                         ConsistentHash defines the configuration when the load balancer type is
@@ -52296,7 +53675,7 @@ spec:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
                                         If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                        Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                        Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                       properties:
                                         window:
                                           description: |-
@@ -52316,12 +53695,14 @@ spec:
                                         "ConsistentHash",
                                         "LeastRequest",
                                         "Random",
-                                        "RoundRobin".
+                                        "RoundRobin",
+                                        "BackendUtilization".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
+                                      - BackendUtilization
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -52402,8 +53783,13 @@ spec:
                                       consistentHash field needs to be set.
                                     rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                       : !has(self.consistentHash)'
+                                  - message: If LoadBalancer type is BackendUtilization,
+                                      backendUtilization field needs to be set.
+                                    rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                      : !has(self.backendUtilization)'
                                   - message: Currently SlowStart is only supported
-                                      for RoundRobin and LeastRequest load balancers.
+                                      for RoundRobin, LeastRequest, and BackendUtilization
+                                      load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
                                   - message: PreferLocal zone-aware routing is not
@@ -52411,6 +53797,12 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware routing is not supported for
+                                      BackendUtilization load balancers. BackendUtilization
+                                      only handles picking endpoints within a single
+                                      locality.
+                                    rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                      : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -52579,6 +53971,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -52637,7 +54035,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
@@ -53154,6 +54552,45 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                                  RetryBudget take precedence over maxParallelRetries.
+                                properties:
+                                  minRetryConcurrency:
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      For example, a budget of 20% with a minimum retry concurrency of 3
+                                      will allow 5 active retries while there are 25 active requests.
+                                      If there are 2 active requests, there are still 3 active retries
+                                      allowed because of the minimum retry concurrency.
+                                      Defaults to 3.
+                                    format: int32
+                                    type: integer
+                                  percent:
+                                    description: |-
+                                      Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                                      the sum of active requests and active pending requests.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                required:
+                                - percent
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -53585,6 +55022,39 @@ spec:
                             description: HTTP2 provides HTTP/2 configuration for backend
                               connections.
                             properties:
+                              connectionKeepalive:
+                                description: ConnectionKeepalive configures HTTP/2
+                                  connection keepalive using PING frames.
+                                properties:
+                                  idleInterval:
+                                    description: IdleInterval specifies how long a
+                                      connection must be idle before a PING is sent.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  interval:
+                                    description: Interval specifies how often to send
+                                      HTTP/2 PING frames to keep the connection alive.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  intervalJitter:
+                                    description: |-
+                                      IntervalJitter specifies a random jitter percentage added to each interval.
+                                      Defaults to 15% if not specified.
+                                    format: int32
+                                    maximum: 100
+                                    minimum: 0
+                                    type: integer
+                                  timeout:
+                                    description: Timeout specifies how long to wait
+                                      for a PING response before considering the connection
+                                      dead.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
+                                x-kubernetes-validations:
+                                - message: timeout must be less than interval
+                                  rule: '!has(self.timeout) || !has(self.interval)
+                                    || duration(self.timeout) < duration(self.interval)'
                               initialConnectionWindowSize:
                                 allOf:
                                 - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -53628,6 +55098,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -53782,7 +55306,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -53802,12 +55326,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -53887,8 +55413,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -53896,6 +55426,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -54061,6 +55596,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
