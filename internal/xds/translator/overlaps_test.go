@@ -8,7 +8,11 @@ package translator
 import (
 	"testing"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
 func TestDomainMatchHostname(t *testing.T) {
@@ -233,6 +237,99 @@ func TestDomainsMatched(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := domainsMatched(tt.vhDomains, tt.overlapsHostname)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetReturn421RouteWithHost(t *testing.T) {
+	tests := []struct {
+		name                 string
+		hostname             string
+		expectHeaderMatcher  bool
+		expectedMatcherType  string // "exact", "suffix", or "none"
+		expectedMatcherValue string
+	}{
+		{
+			name:                "wildcard asterisk - no header matcher",
+			hostname:            "*",
+			expectHeaderMatcher: false,
+			expectedMatcherType: "none",
+		},
+		{
+			name:                 "wildcard subdomain - suffix matcher",
+			hostname:             "*.example.com",
+			expectHeaderMatcher:  true,
+			expectedMatcherType:  "suffix",
+			expectedMatcherValue: ".example.com",
+		},
+		{
+			name:                 "wildcard subdomain complex - suffix matcher",
+			hostname:             "*.foo.bar.example.com",
+			expectHeaderMatcher:  true,
+			expectedMatcherType:  "suffix",
+			expectedMatcherValue: ".foo.bar.example.com",
+		},
+		{
+			name:                 "exact hostname - exact matcher",
+			hostname:             "foo.example.com",
+			expectHeaderMatcher:  true,
+			expectedMatcherType:  "exact",
+			expectedMatcherValue: "foo.example.com",
+		},
+		{
+			name:                 "exact hostname simple - exact matcher",
+			hostname:             "example.com",
+			expectHeaderMatcher:  true,
+			expectedMatcherType:  "exact",
+			expectedMatcherValue: "example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route := getReturn421RouteWithHost(tt.hostname)
+
+			// Verify basic route structure
+			assert.NotNil(t, route)
+			assert.NotNil(t, route.Match)
+			assert.NotNil(t, route.Action)
+
+			// Verify 421 status code
+			directResp, ok := route.Action.(*routev3.Route_DirectResponse)
+			assert.True(t, ok, "Expected DirectResponse action")
+			assert.Equal(t, uint32(421), directResp.DirectResponse.Status)
+
+			// Verify path prefix
+			pathPrefix, ok := route.Match.PathSpecifier.(*routev3.RouteMatch_Prefix)
+			assert.True(t, ok, "Expected Prefix path specifier")
+			assert.Equal(t, "/", pathPrefix.Prefix)
+
+			// Verify filter state for HTTP/2
+			assert.Len(t, route.Match.FilterState, 1)
+			assert.Equal(t, filters.DownstreamProtocolKey, route.Match.FilterState[0].Key)
+
+			// Verify header matcher
+			if !tt.expectHeaderMatcher {
+				assert.Nil(t, route.Match.Headers, "Expected no header matchers for wildcard '*'")
+			} else {
+				assert.Len(t, route.Match.Headers, 1, "Expected exactly one header matcher")
+				headerMatcher := route.Match.Headers[0]
+				assert.Equal(t, ":authority", headerMatcher.Name)
+
+				stringMatch, ok := headerMatcher.HeaderMatchSpecifier.(*routev3.HeaderMatcher_StringMatch)
+				assert.True(t, ok, "Expected StringMatch header matcher")
+
+				switch tt.expectedMatcherType {
+				case "exact":
+					exactMatch, ok := stringMatch.StringMatch.MatchPattern.(*matcherv3.StringMatcher_Exact)
+					assert.True(t, ok, "Expected Exact matcher")
+					assert.Equal(t, tt.expectedMatcherValue, exactMatch.Exact)
+				case "suffix":
+					suffixMatch, ok := stringMatch.StringMatch.MatchPattern.(*matcherv3.StringMatcher_Suffix)
+					assert.True(t, ok, "Expected Suffix matcher")
+					assert.Equal(t, tt.expectedMatcherValue, suffixMatch.Suffix)
+				}
+			}
 		})
 	}
 }
