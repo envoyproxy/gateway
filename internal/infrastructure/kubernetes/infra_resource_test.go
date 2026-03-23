@@ -182,11 +182,11 @@ func TestDeleteIsCalledWhenResourcesExistDeploymentMode(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	assert.Greater(t, counts["*v1.DaemonSet"], 0,
+	assert.Positive(t, counts["*v1.DaemonSet"],
 		"DeleteAllOf should be called for DaemonSet when it exists")
-	assert.Greater(t, counts["*v2.HorizontalPodAutoscaler"], 0,
+	assert.Positive(t, counts["*v2.HorizontalPodAutoscaler"],
 		"DeleteAllOf should be called for HPA when it exists")
-	assert.Greater(t, counts["*v1.PodDisruptionBudget"], 0,
+	assert.Positive(t, counts["*v1.PodDisruptionBudget"],
 		"DeleteAllOf should be called for PDB when it exists")
 }
 
