@@ -312,7 +312,6 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			message,
 		)
 		if listener.httpIR != nil {
-			listener.httpIR.TLSOverlaps = true
 			for _, overlap := range overlappingListeners[i] {
 				listener.httpIR.TLSOverlapsHostnames = append(listener.httpIR.TLSOverlapsHostnames, overlap.hostname)
 			}
@@ -423,7 +422,6 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			gwapiv1.ListenerReasonOverlappingCertificates,
 			message)
 		if listener.httpIR != nil {
-			listener.httpIR.TLSOverlaps = true
 			for _, overlap := range overlappingListeners[i] {
 				listener.httpIR.TLSOverlapsHostnames = append(listener.httpIR.TLSOverlapsHostnames, overlap.hostname)
 			}

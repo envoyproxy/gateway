@@ -321,7 +321,7 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 	// 1. set-filter-state: captures downstream protocol (%PROTOCOL%) for route matching
 	// 2. clear-route-cache: ensures route selection re-evaluates with updated filter state
 	// These enable 421 Misdirected Request responses per RFC 7540 §9.1.2
-	if irListener.TLSOverlaps {
+	if len(irListener.TLSOverlapsHostnames) > 0 {
 		// Assumption: router filter is always last (enforced by sortHTTPFilters above)
 		lastIdx := len(mgr.HttpFilters) - 1
 		httpFilters := make([]*hcmv3.HttpFilter, lastIdx, len(mgr.HttpFilters)+2)

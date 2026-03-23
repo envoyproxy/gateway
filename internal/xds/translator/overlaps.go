@@ -108,7 +108,7 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 }
 
 func (t *Translator) mayPatchVirtualHostsForOverlaps(xdsRouteCfg *routev3.RouteConfiguration, httpListener *ir.HTTPListener) {
-	if !httpListener.TLSOverlaps || len(httpListener.TLSOverlapsHostnames) == 0 {
+	if len(httpListener.TLSOverlapsHostnames) == 0 {
 		return
 	}
 	// add a route that matches all hosts and returns 421 to handle TLS overlapping scenario
