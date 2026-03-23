@@ -1463,7 +1463,6 @@ spec:
                             rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
                     observabilityMode:
-                      default: false
                       description: ObservabilityMode sets if envoy gateway should
                         treat this external processor as "send and go"
                       type: boolean
