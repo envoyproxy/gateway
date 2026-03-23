@@ -11,7 +11,6 @@ import (
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/filters"
@@ -107,38 +106,37 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 	return route
 }
 
-func (t *Translator) mayPatchVirtualHostsForOverlaps(xdsRouteCfg *routev3.RouteConfiguration, httpListener *ir.HTTPListener) {
-	if len(httpListener.TLSOverlapsHostnames) == 0 {
-		return
-	}
-	// add a route that matches all hosts and returns 421 to handle TLS overlapping scenario
-	domains := sets.NewString(httpListener.TLSOverlapsHostnames...)
-
-	for _, vh := range xdsRouteCfg.VirtualHosts {
-		// if vh.domains matched any of the overlaps hostnames, we add the special route with header :authority to return 421 when using h2.
-		// Otherwise, envoy will return 404 instead of 200 when using http1.1(serverName: third-example.wildcard.org hostname: fourth-example.wildcard.org).
-		for _, overlapsHostname := range httpListener.TLSOverlapsHostnames {
-			if !domainsMatched(vh.Domains, overlapsHostname) {
-				continue
-			}
-			// append return 421 route to the first of vh.Routes
-			r := getReturn421RouteWithHost(overlapsHostname)
-			vh.Routes = append([]*routev3.Route{r}, vh.Routes...)
-			domains.Delete(overlapsHostname)
-			break
+// patchVirtualHostForOverlaps patches a single virtual host for TLS overlaps and returns
+// the remaining unmatched overlap hostnames.
+func (t *Translator) patchVirtualHostForOverlaps(vh *routev3.VirtualHost, tlsOverlapsHostnames []string) []string {
+	// if vh.domains matched any of the overlaps hostnames, we add the special route with header :authority to return 421 when using h2.
+	// Otherwise, envoy will return 404 instead of 200 when using http1.1(serverName: third-example.wildcard.org hostname: fourth-example.wildcard.org).
+	for i, overlapsHostname := range tlsOverlapsHostnames {
+		if !domainsMatched(vh.Domains, overlapsHostname) {
+			continue
 		}
+		// append return 421 route to the first of vh.Routes
+		r := getReturn421RouteWithHost(overlapsHostname)
+		vh.Routes = append([]*routev3.Route{r}, vh.Routes...)
+		// Remove this hostname from the list by swapping with the last element and truncating
+		tlsOverlapsHostnames[i] = tlsOverlapsHostnames[len(tlsOverlapsHostnames)-1]
+		return tlsOverlapsHostnames[:len(tlsOverlapsHostnames)-1]
 	}
+	return tlsOverlapsHostnames
+}
 
-	if len(domains) == 0 {
+// addCatchAllForRemainingOverlaps adds a catch-all virtual host for any remaining TLS overlap hostnames
+// that weren't matched by existing virtual hosts.
+func (t *Translator) addCatchAllForRemainingOverlaps(xdsRouteCfg *routev3.RouteConfiguration, httpListener *ir.HTTPListener, remainingHostnames []string) {
+	if len(remainingHostnames) == 0 {
 		return
 	}
-	out := domains.UnsortedList()
 	// Sort for stable XDS output. Envoy uses specificity-based domain matching
 	// (exact > suffix wildcard > prefix wildcard > "*"), so order doesn't affect routing.
-	sort.Strings(out)
+	sort.Strings(remainingHostnames)
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, &routev3.VirtualHost{
 		Name:    virtualHostName(httpListener, "catch_all_tls_overlapping", t.xdsNameSchemeV2()),
-		Domains: out,
+		Domains: remainingHostnames,
 		Routes:  []*routev3.Route{return421Route},
 	})
 }
