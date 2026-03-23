@@ -23341,6 +23341,59 @@ spec:
                   LoadBalancer policy to apply when routing traffic from the gateway to
                   the backend endpoints. Defaults to `LeastRequest`.
                 properties:
+                  backendUtilization:
+                    description: |-
+                      BackendUtilization defines the configuration when the load balancer type is
+                      set to BackendUtilization.
+                    properties:
+                      blackoutPeriod:
+                        description: |-
+                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                          Default is 10s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      errorUtilizationPenaltyPercent:
+                        description: |-
+                          ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                          This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                          For example:
+                          - 100 => 1.0x
+                          - 120 => 1.2x
+                          - 200 => 2.0x
+
+                          Note: In the internal IR/XDS configuration this value is converted back to a
+                          floating point multiplier (value / 100.0).
+
+                          Must be non-negative.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      keepResponseHeaders:
+                        default: false
+                        description: |-
+                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                          Defaults to false.
+                        type: boolean
+                      metricNamesForComputingUtilization:
+                        description: |-
+                          Metric names used to compute utilization if application_utilization is not set.
+                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                        items:
+                          type: string
+                        type: array
+                      weightExpirationPeriod:
+                        description: If a given endpoint has not reported load metrics
+                          in this long, stop using the reported weight. Defaults to
+                          3m.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      weightUpdatePeriod:
+                        description: How often endpoint weights are recalculated.
+                          Values less than 100ms are capped at 100ms. Default 1s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                   consistentHash:
                     description: |-
                       ConsistentHash defines the configuration when the load balancer type is
@@ -23487,7 +23540,7 @@ spec:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
                       If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                      Currently this is only supported for RoundRobin and LeastRequest load balancers
+                      Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                     properties:
                       window:
                         description: |-
@@ -23507,12 +23560,14 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin".
+                      "RoundRobin",
+                      "BackendUtilization".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
+                    - BackendUtilization
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -23588,14 +23643,23 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
-                - message: Currently SlowStart is only supported for RoundRobin and
-                    LeastRequest load balancers.
+                - message: If LoadBalancer type is BackendUtilization, backendUtilization
+                    field needs to be set.
+                  rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                    : !has(self.backendUtilization)'
+                - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
+                    and BackendUtilization load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
                     : true '
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware routing is not supported for BackendUtilization
+                    load balancers. BackendUtilization only handles picking endpoints
+                    within a single locality.
+                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                    : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
@@ -28588,6 +28652,60 @@ spec:
                             LoadBalancer policy to apply when routing traffic from the gateway to
                             the backend endpoints. Defaults to `LeastRequest`.
                           properties:
+                            backendUtilization:
+                              description: |-
+                                BackendUtilization defines the configuration when the load balancer type is
+                                set to BackendUtilization.
+                              properties:
+                                blackoutPeriod:
+                                  description: |-
+                                    A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                    Default is 10s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                errorUtilizationPenaltyPercent:
+                                  description: |-
+                                    ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                    This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                    For example:
+                                    - 100 => 1.0x
+                                    - 120 => 1.2x
+                                    - 200 => 2.0x
+
+                                    Note: In the internal IR/XDS configuration this value is converted back to a
+                                    floating point multiplier (value / 100.0).
+
+                                    Must be non-negative.
+                                  format: int32
+                                  minimum: 0
+                                  type: integer
+                                keepResponseHeaders:
+                                  default: false
+                                  description: |-
+                                    KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                    Defaults to false.
+                                  type: boolean
+                                metricNamesForComputingUtilization:
+                                  description: |-
+                                    Metric names used to compute utilization if application_utilization is not set.
+                                    For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                  items:
+                                    type: string
+                                  type: array
+                                weightExpirationPeriod:
+                                  description: If a given endpoint has not reported
+                                    load metrics in this long, stop using the reported
+                                    weight. Defaults to 3m.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                weightUpdatePeriod:
+                                  description: How often endpoint weights are recalculated.
+                                    Values less than 100ms are capped at 100ms. Default
+                                    1s.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                              type: object
                             consistentHash:
                               description: |-
                                 ConsistentHash defines the configuration when the load balancer type is
@@ -28740,7 +28858,7 @@ spec:
                               description: |-
                                 SlowStart defines the configuration related to the slow start load balancer policy.
                                 If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                               properties:
                                 window:
                                   description: |-
@@ -28760,12 +28878,14 @@ spec:
                                 "ConsistentHash",
                                 "LeastRequest",
                                 "Random",
-                                "RoundRobin".
+                                "RoundRobin",
+                                "BackendUtilization".
                               enum:
                               - ConsistentHash
                               - LeastRequest
                               - Random
                               - RoundRobin
+                              - BackendUtilization
                               type: string
                             zoneAware:
                               description: ZoneAware defines the configuration related
@@ -28843,8 +28963,12 @@ spec:
                               field needs to be set.
                             rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                               : !has(self.consistentHash)'
-                          - message: Currently SlowStart is only supported for RoundRobin
-                              and LeastRequest load balancers.
+                          - message: If LoadBalancer type is BackendUtilization, backendUtilization
+                              field needs to be set.
+                            rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                              : !has(self.backendUtilization)'
+                          - message: Currently SlowStart is only supported for RoundRobin,
+                              LeastRequest, and BackendUtilization load balancers.
                             rule: 'self.type in [''Random'', ''ConsistentHash''] ?
                               !has(self.slowStart) : true '
                           - message: PreferLocal zone-aware routing is not supported
@@ -28852,6 +28976,11 @@ spec:
                               instead.
                             rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
+                          - message: ZoneAware routing is not supported for BackendUtilization
+                              load balancers. BackendUtilization only handles picking
+                              endpoints within a single locality.
+                            rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                              : true'
                           - message: ZoneAware PreferLocal and WeightedZones cannot
                               be specified together.
                             rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -42734,6 +42863,63 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              backendUtilization:
+                                                description: |-
+                                                  BackendUtilization defines the configuration when the load balancer type is
+                                                  set to BackendUtilization.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  errorUtilizationPenaltyPercent:
+                                                    description: |-
+                                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                      For example:
+                                                      - 100 => 1.0x
+                                                      - 120 => 1.2x
+                                                      - 200 => 2.0x
+
+                                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                                      floating point multiplier (value / 100.0).
+
+                                                      Must be non-negative.
+                                                    format: int32
+                                                    minimum: 0
+                                                    type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -42901,7 +43087,7 @@ spec:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                                 properties:
                                                   window:
                                                     description: |-
@@ -42921,12 +43107,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "BackendUtilization".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - BackendUtilization
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -43011,9 +43199,14 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is BackendUtilization,
+                                                backendUtilization field needs to
+                                                be set.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                             - message: Currently SlowStart is only
-                                                supported for RoundRobin and LeastRequest
-                                                load balancers.
+                                                supported for RoundRobin, LeastRequest,
+                                                and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
                                             - message: PreferLocal zone-aware routing
@@ -43023,6 +43216,12 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for BackendUtilization load balancers.
+                                                BackendUtilization only handles picking
+                                                endpoints within a single locality.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -44146,6 +44345,63 @@ spec:
                                               LoadBalancer policy to apply when routing traffic from the gateway to
                                               the backend endpoints. Defaults to `LeastRequest`.
                                             properties:
+                                              backendUtilization:
+                                                description: |-
+                                                  BackendUtilization defines the configuration when the load balancer type is
+                                                  set to BackendUtilization.
+                                                properties:
+                                                  blackoutPeriod:
+                                                    description: |-
+                                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                      Default is 10s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  errorUtilizationPenaltyPercent:
+                                                    description: |-
+                                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                      For example:
+                                                      - 100 => 1.0x
+                                                      - 120 => 1.2x
+                                                      - 200 => 2.0x
+
+                                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                                      floating point multiplier (value / 100.0).
+
+                                                      Must be non-negative.
+                                                    format: int32
+                                                    minimum: 0
+                                                    type: integer
+                                                  keepResponseHeaders:
+                                                    default: false
+                                                    description: |-
+                                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                      Defaults to false.
+                                                    type: boolean
+                                                  metricNamesForComputingUtilization:
+                                                    description: |-
+                                                      Metric names used to compute utilization if application_utilization is not set.
+                                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                                    items:
+                                                      type: string
+                                                    type: array
+                                                  weightExpirationPeriod:
+                                                    description: If a given endpoint
+                                                      has not reported load metrics
+                                                      in this long, stop using the
+                                                      reported weight. Defaults to
+                                                      3m.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                  weightUpdatePeriod:
+                                                    description: How often endpoint
+                                                      weights are recalculated. Values
+                                                      less than 100ms are capped at
+                                                      100ms. Default 1s.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
+                                                type: object
                                               consistentHash:
                                                 description: |-
                                                   ConsistentHash defines the configuration when the load balancer type is
@@ -44313,7 +44569,7 @@ spec:
                                                 description: |-
                                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                                 properties:
                                                   window:
                                                     description: |-
@@ -44333,12 +44589,14 @@ spec:
                                                   "ConsistentHash",
                                                   "LeastRequest",
                                                   "Random",
-                                                  "RoundRobin".
+                                                  "RoundRobin",
+                                                  "BackendUtilization".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
+                                                - BackendUtilization
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -44423,9 +44681,14 @@ spec:
                                                 consistentHash field needs to be set.
                                               rule: 'self.type == ''ConsistentHash''
                                                 ? has(self.consistentHash) : !has(self.consistentHash)'
+                                            - message: If LoadBalancer type is BackendUtilization,
+                                                backendUtilization field needs to
+                                                be set.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                             - message: Currently SlowStart is only
-                                                supported for RoundRobin and LeastRequest
-                                                load balancers.
+                                                supported for RoundRobin, LeastRequest,
+                                                and BackendUtilization load balancers.
                                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                                 ? !has(self.slowStart) : true '
                                             - message: PreferLocal zone-aware routing
@@ -44435,6 +44698,12 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
+                                            - message: ZoneAware routing is not supported
+                                                for BackendUtilization load balancers.
+                                                BackendUtilization only handles picking
+                                                endpoints within a single locality.
+                                              rule: 'self.type == ''BackendUtilization''
+                                                ? !has(self.zoneAware) : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -45717,6 +45986,62 @@ spec:
                                         LoadBalancer policy to apply when routing traffic from the gateway to
                                         the backend endpoints. Defaults to `LeastRequest`.
                                       properties:
+                                        backendUtilization:
+                                          description: |-
+                                            BackendUtilization defines the configuration when the load balancer type is
+                                            set to BackendUtilization.
+                                          properties:
+                                            blackoutPeriod:
+                                              description: |-
+                                                A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                                Default is 10s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            errorUtilizationPenaltyPercent:
+                                              description: |-
+                                                ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                                This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                                For example:
+                                                - 100 => 1.0x
+                                                - 120 => 1.2x
+                                                - 200 => 2.0x
+
+                                                Note: In the internal IR/XDS configuration this value is converted back to a
+                                                floating point multiplier (value / 100.0).
+
+                                                Must be non-negative.
+                                              format: int32
+                                              minimum: 0
+                                              type: integer
+                                            keepResponseHeaders:
+                                              default: false
+                                              description: |-
+                                                KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                                Defaults to false.
+                                              type: boolean
+                                            metricNamesForComputingUtilization:
+                                              description: |-
+                                                Metric names used to compute utilization if application_utilization is not set.
+                                                For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                              items:
+                                                type: string
+                                              type: array
+                                            weightExpirationPeriod:
+                                              description: If a given endpoint has
+                                                not reported load metrics in this
+                                                long, stop using the reported weight.
+                                                Defaults to 3m.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            weightUpdatePeriod:
+                                              description: How often endpoint weights
+                                                are recalculated. Values less than
+                                                100ms are capped at 100ms. Default
+                                                1s.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                          type: object
                                         consistentHash:
                                           description: |-
                                             ConsistentHash defines the configuration when the load balancer type is
@@ -45877,7 +46202,7 @@ spec:
                                           description: |-
                                             SlowStart defines the configuration related to the slow start load balancer policy.
                                             If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                            Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                            Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                           properties:
                                             window:
                                               description: |-
@@ -45897,12 +46222,14 @@ spec:
                                             "ConsistentHash",
                                             "LeastRequest",
                                             "Random",
-                                            "RoundRobin".
+                                            "RoundRobin",
+                                            "BackendUtilization".
                                           enum:
                                           - ConsistentHash
                                           - LeastRequest
                                           - Random
                                           - RoundRobin
+                                          - BackendUtilization
                                           type: string
                                         zoneAware:
                                           description: ZoneAware defines the configuration
@@ -45986,8 +46313,13 @@ spec:
                                           consistentHash field needs to be set.
                                         rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                           : !has(self.consistentHash)'
+                                      - message: If LoadBalancer type is BackendUtilization,
+                                          backendUtilization field needs to be set.
+                                        rule: 'self.type == ''BackendUtilization''
+                                          ? has(self.backendUtilization) : !has(self.backendUtilization)'
                                       - message: Currently SlowStart is only supported
-                                          for RoundRobin and LeastRequest load balancers.
+                                          for RoundRobin, LeastRequest, and BackendUtilization
+                                          load balancers.
                                         rule: 'self.type in [''Random'', ''ConsistentHash'']
                                           ? !has(self.slowStart) : true '
                                       - message: PreferLocal zone-aware routing is
@@ -45996,6 +46328,12 @@ spec:
                                         rule: 'self.type == ''ConsistentHash'' &&
                                           has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
+                                      - message: ZoneAware routing is not supported
+                                          for BackendUtilization load balancers. BackendUtilization
+                                          only handles picking endpoints within a
+                                          single locality.
+                                        rule: 'self.type == ''BackendUtilization''
+                                          ? !has(self.zoneAware) : true'
                                       - message: ZoneAware PreferLocal and WeightedZones
                                           cannot be specified together.
                                         rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -47204,6 +47542,60 @@ spec:
                                   LoadBalancer policy to apply when routing traffic from the gateway to
                                   the backend endpoints. Defaults to `LeastRequest`.
                                 properties:
+                                  backendUtilization:
+                                    description: |-
+                                      BackendUtilization defines the configuration when the load balancer type is
+                                      set to BackendUtilization.
+                                    properties:
+                                      blackoutPeriod:
+                                        description: |-
+                                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                          Default is 10s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      errorUtilizationPenaltyPercent:
+                                        description: |-
+                                          ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                          This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                          For example:
+                                          - 100 => 1.0x
+                                          - 120 => 1.2x
+                                          - 200 => 2.0x
+
+                                          Note: In the internal IR/XDS configuration this value is converted back to a
+                                          floating point multiplier (value / 100.0).
+
+                                          Must be non-negative.
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                      keepResponseHeaders:
+                                        default: false
+                                        description: |-
+                                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                          Defaults to false.
+                                        type: boolean
+                                      metricNamesForComputingUtilization:
+                                        description: |-
+                                          Metric names used to compute utilization if application_utilization is not set.
+                                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                        items:
+                                          type: string
+                                        type: array
+                                      weightExpirationPeriod:
+                                        description: If a given endpoint has not reported
+                                          load metrics in this long, stop using the
+                                          reported weight. Defaults to 3m.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      weightUpdatePeriod:
+                                        description: How often endpoint weights are
+                                          recalculated. Values less than 100ms are
+                                          capped at 100ms. Default 1s.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                    type: object
                                   consistentHash:
                                     description: |-
                                       ConsistentHash defines the configuration when the load balancer type is
@@ -47360,7 +47752,7 @@ spec:
                                     description: |-
                                       SlowStart defines the configuration related to the slow start load balancer policy.
                                       If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                      Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                      Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                     properties:
                                       window:
                                         description: |-
@@ -47380,12 +47772,14 @@ spec:
                                       "ConsistentHash",
                                       "LeastRequest",
                                       "Random",
-                                      "RoundRobin".
+                                      "RoundRobin",
+                                      "BackendUtilization".
                                     enum:
                                     - ConsistentHash
                                     - LeastRequest
                                     - Random
                                     - RoundRobin
+                                    - BackendUtilization
                                     type: string
                                   zoneAware:
                                     description: ZoneAware defines the configuration
@@ -47466,8 +47860,13 @@ spec:
                                     consistentHash field needs to be set.
                                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                     : !has(self.consistentHash)'
+                                - message: If LoadBalancer type is BackendUtilization,
+                                    backendUtilization field needs to be set.
+                                  rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                    : !has(self.backendUtilization)'
                                 - message: Currently SlowStart is only supported for
-                                    RoundRobin and LeastRequest load balancers.
+                                    RoundRobin, LeastRequest, and BackendUtilization
+                                    load balancers.
                                   rule: 'self.type in [''Random'', ''ConsistentHash'']
                                     ? !has(self.slowStart) : true '
                                 - message: PreferLocal zone-aware routing is not supported
@@ -47475,6 +47874,12 @@ spec:
                                     instead.
                                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
+                                - message: ZoneAware routing is not supported for
+                                    BackendUtilization load balancers. BackendUtilization
+                                    only handles picking endpoints within a single
+                                    locality.
+                                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                    : true'
                                 - message: ZoneAware PreferLocal and WeightedZones
                                     cannot be specified together.
                                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -50100,6 +50505,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -50254,7 +50713,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -50274,12 +50733,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -50359,8 +50820,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -50368,6 +50833,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -51391,6 +51861,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -51545,7 +52069,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -51565,12 +52089,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -51650,8 +52176,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -51659,6 +52189,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -52939,6 +53474,61 @@ spec:
                                     LoadBalancer policy to apply when routing traffic from the gateway to
                                     the backend endpoints. Defaults to `LeastRequest`.
                                   properties:
+                                    backendUtilization:
+                                      description: |-
+                                        BackendUtilization defines the configuration when the load balancer type is
+                                        set to BackendUtilization.
+                                      properties:
+                                        blackoutPeriod:
+                                          description: |-
+                                            A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                            Default is 10s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        errorUtilizationPenaltyPercent:
+                                          description: |-
+                                            ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                            This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                            For example:
+                                            - 100 => 1.0x
+                                            - 120 => 1.2x
+                                            - 200 => 2.0x
+
+                                            Note: In the internal IR/XDS configuration this value is converted back to a
+                                            floating point multiplier (value / 100.0).
+
+                                            Must be non-negative.
+                                          format: int32
+                                          minimum: 0
+                                          type: integer
+                                        keepResponseHeaders:
+                                          default: false
+                                          description: |-
+                                            KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                            Defaults to false.
+                                          type: boolean
+                                        metricNamesForComputingUtilization:
+                                          description: |-
+                                            Metric names used to compute utilization if application_utilization is not set.
+                                            For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                          items:
+                                            type: string
+                                          type: array
+                                        weightExpirationPeriod:
+                                          description: If a given endpoint has not
+                                            reported load metrics in this long, stop
+                                            using the reported weight. Defaults to
+                                            3m.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        weightUpdatePeriod:
+                                          description: How often endpoint weights
+                                            are recalculated. Values less than 100ms
+                                            are capped at 100ms. Default 1s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
                                     consistentHash:
                                       description: |-
                                         ConsistentHash defines the configuration when the load balancer type is
@@ -53096,7 +53686,7 @@ spec:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
                                         If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                        Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                        Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                       properties:
                                         window:
                                           description: |-
@@ -53116,12 +53706,14 @@ spec:
                                         "ConsistentHash",
                                         "LeastRequest",
                                         "Random",
-                                        "RoundRobin".
+                                        "RoundRobin",
+                                        "BackendUtilization".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
+                                      - BackendUtilization
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -53202,8 +53794,13 @@ spec:
                                       consistentHash field needs to be set.
                                     rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                       : !has(self.consistentHash)'
+                                  - message: If LoadBalancer type is BackendUtilization,
+                                      backendUtilization field needs to be set.
+                                    rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                      : !has(self.backendUtilization)'
                                   - message: Currently SlowStart is only supported
-                                      for RoundRobin and LeastRequest load balancers.
+                                      for RoundRobin, LeastRequest, and BackendUtilization
+                                      load balancers.
                                     rule: 'self.type in [''Random'', ''ConsistentHash'']
                                       ? !has(self.slowStart) : true '
                                   - message: PreferLocal zone-aware routing is not
@@ -53211,6 +53808,12 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware routing is not supported for
+                                      BackendUtilization load balancers. BackendUtilization
+                                      only handles picking endpoints within a single
+                                      locality.
+                                    rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                      : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -54506,6 +55109,60 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Note: In the internal IR/XDS configuration this value is converted back to a
+                                      floating point multiplier (value / 100.0).
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -54660,7 +55317,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -54680,12 +55337,14 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -54765,8 +55424,12 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
                               rule: 'self.type in [''Random'', ''ConsistentHash'']
                                 ? !has(self.slowStart) : true '
                             - message: PreferLocal zone-aware routing is not supported
@@ -54774,6 +55437,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                load balancers. BackendUtilization only handles picking
+                                endpoints within a single locality.
+                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
