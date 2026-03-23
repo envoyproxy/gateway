@@ -27,6 +27,18 @@
         cluster: httproute/envoy-gateway/httproute-1/rule/0
         upgradeConfigs:
         - upgradeType: websocket
+  - domains:
+    - '*.example.com'
+    name: envoy-gateway/gateway-1/https-1/catch_all_tls_overlapping
+    routes:
+    - directResponse:
+        status: 421
+      match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
+        prefix: /
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/https-2
   virtualHosts:
@@ -42,6 +54,18 @@
             sectionName: https-2
     name: envoy-gateway/gateway-1/https-2/*_example_com
     routes:
+    - directResponse:
+        status: 421
+      match:
+        filterState:
+        - key: eg.downstream_protocol
+          stringMatch:
+            exact: HTTP/2
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: foo.example.com
+        prefix: /
     - match:
         prefix: /
       metadata:

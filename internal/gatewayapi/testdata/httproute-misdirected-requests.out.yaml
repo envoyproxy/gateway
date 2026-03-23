@@ -418,9 +418,9 @@ xdsIR:
           privateKey: '[redacted]'
       tlsOverlaps: true
       tlsOverlapsHostnames:
-      - second-example.org
       - '*.wildcard.org'
       - fourth-example.wildcard.org
+      - second-example.org
     - address: 0.0.0.0
       externalPort: 443
       hostnames:

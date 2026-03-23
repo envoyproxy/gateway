@@ -497,6 +497,8 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			for _, overlap := range overlappingListeners[i] {
 				listener.httpIR.TLSOverlapsHostnames = append(listener.httpIR.TLSOverlapsHostnames, overlap.hostname)
 			}
+			// Deduplicate and sort hostnames in case both hostname and certificate overlaps occur
+			listener.httpIR.TLSOverlapsHostnames = sets.NewString(listener.httpIR.TLSOverlapsHostnames...).List()
 		}
 	}
 }
@@ -508,6 +510,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		gateway  *GatewayContext
 		listener string
 		san      string
+		hostname string
 	}
 
 	// Track all overlapping certificates for each listener
@@ -525,12 +528,14 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 					gateway:  httpsListeners[j].gateway,
 					listener: string(httpsListeners[j].Name),
 					san:      overlappingCertificate.san2,
+					hostname: string(ptr.Deref(httpsListeners[j].Hostname, "*")),
 				})
 				// Add i to j's overlap list
 				overlappingListeners[j] = append(overlappingListeners[j], &overlappingCert{
 					gateway:  httpsListeners[i].gateway,
 					listener: string(httpsListeners[i].Name),
 					san:      overlappingCertificate.san1,
+					hostname: string(ptr.Deref(httpsListeners[i].Hostname, "*")),
 				})
 			}
 		}
@@ -600,6 +605,11 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			message)
 		if listener.httpIR != nil {
 			listener.httpIR.TLSOverlaps = true
+			for _, overlap := range overlappingListeners[i] {
+				listener.httpIR.TLSOverlapsHostnames = append(listener.httpIR.TLSOverlapsHostnames, overlap.hostname)
+			}
+			// Deduplicate and sort hostnames in case both hostname and certificate overlaps occur
+			listener.httpIR.TLSOverlapsHostnames = sets.NewString(listener.httpIR.TLSOverlapsHostnames...).List()
 		}
 	}
 }
