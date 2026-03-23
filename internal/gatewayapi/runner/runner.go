@@ -78,15 +78,27 @@ type aggregatedPolicyStatus struct {
 	generation int64
 }
 
-// TODO: zhaohuabing - truncate the parents to the max allowed(32)
-func mergeRouteStatus(aggregated, incoming *gwapiv1.RouteStatus) *gwapiv1.RouteStatus {
-	if incoming != nil {
-		if aggregated != nil {
-			aggregated.Parents = append(aggregated.Parents, incoming.Parents...)
-		} else {
-			return incoming
-		}
+type aggregatedRouteStatus struct {
+	status     *gwapiv1.RouteStatus
+	generation int64
+}
+
+func mergeAggregatedRouteStatus(aggregated aggregatedRouteStatus, incoming *gwapiv1.RouteStatus, generation int64) aggregatedRouteStatus {
+	if incoming == nil {
+		return aggregated
 	}
+
+	if aggregated.status == nil {
+		aggregated.status = incoming
+		aggregated.generation = generation
+		return aggregated
+	}
+
+	aggregated.status.Parents = append(aggregated.status.Parents, incoming.Parents...)
+	if generation > aggregated.generation {
+		aggregated.generation = generation
+	}
+
 	return aggregated
 }
 
@@ -220,11 +232,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// `aggregatedStatuses` aggregates status result of resources from all
 			// parents/ancestors, and then stores the status once for every resource.
 			aggregatedStatuses := struct {
-				HTTPRoutes              map[types.NamespacedName]*gwapiv1.RouteStatus
-				GRPCRoutes              map[types.NamespacedName]*gwapiv1.RouteStatus
-				TLSRoutes               map[types.NamespacedName]*gwapiv1a2.RouteStatus
-				TCPRoutes               map[types.NamespacedName]*gwapiv1a2.RouteStatus
-				UDPRoutes               map[types.NamespacedName]*gwapiv1a2.RouteStatus
+				HTTPRoutes              map[types.NamespacedName]aggregatedRouteStatus
+				GRPCRoutes              map[types.NamespacedName]aggregatedRouteStatus
+				TLSRoutes               map[types.NamespacedName]aggregatedRouteStatus
+				TCPRoutes               map[types.NamespacedName]aggregatedRouteStatus
+				UDPRoutes               map[types.NamespacedName]aggregatedRouteStatus
 				BackendTLSPolicies      map[types.NamespacedName]aggregatedPolicyStatus
 				ClientTrafficPolicies   map[types.NamespacedName]aggregatedPolicyStatus
 				BackendTrafficPolicies  map[types.NamespacedName]aggregatedPolicyStatus
@@ -232,11 +244,11 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				EnvoyExtensionPolicies  map[types.NamespacedName]aggregatedPolicyStatus
 				ExtensionServerPolicies map[message.NamespacedNameAndGVK]aggregatedPolicyStatus
 			}{
-				HTTPRoutes:              make(map[types.NamespacedName]*gwapiv1.RouteStatus),
-				GRPCRoutes:              make(map[types.NamespacedName]*gwapiv1.RouteStatus),
-				TLSRoutes:               make(map[types.NamespacedName]*gwapiv1a2.RouteStatus),
-				TCPRoutes:               make(map[types.NamespacedName]*gwapiv1a2.RouteStatus),
-				UDPRoutes:               make(map[types.NamespacedName]*gwapiv1a2.RouteStatus),
+				HTTPRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
+				GRPCRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
+				TLSRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
+				TCPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
+				UDPRoutes:               make(map[types.NamespacedName]aggregatedRouteStatus),
 				BackendTLSPolicies:      make(map[types.NamespacedName]aggregatedPolicyStatus),
 				ClientTrafficPolicies:   make(map[types.NamespacedName]aggregatedPolicyStatus),
 				BackendTrafficPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
@@ -364,31 +376,31 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				for _, httpRoute := range result.HTTPRoutes {
 					if len(httpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(httpRoute)
-						aggregatedStatuses.HTTPRoutes[key] = mergeRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus)
+						aggregatedStatuses.HTTPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.HTTPRoutes[key], &httpRoute.Status.RouteStatus, httpRoute.Generation)
 					}
 				}
 				for _, grpcRoute := range result.GRPCRoutes {
 					if len(grpcRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(grpcRoute)
-						aggregatedStatuses.GRPCRoutes[key] = mergeRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus)
+						aggregatedStatuses.GRPCRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.GRPCRoutes[key], &grpcRoute.Status.RouteStatus, grpcRoute.Generation)
 					}
 				}
 				for _, tlsRoute := range result.TLSRoutes {
 					if len(tlsRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(tlsRoute)
-						aggregatedStatuses.TLSRoutes[key] = mergeRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus)
+						aggregatedStatuses.TLSRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TLSRoutes[key], &tlsRoute.Status.RouteStatus, tlsRoute.Generation)
 					}
 				}
 				for _, tcpRoute := range result.TCPRoutes {
 					if len(tcpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(tcpRoute)
-						aggregatedStatuses.TCPRoutes[key] = mergeRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus)
+						aggregatedStatuses.TCPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.TCPRoutes[key], &tcpRoute.Status.RouteStatus, tcpRoute.Generation)
 					}
 				}
 				for _, udpRoute := range result.UDPRoutes {
 					if len(udpRoute.Status.Parents) != 0 {
 						key := utils.NamespacedName(udpRoute)
-						aggregatedStatuses.UDPRoutes[key] = mergeRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus)
+						aggregatedStatuses.UDPRoutes[key] = mergeAggregatedRouteStatus(aggregatedStatuses.UDPRoutes[key], &udpRoute.Status.RouteStatus, udpRoute.Generation)
 					}
 				}
 				for _, backendTLSPolicy := range result.BackendTLSPolicies {
@@ -435,36 +447,41 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 
 			// Store the stauses of all objects atomically with the aggregated status.
-			for key, routeStatus := range aggregatedStatuses.HTTPRoutes {
-				s := gwapiv1.HTTPRouteStatus{RouteStatus: *routeStatus}
+			for key, entry := range aggregatedStatuses.HTTPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.HTTPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.HTTPRouteStatuses.Store(key, &s)
 				httpRouteStatusCount++
 				delete(keysToDelete.HTTPRouteStatus, key)
 				r.keyCache.HTTPRouteStatus[key] = true
 			}
-			for key, routeStatus := range aggregatedStatuses.GRPCRoutes {
-				s := gwapiv1.GRPCRouteStatus{RouteStatus: *routeStatus}
+			for key, entry := range aggregatedStatuses.GRPCRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.GRPCRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.GRPCRouteStatuses.Store(key, &s)
 				grpcRouteStatusCount++
 				delete(keysToDelete.GRPCRouteStatus, key)
 				r.keyCache.GRPCRouteStatus[key] = true
 			}
-			for key, routeStatus := range aggregatedStatuses.TLSRoutes {
-				s := gwapiv1.TLSRouteStatus{RouteStatus: *routeStatus}
+			for key, entry := range aggregatedStatuses.TLSRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1.TLSRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TLSRouteStatuses.Store(key, &s)
 				tlsRouteStatusCount++
 				delete(keysToDelete.TLSRouteStatus, key)
 				r.keyCache.TLSRouteStatus[key] = true
 			}
-			for key, routeStatus := range aggregatedStatuses.TCPRoutes {
-				s := gwapiv1a2.TCPRouteStatus{RouteStatus: *routeStatus}
+			for key, entry := range aggregatedStatuses.TCPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1a2.TCPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.TCPRouteStatuses.Store(key, &s)
 				tcpRouteStatusCount++
 				delete(keysToDelete.TCPRouteStatus, key)
 				r.keyCache.TCPRouteStatus[key] = true
 			}
-			for key, routeStatus := range aggregatedStatuses.UDPRoutes {
-				s := gwapiv1a2.UDPRouteStatus{RouteStatus: *routeStatus}
+			for key, entry := range aggregatedStatuses.UDPRoutes {
+				status.TruncateRouteParents(entry.status, entry.generation)
+				s := gwapiv1a2.UDPRouteStatus{RouteStatus: *entry.status}
 				r.ProviderResources.UDPRouteStatuses.Store(key, &s)
 				udpRouteStatusCount++
 				delete(keysToDelete.UDPRouteStatus, key)

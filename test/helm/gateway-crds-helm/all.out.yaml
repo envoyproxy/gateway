@@ -25277,6 +25277,12 @@ spec:
                           response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -27067,10 +27073,22 @@ spec:
                         required:
                         - refs
                         type: object
+                      mode:
+                        description: |-
+                          Mode defines how the Gateway or Listener validates client certificates.
+                          If not specified, defaults to RequireAndVerify.
+                        enum:
+                        - Request
+                        - RequireAny
+                        - VerifyIfGiven
+                        - RequireAndVerify
+                        type: string
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
+
+                          Deprecated: Use Mode instead.
                         type: boolean
                       spkiHashes:
                         description: |-
@@ -28998,6 +29016,12 @@ spec:
                                 requestTimeout:
                                   description: RequestTimeout is the time until which
                                     entire response is received from the upstream.
+                                  pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                  type: string
+                                streamIdleTimeout:
+                                  description: |2-
+                                     The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                     If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                   pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                   type: string
                               type: object
@@ -43170,6 +43194,12 @@ spec:
                                                       upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -44576,6 +44606,12 @@ spec:
                                                       upstream.
                                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                                     type: string
+                                                  streamIdleTimeout:
+                                                    description: |2-
+                                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                                    type: string
                                                 type: object
                                               tcp:
                                                 description: Timeout settings for
@@ -44725,6 +44761,7 @@ spec:
                               enum:
                               - Listener
                               - Route
+                              - Upstream
                               type: string
                           required:
                           - sinks
@@ -46122,6 +46159,12 @@ spec:
                                               description: RequestTimeout is the time
                                                 until which entire response is received
                                                 from the upstream.
+                                              pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                              type: string
+                                            streamIdleTimeout:
+                                              description: |2-
+                                                 The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                                 If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                               pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                               type: string
                                           type: object
@@ -47593,6 +47636,12 @@ spec:
                                         description: RequestTimeout is the time until
                                           which entire response is received from the
                                           upstream.
+                                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                        type: string
+                                      streamIdleTimeout:
+                                        description: |2-
+                                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                         type: string
                                     type: object
@@ -50475,6 +50524,12 @@ spec:
                                       which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -51758,6 +51813,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -53307,6 +53368,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -53365,7 +53432,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
@@ -54861,6 +54928,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object

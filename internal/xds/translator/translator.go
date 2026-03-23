@@ -160,7 +160,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		t.Logger.Error(err, "Failed to process JSON patches")
 	}
 
-	// Check if an extension want to inject any clusters/secrets
+	// Check if an extension want to modify the generated xDS resources
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies); err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -391,12 +391,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
+			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -692,7 +692,7 @@ func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, 
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
-func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	var (
 		hcm *hcmv3.HttpConnectionManager
 		err error
@@ -703,7 +703,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	}
 
 	// Add http filters to the HCM if they have not yet been added.
-	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog); err != nil {
 		return err
 	}
 	return replaceHCMInFilterChain(hcm, filterChain)
@@ -761,6 +761,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
+	var sharedEmptyTCPRoute *ir.TCPRoute
+	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -851,28 +853,37 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
+			// Reuse shared EmptyCluster across all listeners without routes
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
-			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
-				Destination: &ir.RouteDestination{
+			if sharedEmptyTCPRoute == nil {
+				sharedEmptyTCPRoute = &ir.TCPRoute{
 					Name: emptyClusterName,
-				},
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+				}
 			}
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				emptyRoute,
-				emptyClusterName,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
-			); err != nil {
-				errs = errors.Join(errs, err)
+
+			// Only add the filter chain once per xDS listener; multiple IR listeners may share
+			// the same address/port and map to the same xDS listener.
+			if !emptyFilterChainAdded[xdsListener.Name] {
+				if err := t.addXdsTCPFilterChain(
+					xdsListener,
+					sharedEmptyTCPRoute,
+					emptyClusterName,
+					accesslog,
+					tcpListener.Timeout,
+					tcpListener.Connection,
+					tcpListener.TLS,
+				); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				emptyFilterChainAdded[xdsListener.Name] = true
 			}
 		}
 	}
@@ -1120,6 +1131,15 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	// Use EDS for static endpoints
 	switch args.endpointType {
 	case EndpointTypeStatic:
+		// Only process the PostEndpoints hook for EDS endpoints
+		// DNS endpoints can be modified by the PostCluster hook if needed
+		if err := processExtensionPostEndpointsHook(xdsEndpoints, args.extensionMgr); err != nil {
+			if args.extensionMgr != nil && !(*args.extensionMgr).FailOpen() {
+				return err
+			} else {
+				args.logger.Error(err, "Extension Manager PostEndpoints failure")
+			}
+		}
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}

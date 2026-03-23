@@ -14,7 +14,8 @@ http:
       timeout:
         http:
           requestTimeout: 5s
-          maxStreamDuration: 10s
+          maxStreamDuration: 30s
+          streamIdleTimeout: 20s
     headerMatches:
     - name: user
       exact: "jason"

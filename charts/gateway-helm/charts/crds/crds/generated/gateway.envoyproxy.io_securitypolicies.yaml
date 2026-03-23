@@ -1955,6 +1955,12 @@ spec:
                                       which entire response is received from the upstream.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
                                 type: object
                               tcp:
                                 description: Timeout settings for TCP.
@@ -3238,6 +3244,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -4787,6 +4799,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -4845,7 +4863,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
@@ -6341,6 +6359,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
