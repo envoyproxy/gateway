@@ -44761,6 +44761,7 @@ spec:
                               enum:
                               - Listener
                               - Route
+                              - Upstream
                               type: string
                           required:
                           - sinks

@@ -166,6 +166,10 @@ accessLog:
     - format: |
         this is a Global log
       path: /dev/stdout
+    - format: |
+        Upstream access log: [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%\n
+      logType: Upstream
+      path: /dev/stdout
   json:
     - path: "/dev/stdout"
 http:

@@ -551,6 +551,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
 			case egv1a1.ProxyAccessLogTypeListener:
 				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+			case egv1a1.ProxyAccessLogTypeUpstream:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeUpstream)
 			}
 		}
 

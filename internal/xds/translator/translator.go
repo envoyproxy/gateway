@@ -391,12 +391,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
+			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -692,7 +692,7 @@ func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, 
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
-func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	var (
 		hcm *hcmv3.HttpConnectionManager
 		err error
@@ -703,7 +703,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	}
 
 	// Add http filters to the HCM if they have not yet been added.
-	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog); err != nil {
 		return err
 	}
 	return replaceHCMInFilterChain(hcm, filterChain)

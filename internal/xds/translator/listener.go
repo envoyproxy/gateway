@@ -454,7 +454,7 @@ func (t *Translator) addHCMToXDSListener(
 	}
 	// Add HTTP filters to the HCM, the filters have already been sorted in the
 	// correct order in the patchHCMWithFilters function.
-	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
+	if err := t.patchHCMWithFilters(mgr, irListener, accesslog); err != nil {
 		return err
 	}
 

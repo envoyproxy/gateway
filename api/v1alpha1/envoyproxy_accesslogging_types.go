@@ -39,7 +39,7 @@ type ProxyAccessLogSetting struct {
 	// (1) All Routes.
 	// (2) Listeners if and only if Envoy does not find a matching route for a request.
 	// If type is defined, the accesslog settings would apply to the relevant component (as-is).
-	// +kubebuilder:validation:Enum=Listener;Route
+	// +kubebuilder:validation:Enum=Listener;Route;Upstream
 	// +optional
 	Type *ProxyAccessLogType `json:"type,omitempty"`
 }
@@ -55,6 +55,9 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log
 	ProxyAccessLogTypeRoute ProxyAccessLogType = "Route"
+
+	// ProxyAccessLogTypeUpstream defines the accesslog for upstream.
+	ProxyAccessLogTypeUpstream ProxyAccessLogType = "Upstream"
 )
 
 type ProxyAccessLogFormatType string
@@ -67,7 +70,7 @@ const (
 )
 
 // ProxyAccessLogFormat defines the format of accesslog.
-// By default accesslogs are written to standard output.
+// By default, accesslogs are written to standard output.
 //
 // +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? has(self.text) : true",message="If AccessLogFormat type is Text, text field needs to be set."
 // +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? !has(self.json) : true",message="If AccessLogFormat type is Text, json field must not be set."
