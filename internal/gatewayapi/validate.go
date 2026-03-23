@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"net/netip"
-	"slices"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -680,7 +679,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 type portListeners struct {
 	listeners []*ListenerContext
-	protocol  string
+	protocols map[string]bool
 	hostnames map[string]int
 }
 
@@ -717,27 +716,42 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
 					hostnames: map[string]int{},
+					protocols: map[string]bool{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-			// Determine the protocol for this listener.
-			// If there are multiple protocols on the same port,
-			// we'll mark them as conflicted later in this function.
-			if portListenerInfo[listener.Port].protocol == "" {
-				portListenerInfo[listener.Port].protocol = getProtocolForListener(listener)
-			}
+			// Collect all protocols seen on this port to detect conflicts later.
+			protocol := getProtocolForListener(listener)
+			portListenerInfo[listener.Port].protocols[protocol] = true
 		}
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
 		for _, info := range portListenerInfo {
+			// For protocol conflict detection, the first listener on a port wins.
+			// Subsequent listeners with incompatible protocols are marked as conflicted.
+			// UDP can coexist with TCP/HTTP/HTTPS/TLS, but TCP/HTTP/HTTPS/TLS cannot mix.
+
+			var firstNonUDPProtocol string
+			seenNonUDPProtocol := false
+
 			for _, listener := range info.listeners {
-				target := getProtocolForListener(listener)
-				if info.protocol != "" && info.protocol != target {
-					// UDP could be use same port with TCP.
-					if slices.Contains([]string{info.protocol, target}, "UDP") {
-						continue
-					}
+				protocol := getProtocolForListener(listener)
+
+				// UDP listeners can coexist with any other protocol
+				if protocol == "UDP" {
+					continue
+				}
+
+				// This is the first non-UDP listener we've seen on this port
+				if !seenNonUDPProtocol {
+					firstNonUDPProtocol = protocol
+					seenNonUDPProtocol = true
+					continue
+				}
+
+				// This is a subsequent non-UDP listener - check if it conflicts
+				if protocol != firstNonUDPProtocol {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
@@ -750,13 +764,13 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 						gwapiv1.ListenerConditionAccepted,
 						metav1.ConditionFalse,
 						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a unique hostname",
+						"All listeners for a given port must use a compatible protocol",
 					)
 					listener.SetCondition(
 						gwapiv1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a unique hostname",
+						"All listeners for a given port must use a compatible protocol",
 					)
 				}
 			}
@@ -776,18 +790,11 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
 					hostnames: map[string]int{},
+					protocols: map[string]bool{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			protocol := getProtocolForListener(listener)
-			// If there are multiple listeners on the same port,
-			// the first listener will be accepted regardless of its protocol,
-			// but any additional listener with a different protocol will be in conflict.
-			if portListenerInfo[listener.Port].protocol != "" {
-				portListenerInfo[listener.Port].protocol = protocol
-			}
 
 			var hostname string
 			if listener.Hostname != nil {
