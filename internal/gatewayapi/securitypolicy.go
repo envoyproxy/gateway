@@ -2013,6 +2013,11 @@ func (t *Translator) buildBasicAuth(
 			usersSecret.Namespace, usersSecret.Name)
 	}
 
+	// Normalize CRLF to LF to handle .htpasswd files generated on Windows.
+	// Without this, the \r character gets included in the hash string, causing
+	// Envoy to reject the xDS config with "invalid SHA hash length" errors.
+	usersSecretBytes = []byte(strings.ReplaceAll(string(usersSecretBytes), "\r\n", "\n"))
+
 	// Validate the htpasswd format
 	if err := validateHtpasswdFormat(usersSecretBytes); err != nil {
 		return nil, err
