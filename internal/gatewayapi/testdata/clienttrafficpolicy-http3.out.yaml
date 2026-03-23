@@ -307,8 +307,8 @@ xdsIR:
         minVersion: "1.2"
       tlsOverlaps: true
       tlsOverlapsHostnames:
-      - foo.example.com
       - bar.example.com
+      - foo.example.com
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
