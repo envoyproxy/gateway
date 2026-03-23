@@ -9023,6 +9023,22 @@ spec:
                           description: |-
                             Remote specifies a module fetched from a remote source.
                             The module binary is downloaded and cached by Envoy.
+                          properties:
+                            sha256:
+                              description: SHA256 checksum that Envoy will use to
+                                verify the downloaded module binary.
+                              pattern: ^[a-f0-9]{64}$
+                              type: string
+                            url:
+                              description: URL is the HTTP or HTTPS URL of the dynamic
+                                module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              pattern: ^https?://[^/?#]+(?:[/?#].*)?$
+                              type: string
+                          required:
+                          - sha256
+                          - url
                           type: object
                         type:
                           default: Local
@@ -9039,6 +9055,8 @@ spec:
                         rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
                       - message: If type is Local, local field needs to be set.
                         rule: self.type != 'Local' || has(self.local)
+                      - message: If type is Remote, local field must not be set.
+                        rule: 'self.type == ''Remote'' ? !has(self.local) : true'
                   required:
                   - name
                   - source

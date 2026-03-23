@@ -170,15 +170,23 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
 func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
-		uc      *urlCluster
-		ds      *ir.DestinationSetting
-		tSocket *corev3.TransportSocket
-		err     error
+		uc  *urlCluster
+		err error
 	)
 
 	if uc, err = url2Cluster(url); err != nil {
 		return err
 	}
+
+	return addURLCluster(uc, traffic, tCtx)
+}
+
+func addURLCluster(uc *urlCluster, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
+	var (
+		ds      *ir.DestinationSetting
+		tSocket *corev3.TransportSocket
+		err     error
+	)
 
 	ds = &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
