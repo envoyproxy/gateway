@@ -43,22 +43,10 @@ var return421Route = &routev3.Route{
 }
 
 func getReturn421RouteWithHost(hostname string) *routev3.Route {
-	return &routev3.Route{
+	route := &routev3.Route{
 		Match: &routev3.RouteMatch{
 			PathSpecifier: &routev3.RouteMatch_Prefix{
 				Prefix: "/",
-			},
-			Headers: []*routev3.HeaderMatcher{
-				{
-					Name: ":authority",
-					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-						StringMatch: &matcherv3.StringMatcher{
-							MatchPattern: &matcherv3.StringMatcher_Exact{
-								Exact: hostname,
-							},
-						},
-					},
-				},
 			},
 			FilterState: []*matcherv3.FilterStateMatcher{
 				{
@@ -79,6 +67,44 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 			},
 		},
 	}
+
+	// Handle wildcard hostnames appropriately
+	if hostname == "*" {
+		// Wildcard matches all hostnames, no specific :authority check needed
+		// The virtual host domain matching will handle it
+		return route
+	} else if len(hostname) > 2 && hostname[:2] == "*." {
+		// Wildcard prefix like *.example.com - use suffix match for .example.com
+		suffix := hostname[1:] // Remove the *, keep the dot
+		route.Match.Headers = []*routev3.HeaderMatcher{
+			{
+				Name: ":authority",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Suffix{
+							Suffix: suffix,
+						},
+					},
+				},
+			},
+		}
+	} else {
+		// Exact hostname - use exact match
+		route.Match.Headers = []*routev3.HeaderMatcher{
+			{
+				Name: ":authority",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: hostname,
+						},
+					},
+				},
+			},
+		}
+	}
+
+	return route
 }
 
 func (t *Translator) mayPatchVirtualHostsForOverlaps(xdsRouteCfg *routev3.RouteConfiguration, httpListener *ir.HTTPListener) {

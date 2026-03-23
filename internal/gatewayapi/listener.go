@@ -452,14 +452,14 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			if httpsListeners[i].gateway.Name == overlap.gateway.Name &&
 				httpsListeners[i].gateway.Namespace == overlap.gateway.Namespace {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					currentHostname,
 					overlap.hostname,
 					overlap.listener,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					currentHostname,
 					overlap.hostname,
 					overlap.listener,
@@ -480,7 +480,7 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 				}
 			}
 			message = fmt.Sprintf(
-				"The hostname %s overlaps with: %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+				"The hostname %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				currentHostname,
 				strings.Join(overlapsDesc, "; "),
 			)
@@ -564,14 +564,14 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			if httpsListeners[i].gateway.Name == overlap.gateway.Name &&
 				httpsListeners[i].gateway.Namespace == overlap.gateway.Namespace {
 				message = fmt.Sprintf(
-					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					currentSAN,
 					overlap.san,
 					overlap.listener,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 					currentSAN,
 					overlap.san,
 					overlap.listener,
@@ -592,7 +592,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 				}
 			}
 			message = fmt.Sprintf(
-				"The certificate SAN %s overlaps with: %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+				"The certificate SAN %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
 				currentSAN,
 				strings.Join(overlapsDesc, "; "),
 			)

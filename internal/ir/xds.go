@@ -299,7 +299,8 @@ type HTTPListener struct {
 	// Tls configuration. If omitted, the gateway will expose a plain text HTTP server.
 	TLS *TLSConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// TLSOverlaps indicates if the listener has TLS configuration that overlaps with other listeners.
-	// HTTP2 should be disabled if this is true to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+	// When true, HTTP/2 requests will receive a 421 Misdirected Request response to prevent HTTP/2 Connection Coalescing
+	// (see https://gateway-api.sigs.k8s.io/geps/gep-3567/).
 	// We use a standalone field to avoid messing with the ClientTrafficPolicy ALPN config.
 	TLSOverlaps          bool     `json:"tlsOverlaps,omitempty" yaml:"tlsOverlaps,omitempty"`
 	TLSOverlapsHostnames []string `json:"tlsOverlapsHostnames,omitempty" yaml:"tlsOverlapsHostnames,omitempty"`

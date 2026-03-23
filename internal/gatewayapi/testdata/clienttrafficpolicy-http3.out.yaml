@@ -92,9 +92,9 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: 'The hostname *.example.com overlaps with: hostname foo.example.com
-          in listener https-foo; hostname bar.example.com in listener https-bar. ALPN
-          will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless
-          explicitly configured via ClientTrafficPolicy'
+          in listener https-foo; hostname bar.example.com in listener https-bar. HTTP/2
+          requests will receive a 421 Misdirected Request response to prevent connection
+          coalescing, unless explicitly configured via ClientTrafficPolicy'
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -123,8 +123,9 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+          in listener https-wildcard. HTTP/2 requests will receive a 421 Misdirected
+          Request response to prevent connection coalescing, unless explicitly configured
+          via ClientTrafficPolicy
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -153,8 +154,9 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname bar.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+          in listener https-wildcard. HTTP/2 requests will receive a 421 Misdirected
+          Request response to prevent connection coalescing, unless explicitly configured
+          via ClientTrafficPolicy
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
