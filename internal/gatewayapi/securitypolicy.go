@@ -1048,25 +1048,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	return errs
 }
 
-// listenerHasMatchingHTTPRoute reports whether the listener contains at least one
-// route matched by the current route-targeted policy.
-func listenerHasMatchingHTTPRoute(irListener *ir.HTTPListener, prefix string, sectionName *gwapiv1.SectionName) bool {
-	if irListener == nil {
-		return false
-	}
-
-	for _, r := range irListener.Routes {
-		if sectionName != nil && string(*sectionName) != r.Metadata.SectionName {
-			continue
-		}
-		if strings.HasPrefix(r.Name, prefix) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (t *Translator) translateSecurityPolicyForGateway(
 	policy *egv1a1.SecurityPolicy,
 	gateway *GatewayContext,
