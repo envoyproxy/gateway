@@ -275,10 +275,7 @@ func sortHTTPFilters(filters []*hcmv3.HttpFilter, filterOrder []egv1a1.FilterPos
 // manager.
 // Important: don't forget to set the order for newly added filters in the
 // newOrderedHTTPFilter method.
-func (t *Translator) patchHCMWithFilters(
-	mgr *hcmv3.HttpConnectionManager,
-	irListener *ir.HTTPListener,
-) error {
+func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	// The order of filter patching is not relevant here.
 	// All the filters will be sorted in correct order after the patching is done.
 	//
@@ -304,7 +301,12 @@ func (t *Translator) patchHCMWithFilters(
 	}
 	if !hasRouter {
 		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
-		routerFilter, err := filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders)
+
+		upstreamAccessLogs, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeUpstream)
+		if err != nil {
+			return err
+		}
+		routerFilter, err := filters.GenerateRouterFilter(headerSettings.EnableEnvoyHeaders, upstreamAccessLogs)
 		if err != nil {
 			return err
 		}
