@@ -246,42 +246,36 @@ func TestGetReturn421RouteWithHost(t *testing.T) {
 		name                 string
 		hostname             string
 		expectHeaderMatcher  bool
-		expectedMatcherType  string // "exact", "suffix", or "none"
-		expectedMatcherValue string
+		expectedRegexPattern string // expected regex pattern or empty if no matcher
 	}{
 		{
 			name:                "wildcard asterisk - no header matcher",
 			hostname:            "*",
 			expectHeaderMatcher: false,
-			expectedMatcherType: "none",
 		},
 		{
-			name:                 "wildcard subdomain - suffix matcher",
+			name:                 "wildcard subdomain - regex with single label",
 			hostname:             "*.example.com",
 			expectHeaderMatcher:  true,
-			expectedMatcherType:  "suffix",
-			expectedMatcherValue: ".example.com",
+			expectedRegexPattern: `^[^.]+\.example\.com(:\d+)?$`,
 		},
 		{
-			name:                 "wildcard subdomain complex - suffix matcher",
+			name:                 "wildcard subdomain complex - regex with single label",
 			hostname:             "*.foo.bar.example.com",
 			expectHeaderMatcher:  true,
-			expectedMatcherType:  "suffix",
-			expectedMatcherValue: ".foo.bar.example.com",
+			expectedRegexPattern: `^[^.]+\.foo\.bar\.example\.com(:\d+)?$`,
 		},
 		{
-			name:                 "exact hostname - exact matcher",
+			name:                 "exact hostname - regex with optional port",
 			hostname:             "foo.example.com",
 			expectHeaderMatcher:  true,
-			expectedMatcherType:  "exact",
-			expectedMatcherValue: "foo.example.com",
+			expectedRegexPattern: `^foo\.example\.com(:\d+)?$`,
 		},
 		{
-			name:                 "exact hostname simple - exact matcher",
+			name:                 "exact hostname simple - regex with optional port",
 			hostname:             "example.com",
 			expectHeaderMatcher:  true,
-			expectedMatcherType:  "exact",
-			expectedMatcherValue: "example.com",
+			expectedRegexPattern: `^example\.com(:\d+)?$`,
 		},
 	}
 
@@ -319,16 +313,9 @@ func TestGetReturn421RouteWithHost(t *testing.T) {
 				stringMatch, ok := headerMatcher.HeaderMatchSpecifier.(*routev3.HeaderMatcher_StringMatch)
 				assert.True(t, ok, "Expected StringMatch header matcher")
 
-				switch tt.expectedMatcherType {
-				case "exact":
-					exactMatch, ok := stringMatch.StringMatch.MatchPattern.(*matcherv3.StringMatcher_Exact)
-					assert.True(t, ok, "Expected Exact matcher")
-					assert.Equal(t, tt.expectedMatcherValue, exactMatch.Exact)
-				case "suffix":
-					suffixMatch, ok := stringMatch.StringMatch.MatchPattern.(*matcherv3.StringMatcher_Suffix)
-					assert.True(t, ok, "Expected Suffix matcher")
-					assert.Equal(t, tt.expectedMatcherValue, suffixMatch.Suffix)
-				}
+				safeRegexMatch, ok := stringMatch.StringMatch.MatchPattern.(*matcherv3.StringMatcher_SafeRegex)
+				assert.True(t, ok, "Expected SafeRegex matcher")
+				assert.Equal(t, tt.expectedRegexPattern, safeRegexMatch.SafeRegex.Regex)
 			}
 		})
 	}

@@ -107,7 +107,8 @@
         headers:
         - name: :authority
           stringMatch:
-            exact: fourth-example.wildcard.org
+            safeRegex:
+              regex: ^fourth-example\.wildcard\.org(:\d+)?$
         prefix: /
     - match:
         pathSeparatedPrefix: /detect-misdirected-requests
