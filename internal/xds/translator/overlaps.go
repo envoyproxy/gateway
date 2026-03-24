@@ -68,35 +68,50 @@ func getReturn421RouteWithHost(hostname string) *routev3.Route {
 	}
 
 	// Handle wildcard hostnames appropriately
+	// The :authority header can include a port (e.g., example.com:443), so we use regex
+	// to match both with and without port.
 	switch {
 	case hostname == "*":
 		// Wildcard matches all hostnames, no specific :authority check needed
 		// The virtual host domain matching will handle it
 		return route
 	case len(hostname) > 2 && hostname[:2] == "*.":
-		// Wildcard prefix like *.example.com - use suffix match for .example.com
-		suffix := hostname[1:] // Remove the *, keep the dot
+		// Wildcard prefix like *.example.com - match single label + suffix with optional port
+		// e.g., *.example.com matches foo.example.com or foo.example.com:443
+		// but NOT foo.bar.example.com
+		suffix := hostname[2:] // Remove the *. prefix, e.g., "example.com"
+		// Regex: ^[^.]+\.escaped-suffix(:\d+)?$
+		// [^.]+ matches one or more non-dot characters (single label)
+		escapedSuffix := strings.ReplaceAll(suffix, ".", `\.`)
+		pattern := `^[^.]+\.` + escapedSuffix + `(:\d+)?$`
 		route.Match.Headers = []*routev3.HeaderMatcher{
 			{
 				Name: ":authority",
 				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
 					StringMatch: &matcherv3.StringMatcher{
-						MatchPattern: &matcherv3.StringMatcher_Suffix{
-							Suffix: suffix,
+						MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+							SafeRegex: &matcherv3.RegexMatcher{
+								Regex: pattern,
+							},
 						},
 					},
 				},
 			},
 		}
 	default:
-		// Exact hostname - use exact match
+		// Exact hostname - match with optional port
+		// e.g., example.com matches example.com or example.com:443
+		escapedHostname := strings.ReplaceAll(hostname, ".", `\.`)
+		pattern := `^` + escapedHostname + `(:\d+)?$`
 		route.Match.Headers = []*routev3.HeaderMatcher{
 			{
 				Name: ":authority",
 				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
 					StringMatch: &matcherv3.StringMatcher{
-						MatchPattern: &matcherv3.StringMatcher_Exact{
-							Exact: hostname,
+						MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+							SafeRegex: &matcherv3.RegexMatcher{
+								Regex: pattern,
+							},
 						},
 					},
 				},

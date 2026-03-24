@@ -64,7 +64,8 @@
         headers:
         - name: :authority
           stringMatch:
-            exact: foo.example.com
+            safeRegex:
+              regex: ^foo\.example\.com(:\d+)?$
         prefix: /
     - match:
         prefix: /
