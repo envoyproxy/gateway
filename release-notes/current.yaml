@@ -35,6 +35,8 @@ new features: |
   Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
   Added support for retry budget in BackendTrafficPolicy.
+  Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
+  Added support for upstrean access log.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -49,7 +51,10 @@ bug fixes: |
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
   Fixed endpoint hostname is not respected when doing active health check.
   Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
+  Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
+  Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
+  Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   Fixed Backend resources with mixed IP and Unix Domain Socket endpoints being incorrectly rejected as unsupported mixed address types.
   Fixed Unix Domain Socket endpoints not being allowed in route Backend references.
 
