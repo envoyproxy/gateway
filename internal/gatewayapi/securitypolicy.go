@@ -969,7 +969,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
-			var listenerErrs error
+			var (
+				listenerErrs   error
+				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+			)
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
 				if policyTargetListener != nil && *policyTargetListener != listener.Name {
@@ -1022,9 +1025,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								shouldFailOpen := extAuthErr != nil && !listenerHasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
 								if !shouldFailOpen {
 									// Return a 500 direct response to avoid unauthorized access
-									r.DirectResponse = &ir.CustomResponse{
-										StatusCode: ptr.To(uint32(500)),
-									}
+									r.DirectResponse = directResponse
 									routesWithDirectResponse.Insert(r.Name)
 								}
 							}
