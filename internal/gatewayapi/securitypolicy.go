@@ -970,7 +970,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			var (
-				listenerErrs   error
+				hasBaseErrs    = errs != nil
 				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
 			)
 			for _, listener := range parentRefCtx.listeners {
@@ -1009,7 +1009,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gtwCtx.envoyProxy, irListener.ClientIPDetection)
 								if geoIPErr != nil {
 									geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
-									listenerErrs = errors.Join(listenerErrs, geoIPErr)
+									errs = errors.Join(errs, geoIPErr)
 									listenerHasNonExtAuthError = true
 								} else if geoIPProvider != nil {
 									irListener.GeoIPProvider = geoIPProvider
@@ -1018,7 +1018,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 								geoIPValidated = true
 							}
 
-							if geoIPErr != nil || errs != nil {
+							if geoIPErr != nil || hasBaseErrs {
 								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 								// and allow the request to go through.
 								// Otherwise, return a 500 direct response to avoid unauthorized access.
@@ -1033,7 +1033,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 					}
 				}
 			}
-			errs = errors.Join(errs, listenerErrs)
 		}
 	}
 	if len(routesWithDirectResponse) > 0 {
@@ -1150,7 +1149,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
-	var listenerErrs error
+	hasBaseErrs := errs != nil
+	directResponse := &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
 	for _, h := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -1172,7 +1172,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gateway.envoyProxy, h.ClientIPDetection)
 			if geoIPErr != nil {
 				geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
-				listenerErrs = errors.Join(listenerErrs, geoIPErr)
+				errs = errors.Join(errs, geoIPErr)
 				listenerHasNonExtAuthError = true
 			} else if geoIPProvider != nil {
 				h.GeoIPProvider = geoIPProvider
@@ -1180,15 +1180,13 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		}
 
 		var errorResponse *ir.CustomResponse
-		if geoIPErr != nil || errs != nil {
+		if geoIPErr != nil || hasBaseErrs {
 			// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
 			// and allow the request to go through.
 			// Otherwise, return a 500 direct response to avoid unauthorized access.
 			shouldFailOpen := extAuthErr != nil && !listenerHasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
 			if !shouldFailOpen {
-				errorResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
-				}
+				errorResponse = directResponse
 			}
 		}
 
@@ -1206,7 +1204,6 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 		}
 	}
-	errs = errors.Join(errs, listenerErrs)
 	if len(routesWithDirectResponse) > 0 {
 		t.Logger.Info("setting 500 direct response in routes due to errors in SecurityPolicy",
 			"policy", fmt.Sprintf("%s/%s", policy.Namespace, policy.Name),
