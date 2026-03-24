@@ -1304,6 +1304,37 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{"at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"},
 		},
 		{
+			desc: "authorization-client-ip-geo-locations",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
+										{Country: ptr.To("US")},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "authorization-jwt-claims-without-jwt-authn",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{

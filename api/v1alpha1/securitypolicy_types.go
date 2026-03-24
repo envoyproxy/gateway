@@ -38,10 +38,11 @@ type SecurityPolicy struct {
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
 //
 // NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
-// When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
+// When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 // (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 // authentication/authorization features such as JWT, API Key, Basic Auth,
-// OIDC, or External Authorization are not applicable to TCPRoute targets.
+// OIDC, External Authorization, or GeoIP based authorization are not applicable
+// to TCPRoute targets.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"

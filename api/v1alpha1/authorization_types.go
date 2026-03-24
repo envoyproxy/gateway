@@ -112,11 +112,16 @@ type Principal struct {
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
 
 	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// This field is supported for HTTPRoute and GRPCRoute authorization.
+	// It is not supported for TCPRoute targets.
+	//
 	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+	//
+	// The client IP is inferred from the X-Forwarded-For header or a custom header.
+	// You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
 	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
 	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
 }
 

@@ -59,6 +59,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
+	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeadersToRemove(httpListener)...)
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
 		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)

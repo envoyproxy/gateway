@@ -66,7 +66,7 @@ type GeoIPDBSource struct {
 type LocalGeoIPDBSource struct {
 	// Path is the path to the database file.
 	//
-	// +kubebuilder:validation:Pattern=`^.*\\.mmdb$`
+	// +kubebuilder:validation:Pattern=`^.*\.mmdb$`
 	Path string `json:"path"`
 }
 
