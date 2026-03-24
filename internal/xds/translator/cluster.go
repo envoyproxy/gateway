@@ -20,6 +20,7 @@ import (
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
@@ -443,6 +444,41 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
 					Name:        "envoy.load_balancing_policies.maglev",
 					TypedConfig: typedConsistentHash,
+				},
+			}},
+		}
+	case args.loadBalancer.BackendUtilization != nil:
+		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+		v := args.loadBalancer.BackendUtilization
+		if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
+			cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+		}
+		if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
+			cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
+		}
+		if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
+			cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
+		}
+		if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
+			cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
+			}
+		}
+		if v.ErrorUtilizationPenaltyPercent != nil {
+			cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
+		}
+		if len(v.MetricNamesForComputingUtilization) > 0 {
+			cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
+		}
+		typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
+					TypedConfig: typedCSWRR,
 				},
 			}},
 		}
@@ -1003,7 +1039,8 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 	// If Active Health Check has an explicit hostname override, it will be used on Cluster.
 	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
 	// so that Envoy can use it for health checking.
-	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" {
+	// Note: The "*" wildcard is not an explicit user-provided hostname
+	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
 		return ""
 	}
 	if ep == nil || ep.Hostname == nil {
@@ -1509,6 +1546,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.RandomLoadBalancer
 	case loadBalancer.ConsistentHash != nil:
 		fallbackType = ir.ConsistentHashLoadBalancer
+	case loadBalancer.BackendUtilization != nil:
+		fallbackType = ir.BackendUtilizationLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1599,6 +1638,21 @@ func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*cluste
 				{
 					TypedExtensionConfig: &corev3.TypedExtensionConfig{
 						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.BackendUtilizationLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&cswrrv3.ClientSideWeightedRoundRobin{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal BackendUtilization policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
 						TypedConfig: fallbackPolicyAny,
 					},
 				},
