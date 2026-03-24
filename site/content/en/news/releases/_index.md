@@ -48,7 +48,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 ## Release Schedule
 
 In order to align with the Envoy Proxy [release schedule][], Envoy Gateway releases are produced on a fixed schedule
-(the 22nd day of each quarter), with an acceptable delay of up to 2 weeks, and a hard deadline of 3 weeks.
+(the 29th day of each quarter), with an acceptable delay of up to 2 weeks, and a hard deadline of 3 weeks.
 
 | Version |  Expected  |   Actual   | Difference | End of Life |
 |:-------:|:----------:|:----------:|:----------:|:-----------:|
@@ -64,7 +64,8 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 |  1.4.x  | 2025/05/12 | 2025/05/13 |   +1 day   | 2025/11/13  |
 |  1.5.x  | 2025/08/12 | 2025/08/08 |   -4 day   | 2026/02/13  |
 |  1.6.x  | 2025/11/11 | 2025/11/11 |            | 2026/05/13  |
-|  1.7.x  | 2026/02/04 | 2025/02/05 |  +1 day    | 2026/08/05  |
+|  1.7.x  | 2026/02/04 | 2026/02/05 |  +1 day    | 2026/08/05  |
+|  1.8.x  | 2026/04/29 |            |            |             |
 
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
