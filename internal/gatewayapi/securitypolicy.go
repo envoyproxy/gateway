@@ -1169,7 +1169,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 
 		if authorization.UsesClientIPGeoLocations() {
 			// We have to validate GeoIP here because it requires the listener-level ClientIPDetection configuration
-			geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gateway.envoyProxy, h.ClientIPDetection)
+			geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gtwCtx.envoyProxy, h.ClientIPDetection)
 			if geoIPErr != nil {
 				geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
 				errs = errors.Join(errs, geoIPErr)
