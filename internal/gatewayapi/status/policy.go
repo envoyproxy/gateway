@@ -17,6 +17,16 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
+const (
+	// PolicyReasonUnsupportedHTTP3ClientValidation is used with the "Warning" condition when
+	// HTTP/3 is disabled because downstream client TLS validation is not supported over QUIC.
+	PolicyReasonUnsupportedHTTP3ClientValidation gwapiv1.PolicyConditionReason = "UnsupportedHTTP3ClientValidation"
+
+	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
+	// messages need to be surfaced on the same ancestor.
+	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "MultipleWarnings"
+)
+
 type PolicyResolveError struct {
 	Reason  gwapiv1.PolicyConditionReason
 	Message string
@@ -81,8 +91,34 @@ func SetDeprecatedFieldsWarningForPolicyAncestors(policyStatus *gwapiv1.PolicySt
 
 // SetDeprecatedFieldsWarningForPolicyAncestor sets a deprecated fields warning condition for a specific ancestor reference.
 func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, generation int64, deprecatedFields map[string]string) {
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+}
+
+// SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.
+func SetWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, reason gwapiv1.PolicyConditionReason, message string, generation int64) {
+	if message == "" {
+		return
+	}
+
+	existingCond := getPolicyAncestorCondition(policyStatus, ancestorRef, controllerName, egv1a1.PolicyConditionWarning)
+	if existingCond == nil {
+		SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
+			egv1a1.PolicyConditionWarning, metav1.ConditionTrue, reason, message, generation)
+		return
+	}
+
+	combinedMessage := mergePolicyWarningMessages(existingCond.Message, message)
+	combinedReason := reason
+	switch {
+	case existingCond.Reason == "":
+	case existingCond.Reason == string(reason):
+		combinedReason = reason
+	default:
+		combinedReason = PolicyReasonMultipleWarnings
+	}
+
 	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		egv1a1.PolicyConditionWarning, metav1.ConditionTrue, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
+		egv1a1.PolicyConditionWarning, metav1.ConditionTrue, combinedReason, combinedMessage, generation)
 }
 
 func SetConditionForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string,
@@ -266,5 +302,37 @@ func sortRankForPolicyAncestor(ancestor *gwapiv1.PolicyAncestorStatus) int {
 		return 1
 	default:
 		return 2
+	}
+}
+
+func getPolicyAncestorCondition(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, conditionType gwapiv1.PolicyConditionType) *metav1.Condition {
+	for i, ancestor := range policyStatus.Ancestors {
+		if string(ancestor.ControllerName) != controllerName || !ancestorRefsEqual(&ancestor.AncestorRef, ancestorRef) {
+			continue
+		}
+		for j, cond := range ancestor.Conditions {
+			if cond.Type == string(conditionType) {
+				return &policyStatus.Ancestors[i].Conditions[j]
+			}
+		}
+	}
+
+	return nil
+}
+
+func mergePolicyWarningMessages(existing, next string) string {
+	switch {
+	case existing == "":
+		return next
+	case next == "":
+		return existing
+	case existing == next:
+		return existing
+	case strings.Contains(existing, next):
+		return existing
+	case strings.Contains(next, existing):
+		return next
+	default:
+		return existing + "; " + next
 	}
 }
