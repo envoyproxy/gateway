@@ -38,6 +38,7 @@ new features: |
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
   Added support for upstrean access log.
+  Added `spec.headers.disableXForwardedForAppend` to ClientTrafficPolicy to disable Envoy's automatic X-Forwarded-For append behavior when using XFF-based client IP detection.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
