@@ -95,7 +95,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				continue
 			}
 
-			// find the resources to patch and convert it to JSON
+			// find the resources to patch and convert them to JSON
 			dests, err = findXdsResources(tCtx, p)
 			if err != nil {
 				tErrs = errors.Join(tErrs, err)
@@ -108,8 +108,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				continue
 			}
 
-			var destsError error
-			var destsPatched bool
+			var patchErrors error
+			var anyPatched bool
 			for _, dest := range dests {
 				var (
 					resourceJSON []byte
@@ -119,13 +119,13 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				resourceJSON, err = jsonMarshalOpts.Marshal(dest)
 				if err != nil {
 					tErr := fmt.Errorf("unable to marshal xds resource %s, err: %w", p.Type, err)
-					destsError = errors.Join(destsError, tErr)
+					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
 
 				modifiedJSON, err = jsonpatch.ApplyJSONPatches(resourceJSON, p.Operation)
 				if err != nil {
-					destsError = errors.Join(destsError, err)
+					patchErrors = errors.Join(patchErrors, err)
 					continue
 				}
 
@@ -134,13 +134,13 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				// into and validated before saving it into the xds output resource
 				temp, err := getXdsResourceType(p.Type)
 				if err != nil {
-					destsError = errors.Join(destsError, err)
+					patchErrors = errors.Join(patchErrors, err)
 					continue
 				}
 
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
 					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
-					destsError = errors.Join(destsError, tErr)
+					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
 
@@ -149,26 +149,26 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				if ok {
 					if err = validator.Validate(); err != nil {
 						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", p.Type, err.Error())
-						destsError = errors.Join(destsError, tErr)
+						patchErrors = errors.Join(patchErrors, tErr)
 						continue
 					}
 				}
 
 				if err = deepCopyPtr(temp, dest); err != nil {
 					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", p.Type, err)
-					destsError = errors.Join(destsError, tErr)
+					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
 
 				// Mark that at least one dest has been patched successfully,
 				// so that we can report partial success if there are multiple dests and some of them fail
-				destsPatched = true
+				anyPatched = true
 			}
 
 			// If there are multiple dests and some of them fail,
 			// consider it as successful and ignore the failures to patch other dests.
-			if !destsPatched && destsError != nil {
-				tErrs = errors.Join(tErrs, destsError)
+			if !anyPatched && patchErrors != nil {
+				tErrs = errors.Join(tErrs, patchErrors)
 			}
 		}
 
@@ -214,6 +214,9 @@ var jsonMarshalOpts = protojson.MarshalOptions{
 	UseProtoNames: true,
 }
 
+// findXdsResources returns XDS resources to patch based on the patch configuration.
+// If p.Name is empty, all resources of the specified type are returned.
+// If p.Name is specified, only resources with matching names are returned.
 func findXdsResources(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
 	var resources []cachetypes.Resource
 	switch p.Type {
