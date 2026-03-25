@@ -441,6 +441,8 @@ spec:
 
                   - envoy.filters.http.dynamic_modules
 
+                  - envoy.filters.http.geoip
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -485,6 +487,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -515,6 +518,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -543,6 +547,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -584,7 +589,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -602,7 +607,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -621,7 +626,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -640,7 +645,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -658,7 +663,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
