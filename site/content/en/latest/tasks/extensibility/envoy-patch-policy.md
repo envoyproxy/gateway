@@ -396,6 +396,7 @@ spec:
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
       # The RouteConfiguration name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      # Using empty name to patch all the RouteConfiguration resources generated for this Gateway.
       name: default/eg/http
       operation:
         op: add
@@ -463,15 +464,8 @@ applied to Envoy Proxy.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"gateway.envoyproxy.io/v1alpha1","kind":"EnvoyPatchPolicy","metadata":{"annotations":{},"name":"custom-response-patch-policy","namespace":"default"},"spec":{"jsonPatches":[{"name":"default/eg/http","operation":{"op":"add","path":"/default_filter_chain/filters/0/typed_config/local_reply_config","value":{"mappers":[{"body":{"inline_string":"could not find what you are looking for"},"filter":{"status_code_filter":{"comparison":{"op":"EQ","value":{"default_value":404}}}}}]}},"type":"type.googleapis.com/envoy.config.listener.v3.Listener"}],"priority":0,"targetRef":{"group":"gateway.networking.k8s.io","kind":"Gateway","name":"eg","namespace":"default"},"type":"JSONPatch"}}
-  creationTimestamp: "2023-07-31T21:47:53Z"
-  generation: 1
   name: custom-response-patch-policy
   namespace: default
-  resourceVersion: "10265"
-  uid: a35bda6e-a0cc-46d7-a63a-cee765174bc3
 spec:
   jsonPatches:
   - name: default/eg/http
