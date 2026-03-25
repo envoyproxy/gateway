@@ -8273,7 +8273,10 @@ spec:
                     using JSONPatch semantic
                   properties:
                     name:
-                      description: Name is the name of the resource
+                      description: |-
+                        Name is the name of the resource.
+                        When omitted or set to empty string (""), the patch will be applied to all resources of the specified Type.
+                        When specified, the patch will only be applied to the resource with the matching name.
                       type: string
                     operation:
                       description: Patch defines the JSON Patch Operation
