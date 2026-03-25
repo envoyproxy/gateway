@@ -17,6 +17,8 @@ http:
   clientIPDetection:
     xForwardedFor:
       numTrustedHops: 2
+  headers:
+    disableXForwardedForAppend: true
 - name: "second-listener"
   address: "::"
   port: 8082
