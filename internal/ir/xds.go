@@ -3417,8 +3417,7 @@ type ExtProc struct {
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the LUa configuration.
-	// The xds translator only generates one Lua filter for each unique name
+	// Name is a unique name for the Lua configuration.
 	Name string
 	// Code is the Lua source code
 	Code *string

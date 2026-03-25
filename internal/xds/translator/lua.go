@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -29,8 +30,21 @@ type lua struct{}
 var _ httpFilter = &lua{}
 
 // patchHCM builds and appends disabled Lua filters to the HTTP Connection Manager.
-// One filter is added per distinct Lua name (across all routes). Each has empty default source code;
-// the actual script is supplied per-route via LuaPerRoute.
+// One top-level filter is added per Lua list position across all routes. Each has
+// empty default source code; the actual script is supplied per-route via
+// LuaPerRoute.
+//
+// We intentionally do not collapse everything into a single top-level Lua filter.
+// Envoy's LuaPerRoute API can only override one script for one filter instance,
+// while EG's EnvoyExtensionPolicy API allows an ordered list of Lua filters per
+// route. A single HCM-level filter would lose that ordering unless EG started
+// synthesizing one combined script per route, which would change user semantics
+// and make independently-authored scripts interfere with each other.
+//
+// Using one stable filter per Lua slot index preserves the route-level ordering
+// of multiple Lua entries while still avoiding policy-specific HCM filter names.
+// This keeps the listener filter set stable across policy churn as long as the
+// maximum number of Lua entries per route does not change.
 func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
@@ -39,29 +53,35 @@ func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListen
 		return errors.New("ir listener is nil")
 	}
 
-	var errs error
+	maxLuaCount := 0
 	for _, route := range irListener.Routes {
 		if !routeContainsLua(route) {
 			continue
 		}
-		for _, ep := range route.EnvoyExtensions.Luas {
-			if hcmContainsFilter(mgr, luaFilterName(ep)) {
-				continue
-			}
-			filter, err := buildHCMLuaFilter(ep)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
+		if count := len(route.EnvoyExtensions.Luas); count > maxLuaCount {
+			maxLuaCount = count
 		}
+	}
+
+	var errs error
+	for idx := range maxLuaCount {
+		filterName := luaFilterName(idx)
+		if hcmContainsFilter(mgr, filterName) {
+			continue
+		}
+		filter, err := buildHCMLuaFilter(filterName)
+		if err != nil {
+			errs = errors.Join(errs, err)
+			continue
+		}
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 	return errs
 }
 
 // buildHCMLuaFilter returns a disabled Lua filter for HCM with empty default source code.
 // The actual Lua script for each route is provided via LuaPerRoute in the route's TypedPerFilterConfig.
-func buildHCMLuaFilter(lua ir.Lua) (*hcmv3.HttpFilter, error) {
+func buildHCMLuaFilter(filterName string) (*hcmv3.HttpFilter, error) {
 	var (
 		luaProto *luafilterv3.Lua
 		luaAny   *anypb.Any
@@ -82,7 +102,7 @@ func buildHCMLuaFilter(lua ir.Lua) (*hcmv3.HttpFilter, error) {
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     luaFilterName(lua),
+		Name:     filterName,
 		Disabled: true,
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: luaAny,
@@ -90,9 +110,11 @@ func buildHCMLuaFilter(lua ir.Lua) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-// luaFilterName returns the filter name for the given Lua (policy-based naming).
-func luaFilterName(lua ir.Lua) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterLua, lua.Name)
+// luaFilterName returns the stable top-level filter name for the Lua list index.
+// The index is the execution slot within the ordered EnvoyExtensionPolicy Lua
+// list, so route 0th scripts always bind to the same listener-level filter.
+func luaFilterName(idx int) string {
+	return perRouteFilterName(egv1a1.EnvoyFilterLua, strconv.Itoa(idx))
 }
 
 // routeContainsLua returns true if the route has any Lua extensions.
@@ -120,8 +142,8 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 		return nil
 	}
 
-	for _, ep := range irRoute.EnvoyExtensions.Luas {
-		filterName := luaFilterName(ep)
+	for idx, ep := range irRoute.EnvoyExtensions.Luas {
+		filterName := luaFilterName(idx)
 		luaPerRoute := &luafilterv3.LuaPerRoute{
 			Override: &luafilterv3.LuaPerRoute_SourceCode{
 				SourceCode: &corev3.DataSource{
