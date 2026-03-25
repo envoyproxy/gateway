@@ -13,6 +13,8 @@ request is sent from Envoy to the upstream service and will not affect response 
 client. Header values support Envoy [format strings][envoy-format-strings], enabling dynamic values sourced from the
 request and connection metadata.
 
+Header names are case-insensitive, so each header only needs to be listed once (for example, `x-forwarded-for` also matches `X-Forwarded-For`).
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}
