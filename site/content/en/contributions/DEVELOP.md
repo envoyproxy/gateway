@@ -10,7 +10,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### go
 
-* Version: 1.24
+* Version: 1.26
 * Installation Guide: https://go.dev/doc/install
 
 ### make
@@ -196,7 +196,7 @@ the detailed benchmark report, namely `benchmark_report.zip`.
 
 Here are some brief benchmark reports about Envoy Gateway:
 
-- It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
+- It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTPRoutes) settings
 
 
 [Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
