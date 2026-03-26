@@ -201,7 +201,7 @@ export GITHUB_REMOTE=origin
    2. Cherry-pick the commits from `main` that differ from the release branch, e.g. `git cherry-pick <present commit in rc>..<latest commit on main> -s`
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
-   5. Submit a PR to merge the topic from of your fork into the Envoy Gateway release branch.
+   5. Submit a PR to merge the topic branch of your fork into the Envoy Gateway release branch.
    6. Do not proceed until the PR has merged and CI passes for the merged PR.
    7. If you are still on your topic branch, change to the release branch:
 
@@ -280,7 +280,7 @@ The following steps should be used for creating a patch release.
 ### Prerequisites
 
 - Permissions to push to the Envoy Gateway repository.
-- A minor release has already been released. Refer to the [Minor Release](#minor-candidate) section for additional details on releasing a minor release.
+- A minor release has already been released. Refer to the [Minor Release](#minor-release) section for additional details on releasing a minor release.
 
 Set environment variables for use in subsequent steps:
 
@@ -343,14 +343,14 @@ export GITHUB_REMOTE=origin
 7. Cherry-pick the release note that you created in the previous step to the release branch. The release note will be included in the release artifacts.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the release note and release announcement commit from `main` to the topic branch.
-   3. Submit a PR to merge the topic from of your fork into the release branch.
+   3. Submit a PR to merge the topic branch of your fork into the release branch.
 
 8. Cherry-pick the commits that you want to include in the patch release.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the commits from `main` that you want to include in the patch release.
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
-   5. Submit a PR to merge the topic from of your fork into the release branch.
+   5. Submit a PR to merge the topic branch of your fork into the release branch.
    6. Do not proceed until the PR has merged and CI passes for the merged PR.
    7. If you are still on your topic branch, change to the release branch:
 
@@ -390,8 +390,8 @@ export GITHUB_REMOTE=origin
    ```console
    # Release Announcement
 
-   Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}  release announcement]
-   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
+   Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}  release announcement]
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.html) to learn more about the release.
    ```
 
 17. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.

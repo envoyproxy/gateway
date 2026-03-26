@@ -9,7 +9,7 @@ Any individual document can be written using [Markdown].
 
 ## Documentation Structure
 
-We supported the versioned Docs now, the directory name under docs represents
+We now support versioned Docs, the directory name under docs represents
 the version of docs. The root of the latest site is in `site/content/en/latest`.
 This is probably where to start if you're trying to understand how things fit together.
 
