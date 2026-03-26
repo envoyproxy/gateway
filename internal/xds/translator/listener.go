@@ -28,6 +28,7 @@ import (
 	uuidv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/request_id/uuid/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -61,7 +62,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil {
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil && len(opts.IgnoreHTTP11Upgrade) == 0 {
 		return nil
 	}
 	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
@@ -83,6 +84,13 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts.HTTP10 != nil {
 		r.AcceptHttp_10 = true
 		r.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
+	}
+	if len(opts.IgnoreHTTP11Upgrade) > 0 {
+		matchers := make([]*matcherv3.StringMatcher, 0, len(opts.IgnoreHTTP11Upgrade))
+		for _, m := range opts.IgnoreHTTP11Upgrade {
+			matchers = append(matchers, buildXdsStringMatcher(m))
+		}
+		r.IgnoreHttp_11Upgrade = matchers
 	}
 	return r
 }

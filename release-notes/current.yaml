@@ -38,6 +38,7 @@ new features: |
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
   Added support for upstrean access log.
+  Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoreHTTP11Upgrade`.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

@@ -2641,6 +2641,7 @@ _Appears in:_
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
+| `ignoreHTTP11Upgrade` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoreHTTP11Upgrade specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
 
 
 #### HTTP2KeepaliveSettings
@@ -5658,6 +5659,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
