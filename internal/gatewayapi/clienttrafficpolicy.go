@@ -720,7 +720,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	if http1Settings == nil {
 		return nil
 	}
-	var ignoreUpgrade []*ir.StringMatch
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoreHTTP11Upgrade))
 	for _, match := range http1Settings.IgnoreHTTP11Upgrade {
 		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
 	}
