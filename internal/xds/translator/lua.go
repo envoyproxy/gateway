@@ -44,7 +44,7 @@ var _ httpFilter = &lua{}
 // Using one stable filter per Lua slot index preserves the route-level ordering
 // of multiple Lua entries while still avoiding policy-specific HCM filter names.
 // This keeps the listener filter set stable across policy churn as long as the
-// maximum number of Lua entries per route does not change.
+// maximum number of Lua entries across routes does not change.
 func (*lua) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
