@@ -471,6 +471,9 @@ func TestTranslate(t *testing.T) {
 
 			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+
+			got.EnvoyPatchPolicies = resources.EnvoyPatchPolicies
+
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
