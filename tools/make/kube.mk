@@ -379,10 +379,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) $(E2E_REDIRECT)
 else
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -392,11 +393,12 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
-		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
+		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG) $(CONFORMANCE_STATIC_ADDR_ARGS)
 else
     # we didn't care about output when running single test
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST)

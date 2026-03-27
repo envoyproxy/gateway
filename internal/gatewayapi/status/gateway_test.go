@@ -101,10 +101,6 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
-					Value: "127.0.0.1",
-				},
-				{
 					Type:  ptr.To(gwapiv1.HostnameAddressType),
 					Value: "localhost",
 				},
