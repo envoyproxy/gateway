@@ -115,6 +115,9 @@ type BackendTrafficPolicySpec struct {
 	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
 	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
 	//
+	// Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
+	// on routes that need those protocols, because requests can hang instead of being forwarded upstream.
+	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`
 	// Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).
