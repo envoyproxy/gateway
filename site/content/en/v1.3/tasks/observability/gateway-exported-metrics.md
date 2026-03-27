@@ -13,7 +13,7 @@ For EnvoyProxy Metrics, please refer to the [EnvoyProxy Metrics](./proxy-metric)
 ## Watching Components
 
 The Resource Provider, xDS Translator and Infra Manager etc. are key components that made up of Envoy Gateway,
-they all follow the design of [Watching Components](../../../contributions/design/watching).
+they all follow the design of [Watching Components](../../../community/design/watching).
 
 Envoy Gateway collects the following metrics in Watching Components:
 
