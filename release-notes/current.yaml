@@ -38,6 +38,7 @@ new features: |
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
   Added support for upstrean access log.
+  Added `--topology-webhook-name` flag to certgen to explicitly target a MutatingWebhookConfiguration by name.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -56,7 +57,7 @@ bug fixes: |
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
-
+  Fixed certgen job unable to find the topology injector webhook when deployed to a custom namespace.
 
 # Enhancements that improve performance.
 performance improvements: |
