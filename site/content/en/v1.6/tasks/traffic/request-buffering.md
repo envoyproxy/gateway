@@ -201,6 +201,11 @@ kubectl delete httproute/foo
 kubectl delete backendtrafficpolicy/request-buffer
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
+
 [Envoy buffer filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/buffer_filter
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/

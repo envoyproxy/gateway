@@ -693,6 +693,10 @@ $ curl -L -vvv --header "Host: host.header.rewrite.example" --header "x-custom-h
 You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided
 `x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
 
 [HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
