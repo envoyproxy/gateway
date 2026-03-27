@@ -449,3 +449,52 @@ func TestIsServiceHeadless(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyServiceBackendHostname(t *testing.T) {
+
+	t.Run("uses default cluster domain", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Name:      "service-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Equal(t, ptr.To("service-1.default.svc.cluster.local"), setting.Endpoints[0].Hostname)
+	})
+
+	t.Run("uses configured dns domain", func(t *testing.T) {
+		translator := &Translator{DNSDomain: "example.internal"}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Name:      "service-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Equal(t, ptr.To("service-1.default.svc.example.internal"), setting.Endpoints[0].Hostname)
+	})
+
+	t.Run("ignores non-service backends", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind:      egv1a1.KindBackend,
+				Name:      "backend-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Nil(t, setting.Endpoints[0].Hostname)
+	})
+}
