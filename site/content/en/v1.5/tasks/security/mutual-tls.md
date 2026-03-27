@@ -202,6 +202,6 @@ rm client.example.com.crt client.example.com.key client.example.com.csr
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](../../../community/develop) to get involved in the project.
 
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
