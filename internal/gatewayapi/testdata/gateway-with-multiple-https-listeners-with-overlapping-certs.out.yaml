@@ -62,8 +62,7 @@ gateways:
       - lastTransitionTime: null
         message: The certificate SAN *.example.com overlaps with the certificate SAN
           bar.example.com in listener https-2. HTTP/2 requests will receive a 421
-          Misdirected Request response to prevent connection coalescing, unless explicitly
-          configured via ClientTrafficPolicy
+          Misdirected Request response to prevent connection coalescing.
         reason: OverlappingCertificates
         status: "True"
         type: OverlappingTLSConfig
@@ -93,8 +92,7 @@ gateways:
       - lastTransitionTime: null
         message: The certificate SAN bar.example.com overlaps with the certificate
           SAN *.example.com in listener https-1. HTTP/2 requests will receive a 421
-          Misdirected Request response to prevent connection coalescing, unless explicitly
-          configured via ClientTrafficPolicy
+          Misdirected Request response to prevent connection coalescing.
         reason: OverlappingCertificates
         status: "True"
         type: OverlappingTLSConfig

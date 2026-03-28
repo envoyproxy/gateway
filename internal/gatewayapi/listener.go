@@ -452,14 +452,14 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			if httpsListeners[i].gateway.Name == overlap.gateway.Name &&
 				httpsListeners[i].gateway.Namespace == overlap.gateway.Namespace {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 					currentHostname,
 					overlap.hostname,
 					overlap.listener,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 					currentHostname,
 					overlap.hostname,
 					overlap.listener,
@@ -480,7 +480,7 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 				}
 			}
 			message = fmt.Sprintf(
-				"The hostname %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+				"The hostname %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 				currentHostname,
 				strings.Join(overlapsDesc, "; "),
 			)
@@ -547,9 +547,9 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 
 		// Get the first overlapping SAN from the current listener's cert
 		var currentSAN string
-		if len(httpsListeners[i].certDNSNames) > 0 {
+		if len(httpsListeners[i].tls.certDNSNames) > 0 {
 			for _, overlap := range overlappingListeners[i] {
-				if cert := isOverlappingCertificate(httpsListeners[i].certDNSNames, []string{overlap.san}); cert != nil {
+				if cert := isOverlappingCertificate(httpsListeners[i].tls.certDNSNames, []string{overlap.san}); cert != nil {
 					currentSAN = cert.san1
 					break
 				}
@@ -563,14 +563,14 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 			if httpsListeners[i].gateway.Name == overlap.gateway.Name &&
 				httpsListeners[i].gateway.Namespace == overlap.gateway.Namespace {
 				message = fmt.Sprintf(
-					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 					currentSAN,
 					overlap.san,
 					overlap.listener,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 					currentSAN,
 					overlap.san,
 					overlap.listener,
@@ -591,7 +591,7 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 				}
 			}
 			message = fmt.Sprintf(
-				"The certificate SAN %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+				"The certificate SAN %s overlaps with: %s. HTTP/2 requests will receive a 421 Misdirected Request response to prevent connection coalescing.",
 				currentSAN,
 				strings.Join(overlapsDesc, "; "),
 			)

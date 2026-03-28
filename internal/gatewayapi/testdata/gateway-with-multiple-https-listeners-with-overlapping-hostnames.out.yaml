@@ -62,8 +62,7 @@ gateways:
       - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
           in listener https-2. HTTP/2 requests will receive a 421 Misdirected Request
-          response to prevent connection coalescing, unless explicitly configured
-          via ClientTrafficPolicy
+          response to prevent connection coalescing.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -93,8 +92,7 @@ gateways:
       - lastTransitionTime: null
         message: The hostname *.example.com overlaps with the hostname foo.example.com
           in listener https-1. HTTP/2 requests will receive a 421 Misdirected Request
-          response to prevent connection coalescing, unless explicitly configured
-          via ClientTrafficPolicy
+          response to prevent connection coalescing.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig

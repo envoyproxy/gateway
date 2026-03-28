@@ -59,10 +59,10 @@ func TestDomainMatchHostname(t *testing.T) {
 			want:             true,
 		},
 		{
-			name:             "wildcard subdomain does NOT match two levels (Gateway API spec)",
+			name:             "wildcard subdomain matches multiple levels (Gateway API spec)",
 			vhDomain:         "*.wildcard.com",
 			overlapsHostname: "www.sub.wildcard.com",
-			want:             false,
+			want:             true,
 		},
 		{
 			name:             "wildcard subdomain does not match base domain",
@@ -181,7 +181,7 @@ func TestDomainsMatched(t *testing.T) {
 			name:             "wildcard subdomain does not match multi-level",
 			vhDomains:        []string{"example.com", "*.wildcard.com"},
 			overlapsHostname: "www.sub.wildcard.com",
-			want:             false,
+			want:             true,
 		},
 		{
 			name:             "empty domains list",
@@ -254,16 +254,16 @@ func TestGetReturn421RouteWithHost(t *testing.T) {
 			expectHeaderMatcher: false,
 		},
 		{
-			name:                 "wildcard subdomain - regex with single label",
+			name:                 "wildcard subdomain - regex with multiple labels",
 			hostname:             "*.example.com",
 			expectHeaderMatcher:  true,
-			expectedRegexPattern: `^[^.]+\.example\.com(:\d+)?$`,
+			expectedRegexPattern: `^.+\.example\.com(:\d+)?$`,
 		},
 		{
-			name:                 "wildcard subdomain complex - regex with single label",
+			name:                 "wildcard subdomain complex - regex with multiple labels",
 			hostname:             "*.foo.bar.example.com",
 			expectHeaderMatcher:  true,
-			expectedRegexPattern: `^[^.]+\.foo\.bar\.example\.com(:\d+)?$`,
+			expectedRegexPattern: `^.+\.foo\.bar\.example\.com(:\d+)?$`,
 		},
 		{
 			name:                 "exact hostname - regex with optional port",

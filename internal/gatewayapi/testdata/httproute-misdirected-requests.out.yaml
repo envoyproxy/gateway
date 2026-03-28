@@ -70,7 +70,7 @@ gateways:
           https-with-hostname; hostname *.wildcard.org in listener https-with-wildcard-hostname;
           hostname fourth-example.wildcard.org in listener https-with-hostname-matching-wildcard.
           HTTP/2 requests will receive a 421 Misdirected Request response to prevent
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy'
+          connection coalescing.'
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -100,7 +100,7 @@ gateways:
       - lastTransitionTime: null
         message: The hostname second-example.org overlaps with the hostname * in listener
           https. HTTP/2 requests will receive a 421 Misdirected Request response to
-          prevent connection coalescing, unless explicitly configured via ClientTrafficPolicy
+          prevent connection coalescing.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -131,7 +131,7 @@ gateways:
         message: 'The hostname *.wildcard.org overlaps with: hostname * in listener
           https; hostname fourth-example.wildcard.org in listener https-with-hostname-matching-wildcard.
           HTTP/2 requests will receive a 421 Misdirected Request response to prevent
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy'
+          connection coalescing.'
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -162,7 +162,7 @@ gateways:
         message: 'The hostname fourth-example.wildcard.org overlaps with: hostname
           * in listener https; hostname *.wildcard.org in listener https-with-wildcard-hostname.
           HTTP/2 requests will receive a 421 Misdirected Request response to prevent
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy'
+          connection coalescing.'
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
