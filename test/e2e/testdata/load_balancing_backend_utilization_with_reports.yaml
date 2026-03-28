@@ -1,0 +1,190 @@
+## ConfigMap containing a Python HTTP server that returns ORCA load metrics
+## in the endpoint-load-metrics response header. APPLICATION_UTILIZATION and
+## RPS_FRACTIONAL control the reported load for each backend.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-utilization-with-reports-script
+  namespace: gateway-conformance-infra
+data:
+  server.py: |
+    import json, os
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    POD_NAME = os.environ.get("POD_NAME", "unknown")
+    NAMESPACE = os.environ.get("NAMESPACE", "unknown")
+    APP_UTIL = os.environ.get("APPLICATION_UTILIZATION", "0.5")
+    RPS_FRACTIONAL = os.environ.get("RPS_FRACTIONAL", "100")
+
+    class Handler(BaseHTTPRequestHandler):
+        # Keep upstream connections alive so backend utilization can observe
+        # load reports on stable connections once the blackout window passes.
+        protocol_version = "HTTP/1.1"
+
+        def do_GET(self):
+            body = json.dumps({
+                "path": self.path,
+                "host": self.headers.get("Host", ""),
+                "method": "GET",
+                "proto": self.request_version,
+                "namespace": NAMESPACE,
+                "pod": POD_NAME,
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("endpoint-load-metrics", f'JSON {{"application_utilization": {APP_UTIL}, "rps_fractional": {RPS_FRACTIONAL}}}')
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format, *args):
+            pass
+
+    ThreadingHTTPServer(("0.0.0.0", 3000), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-utilization-low
+  namespace: gateway-conformance-infra
+  labels:
+    app: backend-utilization-with-reports
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-utilization-with-reports
+      utilization: low
+  template:
+    metadata:
+      labels:
+        app: backend-utilization-with-reports
+        utilization: low
+    spec:
+      containers:
+      - name: backend
+        image: python:3-slim
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/server.py"]
+        ports:
+        - containerPort: 3000
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: APPLICATION_UTILIZATION
+          value: "0.05"
+        - name: RPS_FRACTIONAL
+          value: "100"
+        volumeMounts:
+        - name: script
+          mountPath: /app
+        resources:
+          requests:
+            cpu: 10m
+      volumes:
+      - name: script
+        configMap:
+          name: backend-utilization-with-reports-script
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-utilization-high
+  namespace: gateway-conformance-infra
+  labels:
+    app: backend-utilization-with-reports
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend-utilization-with-reports
+      utilization: high
+  template:
+    metadata:
+      labels:
+        app: backend-utilization-with-reports
+        utilization: high
+    spec:
+      containers:
+      - name: backend
+        image: python:3-slim
+        imagePullPolicy: IfNotPresent
+        command: ["python3", "/app/server.py"]
+        ports:
+        - containerPort: 3000
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: APPLICATION_UTILIZATION
+          value: "0.95"
+        - name: RPS_FRACTIONAL
+          value: "100"
+        volumeMounts:
+        - name: script
+          mountPath: /app
+        resources:
+          requests:
+            cpu: 10m
+      volumes:
+      - name: script
+        configMap:
+          name: backend-utilization-with-reports-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-utilization-with-reports
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: backend-utilization-with-reports
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-utilization-with-reports-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend-utilization-with-reports-route
+  loadBalancer:
+    type: BackendUtilization
+    backendUtilization:
+      blackoutPeriod: 1s
+      weightExpirationPeriod: 60s
+      weightUpdatePeriod: 100ms
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-utilization-with-reports-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /backend-utilization-with-reports
+    backendRefs:
+    - name: backend-utilization-with-reports
+      port: 8080

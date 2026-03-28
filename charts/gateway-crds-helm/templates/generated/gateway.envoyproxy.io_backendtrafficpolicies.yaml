@@ -835,9 +835,6 @@ spec:
                           - 120 => 1.2x
                           - 200 => 2.0x
 
-                          Note: In the internal IR/XDS configuration this value is converted back to a
-                          floating point multiplier (value / 100.0).
-
                           Must be non-negative.
                         format: int32
                         minimum: 0
