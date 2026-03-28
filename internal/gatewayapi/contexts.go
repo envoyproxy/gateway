@@ -30,8 +30,9 @@ import (
 type GatewayContext struct {
 	*gwapiv1.Gateway
 
-	listeners  []*ListenerContext
-	envoyProxy *egv1a1.EnvoyProxy
+	listeners             []*ListenerContext
+	envoyProxy            *egv1a1.EnvoyProxy
+	envoyProxyFromGateway bool
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
@@ -64,6 +65,7 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
 				g.envoyProxy = ep
+				g.envoyProxyFromGateway = true
 				return
 			}
 		}
