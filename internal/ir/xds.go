@@ -1522,6 +1522,9 @@ type HTTPExtAuthService struct {
 	// or else the authorization request will be sent to the root path.
 	Path string `json:"path"`
 
+	// PathOverride replaces the value of authorization request path with this value.
+	PathOverride string `json:"pathOverride,omitempty"`
+
 	// HeadersToBackend are the authorization response headers that will be added
 	// to the original client request before sending it to the backend server.
 	// Note that coexisting headers will be overridden.

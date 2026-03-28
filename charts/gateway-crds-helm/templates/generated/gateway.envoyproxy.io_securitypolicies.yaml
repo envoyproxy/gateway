@@ -3423,6 +3423,15 @@ spec:
                           For example, if the original request path is "/hello", and the path specified here is "/auth",
                           then the path of the authorization request will be "/auth/hello". If the path is not specified,
                           the path of the authorization request will be "/hello".
+                          Only one of Path or PathOverride can be set.
+                        type: string
+                      pathOverride:
+                        description: |-
+                          PathOverride replaces the original request path in the authorization request.
+                          If set, the path will be overridden to this value during authorization.
+                          For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+                          then the path of the authorization request will be "/auth".
+                          Only one of Path or PathOverride can be set.
                         type: string
                     type: object
                     x-kubernetes-validations:
@@ -3438,6 +3447,8 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: only one of path or pathOverride can be specified
+                      rule: '!(has(self.path) && has(self.pathOverride))'
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.

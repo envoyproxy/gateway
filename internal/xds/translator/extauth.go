@@ -181,7 +181,8 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 	)
 
 	service = &extauthv3.HttpService{
-		PathPrefix: http.Path,
+		PathPrefix:   http.Path,
+		PathOverride: http.PathOverride,
 	}
 
 	u := url.URL{
@@ -190,7 +191,11 @@ func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *ext
 		// uri to make the request. It only uses the cluster.
 		Scheme: "http",
 		Host:   http.Authority,
-		Path:   http.Path,
+	}
+	if http.PathOverride != "" {
+		u.Path = http.PathOverride
+	} else {
+		u.Path = http.Path
 	}
 	uri = u.String()
 
