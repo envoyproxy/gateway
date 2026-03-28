@@ -4046,6 +4046,42 @@ _Appears in:_
 | `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
 
 
+#### OTelSampler
+
+
+
+OTelSampler configures the OpenTelemetry sampler.
+Type maps to OTEL_TRACES_SAMPLER.
+
+_Appears in:_
+- [OpenTelemetryTracingProvider](#opentelemetrytracingprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[OTelSamplerType](#otelsamplertype)_ |  true  | AlwaysOn | Type is the sampler type. |
+| `samplingPercentage` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingPercentage controls the percentage of traces to sample.<br />Defaults to 100% when not set. |
+
+
+#### OTelSamplerType
+
+_Underlying type:_ _string_
+
+OTelSamplerType specifies the sampler type.
+Values correspond to the OTEL_TRACES_SAMPLER environment variable.
+
+_Appears in:_
+- [OTelSampler](#otelsampler)
+
+| Value | Description |
+| ----- | ----------- |
+| `AlwaysOn` | OTelSamplerTypeAlwaysOn exports all spans.<br /> | 
+| `AlwaysOff` | OTelSamplerTypeAlwaysOff drops all spans.<br /> | 
+| `TraceIdRatio` | OTelSamplerTypeTraceIDRatio exports a percentage of spans based on trace ID.<br /> | 
+| `ParentBasedAlwaysOn` | OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.<br /> | 
+| `ParentBasedAlwaysOff` | OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.<br /> | 
+| `ParentBasedTraceIdRatio` | OTelSamplerTypeParentBasedTraceIDRatio respects the parent span's sampling decision, using trace ID ratio when no parent exists.<br /> | 
+
+
 #### OpenTelemetryEnvoyProxyAccessLog
 
 
@@ -4080,6 +4116,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 | `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of traces.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
+| `sampler` | _[OTelSampler](#otelsampler)_ |  false  |  | Sampler controls whether spans are exported. |
 
 
 #### Operation
