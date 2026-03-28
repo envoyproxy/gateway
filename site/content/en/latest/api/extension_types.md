@@ -2970,6 +2970,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _[HTTPHostnameModifier](#httphostnamemodifier)_ |  false  |  | Hostname is the value to be used to replace the Host header value during<br />forwarding. |
 | `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines a path rewrite. |
+| `appendXForwardedHost` | _boolean_ |  false  |  | AppendXForwardedHost controls whether the original Host header value is<br />appended to the X-Forwarded-Host header when hostname rewriting is configured.<br />Defaults to true for backward compatibility. |
 
 
 #### HTTPWasmCodeSource
