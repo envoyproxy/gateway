@@ -423,24 +423,24 @@ func wildcardHostnameMatchesHostname(wildcardHostname, hostname string) bool {
 
 func containsPort(ports []*protocolPort, port *protocolPort) bool {
 	for _, protocolPort := range ports {
-		curProtocol, curLevel := layer4Protocol(protocolPort)
-		myProtocol, myLevel := layer4Protocol(port)
-		if protocolPort.port == port.port && (curProtocol == myProtocol && curLevel == myLevel) {
+		curProtocol := layer4Protocol(protocolPort)
+		myProtocol := layer4Protocol(port)
+		if protocolPort.port == port.port && curProtocol == myProtocol {
 			return true
 		}
 	}
 	return false
 }
 
-// layer4Protocol returns listener L4 protocol and listen protocol level
-func layer4Protocol(protocolPort *protocolPort) (string, string) {
+// layer4Protocol returns listener L4 protocol
+func layer4Protocol(protocolPort *protocolPort) string {
 	switch protocolPort.protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-		return TCPProtocol, L7Protocol
+		return TCPProtocol
 	case gwapiv1.TCPProtocolType:
-		return TCPProtocol, L4Protocol
+		return TCPProtocol
 	default:
-		return UDPProtocol, L4Protocol
+		return UDPProtocol
 	}
 }
 

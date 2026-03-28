@@ -218,12 +218,6 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
-      - name: envoy-gateway/gateway-1/https
-        ports:
-        - containerPort: 10443
-          name: https-443
-          protocol: HTTPS
-          servicePort: 443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -309,20 +303,6 @@ xdsIR:
           name: ""
           prefix: /foo
         traffic: {}
-    - address: 0.0.0.0
-      externalPort: 443
-      hostnames:
-      - '*'
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: https
-      name: envoy-gateway/gateway-1/https
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10443
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
