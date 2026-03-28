@@ -160,7 +160,7 @@ kubectl delete securitypolicy/jwt-example
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../community/develop/) to get involved in the project.
+Checkout the [Developer Guide](/community/develop/) to get involved in the project.
 
 [SecurityPolicy]: ../../design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519

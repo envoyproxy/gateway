@@ -187,9 +187,9 @@ kubectl delete clientTrafficPolicy/enable-client-ip-detection
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../community/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
-[SecurityPolicy]: ../../../community/design/security-policy
+[SecurityPolicy]: /community/design/security-policy
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

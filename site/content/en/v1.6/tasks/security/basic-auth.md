@@ -209,7 +209,7 @@ kubectl delete secret/example-cert
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../community/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [http Basic authentication]: https://tools.ietf.org/html/rfc2617
