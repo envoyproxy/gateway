@@ -64,7 +64,8 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 						Host: "www.example.com",
 						Path: "/myapp",
 						Headers: map[string]string{
-							"x-current-user": "user1",
+							"x-current-user":      "user1",
+							"x-ext-auth-req-path": "/auth/myapp",
 						},
 					},
 				},
@@ -138,6 +139,42 @@ var HTTPExtAuthTest = suite.ConformanceTest{
 			if err := http.CompareRoundTrip(t, &req, cReq, cResp, expectedResponse); err != nil {
 				t.Errorf("failed to compare request and response: %v", err)
 			}
+		})
+
+		t.Run("http route with ext auth path override", func(t *testing.T) {
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ext-auth-path-override-test", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "www.example.com",
+					Path: "/myapp-override",
+					Headers: map[string]string{
+						"Authorization": "Bearer token1",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/myapp-override",
+						Headers: map[string]string{
+							"x-current-user":      "user1",
+							"x-ext-auth-req-path": "/auth",
+						},
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
 		t.Run("http route without ext auth authentication", func(t *testing.T) {
