@@ -59,6 +59,22 @@
               '@type': type.googleapis.com/google.protobuf.StringValue
               value: '{"authEndpoint":"https://auth.example.com"}'
             filterName: auth-check
+        - disabled: true
+          name: envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.dynamic_modules.v3.DynamicModuleFilter
+            dynamicModuleConfig:
+              module:
+                remote:
+                  httpUri:
+                    cluster: dynamic_module_https_modules_example_com_443
+                    timeout: 10s
+                    uri: https://modules.example.com/libremote_auth.so
+                  sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+            filterConfig:
+              '@type': type.googleapis.com/google.protobuf.StringValue
+              value: '{"authEndpoint":"https://remote-auth.example.com"}'
+            filterName: remote-auth-check
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

@@ -3564,7 +3564,10 @@ type DynamicModule struct {
 	Name string `json:"name"`
 
 	// Path is the absolute filesystem path to the dynamic module shared library.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// Remote is the remote source of the dynamic module shared library.
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
@@ -3580,6 +3583,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// RemoteDynamicModuleSource holds the remote source information for a dynamic module.
+// +k8s:deepcopy-gen=true
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP(S) URL of the dynamic module shared library.
+	URL string `json:"url"`
+
+	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
