@@ -62,6 +62,32 @@ var HTTPRouteRewriteHostHeader = suite.ConformanceTest{
 				Backend:   "infra-backend-v1",
 				Namespace: ns,
 			},
+			{
+				Request: http.Request{
+					Path: "/backend-service",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/backend-service",
+						Host: "infra-backend-v1.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				Backend:   "infra-backend-v1",
+				Namespace: ns,
+			},
+			{
+				Request: http.Request{
+					Path: "/backend-service-2",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/backend-service-2",
+						Host: "infra-backend-v1.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				Backend:   "infra-backend-v1",
+				Namespace: ns,
+			},
 		}
 		for i := range testCases {
 			// Declare tc here to avoid loop variable

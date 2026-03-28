@@ -5,35 +5,62 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-  - name: same-namespace
+    - name: same-namespace
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /header
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: header-host-rewrite
-    backendRefs:
-    - name: infra-backend-v1
-      port: 8080
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /backend
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: backend-host-rewrite
-    backendRefs:
-    - group: gateway.envoyproxy.io
-      kind: Backend
-      name: backend-fqdn
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /header
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: header-host-rewrite
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: backend-host-rewrite
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-fqdn
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-service
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: backend-host-rewrite
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-service-2
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: backend-host-rewrite
+      backendRefs:
+        - name: infra-backend-v1
+          kind: Service # make sure explict service kind also works
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
@@ -63,6 +90,6 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   endpoints:
-  - fqdn:
-      hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-      port: 8080
+    - fqdn:
+        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
+        port: 8080

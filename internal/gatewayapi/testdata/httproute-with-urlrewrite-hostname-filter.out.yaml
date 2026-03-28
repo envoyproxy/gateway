@@ -365,6 +365,7 @@ xdsIR:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
+              hostname: service-1.default.svc.cluster.local
               port: 8080
             metadata:
               kind: Service
