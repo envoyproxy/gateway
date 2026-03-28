@@ -47,6 +47,7 @@ func init() {
 		MultiHeaderConsistentHashHeaderLoadBalancing,
 		QueryParamsBasedConsistentHashLoadBalancing,
 		BackendUtilizationLoadBalancingTest,
+		BackendUtilizationLoadBalancingWithReports,
 	)
 }
 
@@ -174,49 +175,52 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
 	totalRequestCount int, compareFunc TrafficCompareFunc,
 ) bool {
+	trafficMap := captureTrafficMap(t, suite, req, expectedResponse, totalRequestCount)
+	ret := compareFunc(trafficMap)
+	if !ret {
+		tlog.Logf(t, "traffic map: %v", trafficMap)
+	}
+
+	return ret
+}
+
+func captureTrafficMap(t *testing.T, suite *suite.ConformanceTestSuite,
+	req *roundtripper.Request, expectedResponse *http.ExpectedResponse,
+	totalRequestCount int,
+) map[string]int {
 	if req == nil {
-		// this should never happen, just a sanity check for the caller
 		t.Fatalf("request cannot be nil")
-		return false
+		return nil
 	}
 	if expectedResponse == nil {
-		// this should never happen, just a sanity check for the caller
 		t.Fatalf("expected response cannot be nil")
-		return false
+		return nil
 	}
+
 	trafficMap := make(map[string]int)
-	for range totalRequestCount {
+	for i := range totalRequestCount {
 		request := *req
 		cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
 		if err != nil {
-			tlog.Logf(t, "failed to get expected response: %v", err)
+			tlog.Logf(t, "failed to capture round trip %d/%d: %v", i+1, totalRequestCount, err)
 			continue
 		}
 
 		if err := http.CompareRoundTrip(t, &request, cReq, cResp, *expectedResponse); err != nil {
-			tlog.Logf(t, "failed to get expected response: %v", err)
+			tlog.Logf(t, "unexpected response for round trip %d/%d: %v", i+1, totalRequestCount, err)
 			continue
 		}
 
 		podName := cReq.Pod
 		if len(podName) == 0 {
-			// it shouldn't be missing here
-			tlog.Logf(t, "failed to get pod header in response: %v", err)
-		} else {
-			trafficMap[podName]++
+			tlog.Logf(t, "round trip %d/%d did not capture a pod name", i+1, totalRequestCount)
+			continue
 		}
+
+		trafficMap[podName]++
 	}
 
-	ret := compareFunc(trafficMap)
-	if !ret {
-		tlog.Logf(t, "traffic map: %v", trafficMap)
-		// wait for a while to let envoy flush all the logs.
-		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
-		t.FailNow()
-	}
-
-	return ret
+	return trafficMap
 }
 
 var SourceIPBasedConsistentHashLoadBalancing = suite.ConformanceTest{
