@@ -1836,7 +1836,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			got, _, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1851,4 +1851,160 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
+	t.Run("route policy overrides parent for the same owner keys", func(t *testing.T) {
+		parentPolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "parent",
+				Namespace: "parent-ns",
+			},
+			Spec: egv1a1.SecurityPolicySpec{
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "parent-users"},
+				},
+				APIKeyAuth: &egv1a1.APIKeyAuth{
+					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "parent-cred"}},
+				},
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{{Name: ptr.To("parent-rule")}},
+				},
+				ExtAuth: &egv1a1.ExtAuth{
+					HTTP: &egv1a1.HTTPExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-http-backend-refs"},
+							}},
+						},
+					},
+					ContextExtensions: []*egv1a1.ContextExtension{
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("parent-shared")},
+						{Name: "parent-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("parent-only")},
+					},
+				},
+				OIDC: &egv1a1.OIDC{
+					ClientSecret: gwapiv1.SecretObjectReference{Name: "parent-client-secret"},
+					ClientIDRef:  &gwapiv1.SecretObjectReference{Name: "parent-client-id"},
+					Provider: egv1a1.OIDCProvider{
+						Issuer: "https://parent.example.com",
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-oidc-provider"},
+							}},
+						},
+					},
+				},
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{
+						Name: "parent-jwt-provider",
+						RemoteJWKS: &egv1a1.RemoteJWKS{
+							URI: "https://parent.example.com/jwks",
+						},
+					}},
+				},
+			},
+		}
+
+		routePolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "route",
+				Namespace: "route-ns",
+			},
+			Spec: egv1a1.SecurityPolicySpec{
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "route-users"},
+				},
+				APIKeyAuth: &egv1a1.APIKeyAuth{
+					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "route-cred"}},
+				},
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{{Name: ptr.To("route-rule")}},
+				},
+				ExtAuth: &egv1a1.ExtAuth{
+					HTTP: &egv1a1.HTTPExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "route-http-backend-refs"},
+							}},
+						},
+					},
+					ContextExtensions: []*egv1a1.ContextExtension{
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("route-shared")},
+						{Name: "route-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("route-only")},
+					},
+				},
+				OIDC: &egv1a1.OIDC{
+					ClientSecret: gwapiv1.SecretObjectReference{Name: "route-client-secret"},
+					ClientIDRef:  &gwapiv1.SecretObjectReference{Name: "route-client-id"},
+					Provider: egv1a1.OIDCProvider{
+						Issuer: "https://route.example.com",
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "route-oidc-provider"},
+							}},
+						},
+					},
+				},
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{
+						Name: "route-jwt-provider",
+						LocalJWKS: &egv1a1.LocalJWKS{
+							Type:   ptr.To(egv1a1.LocalJWKSTypeInline),
+							Inline: ptr.To(`{"keys":[]}`),
+						},
+					}},
+				},
+			},
+		}
+
+		owners := buildSecurityPolicyFieldOwners(routePolicy, parentPolicy)
+		require.NotNil(t, owners)
+
+		assert.Same(t, routePolicy, owners[spFieldBasicAuth])
+		assert.Same(t, routePolicy, owners[spFieldAPIKeyAuthCreds])
+		assert.Same(t, routePolicy, owners[spFieldAuthRules])
+		assert.Same(t, routePolicy, owners[spFieldExtAuth])
+		assert.Same(t, routePolicy, owners[spFieldExtAuthHTTPBackendRefs])
+		assert.Same(t, routePolicy, owners[spFieldOIDC])
+		assert.Same(t, routePolicy, owners[spFieldOIDCClientIDRef])
+		assert.Same(t, routePolicy, owners[spFieldOIDCClientSecret])
+		assert.Same(t, routePolicy, owners[spFieldOIDCProviderBackendRefs])
+		assert.Same(t, routePolicy, owners[spFieldJwtProviders])
+		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtensions])
+	})
+
+	t.Run("uses parent owner for grpc backend fields when route does not set them", func(t *testing.T) {
+		parentPolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "parent",
+				Namespace: "parent-ns",
+			},
+			Spec: egv1a1.SecurityPolicySpec{
+				ExtAuth: &egv1a1.ExtAuth{
+					GRPC: &egv1a1.GRPCExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-grpc-backend-refs"},
+							}},
+						},
+					},
+				},
+			},
+		}
+
+		routePolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "route",
+				Namespace: "route-ns",
+			},
+			Spec: egv1a1.SecurityPolicySpec{},
+		}
+
+		owners := buildSecurityPolicyFieldOwners(routePolicy, parentPolicy)
+		require.NotNil(t, owners)
+
+		assert.Same(t, parentPolicy, owners[spFieldExtAuth])
+		assert.Same(t, parentPolicy, owners[spFieldExtAuthGRPCBackendRefs])
+	})
 }
