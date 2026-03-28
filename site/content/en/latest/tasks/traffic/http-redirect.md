@@ -69,10 +69,6 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-__Note:__ Currently, Envoy Gateway supports only `301` (default) and `302`
-redirect status codes. Support for additional status codes such as
-`303`, `307`, and `308` is planned for a future release (targeted for v1.8).
-
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
 ```shell
