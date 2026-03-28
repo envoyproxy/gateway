@@ -31,7 +31,7 @@ Envoy reads GeoIP data from a local MaxMind `.mmdb` database file mounted into t
 This task uses a public MaxMind anonymous-IP test database. Apply the example manifest before continuing:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/geoip-anonymous-ip-db.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/{{< yaml-version >}}/examples/kubernetes/geoip-anonymous-ip-db.yaml
 ```
 
 To keep this guide readable, the full base64-encoded `ConfigMap` is not repeated here.
