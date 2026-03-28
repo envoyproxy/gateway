@@ -97,4 +97,4 @@ kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.3.0
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../community/develop/) to get involved in the project.
+Checkout the [Developer Guide](/community/develop/) to get involved in the project.
