@@ -775,7 +775,7 @@ The command above should succeed and output the following:
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../community/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
 [ClientTrafficPolicy]: ../../api/extension_types#clienttrafficpolicy

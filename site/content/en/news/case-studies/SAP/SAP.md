@@ -12,7 +12,7 @@ Our journey with Envoy Gateway (EG) began in late 2023, when multiple SAP produc
 
 However, the following factors made Envoy Gateway the right strategic choice for us:
 * Strong alignment with the Envoy Proxy organization and maintainer community.
-* An [open-source-first roadmap](../../../community/roadmap/) that matched our requirements and balanced community and vendor needs.
+* An [open-source-first roadmap](/community/roadmap/) that matched our requirements and balanced community and vendor needs.
 * A leading [implementation of Gateway API](https://gateway-api.sigs.k8s.io/implementations/#envoy-gateway), providing portability and long-term viability.
 * Multi-vendor backing committed to a [common layer for Envoy-based gateways](https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532) and announced plans to migrate to this common layer.
 * Strong [extensibility](../../../docs/tasks/extensibility/) that accelerates delivery without waiting on upstream changes.
@@ -31,7 +31,7 @@ After GA, we focused on high-impact capabilities requested by the Envoy Gateway 
 * Advanced route actions via an Envoy Gateway [HTTPRouteFilter](../../../docs/api/extension_types/#httproutefilter), starting with [regex rewrites](../../../docs/api/extension_types/#httpurlrewritefilter) and subsequently expanded by the community to direct responses, credential injection, and more.
 
 For scenarios beyond common API Gateway patterns, we invested in the extensibility of both the data plane and the control plane:
-* Data Plane: We co-designed and co-implemented the [Envoy Extension Policy](../../../community/design/envoy-extension-policy/) resource with the community, enabling features such as [Ext-Proc](../../../docs/tasks/extensibility/ext-proc/) and [Wasm](../../../docs/tasks/extensibility/wasm/), filter ordering, and per-route extensions.
+* Data Plane: We co-designed and co-implemented the [Envoy Extension Policy](/community/design/envoy-extension-policy/) resource with the community, enabling features such as [Ext-Proc](../../../docs/tasks/extensibility/ext-proc/) and [Wasm](../../../docs/tasks/extensibility/wasm/), filter ordering, and per-route extensions.
 * Control Plane: We invested in the [Envoy Gateway Extension Server](../../../docs/tasks/extensibility/extension-server/), a programmable XDS mutation path. We added [Custom Policies](https://github.com/envoyproxy/gateway/issues/2975) to pass extension context via the same policy model used by the Gateway API. We strengthened [error handling](https://github.com/envoyproxy/gateway/pull/5540), [resilience](https://github.com/envoyproxy/gateway/issues/5612), and [security](https://github.com/envoyproxy/gateway/pull/5613) while exposing additional [deployment modes](https://github.com/envoyproxy/gateway/pull/3494).
 
 These extensibility options became foundational for vendors aiming to deliver distinctive features, large-scale enterprises seeking additional configuration flexibility, and domain-specific projects such as [Envoy AI Gateway](https://aigateway.envoyproxy.io/). The community continues to invest in these extensibility options, introducing [Lua](../../../docs/tasks/extensibility/lua/) extensions and [custom backend extension](../../../docs/api/extension_types/#extensionmanager) resources.
