@@ -82,9 +82,9 @@ var GatewayInfraResource = suite.ConformanceTest{
 			})
 			require.NoError(t, err)
 
-			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
 				gatewayDeploymentList := &appsv1.DeploymentList{}
-				err = suite.Client.List(t.Context(), gatewayDeploymentList, &client.ListOptions{
+				err = suite.Client.List(ctx, gatewayDeploymentList, &client.ListOptions{
 					LabelSelector: labelSelector,
 					Namespace:     gatewayObjMeta.Namespace,
 				})
@@ -101,12 +101,12 @@ var GatewayInfraResource = suite.ConformanceTest{
 			newListenerTCPName := "custom-tcp"
 			newListenerHTTPPort := int32(8001)
 
-			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
 				gateway := &gwapiv1.Gateway{
 					TypeMeta:   gatewayTypeMeta,
 					ObjectMeta: gatewayObjMeta,
 				}
-				err := suite.Client.Get(t.Context(), client.ObjectKeyFromObject(gateway), gateway)
+				err := suite.Client.Get(ctx, client.ObjectKeyFromObject(gateway), gateway)
 				if err != nil {
 					tlog.Logf(t, "error getting gateway: %v", err)
 					return false, nil
@@ -125,7 +125,7 @@ var GatewayInfraResource = suite.ConformanceTest{
 					},
 				}
 
-				err = suite.Client.Update(t.Context(), gateway)
+				err = suite.Client.Update(ctx, gateway)
 				if err != nil {
 					tlog.Logf(t, "failed to update gateway: %v", err)
 					return false, nil
@@ -134,9 +134,9 @@ var GatewayInfraResource = suite.ConformanceTest{
 				return true, nil
 			}))
 
-			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
 				svcList := &corev1.ServiceList{}
-				err := suite.Client.List(t.Context(), svcList, &client.ListOptions{
+				err := suite.Client.List(ctx, svcList, &client.ListOptions{
 					LabelSelector: labelSelector,
 					Namespace:     gatewayObjMeta.Namespace,
 				})
@@ -183,9 +183,9 @@ var GatewayInfraResource = suite.ConformanceTest{
 				ObjectMeta: gatewayObjMeta,
 			}
 			require.NoError(t, suite.Client.Delete(t.Context(), gwObj))
-			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
 				gatewayDeploymentList := &appsv1.DeploymentList{}
-				err := suite.Client.List(t.Context(), gatewayDeploymentList, &client.ListOptions{
+				err := suite.Client.List(ctx, gatewayDeploymentList, &client.ListOptions{
 					LabelSelector: labelSelector,
 					Namespace:     gatewayObjMeta.Namespace,
 				})

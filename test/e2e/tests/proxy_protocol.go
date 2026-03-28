@@ -39,9 +39,9 @@ var ProxyProtocolTest = suite.ConformanceTest{
 
 		// Update the backend FQDN to point to the service in the same namespace when using gateway namespace mode.
 		if IsGatewayNamespaceMode() {
-			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(_ context.Context) (bool, error) {
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
 				backend := &egv1a1.Backend{}
-				err := suite.Client.Get(t.Context(), types.NamespacedName{
+				err := suite.Client.Get(ctx, types.NamespacedName{
 					Name:      "proxy-protocol-backend",
 					Namespace: ns,
 				}, backend)
@@ -57,7 +57,7 @@ var ProxyProtocolTest = suite.ConformanceTest{
 					},
 				}
 
-				if err := suite.Client.Update(t.Context(), backend); err != nil {
+				if err := suite.Client.Update(ctx, backend); err != nil {
 					return false, nil
 				}
 
