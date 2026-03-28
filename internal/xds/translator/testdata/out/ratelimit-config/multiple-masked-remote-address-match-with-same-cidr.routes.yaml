@@ -6,9 +6,13 @@ rateLimits:
         descriptor_key: first-route
         descriptor_value: first-route
   - ActionSpecifier:
-      MaskedRemoteAddress:
-        v4_prefix_mask_len:
-          value: 32
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - prefix_len:
+              value: 32
+        descriptor_key: masked_remote_address
+        descriptor_value: 192.168.0.10/32
 routeName: first-route
 ---
 costSpecified: false
@@ -19,7 +23,11 @@ rateLimits:
         descriptor_key: second-route
         descriptor_value: second-route
   - ActionSpecifier:
-      MaskedRemoteAddress:
-        v4_prefix_mask_len:
-          value: 32
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - prefix_len:
+              value: 32
+        descriptor_key: masked_remote_address
+        descriptor_value: 192.168.0.10/32
 routeName: second-route

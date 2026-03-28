@@ -34,6 +34,8 @@ import (
 func init() {
 	ConformanceTests = append(ConformanceTests,
 		RateLimitCIDRMatchTest,
+		RateLimitCIDRInvertMatchAlwaysEnforceTest,
+		RateLimitCIDRInvertAlwaysExemptTest,
 		RateLimitHeaderMatchTest,
 		RateLimitMethodMatchTest,
 		RateLimitPathMatchTest,
@@ -111,6 +113,102 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 				return false, nil
 			}); err != nil {
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitCIDRInvertMatchAlwaysEnforceTest = suite.ConformanceTest{
+	ShortName:   "RateLimitCIDRInvertMatchAlwaysEnforce",
+	Description: "Rate limit all IPs except a defined CIDR (invert match)",
+	Manifests:   []string{"testdata/ratelimit-cidr-invert-match-always-enforce.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("rate limit all IPs except CIDR", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-invert-ratelimit", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			ratelimitHeader := make(map[string]string)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "2, 2;w=3600"
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{429},
+				},
+				Namespace: ns,
+			}
+			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+			// Limit is 2/hour. With invert: true, client IP is not in 192.0.2.0/24 (TEST-NET-1), so the rule applies. Expect 2 OK then 429.
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+
+			// fire the rest of the requests
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first two requests: %v", err)
+			}
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("failed to get expected response for the last (third) request: %v", err)
+			}
+			// make sure that metric worked as expected.
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_192.0.2.0/24"}`)
+				if err != nil {
+					tlog.Logf(t, "failed to query prometheus: %v", err)
+					return false, err
+				}
+				if v != nil {
+					tlog.Logf(t, "got expected value: %v", v)
+					return true, nil
+				}
+				return false, nil
+			}); err != nil {
+				t.Errorf("failed to get expected response for the last (third) request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitCIDRInvertAlwaysExemptTest = suite.ConformanceTest{
+	ShortName:   "RateLimitCIDRInvertAlwaysExempt",
+	Description: "With invert and exempt CIDR 0.0.0.0/0, all clients are exempt so we never see rate limit",
+	Manifests:   []string{"testdata/ratelimit-cidr-invert-always-exempt.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("never rate limited when exempt range is all IPv4", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-invert-always-exempt", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/never-limited",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			// Exempt CIDR is 0.0.0.0/0 (all IPv4). With invert: true, the rule applies when client IP is *not* in that range.
+			// Every IPv4 client is in 0.0.0.0/0, so the rule never applies — we should never get 429.
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("expected all requests to succeed (no rate limit): %v", err)
 			}
 		})
 	},
