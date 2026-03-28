@@ -4113,6 +4113,11 @@ func (in *HTTPExtAuthService) DeepCopyInto(out *HTTPExtAuthService) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.PathOverride != nil {
+		in, out := &in.PathOverride, &out.PathOverride
+		*out = new(string)
+		**out = **in
+	}
 	if in.HeadersToBackend != nil {
 		in, out := &in.HeadersToBackend, &out.HeadersToBackend
 		*out = make([]string, len(*in))
