@@ -169,7 +169,7 @@ func domainsMatched(vhDomains []string, overlapsHostname string) bool {
 // domainMatchHostname checks if the hostname is matched the virtual host domain,
 // it returns true if the hostname is matched by any of the overlaps hostnames, otherwise returns false.
 // Per Gateway API spec, wildcards match only a single DNS label:
-// - *.example.com matches foo.example.com but NOT foo.bar.example.com
+// - *.example.com matches both test.example.com, and foo.test.example.com, but not example.com
 // - * matches any hostname
 func domainMatchHostname(vhDomain, overlapsHostname string) bool {
 	if vhDomain == "*" {
@@ -177,11 +177,11 @@ func domainMatchHostname(vhDomain, overlapsHostname string) bool {
 	}
 	if len(vhDomain) > 2 && vhDomain[:2] == "*." {
 		domainSuffix := vhDomain[1:] // e.g., ".example.com"
-		// Check: hostname must have the suffix and exactly one more label (no dots in prefix)
+		// Check: hostname must have the suffix and at least one label prefix
 		if strings.HasSuffix(overlapsHostname, domainSuffix) {
 			prefix := overlapsHostname[:len(overlapsHostname)-len(domainSuffix)]
-			// Wildcard matches single label only - prefix must be non-empty and not contain dots
-			return prefix != "" && !strings.Contains(prefix, ".")
+			// Wildcard matches any number of labels - prefix must be non-empty
+			return prefix != ""
 		}
 		return false
 	}
