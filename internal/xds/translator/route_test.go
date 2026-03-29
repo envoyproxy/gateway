@@ -193,6 +193,14 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			expected: defaultUpgradeConfig,
 		},
 		{
+			name: "request buffer disables default websocket upgrade",
+			trafficFeature: &ir.TrafficFeatures{
+				RequestBuffer: &ir.RequestBuffer{},
+				HTTPUpgrade:   nil,
+			},
+			expected: nil,
+		},
+		{
 			name: "spdy",
 			trafficFeature: &ir.TrafficFeatures{
 				HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "spdy/3.1"}},

@@ -201,6 +201,52 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 	}
 }
 
+func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
+	t.Run("same policy", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "websocket"},
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.NotNil(t, tf)
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		tr := &Translator{}
+		parentPolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+			},
+		}
+		routePolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "CONNECT"},
+				},
+			},
+		}
+
+		mergedPolicy, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+
+		tf, err := tr.buildTrafficFeatures(mergedPolicy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.NotNil(t, tf)
+	})
+}
+
 func TestBuildPassiveHealthCheck(t *testing.T) {
 	cases := []struct {
 		name     string

@@ -23308,7 +23308,9 @@ spec:
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
-                  If not specified, the default upgrade configuration(websocket) will be used.
+                  If not specified, the default upgrade configuration (websocket) will be used.
+                  However, if requestBuffer is configured, the default upgrade configuration
+                  will be ignored.
                 items:
                   description: ProtocolUpgradeConfig specifies the configuration for
                     protocol upgrades.
@@ -25389,6 +25391,9 @@ spec:
                 : true '
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: requestBuffer cannot be used together with httpUpgrade
+              rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
+                == 0'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&
