@@ -67,7 +67,7 @@
               module:
                 remote:
                   httpUri:
-                    cluster: dynamic_module_https_modules_example_com_443
+                    cluster: modules_example_com_443
                     timeout: 10s
                     uri: https://modules.example.com/libremote_auth.so
                   sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789

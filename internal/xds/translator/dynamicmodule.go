@@ -7,9 +7,6 @@ package translator
 
 import (
 	"errors"
-	"fmt"
-	"net/url"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -125,7 +122,7 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 
 func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
 	if dm.Remote != nil {
-		cluster, err := dynamicModuleURLCluster(dm.Remote.URL)
+		uc, err := url2Cluster(dm.Remote.URL)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +133,7 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 					HttpUri: &corev3.HttpUri{
 						Uri: dm.Remote.URL,
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: cluster.name,
+							Cluster: uc.name,
 						},
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
@@ -155,25 +152,6 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 			},
 		},
 	}, nil
-}
-
-func dynamicModuleURLCluster(strURL string) (*urlCluster, error) {
-	parsedURL, err := url.ParseRequestURI(strURL)
-	if err != nil {
-		return nil, err
-	}
-
-	if parsedURL.Hostname() == "" {
-		return nil, fmt.Errorf("dynamic module URL %q must include a hostname", strURL)
-	}
-
-	uc, err := url2Cluster(strURL)
-	if err != nil {
-		return nil, err
-	}
-
-	uc.name = fmt.Sprintf("dynamic_module_%s_%s", strings.ToLower(parsedURL.Scheme), uc.name)
-	return uc, nil
 }
 
 // routeContainsDynamicModule returns true if DynamicModules exist for the provided route.
@@ -201,13 +179,7 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 				continue
 			}
 
-			cluster, err := dynamicModuleURLCluster(dm.Remote.URL)
-			if err != nil {
-				errs = errors.Join(errs, err)
-				continue
-			}
-
-			if err := addURLCluster(cluster, nil, tCtx); err != nil {
+			if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

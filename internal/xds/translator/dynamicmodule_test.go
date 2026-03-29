@@ -42,7 +42,7 @@ func TestDynamicModuleSource(t *testing.T) {
 				},
 			},
 			wantRemote:  true,
-			wantCluster: "dynamic_module_https_modules_example_com_443",
+			wantCluster: "modules_example_com_443",
 			wantURI:     "https://modules.example.com/libremote_auth.so",
 			wantSHA256:  "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
@@ -55,7 +55,7 @@ func TestDynamicModuleSource(t *testing.T) {
 				},
 			},
 			wantRemote:  true,
-			wantCluster: "dynamic_module_http_modules_example_com_80",
+			wantCluster: "modules_example_com_80",
 			wantURI:     "http://modules.example.com/libremote_auth.so",
 			wantSHA256:  "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
@@ -68,7 +68,7 @@ func TestDynamicModuleSource(t *testing.T) {
 				},
 			},
 			wantRemote:  true,
-			wantCluster: "dynamic_module_https_modules_example_com_8443",
+			wantCluster: "modules_example_com_8443",
 			wantURI:     "https://modules.example.com:8443/libremote_auth.so",
 			wantSHA256:  "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
@@ -81,7 +81,7 @@ func TestDynamicModuleSource(t *testing.T) {
 				},
 			},
 			wantRemote:  true,
-			wantCluster: "dynamic_module_http_modules_example_com_8443",
+			wantCluster: "modules_example_com_8443",
 			wantURI:     "http://modules.example.com:8443/libremote_auth.so",
 			wantSHA256:  "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
@@ -90,16 +90,6 @@ func TestDynamicModuleSource(t *testing.T) {
 			dm: ir.DynamicModule{
 				Remote: &ir.RemoteDynamicModuleSource{
 					URL:    "://invalid",
-					SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "remote URL without hostname",
-			dm: ir.DynamicModule{
-				Remote: &ir.RemoteDynamicModuleSource{
-					URL:    "https:///libremote_auth.so",
 					SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 				},
 			},
