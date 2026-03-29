@@ -2053,8 +2053,8 @@ func (t *Translator) buildBasicAuth(
 	usersSecretBytes, ok := usersSecret.Data[egv1a1.BasicAuthUsersSecretKey]
 	if !ok || len(usersSecretBytes) == 0 {
 		return nil, fmt.Errorf(
-			"users secret not found in secret %s/%s",
-			usersSecret.Namespace, usersSecret.Name)
+			"secret %s/%s must contain a non-empty \"%s\" key",
+			usersSecret.Namespace, usersSecret.Name, egv1a1.BasicAuthUsersSecretKey)
 	}
 
 	// Normalize CRLF to LF so the \r is not included in the hash,
