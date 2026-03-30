@@ -565,6 +565,11 @@ spec:
                       Defaults to 1.0 if not specified.
                     minimum: 1
                     type: number
+                  enabled:
+                    description: |-
+                      Enabled enables or disables the admission control filter.
+                      Defaults to true if not specified.
+                    type: boolean
                   maxRejectionProbability:
                     description: |-
                       MaxRejectionProbability represents the upper limit of the rejection probability.
@@ -9260,7 +9265,6 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
-                      - envoy.filters.http.admission_control
                       - envoy.filters.http.cors
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
@@ -9292,7 +9296,6 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
-                      - envoy.filters.http.admission_control
                       - envoy.filters.http.cors
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz
@@ -9322,7 +9325,6 @@ spec:
                       - envoy.filters.http.custom_response
                       - envoy.filters.http.health_check
                       - envoy.filters.http.fault
-                      - envoy.filters.http.admission_control
                       - envoy.filters.http.cors
                       - envoy.filters.http.header_mutation
                       - envoy.filters.http.ext_authz

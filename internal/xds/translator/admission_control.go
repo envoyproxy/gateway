@@ -121,10 +121,11 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 			successCriteria.GrpcCriteria = grpcCriteria
 		}
 
-		// Set as EvaluationCriteria (oneof field)
-		config.EvaluationCriteria = &admissioncontrolv3.AdmissionControl_SuccessCriteria_{
-			SuccessCriteria: successCriteria,
-		}
+	}
+
+	// Always set EvaluationCriteria (required field)
+	config.EvaluationCriteria = &admissioncontrolv3.AdmissionControl_SuccessCriteria_{
+		SuccessCriteria: successCriteria,
 	}
 
 	return config, nil

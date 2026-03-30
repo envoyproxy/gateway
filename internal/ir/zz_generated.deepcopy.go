@@ -309,7 +309,7 @@ func (in *AdmissionControl) DeepCopyInto(out *AdmissionControl) {
 	}
 	if in.SamplingWindow != nil {
 		in, out := &in.SamplingWindow, &out.SamplingWindow
-		*out = new(v1.Duration)
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	if in.SuccessRateThreshold != nil {
