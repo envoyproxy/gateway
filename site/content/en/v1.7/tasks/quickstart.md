@@ -105,7 +105,7 @@ Here is a suggested list of follow-on tasks to guide you in your exploration of 
 - [Global Rate Limit](traffic/global-rate-limit/)
 - [gRPC Routing](traffic/grpc-routing/)
 
-Review the [Tasks](./) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
+Review the [Tasks](../) section for the scenario matching your use case.  The Envoy Gateway tasks are organized by category: traffic management, security, extensibility, observability, and operations.
 
 ## Clean-Up
 
