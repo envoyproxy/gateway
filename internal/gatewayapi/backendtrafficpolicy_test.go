@@ -618,9 +618,41 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				MethodMatches: []*ir.StringMatch{},
 				CIDRMatch: &ir.CIDRMatch{
 					CIDR:     "192.168.1.0/24",
-					IP:       "192.168.1.0",
 					MaskLen:  24,
 					Distinct: true,
+				},
+				Shared: nil,
+			},
+			expectError: false,
+		},
+		{
+			name: "sourceCIDR with Invert - rate limit all IPs except CIDR",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Value:  "192.168.0.0/24",
+							Invert: ptr.To(true),
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 5,
+					Unit:     egv1a1.RateLimitUnitSecond,
+				},
+			},
+			expected: &ir.RateLimitRule{
+				Limit: ir.RateLimitValue{
+					Requests: 5,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+				},
+				HeaderMatches: []*ir.StringMatch{},
+				MethodMatches: []*ir.StringMatch{},
+				CIDRMatch: &ir.CIDRMatch{
+					CIDR:    "192.168.0.0/24",
+					MaskLen: 24,
+					Invert:  true,
+					IsIPv6:  false,
 				},
 				Shared: nil,
 			},

@@ -66,8 +66,13 @@ rateLimits:
                 Exact: foo/bar/baz
           name: :path
   - ActionSpecifier:
-      MaskedRemoteAddress:
-        v4_prefix_mask_len: {}
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - address_prefix: 0.0.0.0
+            prefix_len: {}
+        descriptor_key: masked_remote_address
+        descriptor_value: 0.0.0.0/0
 - actions:
   - ActionSpecifier:
       GenericKey:
@@ -134,6 +139,11 @@ rateLimits:
                 Exact: foo/bar/baz
           name: :path
   - ActionSpecifier:
-      MaskedRemoteAddress:
-        v4_prefix_mask_len: {}
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - address_prefix: 0.0.0.0
+            prefix_len: {}
+        descriptor_key: masked_remote_address
+        descriptor_value: 0.0.0.0/0
 routeName: first-route

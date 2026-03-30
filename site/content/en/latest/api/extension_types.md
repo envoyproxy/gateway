@@ -5555,6 +5555,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[SourceMatchType](#sourcematchtype)_ |  false  | Exact |  |
 | `value` | _string_ |  true  |  | Value is the IP CIDR that represents the range of Source IP Addresses of the client.<br />These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.<br />For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the source range match result will be inverted.<br />When true, the rule matches when the client IP is not in the specified range(s). |
 
 
 #### SourceMatchType

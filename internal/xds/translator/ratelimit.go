@@ -13,11 +13,13 @@ import (
 	"strconv"
 	"strings"
 
+	xdscorev3 "github.com/cncf/xds/go/xds/core/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -29,6 +31,13 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	descriptorKeyMaskedRemoteAddress               = "masked_remote_address"
+	descriptorKeyRemoteAddress                     = "remote_address"
+	descriptorValueInvertPrefix                    = "invert:"
+	downstreamRemoteAddressWithoutPortCelFormatter = "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -439,8 +448,54 @@ func buildPathMatchRateLimitActions(
 //	          unit: second
 //	          requests_per_unit: 100
 //
+
+// buildCIDRRateLimitActionAddressMatcher returns an AddressMatcher for the single CIDR range (address prefix + mask length).
+func buildCIDRRateLimitActionAddressMatcher(addressPrefix string, maskLen uint32, invert bool) *matcherv3.AddressMatcher {
+	return &matcherv3.AddressMatcher{
+		Ranges: []*xdscorev3.CidrRange{
+			{AddressPrefix: addressPrefix, PrefixLen: &wrapperspb.UInt32Value{Value: maskLen}},
+		},
+		InvertMatch: invert,
+	}
+}
+
+// exactCIDRDescriptorValue builds the descriptor value for exact CIDR matches.
+// When invert is enabled, the value is prefixed to indicate the source IP did not match the CIDR.
+func exactCIDRDescriptorValue(cidr string, invert bool) string {
+	if !invert {
+		return cidr
+	}
+	return descriptorValueInvertPrefix + cidr
+}
+
+// buildExactCIDRMatchRateLimitAction returns a RemoteAddressMatch action for the masked/shared bucket (exact CIDR match).
+func buildExactCIDRMatchRateLimitAction(cidrMatch *ir.CIDRMatch, descriptorKey string) *routev3.RateLimit_Action {
+	return &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_RemoteAddressMatch_{
+			RemoteAddressMatch: &routev3.RateLimit_Action_RemoteAddressMatch{
+				DescriptorKey:   descriptorKey,
+				DescriptorValue: exactCIDRDescriptorValue(cidrMatch.CIDR, cidrMatch.Invert),
+				AddressMatcher:  buildCIDRRateLimitActionAddressMatcher(cidrMatch.AddressPrefix(), cidrMatch.MaskLen, cidrMatch.Invert),
+			},
+		},
+	}
+}
+
+// buildDistinctCIDRMatchRateLimitAction returns a RemoteAddressMatch action for the per-IP bucket (distinct CIDR match).
+func buildDistinctCIDRMatchRateLimitAction(cidrMatch *ir.CIDRMatch, descriptorKey string) *routev3.RateLimit_Action {
+	return &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_RemoteAddressMatch_{
+			RemoteAddressMatch: &routev3.RateLimit_Action_RemoteAddressMatch{
+				DescriptorKey:   descriptorKey,
+				DescriptorValue: downstreamRemoteAddressWithoutPortCelFormatter, // CEL formatter to get source IP
+				AddressMatcher:  buildCIDRRateLimitActionAddressMatcher(cidrMatch.AddressPrefix(), cidrMatch.MaskLen, cidrMatch.Invert),
+			},
+		},
+	}
+}
+
 // Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
-// If a CIDR match is specified, add MaskedRemoteAddress and RemoteAddress descriptors.
+// If a CIDR match is specified, add RemoteAddressMatch (format specifier for masked or full address).
 func buildCIDRMatchRateLimitActions(
 	rlActions *[]*routev3.RateLimit_Action,
 	cidrMatch *ir.CIDRMatch,
@@ -448,30 +503,9 @@ func buildCIDRMatchRateLimitActions(
 	if cidrMatch == nil {
 		return
 	}
-
-	// Setup MaskedRemoteAddress action.
-	mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-	maskLen := &wrapperspb.UInt32Value{Value: cidrMatch.MaskLen}
-	if cidrMatch.IsIPv6 {
-		mra.V6PrefixMaskLen = maskLen
-	} else {
-		mra.V4PrefixMaskLen = maskLen
-	}
-	action := &routev3.RateLimit_Action{
-		ActionSpecifier: &routev3.RateLimit_Action_MaskedRemoteAddress_{
-			MaskedRemoteAddress: mra,
-		},
-	}
-	*rlActions = append(*rlActions, action)
-
-	// Setup RemoteAddress action if distinct match is set.
+	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, descriptorKeyMaskedRemoteAddress))
 	if cidrMatch.Distinct {
-		action = &routev3.RateLimit_Action{
-			ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
-				RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
-			},
-		}
-		*rlActions = append(*rlActions, action)
+		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, descriptorKeyRemoteAddress))
 	}
 }
 
@@ -862,11 +896,11 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		// 4) CIDR Match
 		if rule.CIDRMatch != nil {
-			// MaskedRemoteAddress case
+			// MaskedRemoteAddress case.
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			pbDesc.ShadowMode = isRuleShadowMode(rule)
-			pbDesc.Key = "masked_remote_address"
-			pbDesc.Value = rule.CIDRMatch.CIDR
+			pbDesc.Key = descriptorKeyMaskedRemoteAddress
+			pbDesc.Value = exactCIDRDescriptorValue(rule.CIDRMatch.CIDR, rule.CIDRMatch.Invert)
 
 			if cur != nil {
 				// The header/method/path match descriptor chain exist, add current
@@ -880,7 +914,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 			if rule.CIDRMatch.Distinct {
 				pbDesc := new(rlsconfv3.RateLimitDescriptor)
 				pbDesc.ShadowMode = isRuleShadowMode(rule)
-				pbDesc.Key = "remote_address"
+				pbDesc.Key = descriptorKeyRemoteAddress
 				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 				cur = pbDesc
 			}

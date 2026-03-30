@@ -42,6 +42,11 @@ rateLimits:
                 Exact: three
           name: x-org-id
   - ActionSpecifier:
-      MaskedRemoteAddress:
-        v4_prefix_mask_len: {}
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - address_prefix: 0.0.0.0
+            prefix_len: {}
+        descriptor_key: masked_remote_address
+        descriptor_value: 0.0.0.0/0
 routeName: first-route

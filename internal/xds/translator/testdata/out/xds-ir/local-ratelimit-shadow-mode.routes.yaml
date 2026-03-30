@@ -100,8 +100,13 @@
                 - name: x-org-id
                   stringMatch:
                     exact: bar
-            - maskedRemoteAddress:
-                v4PrefixMaskLen: 16
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: masked_remote_address
+                descriptorValue: 192.168.0.0/16
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s

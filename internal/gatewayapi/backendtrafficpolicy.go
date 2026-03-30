@@ -1553,19 +1553,21 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.SourceCIDR != nil {
-			// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-			// distinct client selector and uses a separate rate limit bucket/counter.
 			distinct := false
-			sourceCIDR := match.SourceCIDR.Value
 			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
 				distinct = true
 			}
+			invert := false
+			if match.SourceCIDR.Invert != nil {
+				invert = *match.SourceCIDR.Invert
+			}
 
-			cidrMatch, err := parseCIDR(sourceCIDR)
+			cidrMatch, err := parseCIDR(match.SourceCIDR.Value)
 			if err != nil {
 				return nil, fmt.Errorf("unable to translate rateLimit: %w", err)
 			}
 			cidrMatch.Distinct = distinct
+			cidrMatch.Invert = invert
 			irRule.CIDRMatch = cidrMatch
 		}
 

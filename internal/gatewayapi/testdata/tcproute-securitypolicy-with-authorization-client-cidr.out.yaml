@@ -610,7 +610,7 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.10.5.0/24
                   distinct: false
-                  ip: 10.10.5.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
           cors:
@@ -646,7 +646,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.5.0/24
                 distinct: false
-                ip: 10.10.5.0
+                invert: false
                 isIPv6: false
                 maskLen: 24
         destination:
@@ -723,7 +723,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.1.0/24
                 distinct: false
-                ip: 10.10.1.0
+                invert: false
                 isIPv6: false
                 maskLen: 24
         destination:
@@ -769,7 +769,7 @@ xdsIR:
               clientCIDRs:
               - cidr: 10.10.2.0/24
                 distinct: false
-                ip: 10.10.2.0
+                invert: false
                 isIPv6: false
                 maskLen: 24
         destination:
