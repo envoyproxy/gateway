@@ -406,11 +406,16 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 // because envoy does not support downstream client TLS validation over QUIC yet.
 // https://github.com/envoyproxy/envoy/blob/11299f21b37743680a715819ef7e16d12a4d8b8d/source/common/quic/quic_server_transport_socket_factory.cc#L27-L29
 func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener) bool {
-	return httpIR != nil &&
-		httpIR.TLS != nil &&
-		policy.Spec.HTTP3 != nil &&
-		policy.Spec.TLS != nil &&
-		policy.Spec.TLS.ClientValidation != nil
+	if httpIR == nil || httpIR.TLS == nil {
+		return false
+	}
+	if policy.Spec.HTTP3 == nil {
+		return false
+	}
+	if policy.Spec.TLS == nil || policy.Spec.TLS.ClientValidation == nil {
+		return false
+	}
+	return true
 }
 
 func disabledHTTP3WarningMessage(listenerNames []string) string {
