@@ -17,7 +17,6 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { TrendingUp, Clock, CheckCircle, Lightbulb, MemoryStick, Cpu, Zap, Shield } from 'lucide-react';
-import { normalizeLatencyToMs } from '@/lib/utils';
 
 interface OverviewTabProps {
   performanceMatrix: any[];
@@ -81,11 +80,11 @@ const OverviewTab = ({
       if (maxScaleData && maxScaleData.latency && maxScaleData.latency.percentiles) {
         const percentiles = maxScaleData.latency.percentiles;
         return [
-          { percentile: 'P50', value: Number(normalizeLatencyToMs(percentiles.p50).toFixed(1)), status: 'excellent' },
-          { percentile: 'P75', value: Number(normalizeLatencyToMs(percentiles.p75).toFixed(1)), status: 'excellent' },
-          { percentile: 'P90', value: Number(normalizeLatencyToMs(percentiles.p90).toFixed(1)), status: 'good' },
-          { percentile: 'P95', value: Number(normalizeLatencyToMs(percentiles.p95).toFixed(1)), status: 'acceptable' },
-          { percentile: 'P99', value: Number(normalizeLatencyToMs(percentiles.p99).toFixed(1)), status: 'watch' }
+          { percentile: 'P50', value: Number(percentiles.p50.toFixed(1)), status: 'excellent' },
+          { percentile: 'P75', value: Number(percentiles.p75.toFixed(1)), status: 'excellent' },
+          { percentile: 'P90', value: Number(percentiles.p90.toFixed(1)), status: 'good' },
+          { percentile: 'P95', value: Number(percentiles.p95.toFixed(1)), status: 'acceptable' },
+          { percentile: 'P99', value: Number(percentiles.p99.toFixed(1)), status: 'watch' }
         ];
       }
     }

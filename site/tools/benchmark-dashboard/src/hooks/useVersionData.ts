@@ -4,7 +4,6 @@ import {
   getAvailableVersions
 } from '@/data';
 import { TestSuite, TestResult, TestConfiguration } from '@/data/types';
-import { normalizeLatencyToMs } from '@/lib/utils';
 
 interface UseVersionDataReturn {
   selectedVersion: string;
@@ -68,17 +67,17 @@ export const useVersionData = (): UseVersionDataReturn => {
         maxRoutes: results.length > 0 ? Math.max(...results.map(r => r.routes)) : 0,
         minRoutes: results.length > 0 ? Math.min(...results.map(r => r.routes)) : 0,
         avgThroughput: results.length > 0 ? results.reduce((sum, r) => sum + r.throughput, 0) / results.length : 0,
-        avgLatency: results.length > 0 ? results.reduce((sum, r) => sum + normalizeLatencyToMs(r.latency.mean), 0) / results.length : 0
+        avgLatency: results.length > 0 ? results.reduce((sum, r) => sum + r.latency.mean, 0) / results.length : 0
       },
       latencyPercentileComparison: results.map(result => ({
         routes: result.routes,
         phase: result.phase,
-        p50: normalizeLatencyToMs(result.latency.percentiles.p50),
-        p75: normalizeLatencyToMs(result.latency.percentiles.p75),
-        p90: normalizeLatencyToMs(result.latency.percentiles.p90),
-        p95: normalizeLatencyToMs(result.latency.percentiles.p95),
-        p99: normalizeLatencyToMs(result.latency.percentiles.p99),
-        p999: normalizeLatencyToMs(result.latency.percentiles.p999)
+        p50: result.latency.percentiles.p50,
+        p75: result.latency.percentiles.p75,
+        p90: result.latency.percentiles.p90,
+        p95: result.latency.percentiles.p95,
+        p99: result.latency.percentiles.p99,
+        p999: result.latency.percentiles.p999
       })),
       resourceTrends: results.map(result => ({
         routes: result.routes,
@@ -93,8 +92,8 @@ export const useVersionData = (): UseVersionDataReturn => {
         routes: result.routes,
         phase: result.phase,
         throughput: result.throughput,
-        meanLatency: normalizeLatencyToMs(result.latency.mean),
-        p95Latency: normalizeLatencyToMs(result.latency.percentiles.p95),
+        meanLatency: result.latency.mean,
+        p95Latency: result.latency.percentiles.p95,
         totalMemory: result.resources.envoyGateway.memory.mean + result.resources.envoyProxy.memory.mean,
         totalCpu: result.resources.envoyGateway.cpu.mean + result.resources.envoyProxy.cpu.mean
       })),

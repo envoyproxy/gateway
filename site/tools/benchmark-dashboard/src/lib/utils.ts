@@ -62,16 +62,3 @@ export function addBdPrefix(className: string): string {
     })
     .join(' ');
 }
-
-/**
- * Older benchmark datasets store latency in microseconds, while newer
- * release artifacts store latency directly in milliseconds.
- * Normalize both formats to milliseconds for display and comparisons.
- */
-export function normalizeLatencyToMs(latencyValue: number): number {
-  if (!Number.isFinite(latencyValue)) {
-    return 0;
-  }
-
-  return latencyValue >= 1000 ? latencyValue / 1000 : latencyValue;
-}

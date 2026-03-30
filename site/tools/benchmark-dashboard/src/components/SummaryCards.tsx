@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Activity, Clock, MemoryStick, Server } from 'lucide-react';
-import { normalizeLatencyToMs } from '@/lib/utils';
 
 interface SummaryCardsProps {
   performanceSummary: {
@@ -17,7 +16,7 @@ interface SummaryCardsProps {
 const SummaryCards = ({ performanceSummary, benchmarkResults }: SummaryCardsProps) => {
   // Calculate dynamic values from the actual data
   const maxThroughput = Math.round(Math.max(...benchmarkResults.map(r => r.throughput)));
-  const meanLatencyMs = Math.round(normalizeLatencyToMs(performanceSummary.avgLatency));
+  const meanLatencyMs = Math.round(performanceSummary.avgLatency);
   const maxMemoryMB = Math.round(Math.max(...benchmarkResults.map(r =>
     r.resources.envoyGateway.memory.mean + r.resources.envoyProxy.memory.mean
   )));
