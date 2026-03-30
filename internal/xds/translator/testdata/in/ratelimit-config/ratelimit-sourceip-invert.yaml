@@ -14,23 +14,16 @@ http:
         global:
           rules:
           - name: "test-namespace/test-policy-1/rule/0"
-            headerMatches:
-            - name: "x-user-id"
-              exact: "one"
-            - name: "x-user-id"
-              exact: "two"
-            - name: "x-org-id"
-              exact: "three"
             cidrMatch:
-              cidr: 0.0.0.0/0
-              maskLen: 0
+              cidr: "192.168.0.0/24"
+              maskLen: 24
               isIPv6: false
-              distinct: false
+              invert: true
             limit:
               requests: 5
               unit: second
     pathMatch:
-      exact: "foo/bar"
+      exact: "except-cidr"
     destination:
       name: "first-route-dest"
       settings:

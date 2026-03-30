@@ -23,8 +23,13 @@
               - name: x-user-id
                 stringMatch:
                   exact: one
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/16
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -43,8 +48,13 @@
           - requestHeaders:
               descriptorKey: rule-0-match-1
               headerName: foobar
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/16
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -65,8 +75,13 @@
               - name: x-user-id
                 stringMatch:
                   exact: one
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/16
         - actions:
           - genericKey:
               descriptorKey: third-route
@@ -82,7 +97,12 @@
           - requestHeaders:
               descriptorKey: rule-1-match-1
               headerName: foobar
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.169.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.169.0.0/16
         upgradeConfigs:
         - upgradeType: websocket

@@ -1,6 +1,12 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+
 http:
 - name: "first-listener"
-  address: "0.0.0.0"
+  address: "::"
   port: 10080
   hostnames:
   - "*"
@@ -9,31 +15,25 @@ http:
     escapedSlashesAction: UnescapeAndRedirect
   routes:
   - name: "first-route"
+    hostname: "*"
     traffic:
       rateLimit:
         global:
           rules:
-          - name: "test-namespace/test-policy-1/rule/0"
-            headerMatches:
-            - name: "x-user-id"
-              exact: "one"
-            - name: "x-user-id"
-              exact: "two"
-            - name: "x-org-id"
-              exact: "three"
-            cidrMatch:
-              cidr: 0.0.0.0/0
-              maskLen: 0
+          - cidrMatch:
+              cidr: 192.168.0.0/24
+              maskLen: 24
               isIPv6: false
-              distinct: false
+              invert: true
             limit:
               requests: 5
               unit: second
     pathMatch:
-      exact: "foo/bar"
+      exact: "except-cidr"
     destination:
       name: "first-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
