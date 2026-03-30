@@ -1343,6 +1343,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
 | `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+| `remote` | _[RemoteDynamicModuleSource](#remotedynamicmodulesource)_ |  false  |  | Remote specifies a module fetched from a remote source.<br />The module binary is downloaded and cached by Envoy. |
 
 
 #### DynamicModuleSourceType
@@ -5061,11 +5062,15 @@ _Appears in:_
 
 
 
-RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+RemoteDynamicModuleSource defines a dynamic module fetched from a remote HTTP source.
 
 _Appears in:_
 - [DynamicModuleSource](#dynamicmodulesource)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `url` | _string_ |  true  |  | URL is the HTTP or HTTPS URL of the dynamic module shared library (.so file). |
+| `sha256` | _string_ |  true  |  | SHA256 checksum that Envoy will use to verify the downloaded module binary. |
 
 
 #### RemoteJWKS
