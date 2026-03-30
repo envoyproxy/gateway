@@ -8,7 +8,7 @@ require (
 	fortio.org/fortio v1.73.2
 	fortio.org/log v1.18.3
 	github.com/andybalholm/brotli v1.2.0
-	github.com/docker/docker v28.5.1+incompatible
+	github.com/docker/docker v28.5.2+incompatible
 	github.com/envoyproxy/gateway v0.0.0-00010101000000-000000000000
 	github.com/go-logfmt/logfmt v0.6.1
 	github.com/google/go-cmp v0.7.0
