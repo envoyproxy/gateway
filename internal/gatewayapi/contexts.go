@@ -41,22 +41,26 @@ type ResourceMetadata struct {
 	Kind      string
 }
 
-// GetBackendTLSConfig returns the BackendTLSConfig for the Gateway,
-// which may come from the EnvoyProxy attached to the Gateway or GatewayClass,
-// or from the default specified in the Gateway.spec.tls.backend configuration.
+// GetBackendTLSConfig returns the BackendTLSConfig for the Gateway.
+// Precedence order (highest to lowest):
+// 1. Gateway.spec.tls.backend configuration
+// 2. EnvoyProxy.spec.backendTLS (attached to Gateway or GatewayClass)
 func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *ResourceMetadata) {
-	if g.envoyProxy == nil || g.envoyProxy.Spec.BackendTLS == nil {
+	if g.backendTLS != nil {
 		return g.backendTLS, &ResourceMetadata{
 			Namespace: g.Namespace,
 			Name:      g.Name,
 			Kind:      resource.KindGateway,
 		}
 	}
-	return g.envoyProxy.Spec.BackendTLS, &ResourceMetadata{
-		Namespace: g.envoyProxy.Namespace,
-		Name:      g.envoyProxy.Name,
-		Kind:      egv1a1.KindEnvoyProxy,
+	if g.envoyProxy != nil && g.envoyProxy.Spec.BackendTLS != nil {
+		return g.envoyProxy.Spec.BackendTLS, &ResourceMetadata{
+			Namespace: g.envoyProxy.Namespace,
+			Name:      g.envoyProxy.Name,
+			Kind:      egv1a1.KindEnvoyProxy,
+		}
 	}
+	return nil, nil
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
