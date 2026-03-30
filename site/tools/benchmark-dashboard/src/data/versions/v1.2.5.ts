@@ -28,18 +28,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5704.46,
       "totalRequests": 171136,
       "latency": {
-        "min": 370,
-        "mean": 6520,
-        "max": 74477,
-        "pstdev": 11781,
+        "min": 0.37,
+        "mean": 6.52,
+        "max": 74.477,
+        "pstdev": 11.781,
         "percentiles": {
-          "p50": 3051,
-          "p75": 4913,
-          "p80": 5565,
-          "p90": 8700,
-          "p95": 47091,
-          "p99": 54638,
-          "p999": 59404
+          "p50": 3.051,
+          "p75": 4.913,
+          "p80": 5.565,
+          "p90": 8.7,
+          "p95": 47.091,
+          "p99": 54.638,
+          "p999": 59.404
         }
       },
       "resources": {
@@ -79,18 +79,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5647.86,
       "totalRequests": 169439,
       "latency": {
-        "min": 379,
-        "mean": 6313,
-        "max": 80498,
-        "pstdev": 11935,
+        "min": 0.379,
+        "mean": 6.313,
+        "max": 80.498,
+        "pstdev": 11.935,
         "percentiles": {
-          "p50": 2854,
-          "p75": 4550,
-          "p80": 5158,
-          "p90": 7820,
-          "p95": 48025,
-          "p99": 54390,
-          "p999": 60321
+          "p50": 2.854,
+          "p75": 4.55,
+          "p80": 5.158,
+          "p90": 7.82,
+          "p95": 48.025,
+          "p99": 54.39,
+          "p999": 60.321
         }
       },
       "resources": {
@@ -130,18 +130,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5529.29,
       "totalRequests": 165879,
       "latency": {
-        "min": 379,
-        "mean": 6240,
-        "max": 73539,
-        "pstdev": 12017,
+        "min": 0.379,
+        "mean": 6.24,
+        "max": 73.539,
+        "pstdev": 12.017,
         "percentiles": {
-          "p50": 2818,
-          "p75": 4510,
-          "p80": 5068,
-          "p90": 7413,
-          "p95": 48300,
-          "p99": 54171,
-          "p999": 59308
+          "p50": 2.818,
+          "p75": 4.51,
+          "p80": 5.068,
+          "p90": 7.413,
+          "p95": 48.3,
+          "p99": 54.171,
+          "p999": 59.308
         }
       },
       "resources": {
@@ -181,18 +181,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5542.3,
       "totalRequests": 166274,
       "latency": {
-        "min": 365,
-        "mean": 6463,
-        "max": 81305,
-        "pstdev": 12357,
+        "min": 0.365,
+        "mean": 6.463,
+        "max": 81.305,
+        "pstdev": 12.357,
         "percentiles": {
-          "p50": 2890,
-          "p75": 4545,
-          "p80": 5116,
-          "p90": 7585,
-          "p95": 49043,
-          "p99": 55365,
-          "p999": 64399
+          "p50": 2.89,
+          "p75": 4.545,
+          "p80": 5.116,
+          "p90": 7.585,
+          "p95": 49.043,
+          "p99": 55.365,
+          "p999": 64.399
         }
       },
       "resources": {
@@ -232,18 +232,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5407.59,
       "totalRequests": 162228,
       "latency": {
-        "min": 363,
-        "mean": 6396,
-        "max": 88236,
-        "pstdev": 12419,
+        "min": 0.363,
+        "mean": 6.396,
+        "max": 88.236,
+        "pstdev": 12.419,
         "percentiles": {
-          "p50": 2816,
-          "p75": 4450,
-          "p80": 5012,
-          "p90": 7485,
-          "p95": 48762,
-          "p99": 55666,
-          "p999": 67457
+          "p50": 2.816,
+          "p75": 4.45,
+          "p80": 5.012,
+          "p90": 7.485,
+          "p95": 48.762,
+          "p99": 55.666,
+          "p999": 67.457
         }
       },
       "resources": {
@@ -283,18 +283,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5247.32,
       "totalRequests": 157425,
       "latency": {
-        "min": 374,
-        "mean": 6604,
-        "max": 106491,
-        "pstdev": 12903,
+        "min": 0.374,
+        "mean": 6.604,
+        "max": 106.491,
+        "pstdev": 12.903,
         "percentiles": {
-          "p50": 2880,
-          "p75": 4514,
-          "p80": 5089,
-          "p90": 7639,
-          "p95": 49453,
-          "p99": 58750,
-          "p999": 71970
+          "p50": 2.88,
+          "p75": 4.514,
+          "p80": 5.089,
+          "p90": 7.639,
+          "p95": 49.453,
+          "p99": 58.75,
+          "p999": 71.97
         }
       },
       "resources": {
@@ -334,18 +334,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5668.05,
       "totalRequests": 170048,
       "latency": {
-        "min": 366,
-        "mean": 6143,
-        "max": 73551,
-        "pstdev": 12054,
+        "min": 0.366,
+        "mean": 6.143,
+        "max": 73.551,
+        "pstdev": 12.054,
         "percentiles": {
-          "p50": 2726,
-          "p75": 4279,
-          "p80": 4799,
-          "p90": 7123,
-          "p95": 48988,
-          "p99": 54704,
-          "p999": 58812
+          "p50": 2.726,
+          "p75": 4.279,
+          "p80": 4.799,
+          "p90": 7.123,
+          "p95": 48.988,
+          "p99": 54.704,
+          "p999": 58.812
         }
       },
       "resources": {
@@ -385,18 +385,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5579.16,
       "totalRequests": 167375,
       "latency": {
-        "min": 353,
-        "mean": 6190,
-        "max": 87244,
-        "pstdev": 12028,
+        "min": 0.353,
+        "mean": 6.19,
+        "max": 87.244,
+        "pstdev": 12.028,
         "percentiles": {
-          "p50": 2803,
-          "p75": 4357,
-          "p80": 4889,
-          "p90": 7110,
-          "p95": 48482,
-          "p99": 54329,
-          "p999": 59113
+          "p50": 2.803,
+          "p75": 4.357,
+          "p80": 4.889,
+          "p90": 7.11,
+          "p95": 48.482,
+          "p99": 54.329,
+          "p999": 59.113
         }
       },
       "resources": {
@@ -436,18 +436,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5581.7,
       "totalRequests": 167453,
       "latency": {
-        "min": 377,
-        "mean": 6525,
-        "max": 72724,
-        "pstdev": 12286,
+        "min": 0.377,
+        "mean": 6.525,
+        "max": 72.724,
+        "pstdev": 12.286,
         "percentiles": {
-          "p50": 2929,
-          "p75": 4641,
-          "p80": 5219,
-          "p90": 7915,
-          "p95": 48732,
-          "p99": 54810,
-          "p999": 61450
+          "p50": 2.929,
+          "p75": 4.641,
+          "p80": 5.219,
+          "p90": 7.915,
+          "p95": 48.732,
+          "p99": 54.81,
+          "p999": 61.45
         }
       },
       "resources": {
@@ -487,18 +487,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5447.53,
       "totalRequests": 163426,
       "latency": {
-        "min": 368,
-        "mean": 6540,
-        "max": 88612,
-        "pstdev": 12451,
+        "min": 0.368,
+        "mean": 6.54,
+        "max": 88.612,
+        "pstdev": 12.451,
         "percentiles": {
-          "p50": 2904,
-          "p75": 4546,
-          "p80": 5128,
-          "p90": 7692,
-          "p95": 49305,
-          "p99": 55422,
-          "p999": 64116
+          "p50": 2.904,
+          "p75": 4.546,
+          "p80": 5.128,
+          "p90": 7.692,
+          "p95": 49.305,
+          "p99": 55.422,
+          "p999": 64.116
         }
       },
       "resources": {
@@ -538,18 +538,18 @@ export const benchmarkData: TestSuite = {
       "throughput": 5437.61,
       "totalRequests": 163132,
       "latency": {
-        "min": 383,
-        "mean": 6527,
-        "max": 102998,
-        "pstdev": 12600,
+        "min": 0.383,
+        "mean": 6.527,
+        "max": 102.998,
+        "pstdev": 12.6,
         "percentiles": {
-          "p50": 2827,
-          "p75": 4470,
-          "p80": 5070,
-          "p90": 7714,
-          "p95": 49029,
-          "p99": 56436,
-          "p999": 66684
+          "p50": 2.827,
+          "p75": 4.47,
+          "p80": 5.07,
+          "p90": 7.714,
+          "p95": 49.029,
+          "p99": 56.436,
+          "p999": 66.684
         }
       },
       "resources": {
