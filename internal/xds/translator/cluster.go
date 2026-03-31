@@ -488,6 +488,15 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
 	}
 
+	// Apply ignore_new_hosts_until_first_hc if configured
+	if args.healthCheck != nil &&
+		args.healthCheck.Active != nil &&
+		args.healthCheck.Active.IgnoreNewHostsUntilFirstHealthCheck != nil {
+
+		cluster.CommonLbConfig.IgnoreNewHostsUntilFirstHc =
+			*args.healthCheck.Active.IgnoreNewHostsUntilFirstHealthCheck
+	}
+
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
 		cluster.OutlierDetection = buildXdsOutlierDetection(args.healthCheck.Passive)
 	}
