@@ -265,6 +265,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      statusOnError: 500
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -466,6 +467,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
+            statusOnError: 500
       - destination:
           metadata:
             kind: HTTPRoute
@@ -523,6 +525,7 @@ xdsIR:
             - header1
             - header2
             name: securitypolicy/default/policy-for-http-route-1
+            statusOnError: 500
       - destination:
           metadata:
             kind: HTTPRoute

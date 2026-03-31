@@ -22,6 +22,7 @@ jobs:
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@c5996e0193a3df57d695c1b8a1dec2a4c62e8730"  # v2.3.3
     with:
       scan-args: |-
+        --config tools/osv-scanner/vulnerability-scan-config.toml
         --recursive
         ./
     permissions:
@@ -35,6 +36,7 @@ jobs:
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@c5996e0193a3df57d695c1b8a1dec2a4c62e8730"  # v2.3.3
     with:
       scan-args: |-
+        --config tools/osv-scanner/vulnerability-scan-config.toml
         --recursive
         ./
     permissions:

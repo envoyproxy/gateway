@@ -15,7 +15,8 @@ assignees: ''
 - [ ] push tag
     - [ ] Push tag https://github.com/envoyproxy/gateway/releases/tag/v1.x.x
     - [ ] wait for release CI
+- [ ] update benchmark report
 - [ ] verify quickstart
 - [ ] update doc
-- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x) 
+- [ ] update release [announcement](https://github.com/envoyproxy/gateway/releases/tag/v1.x.x)
 - [ ] GH Release, Slack announcement, [google group](https://groups.google.com/g/envoy-gateway-announce) announcement

@@ -15,9 +15,15 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false
   - key: test-namespace/test-policy-1/rule/1
     value: test-namespace/test-policy-1/rule/1
     rate_limit: null
@@ -32,9 +38,15 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false
   - key: test-namespace/test-policy-1/rule/2
     value: test-namespace/test-policy-1/rule/2
     rate_limit: null
@@ -49,6 +61,12 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false

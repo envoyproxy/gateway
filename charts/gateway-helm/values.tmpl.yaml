@@ -114,6 +114,10 @@ config:
 
 createNamespace: false
 
+# -- Override the namespace for resources deployed by the chart.
+# Defaults to the release namespace.
+namespaceOverride: ""
+
 kubernetesClusterDomain: cluster.local
 
 # -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.

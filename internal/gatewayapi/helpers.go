@@ -663,7 +663,6 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	mask, _ := ipn.Mask.Size()
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
-		IP:      ip.String(),
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil

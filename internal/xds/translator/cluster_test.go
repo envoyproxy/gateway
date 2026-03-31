@@ -12,13 +12,13 @@ import (
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
@@ -152,8 +152,8 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 		{
 			name: "basic outlier detection",
 			input: &ir.OutlierDetection{
-				Interval:             ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:     ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:   ptr.To[int32](10),
 				Consecutive5xxErrors: ptr.To[uint32](5),
 			},
@@ -167,8 +167,8 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 		{
 			name: "outlier detection with failure percentage threshold",
 			input: &ir.OutlierDetection{
-				Interval:                   ptr.To(metav1.Duration{Duration: 10 * time.Second}),
-				BaseEjectionTime:           ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
+				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:         ptr.To[int32](10),
 				Consecutive5xxErrors:       ptr.To[uint32](5),
 				FailurePercentageThreshold: ptr.To[uint32](90),
@@ -186,11 +186,11 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			name: "outlier detection with all fields",
 			input: &ir.OutlierDetection{
 				SplitExternalLocalOriginErrors: ptr.To(true),
-				Interval:                       ptr.To(metav1.Duration{Duration: 10 * time.Second}),
+				Interval:                       ir.MetaV1DurationPtr(10 * time.Second),
 				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
 				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
 				Consecutive5xxErrors:           ptr.To[uint32](5),
-				BaseEjectionTime:               ptr.To(metav1.Duration{Duration: 30 * time.Second}),
+				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
 				MaxEjectionPercent:             ptr.To[int32](10),
 				FailurePercentageThreshold:     ptr.To[uint32](85),
 				AlwaysEjectOneEndpoint:         ptr.To(true),
@@ -221,4 +221,236 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 
 func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 	require.Empty(t, cmp.Diff(expected, actual, protocmp.Transform()))
+}
+
+func TestBuildClusterWithBackendUtilization(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-bu",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{}},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.NotNil(t, policy)
+	require.NotNil(t, policy.TypedExtensionConfig)
+	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", policy.TypedExtensionConfig.Name)
+	require.NotNil(t, policy.TypedExtensionConfig.TypedConfig)
+	require.Equal(t, "type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin", policy.TypedExtensionConfig.TypedConfig.TypeUrl)
+}
+
+func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
+	window := 5 * time.Second
+	args := &xdsClusterArgs{
+		name:         "test-cluster-bu-ss",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{BackendUtilization: &ir.BackendUtilization{
+			SlowStart: &ir.SlowStart{Window: ir.MetaV1DurationPtr(window)},
+		}},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.NotNil(t, policy)
+	require.NotNil(t, policy.TypedExtensionConfig)
+	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", policy.TypedExtensionConfig.Name)
+
+	// Unmarshal and verify SlowStartConfig is present
+	cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(cswrr)
+	require.NoError(t, err)
+	require.NotNil(t, cswrr.SlowStartConfig)
+	require.NotNil(t, cswrr.SlowStartConfig.SlowStartWindow)
+	require.Equal(t, window, cswrr.SlowStartConfig.SlowStartWindow.AsDuration())
+}
+
+func TestGetHealthCheckOverridesHostname(t *testing.T) {
+	tests := []struct {
+		name        string
+		healthCheck *ir.HealthCheck
+		endpoint    *ir.DestinationEndpoint
+		expected    string
+	}{
+		{
+			name: "nil HTTP health checker",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HealthyThreshold: ptr.To[uint32](3),
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with empty host and endpoint has hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with wildcard host and endpoint has hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "HTTP health checker with explicit host",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "health.example.com",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with empty host but nil endpoint",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: nil,
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with empty host but endpoint has nil hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: nil,
+			},
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with wildcard host but nil endpoint",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: nil,
+			expected: "",
+		},
+		{
+			name: "HTTP health checker with wildcard host but endpoint has nil hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "*",
+						Path: "/health",
+					},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: nil,
+			},
+			expected: "",
+		},
+		{
+			name: "TCP health checker with endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					TCP: &ir.TCPHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "GRPC health checker with endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					GRPC: &ir.GRPCHealthChecker{},
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: ptr.To("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }

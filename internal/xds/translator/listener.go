@@ -110,6 +110,23 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		}
 	}
 
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &typev3.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.IdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.IdleInterval.Duration)
+		}
+		out.ConnectionKeepalive = keepalive
+	}
+
 	return out
 }
 
@@ -437,7 +454,7 @@ func (t *Translator) addHCMToXDSListener(
 	}
 	// Add HTTP filters to the HCM, the filters have already been sorted in the
 	// correct order in the patchHCMWithFilters function.
-	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
+	if err := t.patchHCMWithFilters(mgr, irListener, accesslog); err != nil {
 		return err
 	}
 
@@ -456,11 +473,13 @@ func (t *Translator) addHCMToXDSListener(
 			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
 		}
 
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
+		if connLimit.Value != nil {
+			cl := buildConnectionLimitFilter(statPrefix, connection)
+			if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+				filters = append(filters, clf)
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -721,7 +740,7 @@ func buildTCPFilterChain(
 	}
 
 	// Connection limit (if configured)
-	if connection != nil && connection.ConnectionLimit != nil {
+	if connection != nil && connection.ConnectionLimit != nil && connection.ConnectionLimit.Value != nil {
 		cl := buildConnectionLimitFilter(statPrefix, connection)
 		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
 			filters = append(filters, clf)
@@ -822,8 +841,8 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
-		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
+		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		setTLSValidationContext(tlsConfig, tlsCtx.DownstreamTlsContext.CommonTlsContext)
 	}
 
@@ -859,7 +878,7 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
@@ -880,37 +899,57 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 }
 
 func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
+	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		len(tlsConfig.VerifyCertificateSpki) > 0 ||
+		len(tlsConfig.VerifyCertificateHash) > 0 ||
+		len(tlsConfig.MatchTypedSubjectAltNames) > 0
+
+	validationContext := &tlsv3.CertificateValidationContext{}
+
+	if tlsConfig.AcceptUntrusted {
+		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+
+	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
+	validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
+
+	for _, match := range tlsConfig.MatchTypedSubjectAltNames {
+		sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
+		oid := ""
+		switch match.Name {
+		case "":
+			sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
+		case "EMAIL":
+			sanType = tlsv3.SubjectAltNameMatcher_EMAIL
+		case "DNS":
+			sanType = tlsv3.SubjectAltNameMatcher_DNS
+		case "URI":
+			sanType = tlsv3.SubjectAltNameMatcher_URI
+		case "IP_ADDRESS":
+			sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
+		default:
+			oid = match.Name
+		}
+		validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
+			SanType: sanType,
+			Matcher: buildXdsStringMatcher(match),
+			Oid:     oid,
+		})
+	}
+
+	if tlsConfig.CACertificate == nil {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContext{
+			ValidationContext: validationContext,
+		}
+		return
+	}
+
 	sdsSecretConfig := &tlsv3.SdsSecretConfig{
 		Name:      tlsConfig.CACertificate.Name,
 		SdsConfig: makeConfigSource(),
 	}
-	if len(tlsConfig.VerifyCertificateSpki) > 0 || len(tlsConfig.VerifyCertificateHash) > 0 || len(tlsConfig.MatchTypedSubjectAltNames) > 0 {
-		validationContext := &tlsv3.CertificateValidationContext{}
-		validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
-		validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
-		for _, match := range tlsConfig.MatchTypedSubjectAltNames {
-			sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
-			oid := ""
-			switch match.Name {
-			case "":
-				sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
-			case "EMAIL":
-				sanType = tlsv3.SubjectAltNameMatcher_EMAIL
-			case "DNS":
-				sanType = tlsv3.SubjectAltNameMatcher_DNS
-			case "URI":
-				sanType = tlsv3.SubjectAltNameMatcher_URI
-			case "IP_ADDRESS":
-				sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
-			default:
-				oid = match.Name
-			}
-			validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
-				SanType: sanType,
-				Matcher: buildXdsStringMatcher(match),
-				Oid:     oid,
-			})
-		}
+
+	if needsDefaultValidationContext {
 		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
 			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 				DefaultValidationContext:         validationContext,
