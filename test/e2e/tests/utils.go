@@ -60,10 +60,6 @@ var (
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
 
 	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-	patchOpts = []client.PatchOption{
-		client.ForceOwnership, client.FieldOwner("e2e-test"),
-	}
 )
 
 const (
@@ -481,14 +477,14 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 // ScrapeMetrics
 // TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
-	url, err := RetrieveURL(c, nn, port, path)
+	promURL, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
 		return err
 	}
 
-	tlog.Logf(t, "scraping metrics from %s", url)
+	tlog.Logf(t, "scraping metrics from %s", promURL)
 
-	metrics, err := RetrieveMetrics(url, time.Second)
+	metrics, err := RetrieveMetrics(promURL, time.Second)
 	if err != nil {
 		return err
 	}
@@ -541,6 +537,9 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
 	}
@@ -664,6 +663,9 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	tlog.Logf(t, "get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
@@ -857,12 +859,12 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 		URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: path, RawQuery: query},
 	}
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 		func(elapsed time.Duration) bool {
-			resp, err := client.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				panic(err)
 			}
@@ -874,10 +876,10 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 			// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
 			if exceptedStatusCode == resp.StatusCode {
 				return true
-			} else {
-				tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
-				return false
 			}
+
+			tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
+			return false
 		})
 }
 
