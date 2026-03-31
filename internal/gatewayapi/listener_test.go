@@ -1300,7 +1300,7 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 				}},
 			}
 
-			ds, _, err := translator.processBackendRefs("test", backendCluster, ns, resources, &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}})
+			ds, _, err := translator.processBackendRefsForTelemetry("test", backendCluster, ns, resources, &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}})
 			require.NoError(t, err)
 			require.Len(t, ds, 1)
 
@@ -1478,7 +1478,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 				BackendEnabled:        true,
 				GatewayControllerName: egv1a1.GatewayControllerName,
 			}
-			ds, _, err := translator.processBackendRefs("test", tc.backendCluster, ns, tc.resources, envoyProxy)
+			ds, _, err := translator.processBackendRefsForTelemetry("test", tc.backendCluster, ns, tc.resources, envoyProxy)
 			if tc.expectedErr != "" {
 				require.EqualError(t, err, tc.expectedErr)
 			} else {

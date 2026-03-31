@@ -633,7 +633,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -679,7 +679,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				// TODO: rename this, so that we can share backend with tracing?
 				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
-				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -742,7 +742,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	// TODO: rename this, so that we can share backend with accesslog?
 	destName := "tracing"
 	settingName := irDestinationSettingName(destName, -1)
-	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -879,7 +879,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 
 		destName := fmt.Sprintf("metrics_otel_%d", i)
 		settingName := irDestinationSettingName(destName, -1)
-		ds, _, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		ds, _, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -927,7 +927,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}, resolvedSinks, nil
 }
 
-func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
+func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
