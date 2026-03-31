@@ -65,6 +65,12 @@ type HTTPURLRewriteFilter struct {
 	//
 	// +optional
 	Path *HTTPPathModifier `json:"path,omitempty"`
+	// AppendXForwardedHost controls whether the original Host header value is
+	// appended to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true for backward compatibility.
+	//
+	// +optional
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty"`
 }
 
 // HTTPDirectResponseFilter defines the configuration to return a fixed response.

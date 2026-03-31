@@ -117,6 +117,36 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "Valid appendXForwardedHost false",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: ptr.To("foo"),
+						},
+						AppendXForwardedHost: ptr.To(false),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid appendXForwardedHost true",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: ptr.To("foo"),
+						},
+						AppendXForwardedHost: ptr.To(true),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid Header missing settings",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
