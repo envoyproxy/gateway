@@ -17575,6 +17575,14 @@ spec:
                         specified
                       rule: '!(has(self.samplingRate) && has(self.samplingFraction))'
                 type: object
+              xdsTLSCAPath:
+                description: |-
+                  XDSTLSCAPath overrides the default CA certificate path (/certs/ca.crt) used for
+                  xDS mTLS between the Envoy proxy and the Envoy Gateway controller.
+                  When set, the SDS trusted CA config will reference this path instead of the default.
+                  This allows using a separately managed CA bundle (e.g. from trust-manager) that
+                  updates independently of the leaf certificate secret, enabling non-disruptive CA rotation.
+                type: string
             type: object
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.

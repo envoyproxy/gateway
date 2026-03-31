@@ -51,6 +51,9 @@ spec:
       - args:
         - server
         - --config-path=/config/envoy-gateway.yaml
+        {{- if .Values.xdsTLSCAPath }}
+        - --xds-tls-ca-path={{ .Values.xdsTLSCAPath }}
+        {{- end }}
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:
@@ -94,6 +97,11 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        {{- if .Values.xdsTLSCABundle }}
+        - mountPath: /ca-bundle
+          name: ca-bundle
+          readOnly: true
+        {{- end }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
@@ -108,3 +116,8 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      {{- if .Values.xdsTLSCABundle }}
+      - name: ca-bundle
+        configMap:
+          name: {{ .Values.xdsTLSCABundle }}
+      {{- end }}
