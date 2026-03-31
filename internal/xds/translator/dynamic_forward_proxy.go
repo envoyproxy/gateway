@@ -110,36 +110,30 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 		return errors.New("ir route is nil")
 	}
 
-	// Add per-route RBAC config to deny loopback addresses when DFP is used.
-	if irRoute.IsDynamicResolverRoute() {
-		hostFromLiteral := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Name != nil
-		// We don't enforce check for host rewrite from literal since it's static and known at config time.
-		// The loopback check is mainly to prevent dynamic hostnames that may resolve to loopback addresses.
-		if !hostFromLiteral {
-			rbacPerRouteCfg, err := buildDFPLoopbackRBACPerRoute(irRoute)
-			if err != nil {
-				return err
-			}
-			rbacAny, err := anypb.New(rbacPerRouteCfg)
-			if err != nil {
-				return err
-			}
-			if route.TypedPerFilterConfig == nil {
-				route.TypedPerFilterConfig = make(map[string]*anypb.Any)
-			}
-			route.TypedPerFilterConfig[dfpLoopbackRBACFilterName] = rbacAny
-		}
-	}
-
 	if !routeRequireDFP(irRoute) {
 		return nil
 	}
 
-	perRouteCfg := buildDFPPerRouteConfig(irRoute)
-	if perRouteCfg == nil {
-		return nil
+	// Add per-route RBAC config to deny loopback addresses when DFP is used.
+	hostFromLiteral := irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Name != nil
+	// We don't enforce check for host rewrite from literal since it's static and known at config time.
+	// The loopback check is mainly to prevent dynamic hostnames that may resolve to loopback addresses.
+	if !hostFromLiteral {
+		rbacPerRouteCfg, err := buildDFPLoopbackRBACPerRoute(irRoute)
+		if err != nil {
+			return err
+		}
+		rbacAny, err := anypb.New(rbacPerRouteCfg)
+		if err != nil {
+			return err
+		}
+		if route.TypedPerFilterConfig == nil {
+			route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		}
+		route.TypedPerFilterConfig[dfpLoopbackRBACFilterName] = rbacAny
 	}
 
+	perRouteCfg := buildDFPPerRouteConfig(irRoute)
 	perRouteAny, err := anypb.New(perRouteCfg)
 	if err != nil {
 		return err
@@ -186,24 +180,13 @@ func listenerHasDynamicResolverRoute(listener *ir.HTTPListener) bool {
 }
 
 // routeRequireDFP check if a given route requires the dynamic forward proxy filter.
-// A dynamic forward proxy is required when:
-// * The route has a dynamic resolver backend.
-// * The route needs DFP to rewrite the host header based on a header or literal name.
+// A dynamic forward proxy is required for any dynamic resolver backend route.
 func routeRequireDFP(route *ir.HTTPRoute) bool {
 	if route == nil || route.Destination == nil {
 		return false
 	}
 
-	if !route.IsDynamicResolverRoute() {
-		return false
-	}
-
-	if route.URLRewrite != nil && route.URLRewrite.Host != nil &&
-		(route.URLRewrite.Host.Header != nil || route.URLRewrite.Host.Name != nil) {
-		return true
-	}
-
-	return false
+	return route.IsDynamicResolverRoute()
 }
 
 // dfpCacheConfigs builds a sorted list of unique DFP DNS cache configs needed by the given routes.
@@ -245,23 +228,20 @@ func dfpCacheConfigs(routes []*ir.HTTPRoute) []*commondfpv3.DnsCacheConfig {
 
 func buildDFPPerRouteConfig(irRoute *ir.HTTPRoute) *dfpv3.PerRouteConfig {
 	switch {
-	case irRoute.URLRewrite == nil || irRoute.URLRewrite.Host == nil:
-		return nil
-	case irRoute.URLRewrite.Host.Header != nil:
+	case irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Header != nil:
 		return &dfpv3.PerRouteConfig{
 			HostRewriteSpecifier: &dfpv3.PerRouteConfig_HostRewriteHeader{
 				HostRewriteHeader: *irRoute.URLRewrite.Host.Header,
 			},
 		}
-	case irRoute.URLRewrite.Host.Name != nil:
+	case irRoute.URLRewrite != nil && irRoute.URLRewrite.Host != nil && irRoute.URLRewrite.Host.Name != nil:
 		return &dfpv3.PerRouteConfig{
 			HostRewriteSpecifier: &dfpv3.PerRouteConfig_HostRewriteLiteral{
 				HostRewriteLiteral: *irRoute.URLRewrite.Host.Name,
 			},
 		}
 	default:
-		return nil
-
+		return &dfpv3.PerRouteConfig{}
 	}
 }
 
