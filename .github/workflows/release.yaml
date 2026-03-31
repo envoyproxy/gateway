@@ -14,9 +14,46 @@ on:
 
 
 jobs:
+  verify-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - name: Verify Build and Test Success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh run list \
+            --workflow build_and_test.yaml \
+            --commit ${{ github.sha }} \
+            --limit 1 \
+            --json status,conclusion \
+            --jq '.[0]')
+
+          if [ -z "$RUN" ] || [ "$RUN" = "null" ]; then
+            echo "❌ ERROR: No 'Build and Test' workflow run found for this commit."
+            exit 1
+          fi
+
+          STATUS=$(echo "$RUN" | jq -r '.status')
+          CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
+          echo "Latest 'Build and Test' run: status=$STATUS, conclusion=$CONCLUSION"
+
+          if [ "$STATUS" != "completed" ]; then
+            echo "❌ ERROR: The latest 'Build and Test' workflow run is still $STATUS."
+            exit 1
+          fi
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "❌ ERROR: The latest 'Build and Test' workflow run concluded with: $CONCLUSION"
+            exit 1
+          fi
+
+          echo "✅ SUCCESS: The latest 'Build and Test' workflow succeeded."
+
   # For push event, we run benchmark test here because we need to
   # include benchmark report in the release.
   benchmark-test:
+    needs: [verify-build-and-test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
@@ -71,9 +108,11 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - name: Retag and push existing gateway-dev image
-        run: |
-          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://docker.io/envoyproxy/gateway:${{ env.release_tag }}
+      - name: Build multiarch binaries
+        run: make build-multiarch
+
+      - name: Build and push multiarch image
+        run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
 
       - name: Generate Release Artifacts
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
@@ -95,9 +134,8 @@ jobs:
         run: |
           cd release-artifacts && unzip benchmark_report.zip
 
-      - name: Build egctl multiarch binaries
+      - name: Package EG multiarch binaries
         run: |
-          make build-multiarch
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
