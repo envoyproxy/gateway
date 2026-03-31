@@ -39,10 +39,7 @@ func TestE2E(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	skipTests := []string{
-		tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-	}
-
+	var skipTests []string
 	// Skip test only work on DualStack cluster
 	if tests.IPFamily != "dual" {
 		skipTests = append(skipTests,
@@ -57,8 +54,11 @@ func TestE2E(t *testing.T) {
 			tests.DynamicResolverBackendTest.ShortName,
 			tests.DynamicResolverBackendWithTLSTest.ShortName,
 			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitCIDRInvertMatchAlwaysEnforceTest.ShortName,
+			tests.RateLimitCIDRInvertAlwaysExemptTest.ShortName,
 			tests.RateLimitMultipleListenersTest.ShortName,
 			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+			tests.AuthorizationGeoIPCountryTest.ShortName,
 		)
 	}
 
@@ -90,6 +90,7 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: enabledFeatures,

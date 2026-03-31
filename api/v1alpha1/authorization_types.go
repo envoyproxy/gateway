@@ -72,7 +72,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers))",message="at least one of clientCIDRs, jwt, or headers must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations))",message="at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -111,23 +111,64 @@ type Principal struct {
 	// +kubebuilder:validation:MaxItems=256
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
 
-	// SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
-	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
+	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// This field is supported for HTTPRoute and GRPCRoute authorization.
+	// It is not supported for TCPRoute targets.
 	//
-	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
-	// the source IP for the rule to match.
+	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 	//
-	// The source IP is the IP address of the peer that connected to Envoy.
-	// This IP is obtained from the TCP connection's peer address and is not
-	// affected by X-Forwarded-For or other IP detection headers.
-	// If intermediaries (load balancers, NAT) terminate or proxy TCP,
-	// the original client IP will only be available if the intermediary
-	// preserves the source address (for example by enabling the PROXY protocol
-	// or avoiding SNAT).
+	// The client IP is inferred from the X-Forwarded-For header or a custom header.
+	// You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
+	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
-	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
+	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
+}
+
+// ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.country) || has(self.region) || has(self.city) || has(self.asn) || has(self.isp) || has(self.anonymous)",message="at least one of country, region, city, asn, isp, or anonymous must be specified"
+type ClientIPGeoLocation struct {
+	// Country is the country ISO code associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=2
+	// +kubebuilder:validation:Pattern=`^[A-Za-z]{2}$`
+	Country *string `json:"country,omitempty"`
+
+	// Region is the region ISO code associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=16
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9-]+$`
+	Region *string `json:"region,omitempty"`
+
+	// City is the city associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	City *string `json:"city,omitempty"`
+
+	// ASN is the autonomous system number associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	ASN *uint32 `json:"asn,omitempty"`
+
+	// ISP is the internet service provider associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	ISP *string `json:"isp,omitempty"`
+
+	// Anonymous matches anonymous network detection signals.
+	//
+	// +optional
+	Anonymous *GeoIPAnonymousMatch `json:"anonymous,omitempty"`
 }
 
 // AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.

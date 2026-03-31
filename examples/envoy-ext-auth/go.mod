@@ -1,12 +1,12 @@
 module github.com/envoyproxy/gateway-grcp-ext-auth
 
-go 1.25.7
+go 1.26.1
 
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260217184816-6318b674fe2f
 	github.com/golang/protobuf v1.5.4
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.3
 )
 
 require (

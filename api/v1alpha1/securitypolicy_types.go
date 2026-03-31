@@ -38,10 +38,11 @@ type SecurityPolicy struct {
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
 //
 // NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
-// When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
+// When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 // (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 // authentication/authorization features such as JWT, API Key, Basic Auth,
-// OIDC, or External Authorization are not applicable to TCPRoute targets.
+// OIDC, External Authorization, or GeoIP based authorization are not applicable
+// to TCPRoute targets.
 //
 // +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef) && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size() > 0) ", message="either targetRef or targetRefs must be used"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRef) ? self.targetRef.group == 'gateway.networking.k8s.io' : true", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
@@ -51,6 +52,15 @@ type SecurityPolicy struct {
 // +kubebuilder:validation:XValidation:rule="(has(self.authorization) && has(self.authorization.rules) && self.authorization.rules.exists(r, has(r.principal.jwt))) ? has(self.jwt) : true", message="if authorization.rules.principal.jwt is used, jwt must be defined"
 type SecurityPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
+
+	// MergeType determines how this configuration is merged with existing SecurityPolicy
+	// configurations targeting a parent resource. When set, this configuration will be merged
+	// into a parent SecurityPolicy (i.e. the one targeting a Gateway or Listener).
+	// This field cannot be set when targeting a parent resource (Gateway).
+	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	//
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
 
 	// APIKeyAuth defines the configuration for the API Key Authentication.
 	//

@@ -967,6 +967,24 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				r.Traffic = tf.DeepCopy()
 
+				if r.Traffic != nil && r.Traffic.LoadBalancer != nil &&
+					r.Traffic.LoadBalancer.BackendUtilization != nil &&
+					!ptr.Deref(r.Traffic.LoadBalancer.BackendUtilization.KeepResponseHeaders, false) {
+					headersToRemove := []string{"endpoint-load-metrics", "endpoint-load-metrics-bin"}
+					for _, h := range headersToRemove {
+						found := false
+						for _, existing := range r.RemoveResponseHeaders {
+							if existing == h {
+								found = true
+								break
+							}
+						}
+						if !found {
+							r.RemoveResponseHeaders = append(r.RemoveResponseHeaders, h)
+						}
+					}
+				}
+
 				if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 					r.Traffic.Timeout = localTo
 				}
@@ -1090,6 +1108,11 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 
 	cp = buildCompression(policy.Spec.Compression, policy.Spec.Compressor)
 	httpUpgrade = buildHTTPProtocolUpgradeConfig(policy.Spec.HTTPUpgrade)
+	if rb != nil && len(httpUpgrade) > 0 {
+		err = errors.New("requestBuffer cannot be used together with httpUpgrade")
+		err = perr.WithMessage(err, "RequestBuffer")
+		errs = errors.Join(errs, err)
+	}
 
 	ds = translateDNS(&policy.Spec.ClusterSettings, utils.NamespacedName(policy).String())
 
@@ -1530,19 +1553,21 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		}
 
 		if match.SourceCIDR != nil {
-			// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-			// distinct client selector and uses a separate rate limit bucket/counter.
 			distinct := false
-			sourceCIDR := match.SourceCIDR.Value
 			if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
 				distinct = true
 			}
+			invert := false
+			if match.SourceCIDR.Invert != nil {
+				invert = *match.SourceCIDR.Invert
+			}
 
-			cidrMatch, err := parseCIDR(sourceCIDR)
+			cidrMatch, err := parseCIDR(match.SourceCIDR.Value)
 			if err != nil {
 				return nil, fmt.Errorf("unable to translate rateLimit: %w", err)
 			}
 			cidrMatch.Distinct = distinct
+			cidrMatch.Invert = invert
 			irRule.CIDRMatch = cidrMatch
 		}
 

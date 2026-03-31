@@ -15,26 +15,17 @@
           maxConcurrentStreams: 100
         httpFilters:
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/default/policy-for-http-route/lua/0
+          name: envoy.filters.http.lua/0
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
-              inlineString: function envoy_on_request(request_handle) request_handle:logInfo('Goodbye.')
-                end
+              inlineString: ""
         - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/0
+          name: envoy.filters.http.lua/1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
-                end
-        - disabled: true
-          name: envoy.filters.http.lua/envoyextensionpolicy/envoy-gateway/policy-for-gateway/lua/1
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
-            defaultSourceCode:
-              inlineString: function envoy_on_response(response_handle) response_handle:logError('Hello.')
-                end
+              inlineString: ""
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

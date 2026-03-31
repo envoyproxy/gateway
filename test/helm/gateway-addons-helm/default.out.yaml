@@ -6,10 +6,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 ---
 # Source: gateway-addons-helm/charts/grafana/templates/serviceaccount.yaml
@@ -32,10 +32,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
@@ -46,8 +46,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -75,10 +75,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 data:
   custom_parsers.conf: |
@@ -197,10 +197,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 data:
   config.yaml: |
     
@@ -297,10 +297,10 @@ metadata:
   name: loki-runtime
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 data:
   runtime-config.yaml: |
     {}
@@ -313,8 +313,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -9949,10 +9949,10 @@ kind: ClusterRole
 metadata:
   name: fluent-bit
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 rules:
   - apiGroups:
@@ -9982,10 +9982,10 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   name: loki-clusterrole
 rules:
 - apiGroups: [""] # "" indicates the core API group
@@ -10000,8 +10000,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10047,10 +10047,10 @@ kind: ClusterRoleBinding
 metadata:
   name: fluent-bit
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -10086,10 +10086,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: loki-clusterrolebinding
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
 subjects:
   - kind: ServiceAccount
     name: loki
@@ -10107,8 +10107,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10160,10 +10160,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 spec:
   type: ClusterIP
@@ -10205,10 +10205,10 @@ metadata:
   name: loki-memberlist
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   annotations:
 spec:
   type: ClusterIP
@@ -10230,10 +10230,10 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
     variant: headless
     prometheus.io/service-monitor: "false"
   annotations:
@@ -10255,10 +10255,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
   annotations:
 spec:
   type: ClusterIP
@@ -10284,8 +10284,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10371,10 +10371,10 @@ metadata:
   name: fluent-bit
   namespace: monitoring
   labels:
-    helm.sh/chart: fluent-bit-0.55.0
+    helm.sh/chart: fluent-bit-0.56.0
     app.kubernetes.io/name: fluent-bit
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "4.2.2"
+    app.kubernetes.io/version: "4.2.3"
     app.kubernetes.io/managed-by: Helm
 spec:
   selector:
@@ -10387,7 +10387,7 @@ spec:
         app.kubernetes.io/name: fluent-bit
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: f2f68b12d2de32fdecf942ac6c44bb30a41a24d532e5c6647cd23482d7224493
+        checksum/config: 49e9bf3d4edd7d9990a69628a8b217843b43b66d2c8c1fc67b02fdb4535ecae5
         fluentbit.io/exclude: "true"
         prometheus.io/path: /api/v1/metrics/prometheus
         prometheus.io/port: "2020"
@@ -10399,7 +10399,7 @@ spec:
       dnsPolicy: ClusterFirst
       containers:
         - name: fluent-bit
-          image: "fluent/fluent-bit:4.2.2"
+          image: "fluent/fluent-bit:4.2.3"
           imagePullPolicy: IfNotPresent
           command:
             - /fluent-bit/bin/fluent-bit
@@ -10583,8 +10583,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.9.1
-    helm.sh/chart: prometheus-28.9.1
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.0
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10605,15 +10605,15 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v3.9.1
-        helm.sh/chart: prometheus-28.9.1
+        app.kubernetes.io/version: v3.10.0
+        helm.sh/chart: prometheus-28.14.0
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.90.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
@@ -10641,7 +10641,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.9.1"
+          image: "prom/prometheus:v3.10.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
@@ -10700,10 +10700,10 @@ metadata:
   name: loki
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-6.53.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/version: "3.6.7"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10743,7 +10743,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:3.6.5
+          image: docker.io/grafana/loki:3.6.7
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml
@@ -10793,7 +10793,7 @@ spec:
           resources:
             {}
         - name: loki-sc-rules
-          image: docker.io/kiwigrid/k8s-sidecar:1.30.9
+          image: docker.io/kiwigrid/k8s-sidecar:2.5.0
           imagePullPolicy: IfNotPresent
           env:
             - name: METHOD
@@ -10817,6 +10817,8 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           volumeMounts:
+            - name: tmp
+              mountPath: /tmp
             - name: sc-rules-volume
               mountPath: "/rules"
       affinity:

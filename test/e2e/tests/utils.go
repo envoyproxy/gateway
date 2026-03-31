@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -59,10 +60,6 @@ var (
 	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
 
 	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-
-	patchOpts = []client.PatchOption{
-		client.ForceOwnership, client.FieldOwner("e2e-test"),
-	}
 )
 
 const (
@@ -74,6 +71,17 @@ const (
 
 	defaultServiceStartupTimeout = 5 * time.Minute
 )
+
+// TimeoutConfig returns the default TimeoutConfig for E2E tests.
+// We need this to reduce the logs in CI because of https://github.com/kubernetes-sigs/gateway-api/pull/4630
+func TimeoutConfig() config.TimeoutConfig {
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
+	return timeout
+}
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
@@ -108,6 +116,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 
 			for _, c := range p.Status.Conditions {
 				if c.Type == condition.Type && c.Status == condition.Status {
+					tlog.Logf(t, "pod %s/%s matches the status: %v ip: %v", p.Namespace, p.Name, condition.Status, p.Status.PodIPs)
 					continue checkPods // pod is ready, check next pod
 				}
 			}
@@ -143,6 +152,28 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
+}
+
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
 func SecurityPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
@@ -168,6 +199,29 @@ func SecurityPolicyMustFail(
 		})
 
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
+}
+
+// SecurityPolicyMustBeMerged waits for the specified SecurityPolicy to have Merged condition.
+func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
 }
 
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
@@ -318,6 +372,19 @@ func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controll
 	return false
 }
 
+func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionMerged) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
 func EnvoyExtensionPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
@@ -410,14 +477,14 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 // ScrapeMetrics
 // TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
-	url, err := RetrieveURL(c, nn, port, path)
+	promURL, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
 		return err
 	}
 
-	tlog.Logf(t, "scraping metrics from %s", url)
+	tlog.Logf(t, "scraping metrics from %s", promURL)
 
-	metrics, err := RetrieveMetrics(url, time.Second)
+	metrics, err := RetrieveMetrics(promURL, time.Second)
 	if err != nil {
 		return err
 	}
@@ -470,6 +537,9 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
 	}
@@ -593,6 +663,9 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if err != nil {
 		return -1, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	tlog.Logf(t, "get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
@@ -635,21 +708,34 @@ func CollectAndDump(t *testing.T, rest *rest.Config) {
 		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
 		return
 	}
-
 	dumpedNamespaces := []string{"envoy-gateway-system"}
 	if IsGatewayNamespaceMode() {
 		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
 	}
 
-	opts := []tb.CollectOption{
-		tb.WithCollectedNamespaces(dumpedNamespaces),
-	}
+	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+}
 
+func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
 	result, _ := tb.CollectResult(t.Context(), rest, opts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s", data)
+		tlog.Logf(t, "\ndata: \n%s\n", data)
 	}
+}
+
+func consistentHashDump(t *testing.T, rest *rest.Config) {
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
+		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
+	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
@@ -750,6 +836,10 @@ func IsGatewayNamespaceMode() bool {
 	return DeployProfile == "gateway-namespace-mode"
 }
 
+func UseStandardChannel() bool {
+	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
+}
+
 // TODO(zhaohuabing) remove this after the feature flag is removed.
 func XDSNameSchemeV2() bool {
 	return DeployProfile == "xds-name-scheme-v2"
@@ -769,12 +859,12 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 		URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: path, RawQuery: query},
 	}
 
-	client := &http.Client{
+	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
 		func(elapsed time.Duration) bool {
-			resp, err := client.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				panic(err)
 			}
@@ -786,10 +876,10 @@ func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAdd
 			// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
 			if exceptedStatusCode == resp.StatusCode {
 				return true
-			} else {
-				tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
-				return false
 			}
+
+			tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
+			return false
 		})
 }
 

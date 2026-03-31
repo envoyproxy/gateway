@@ -27,6 +27,9 @@
         envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
     - match:
         pathSeparatedPrefix: /terminal
       name: httproute/default/httproute-3/rule/0/match/0/www_example_com
@@ -36,5 +39,16 @@
         - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-terminal/dynamic-module/0:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        pathSeparatedPrefix: /path-loaded
+      name: httproute/default/httproute-4/rule/0/match/0/www_example_com
+      route:
+        cluster: httproute/default/httproute-4/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.dynamic_modules/envoyextensionpolicy/default/policy-path/dynamic-module/0:
           '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
           config: {}

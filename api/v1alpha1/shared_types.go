@@ -402,15 +402,16 @@ const (
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation;Cluster;Endpoints
 type XDSTranslatorHook string
 
 const (
 	XDSVirtualHost  XDSTranslatorHook = "VirtualHost"
 	XDSRoute        XDSTranslatorHook = "Route"
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
-	XDSTranslation  XDSTranslatorHook = "Translation"
 	XDSCluster      XDSTranslatorHook = "Cluster"
+	XDSEndpoints    XDSTranslatorHook = "Endpoints"
+	XDSTranslation  XDSTranslatorHook = "Translation"
 )
 
 // StringMatch defines how to match any strings.
@@ -718,6 +719,48 @@ type HTTP2Settings struct {
 	// Default: TerminateConnection
 	// +optional
 	OnInvalidMessage *InvalidMessageAction `json:"onInvalidMessage,omitempty"`
+
+	// ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames.
+	// +optional
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +kubebuilder:validation:XValidation:rule="!has(self.timeout) || !has(self.interval) || duration(self.timeout) < duration(self.interval)",message="timeout must be less than interval"
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames to keep the connection alive.
+	// +optional
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
+
+	// Timeout specifies how long to wait for a PING response before considering the connection dead.
+	// +optional
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
+
+	// IntervalJitter specifies a random jitter percentage added to each interval.
+	// Defaults to 15% if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty"`
+
+	// IdleInterval specifies how long a connection must be idle before a PING is sent.
+	// +optional
+	IdleInterval *gwapiv1.Duration `json:"idleInterval,omitempty"`
+}
+
+// GRPCSettings provides gRPC configuration for listeners.
+type GRPCSettings struct {
+	// EnableWeb configures the gRPC-web filter on the listener.
+	// The gRPC-web filter allows clients (typically browsers) to make gRPC calls
+	// using HTTP/1.1 or HTTP/2.
+	//
+	// This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+	// In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+	// users want to route gRPC using HTTPRoute for its richer matching capabilities.
+	// Therefore, we enable this behavior only when it is explicitly opted in.
+	//
+	// +optional
+	EnableWeb *bool `json:"enableWeb,omitempty"`
 }
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.

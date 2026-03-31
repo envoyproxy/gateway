@@ -2042,23 +2042,15 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name:         "my-module",
-							LibraryName:  ptr.To("my_module"),
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "/opt/modules/my_module.so",
+								},
+							},
 							DoNotClose:   ptr.To(true),
 							LoadGlobally: ptr.To(true),
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "valid: dynamicModules with minimal fields",
-			mutate: func(envoy *egv1a1.EnvoyProxy) {
-				envoy.Spec = egv1a1.EnvoyProxySpec{
-					DynamicModules: []egv1a1.DynamicModuleEntry{
-						{
-							Name: "my-module",
 						},
 					},
 				}
@@ -2071,14 +2063,43 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name:        "auth-module",
-							LibraryName: ptr.To("auth_lib"),
+							Name: "auth-module",
+							Source: egv1a1.DynamicModuleSource{
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "/opt/modules/auth_lib.so",
+								},
+							},
 						},
 						{
-							Name:         "rate-limiter",
-							LibraryName:  ptr.To("rate_limit_lib"),
+							Name: "rate-limiter",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "/opt/modules/rate_limit_lib.so",
+								},
+							},
 							DoNotClose:   ptr.To(true),
 							LoadGlobally: ptr.To(false),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid: dynamicModules with remote source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "remote-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https://modules.example.com/libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
 						},
 					},
 				}
@@ -2091,7 +2112,8 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name: "",
+							Name:   "",
+							Source: egv1a1.DynamicModuleSource{},
 						},
 					},
 				}
@@ -2104,7 +2126,8 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name: "My-Module",
+							Name:   "My-Module",
+							Source: egv1a1.DynamicModuleSource{},
 						},
 					},
 				}
@@ -2112,18 +2135,113 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"spec.dynamicModules[0].name in body should match"},
 		},
 		{
-			desc: "invalid: dynamicModules libraryName with invalid chars",
+			desc: "invalid: dynamicModules Local type without local field",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
 					DynamicModules: []egv1a1.DynamicModuleEntry{
 						{
-							Name:        "my-module",
-							LibraryName: ptr.To("my module!"),
+							Name:   "my-module",
+							Source: egv1a1.DynamicModuleSource{},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.dynamicModules[0].libraryName in body should match"},
+			wantErrors: []string{"If type is Local, local field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Remote without remote field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Remote, remote field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Local with remote field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type:   ptr.To(egv1a1.LocalDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Remote, remote field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules remote source missing sha256",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL: "https://modules.example.com/libremote.so",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.remote.sha256 in body should match"},
+		},
+		{
+			desc: "invalid: dynamicModules remote source without hostname",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https:///libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.remote.url in body should match"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Remote with local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "/opt/modules/my_module.so",
+								},
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https://modules.example.com/libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 	}
 

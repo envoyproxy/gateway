@@ -1,0 +1,109 @@
+http:
+- address: 0.0.0.0
+  clientIPDetection:
+    customHeader:
+      failClosed: false
+      name: x-real-client-ip
+  geoIPProvider:
+    maxMind:
+      anonymousIpDbPath: /db/GeoIP2-Anonymous-IP.mmdb
+      cityDbPath: /db/GeoLite2-City.mmdb
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-plain
+        namespace: default
+      name: httproute/default/httproute-plain/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-plain/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-plain
+      namespace: default
+    name: httproute/default/httproute-plain/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /plain
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-geo
+        namespace: default
+      name: httproute/default/httproute-geo/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-geo/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: www.example.com
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-geo
+      namespace: default
+    name: httproute/default/httproute-geo/rule/0/match/0/www_example_com
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /geo
+    security:
+      authorization:
+        defaultAction: Deny
+        rules:
+        - action: Allow
+          name: allow-us-seattle-proxy
+          principal:
+            clientIPGeoLocations:
+            - anonymous:
+                isProxy: true
+              city: Seattle
+              country: US
+        - action: Allow
+          name: allow-eu-non-vpn-non-hosting
+          principal:
+            clientIPGeoLocations:
+            - anonymous:
+                isHosting: false
+                isVPN: false
+              city: London
+              country: GB
+            - anonymous:
+                isHosting: false
+                isVPN: false
+              city: Paris
+              country: France

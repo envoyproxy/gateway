@@ -210,6 +210,16 @@ func (t *Translator) ProcessGRPCFilters(
 		}
 	}
 
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorDirectResponseConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+
 	return httpFiltersContext, errs.GetAllErrors()
 }
 
@@ -938,7 +948,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.CredentialInjection != nil {
 					secret, err := t.validateSecretRef(
-						false,
+						true,
 						crossNamespaceFrom{
 							group:     egv1a1.GroupName,
 							kind:      resource.KindHTTPRouteFilter,

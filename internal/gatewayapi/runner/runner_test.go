@@ -240,6 +240,138 @@ func TestDeleteAllKeys(t *testing.T) {
 	require.Empty(t, r.keyCache.EnvoyExtensionPolicyStatus)
 }
 
+func TestMergePolicyStatus(t *testing.T) {
+	controllerName := "example.com/gateway"
+
+	t.Run("nil incoming keeps existing entry", func(t *testing.T) {
+		existing := aggregatedPolicyStatus{
+			status: &gwapiv1.PolicyStatus{
+				Ancestors: []gwapiv1.PolicyAncestorStatus{
+					{
+						AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+						ControllerName: gwapiv1a2.GatewayController(controllerName),
+					},
+				},
+			},
+			generation: 2,
+		}
+
+		got := mergePolicyStatus(existing, nil, 10)
+		require.Equal(t, existing, got)
+	})
+
+	t.Run("nil existing takes incoming", func(t *testing.T) {
+		incoming := &gwapiv1.PolicyStatus{
+			Ancestors: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1a2.GatewayController(controllerName),
+				},
+			},
+		}
+
+		got := mergePolicyStatus(aggregatedPolicyStatus{}, incoming, 7)
+		require.Same(t, incoming, got.status)
+		require.Equal(t, int64(7), got.generation)
+	})
+
+	t.Run("appends ancestors and tracks max generation", func(t *testing.T) {
+		first := &gwapiv1.PolicyStatus{
+			Ancestors: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1a2.GatewayController(controllerName),
+				},
+			},
+		}
+		second := &gwapiv1.PolicyStatus{
+			Ancestors: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")},
+					ControllerName: gwapiv1a2.GatewayController(controllerName),
+				},
+			},
+		}
+
+		entry := mergePolicyStatus(aggregatedPolicyStatus{}, first, 3)
+		entry = mergePolicyStatus(entry, second, 9)
+
+		require.Len(t, entry.status.Ancestors, 2)
+		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Ancestors[0].AncestorRef.Name)
+		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Ancestors[1].AncestorRef.Name)
+		require.Equal(t, int64(9), entry.generation)
+
+		entry = mergePolicyStatus(entry, &gwapiv1.PolicyStatus{}, 4)
+		require.Equal(t, int64(9), entry.generation)
+	})
+}
+
+func TestMergeRouteStatus(t *testing.T) {
+	controllerName := "example.com/gateway"
+
+	t.Run("nil incoming keeps existing entry", func(t *testing.T) {
+		existing := aggregatedRouteStatus{
+			status: &gwapiv1.RouteStatus{
+				Parents: []gwapiv1.RouteParentStatus{
+					{
+						ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+						ControllerName: gwapiv1.GatewayController(controllerName),
+					},
+				},
+			},
+			generation: 2,
+		}
+
+		got := mergeAggregatedRouteStatus(existing, nil, 10)
+		require.Equal(t, existing, got)
+	})
+
+	t.Run("nil existing takes incoming", func(t *testing.T) {
+		incoming := &gwapiv1.RouteStatus{
+			Parents: []gwapiv1.RouteParentStatus{
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
+			},
+		}
+
+		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7)
+		require.Same(t, incoming, got.status)
+		require.Equal(t, int64(7), got.generation)
+	})
+
+	t.Run("appends parents and tracks max generation", func(t *testing.T) {
+		first := &gwapiv1.RouteStatus{
+			Parents: []gwapiv1.RouteParentStatus{
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
+			},
+		}
+		second := &gwapiv1.RouteStatus{
+			Parents: []gwapiv1.RouteParentStatus{
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
+			},
+		}
+
+		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3)
+		entry = mergeAggregatedRouteStatus(entry, second, 9)
+
+		require.Len(t, entry.status.Parents, 2)
+		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Parents[0].ParentRef.Name)
+		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Parents[1].ParentRef.Name)
+		require.Equal(t, int64(9), entry.generation)
+
+		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4)
+		require.Equal(t, int64(9), entry.generation)
+	})
+}
+
 func TestLoadTLSConfig_HostMode(t *testing.T) {
 	// Create temporary directory structure for certs using t.TempDir()
 	configHome := t.TempDir()

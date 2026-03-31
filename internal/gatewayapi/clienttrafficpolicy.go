@@ -493,6 +493,9 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			}
 		}
 
+		// Translate GRPC Settings
+		translateGRPCSettings(policy.Spec.GRPC, httpIR)
+
 		// Translate Health Check Settings
 		translateHealthCheckSettings(policy.Spec.HealthCheck, httpIR)
 
@@ -773,6 +776,17 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	return nil
 }
 
+func translateGRPCSettings(grpcSettings *egv1a1.GRPCSettings, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if grpcSettings == nil {
+		return
+	}
+	if httpIR.GRPC == nil {
+		httpIR.GRPC = &ir.GRPCSettings{}
+	}
+	httpIR.GRPC.EnableGRPCWeb = grpcSettings.EnableWeb
+}
+
 func translateHealthCheckSettings(healthCheckSettings *egv1a1.HealthCheckSettings, httpIR *ir.HTTPListener) {
 	// Return early if not set
 	if healthCheckSettings == nil {
@@ -857,6 +871,34 @@ func (t *Translator) buildListenerTLSParameters(
 			namespace: policy.Namespace,
 		}
 
+		// Determine the effective client validation mode.
+		mode := egv1a1.ClientValidationRequireAndVerify
+		if tlsParams.ClientValidation.Mode != nil {
+			mode = *tlsParams.ClientValidation.Mode
+		} else if tlsParams.ClientValidation.Optional {
+			// Legacy mapping: Optional=true means VerifyIfGiven.
+			mode = egv1a1.ClientValidationVerifyIfGiven
+		}
+
+		irTLSConfig.ClientValidationEnabled = true
+		switch mode {
+		case egv1a1.ClientValidationRequest:
+			irTLSConfig.RequireClientCertificate = false
+			irTLSConfig.AcceptUntrusted = true
+		case egv1a1.ClientValidationRequireAny:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = true
+		case egv1a1.ClientValidationVerifyIfGiven:
+			irTLSConfig.RequireClientCertificate = false
+			irTLSConfig.AcceptUntrusted = false
+		case egv1a1.ClientValidationRequireAndVerify:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = false
+		default:
+			irTLSConfig.RequireClientCertificate = true
+			irTLSConfig.AcceptUntrusted = false
+		}
+
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
 		}
@@ -880,11 +922,20 @@ func (t *Translator) buildListenerTLSParameters(
 			}
 			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
+
+		// CA certificates are required for verification modes.
+		if (mode == egv1a1.ClientValidationVerifyIfGiven || mode == egv1a1.ClientValidationRequireAndVerify) && len(irCACert.Certificate) == 0 {
+			if tlsParams.ClientValidation.Mode == nil && tlsParams.ClientValidation.Optional {
+				return irTLSConfig, fmt.Errorf(`tls.clientValidation.optional=true requires caCertificateRefs (maps to mode %q)`, mode)
+			}
+			return irTLSConfig, fmt.Errorf(`tls.clientValidation.mode %q requires caCertificateRefs`, mode)
+		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
-			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
-			setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 		}
+
+		// Apply additional validation context fields (SPKI/cert hashes and SAN matchers) regardless of CA presence.
+		setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 
 		irCrl := &ir.TLSCrl{
 			Name: irTLSCrlName(policy.Namespace, policy.Name),
@@ -932,7 +983,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 	refKind := string(ptr.Deref(ref.Kind, resource.KindSecret))
 	switch refKind {
 	case resource.KindSecret:
-		secret, err := t.validateSecretRef(false, from, ref, resources)
+		secret, err := t.validateSecretRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -943,7 +994,7 @@ func (t *Translator) validateAndGetDataAtKeyInRef(
 		}
 		return secretCertBytes, nil
 	case resource.KindConfigMap:
-		configMap, err := t.validateConfigMapRef(false, from, ref, resources)
+		configMap, err := t.validateConfigMapRef(true, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1000,7 +1051,9 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 	if connection.ConnectionLimit != nil {
 		irConnectionLimit := &ir.ConnectionLimit{}
 
-		irConnectionLimit.Value = ptr.To(uint64(connection.ConnectionLimit.Value))
+		if connection.ConnectionLimit.Value != nil {
+			irConnectionLimit.Value = ptr.To(uint64(*connection.ConnectionLimit.Value))
+		}
 
 		if connection.ConnectionLimit.CloseDelay != nil {
 			d, err := time.ParseDuration(string(*connection.ConnectionLimit.CloseDelay))
@@ -1015,7 +1068,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
 			}
-			irConnectionLimit.MaxConnectionDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
@@ -1027,7 +1080,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxStreamDuration value %s", *connection.ConnectionLimit.MaxStreamDuration)
 			}
-			irConnectionLimit.MaxStreamDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxStreamDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		irConnection.ConnectionLimit = irConnectionLimit

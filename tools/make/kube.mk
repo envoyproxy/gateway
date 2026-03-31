@@ -9,7 +9,7 @@ ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_MINOR_VERSION ?= 1.5
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -40,6 +40,9 @@ E2E_TEST_ARGS ?= -v -tags e2e -timeout $(E2E_TIMEOUT)
 E2E_DEBUG ?= $(if $(filter true yes 1,$(ACTIONS_STEP_DEBUG)),true,false)
 # If you want to skip crds version check, add `--allow-crds-mismatch` to E2E_TEST_SUITE_ARGS
 E2E_TEST_SUITE_ARGS ?= --debug=$(E2E_DEBUG)
+
+# Define the Gateway API channel used in tests
+E2E_GATEWAY_API_CHANNEL ?= experimental
 
 CONFORMANCE_RUN_TEST ?=
 CONFORMANCE_TEST_ARGS ?= -v -tags conformance -timeout $(E2E_TIMEOUT)
@@ -174,12 +177,27 @@ endif
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
+ifeq ($(E2E_GATEWAY_API_CHANNEL),standard)
+	# Install standard Gateway API CRDs and EG CRDs.
+	$(GO_TOOL) helm template eg-crds charts/gateway-crds-helm \
+		-f $(ROOT_DIR)/test/helm/gateway-crds-helm/e2e.in.yaml \
+		| kubectl apply -f - --server-side
+	# Install EG with --skip-crds since CRDs are already installed.
+	$(GO_TOOL) helm install eg charts/gateway-helm \
+		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+		--skip-crds \
+		-n envoy-gateway-system --create-namespace \
+		--debug --timeout='$(WAIT_TIMEOUT)' \
+		--wait --wait-for-jobs \
+		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+else
 	$(GO_TOOL) helm install eg charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
 		--wait --wait-for-jobs \
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
+endif
 
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
@@ -281,7 +299,7 @@ setup-mac-net-connect:
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
-	
+
 ifeq ($(E2E_RUN_TEST),)
 	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
 	cd test/ && go test $(E2E_TEST_ARGS) ./e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false

@@ -2,7 +2,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - foo.example.com
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -45,7 +44,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - '*.example.com'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -88,7 +86,6 @@ http:
 - address: 0.0.0.0   # this listener should keep the ALPN because it's explictily set
   hostnames:
   - bar.example.com
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1

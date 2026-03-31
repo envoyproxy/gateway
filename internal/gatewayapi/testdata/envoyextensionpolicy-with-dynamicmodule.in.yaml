@@ -7,11 +7,27 @@ envoyProxiesForGateways:
   spec:
     dynamicModules:
     - name: my-auth-module
-      libraryName: my_auth
+      source:
+        type: Local
+        local:
+          path: /usr/lib/envoy/modules/my_auth.so
+    - name: remote-auth-module
+      source:
+        type: Remote
+        remote:
+          url: https://modules.example.com/libremote_auth.so
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
     - name: ai-gateway-filter
-      libraryName: ai_gateway
+      source:
+        local:
+          path: /usr/lib/envoy/modules/ai_gateway.so
       doNotClose: true
       loadGlobally: true
+    - name: path-loaded-module
+      source:
+        type: Local
+        local:
+          path: /opt/modules/my_module.so
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -87,6 +103,10 @@ envoyextensionpolicies:
       filterName: auth-check
       config:
         authEndpoint: https://auth.example.com
+    - name: remote-auth-module
+      filterName: remote-auth-check
+      config:
+        authEndpoint: https://remote-auth.example.com
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -102,3 +122,5 @@ envoyextensionpolicies:
       filterName: token-ratelimit
       config:
         maxTokensPerMinute: 10000
+    - name: path-loaded-module
+      filterName: path-filter

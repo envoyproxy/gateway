@@ -10,6 +10,8 @@ package suite
 import (
 	"encoding/json"
 	"math"
+
+	"github.com/envoyproxy/gateway/test/benchmark/proto"
 )
 
 func ToJSON(report *BenchmarkSuiteReport) []byte {
@@ -53,25 +55,7 @@ func convertCaseReport(report *BenchmarkCaseReport) *JSONTestResult {
 			latency.Max = stat.GetMax().AsDuration().Seconds() * 1000
 			latency.Min = stat.GetMin().AsDuration().Seconds() * 1000
 			latency.Mean = stat.GetMean().AsDuration().Seconds() * 1000
-			latency.Percentiles = Percentiles{}
-			for _, p := range stat.Percentiles {
-				switch p.Percentile {
-				case 0.5:
-					latency.Percentiles.P50 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.75:
-					latency.Percentiles.P75 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.8:
-					latency.Percentiles.P80 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.9:
-					latency.Percentiles.P90 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.95:
-					latency.Percentiles.P95 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.99:
-					latency.Percentiles.P99 = p.GetDuration().AsDuration().Seconds() * 1000
-				case 0.999:
-					latency.Percentiles.P999 = p.GetDuration().AsDuration().Seconds() * 1000
-				}
-			}
+			latency.Percentiles = getLatencyPercentiles(stat.Percentiles)
 		}
 	}
 
@@ -157,4 +141,29 @@ func getResourceUsage(metrics []float64) *ResourceUsage {
 		Min:  minVal,
 		Max:  maxVal,
 	}
+}
+
+func getLatencyPercentiles(percentiles []*proto.Percentile) Percentiles {
+	return Percentiles{
+		P50:  getPercentileDurationMs(percentiles, 0.5),
+		P75:  getPercentileDurationMs(percentiles, 0.75),
+		P80:  getPercentileDurationMs(percentiles, 0.8),
+		P90:  getPercentileDurationMs(percentiles, 0.9),
+		P95:  getPercentileDurationMs(percentiles, 0.95),
+		P99:  getPercentileDurationMs(percentiles, 0.99),
+		P999: getPercentileDurationMs(percentiles, 0.999),
+	}
+}
+
+func getPercentileDurationMs(percentiles []*proto.Percentile, target float64) float64 {
+	lastPercentile := float64(-1)
+	for _, percentile := range percentiles {
+		current := percentile.GetPercentile()
+		if current >= target && lastPercentile < current {
+			return percentile.GetDuration().AsDuration().Seconds() * 1000
+		}
+		lastPercentile = current
+	}
+
+	return 0
 }

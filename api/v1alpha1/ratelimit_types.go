@@ -54,7 +54,7 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +kubebuilder:validation:MaxItems=128
+	// +kubebuilder:validation:MaxItems=256
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -306,9 +306,18 @@ type SourceMatch struct {
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
 	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
+	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Value string `json:"value"`
+
+	// Invert specifies whether the source range match result will be inverted.
+	// When true, the rule matches when the client IP is not in the specified range(s).
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
