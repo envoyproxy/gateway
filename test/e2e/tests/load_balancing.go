@@ -52,7 +52,7 @@ func init() {
 
 var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 	ShortName:   "BackendUtilizationLoadBalancing",
-	Description: "Test that CSWRR shifts traffic toward lower-utilization backends using ORCA metrics",
+	Description: "Test that BackendUtilization shifts traffic toward lower-utilization backends using ORCA metrics",
 	Manifests: []string{
 		"testdata/load_balancing_backend_utilization.yaml",
 	},
