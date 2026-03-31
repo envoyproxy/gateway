@@ -29,7 +29,10 @@ const (
 // SetGatewayClassAccepted inserts or updates the Accepted condition
 // for the provided GatewayClass.
 func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) {
-	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted, reason, msg))
+	gc.Status.Conditions = MergeConditions(gc.Status.Conditions,
+		computeGatewayClassAcceptedCondition(gc, accepted, reason, msg),
+		computeGatewayClassSupportedVersionCondition(gc),
+	)
 	// Disable SupportedFeatures until the field moves from experimental to stable to avoid
 	// status failures due to changes in the datatype. This can occur because we cannot control
 	// how a CRD is installed in the cluster
@@ -58,5 +61,16 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
 		}
+	}
+}
+
+// computeGatewayClassSupportedVersionCondition computes the GatewayClass SupportedVersion status condition.
+func computeGatewayClassSupportedVersionCondition(gatewayClass *gwapiv1.GatewayClass) metav1.Condition {
+	return metav1.Condition{
+		Type:               string(gwapiv1.GatewayClassConditionStatusSupportedVersion),
+		Status:             metav1.ConditionTrue,
+		Reason:             string(gwapiv1.GatewayClassReasonSupportedVersion),
+		Message:            "Gateway API CRD versions are supported",
+		ObservedGeneration: gatewayClass.Generation,
 	}
 }

@@ -46,6 +46,11 @@ gatewayClass:
       reason: Accepted
       status: "True"
       type: Accepted
+    - lastTransitionTime: null
+      message: Gateway API CRD versions are supported
+      reason: SupportedVersion
+      status: "True"
+      type: SupportedVersion
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -80,6 +85,11 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io

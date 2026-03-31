@@ -19,6 +19,11 @@ gatewayClass:
       reason: InvalidParameters
       status: "False"
       type: Accepted
+    - lastTransitionTime: null
+      message: Gateway API CRD versions are supported
+      reason: SupportedVersion
+      status: "True"
+      type: SupportedVersion
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
