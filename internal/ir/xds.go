@@ -2532,14 +2532,34 @@ type RateLimitCost struct {
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
+// CIDRMatch defines the match conditions on the source IP's CIDR for rate limiting.
+// +k8s:deepcopy-gen=true
 type CIDRMatch struct {
-	CIDR    string `json:"cidr" yaml:"cidr"`
-	IP      string `json:"ip" yaml:"ip"`
+	// CIDR is the full CIDR string (e.g. "192.168.0.0/24") from the API source match.
+	CIDR string `json:"cidr" yaml:"cidr"`
+	// MaskLen is the prefix length in bits (e.g. 24 for /24).
 	MaskLen uint32 `json:"maskLen" yaml:"maskLen"`
-	IsIPv6  bool   `json:"isIPv6" yaml:"isIPv6"`
+	// IsIPv6 is true when the CIDR is an IPv6 range.
+	IsIPv6 bool `json:"isIPv6" yaml:"isIPv6"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert when true matches when the client IP is not in the specified range(s).
+	Invert bool `json:"invert" yaml:"invert"`
+}
+
+// AddressPrefix returns the network/base IP address derived from CIDR.
+func (c *CIDRMatch) AddressPrefix() string {
+	if c == nil {
+		return ""
+	}
+
+	prefix, err := netip.ParsePrefix(c.CIDR)
+	if err != nil {
+		return ""
+	}
+
+	return prefix.Masked().Addr().String()
 }
 
 // QueryParamMatch defines the match attributes within the query parameters of the request.
@@ -3564,7 +3584,10 @@ type DynamicModule struct {
 	Name string `json:"name"`
 
 	// Path is the absolute filesystem path to the dynamic module shared library.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// Remote is the remote source of the dynamic module shared library.
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
@@ -3580,6 +3603,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// RemoteDynamicModuleSource holds the remote source information for a dynamic module.
+// +k8s:deepcopy-gen=true
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP(S) URL of the dynamic module shared library.
+	URL string `json:"url"`
+
+	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

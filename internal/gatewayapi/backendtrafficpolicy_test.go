@@ -201,6 +201,52 @@ func TestBuildHTTPProtocolUpgradeConfig(t *testing.T) {
 	}
 }
 
+func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
+	t.Run("same policy", func(t *testing.T) {
+		tr := &Translator{}
+		policy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "websocket"},
+				},
+			},
+		}
+
+		tf, err := tr.buildTrafficFeatures(policy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.NotNil(t, tf)
+	})
+
+	t.Run("merged policy", func(t *testing.T) {
+		tr := &Translator{}
+		parentPolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				RequestBuffer: &egv1a1.RequestBuffer{
+					Limit: resource.MustParse("1Mi"),
+				},
+			},
+		}
+		routePolicy := &egv1a1.BackendTrafficPolicy{
+			Spec: egv1a1.BackendTrafficPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+					{Type: "CONNECT"},
+				},
+			},
+		}
+
+		mergedPolicy, err := tr.mergeBackendTrafficPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+
+		tf, err := tr.buildTrafficFeatures(mergedPolicy)
+		require.ErrorContains(t, err, "RequestBuffer: requestBuffer cannot be used together with httpUpgrade")
+		require.NotNil(t, tf)
+	})
+}
+
 func TestBuildPassiveHealthCheck(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -572,9 +618,41 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				MethodMatches: []*ir.StringMatch{},
 				CIDRMatch: &ir.CIDRMatch{
 					CIDR:     "192.168.1.0/24",
-					IP:       "192.168.1.0",
 					MaskLen:  24,
 					Distinct: true,
+				},
+				Shared: nil,
+			},
+			expectError: false,
+		},
+		{
+			name: "sourceCIDR with Invert - rate limit all IPs except CIDR",
+			rule: egv1a1.RateLimitRule{
+				ClientSelectors: []egv1a1.RateLimitSelectCondition{
+					{
+						SourceCIDR: &egv1a1.SourceMatch{
+							Value:  "192.168.0.0/24",
+							Invert: ptr.To(true),
+						},
+					},
+				},
+				Limit: egv1a1.RateLimitValue{
+					Requests: 5,
+					Unit:     egv1a1.RateLimitUnitSecond,
+				},
+			},
+			expected: &ir.RateLimitRule{
+				Limit: ir.RateLimitValue{
+					Requests: 5,
+					Unit:     ir.RateLimitUnit(egv1a1.RateLimitUnitSecond),
+				},
+				HeaderMatches: []*ir.StringMatch{},
+				MethodMatches: []*ir.StringMatch{},
+				CIDRMatch: &ir.CIDRMatch{
+					CIDR:    "192.168.0.0/24",
+					MaskLen: 24,
+					Invert:  true,
+					IsIPv6:  false,
 				},
 				Shared: nil,
 			},
