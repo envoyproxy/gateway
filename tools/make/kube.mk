@@ -183,7 +183,7 @@ ifeq ($(E2E_GATEWAY_API_CHANNEL),standard)
 		-f $(ROOT_DIR)/test/helm/gateway-crds-helm/e2e.in.yaml \
 		| kubectl apply -f - --server-side
 	# Install EG with --skip-crds since CRDs are already installed.
-	$(GO_TOOL) helm install eg charts/gateway-helm \
+	$(GO_TOOL) helm install envoy-gateway charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--skip-crds \
 		-n envoy-gateway-system --create-namespace \
@@ -191,7 +191,7 @@ ifeq ($(E2E_GATEWAY_API_CHANNEL),standard)
 		--wait --wait-for-jobs \
 		-f $(KUBE_DEPLOY_HELM_VALUES_FILE)
 else
-	$(GO_TOOL) helm install eg charts/gateway-helm \
+	$(GO_TOOL) helm install envoy-gateway charts/gateway-helm \
 		--set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		-n envoy-gateway-system --create-namespace \
 		--debug --timeout='$(WAIT_TIMEOUT)' \
@@ -202,13 +202,13 @@ endif
 .PHONY: kube-deploy-for-benchmark-test
 kube-deploy-for-benchmark-test: manifests helm-generate ## Install Envoy Gateway and prometheus-server for benchmark test purpose only.
 	@$(LOG_TARGET)
-	$(GO_TOOL) helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
+	$(GO_TOOL) helm install envoy-gateway charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) \
 		--set deployment.envoyGateway.resources.limits.cpu=$(BENCHMARK_CPU_LIMITS) \
 		--set deployment.envoyGateway.resources.limits.memory=$(BENCHMARK_MEMORY_LIMITS) \
 		--set config.envoyGateway.admin.enablePprof=true \
 		-n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 	# Install Prometheus-server only
-	$(GO_TOOL) helm install eg-addons charts/gateway-addons-helm --set loki.enabled=false \
+	$(GO_TOOL) helm install envoy-gateway-addons charts/gateway-addons-helm --set loki.enabled=false \
 		--set tempo.enabled=false \
 		--set grafana.enabled=false \
 		--set fluent-bit.enabled=false \
