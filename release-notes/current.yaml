@@ -5,6 +5,7 @@ breaking changes: |
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. Existing configurations including the template syntax (%) will be interpolated.
   The `0s` timeout in SecurityPolicy is now treated as infinite timeout instead of immediate timeout.
   `SamplingFraction` behavior changed from raw fraction to percentage ratio. This will lead to 100x more sampling than before. E.g. `numerator: 100` used to result in 1% sampling rate, now will result in 100% sampling.
+  The controller now uses production logging encoder config by default, which provides better output when using JSON encoder.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -34,9 +35,11 @@ new features: |
   Added support for stream idle timeout in BackendTrafficPolicy.
   Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
+  Added support for GeoIP-based authorization on HTTPRoute and GRPCRoute via `SecurityPolicy.spec.authorization.rules[*].principal.clientIPGeoLocations`, backed by shared GeoIP provider settings in `EnvoyProxy.spec.geoIP`.
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
   Added support for upstrean access log.
+  Added support for invert match in CIDR match RateLimit API.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
@@ -53,6 +56,7 @@ bug fixes: |
   Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
   Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
+  Fixed BackendTrafficPolicy `requestBuffer` coexisting with route upgrades by disabling the default WebSocket upgrade on buffered routes and rejecting explicit `requestBuffer` + `httpUpgrade` combinations.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
 

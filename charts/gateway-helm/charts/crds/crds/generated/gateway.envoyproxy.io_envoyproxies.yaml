@@ -351,6 +351,22 @@ spec:
                           description: |-
                             Remote specifies a module fetched from a remote source.
                             The module binary is downloaded and cached by Envoy.
+                          properties:
+                            sha256:
+                              description: SHA256 checksum that Envoy will use to
+                                verify the downloaded module binary.
+                              pattern: ^[a-f0-9]{64}$
+                              type: string
+                            url:
+                              description: URL is the HTTP or HTTPS URL of the dynamic
+                                module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              pattern: ^https?://[^/?#]+(?:[/?#].*)?$
+                              type: string
+                          required:
+                          - sha256
+                          - url
                           type: object
                         type:
                           default: Local
@@ -367,6 +383,8 @@ spec:
                         rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
                       - message: If type is Local, local field needs to be set.
                         rule: self.type != 'Local' || has(self.local)
+                      - message: If type is Remote, local field must not be set.
+                        rule: 'self.type == ''Remote'' ? !has(self.local) : true'
                   required:
                   - name
                   - source
@@ -423,6 +441,8 @@ spec:
 
                   - envoy.filters.http.dynamic_modules
 
+                  - envoy.filters.http.geoip
+
                   - envoy.filters.http.rbac
 
                   - envoy.filters.http.local_ratelimit
@@ -467,6 +487,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -497,6 +518,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -525,6 +547,7 @@ spec:
                       - envoy.filters.http.ext_proc
                       - envoy.filters.http.wasm
                       - envoy.filters.http.dynamic_modules
+                      - envoy.filters.http.geoip
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
@@ -566,7 +589,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -584,7 +607,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -603,7 +626,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -622,7 +645,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path
@@ -640,7 +663,7 @@ spec:
                                   path:
                                     description: Path is the path to the database
                                       file.
-                                    pattern: ^.*\\.mmdb$
+                                    pattern: ^.*\.mmdb$
                                     type: string
                                 required:
                                 - path

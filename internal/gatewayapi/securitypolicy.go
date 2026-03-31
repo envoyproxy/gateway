@@ -651,6 +651,9 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: headers not supported for TCP", i)
 		}
+		if len(rule.Principal.ClientIPGeoLocations) > 0 {
+			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
+		}
 		if err := validateCIDRs(rule.Principal.ClientCIDRs); err != nil {
 			return fmt.Errorf("rule %d: %w", i, err)
 		}
@@ -940,17 +943,6 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			Authorization: authorization,
 		}
 
-		// Pre-create error response to avoid repeated allocations
-		var errorResponse *ir.CustomResponse
-		if errs != nil {
-			shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-			if !shouldFailOpen {
-				errorResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
-				}
-			}
-		}
-
 		irKey := t.getIRKey(gtwCtx.Gateway)
 		switch route.GetRouteType() {
 		case resource.KindTCPRoute:
@@ -977,6 +969,10 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 			}
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
+			var (
+				hasBaseErrs    = errs != nil
+				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+			)
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
 				if policyTargetListener != nil && *policyTargetListener != listener.Name {
@@ -984,6 +980,13 @@ func (t *Translator) translateSecurityPolicyForRoute(
 				}
 				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
+					var (
+						geoIPProvider              *ir.GeoIPProvider
+						geoIPErr                   error
+						listenerHasNonExtAuthError = hasNonExtAuthError
+						geoIPValidated             bool
+					)
+
 					for _, r := range irListener.Routes {
 						// If specified the sectionName must match route rule from ir route metadata.
 						if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
@@ -999,10 +1002,32 @@ func (t *Translator) translateSecurityPolicyForRoute(
 							}
 
 							r.Security = securityFeatures
-							if errorResponse != nil {
-								// Return a 500 direct response to avoid unauthorized access
-								r.DirectResponse = errorResponse
-								routesWithDirectResponse.Insert(r.Name)
+
+							// Validate GeoIP if clientIPGeoLocations is used in the Authorization.
+							// We have to validate GeoIP here because it reuses the listener-level ClientIPDetection configuration from CTP.
+							if r.Security.Authorization.UsesClientIPGeoLocations() && !geoIPValidated {
+								geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gtwCtx.envoyProxy, irListener.ClientIPDetection)
+								if geoIPErr != nil {
+									geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
+									errs = errors.Join(errs, geoIPErr)
+									listenerHasNonExtAuthError = true
+								} else if geoIPProvider != nil {
+									irListener.GeoIPProvider = geoIPProvider
+								}
+								// We only need to validate GeoIP once per listener
+								geoIPValidated = true
+							}
+
+							if geoIPErr != nil || hasBaseErrs {
+								// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+								// and allow the request to go through.
+								// Otherwise, return a 500 direct response to avoid unauthorized access.
+								shouldFailOpen := extAuthErr != nil && !listenerHasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+								if !shouldFailOpen {
+									// Return a 500 direct response to avoid unauthorized access
+									r.DirectResponse = directResponse
+									routesWithDirectResponse.Insert(r.Name)
+								}
 							}
 						}
 					}
@@ -1122,21 +1147,10 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		Authorization: authorization,
 	}
 
-	var errorResponse *ir.CustomResponse
-	if errs != nil {
-		// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
-		// and allow the request to go through.
-		// Otherwise, return a 500 direct response to avoid unauthorized access.
-		shouldFailOpen := extAuthErr != nil && !hasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
-		if !shouldFailOpen {
-			errorResponse = &ir.CustomResponse{
-				StatusCode: ptr.To(uint32(500)),
-			}
-		}
-	}
-
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
+	hasBaseErrs := errs != nil
+	directResponse := &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
 	for _, h := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -1145,6 +1159,35 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		// If specified the sectionName must match listenerName from ir listener metadata.
 		if target.SectionName != nil && string(*target.SectionName) != h.Metadata.SectionName {
 			continue
+		}
+
+		var (
+			geoIPProvider              *ir.GeoIPProvider
+			geoIPErr                   error
+			listenerHasNonExtAuthError = hasNonExtAuthError
+		)
+
+		if authorization.UsesClientIPGeoLocations() {
+			// We have to validate GeoIP here because it requires the listener-level ClientIPDetection configuration
+			geoIPProvider, geoIPErr = validateAuthorizationGeoIP(authorization, gateway.envoyProxy, h.ClientIPDetection)
+			if geoIPErr != nil {
+				geoIPErr = perr.WithMessage(geoIPErr, "Authorization")
+				errs = errors.Join(errs, geoIPErr)
+				listenerHasNonExtAuthError = true
+			} else if geoIPProvider != nil {
+				h.GeoIPProvider = geoIPProvider
+			}
+		}
+
+		var errorResponse *ir.CustomResponse
+		if geoIPErr != nil || hasBaseErrs {
+			// If there is only error for ext auth and ext auth is set to fail open, then skip the ext auth
+			// and allow the request to go through.
+			// Otherwise, return a 500 direct response to avoid unauthorized access.
+			shouldFailOpen := extAuthErr != nil && !listenerHasNonExtAuthError && ptr.Deref(policy.Spec.ExtAuth.FailOpen, false)
+			if !shouldFailOpen {
+				errorResponse = directResponse
+			}
 		}
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
@@ -2010,8 +2053,8 @@ func (t *Translator) buildBasicAuth(
 	usersSecretBytes, ok := usersSecret.Data[egv1a1.BasicAuthUsersSecretKey]
 	if !ok || len(usersSecretBytes) == 0 {
 		return nil, fmt.Errorf(
-			"users secret not found in secret %s/%s",
-			usersSecret.Namespace, usersSecret.Name)
+			"secret %s/%s must contain a non-empty \"%s\" key",
+			usersSecret.Namespace, usersSecret.Name, egv1a1.BasicAuthUsersSecretKey)
 	}
 
 	// Normalize CRLF to LF so the \r is not included in the hash,
@@ -2321,6 +2364,7 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 
 		irPrincipal.JWT = rule.Principal.JWT
 		irPrincipal.Headers = rule.Principal.Headers
+		irPrincipal.ClientIPGeoLocations = rule.Principal.ClientIPGeoLocations
 
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
@@ -2337,6 +2381,86 @@ func (t *Translator) buildAuthorization(policy *egv1a1.SecurityPolicy) (*ir.Auth
 	}
 
 	return irAuth, nil
+}
+
+func validateAuthorizationGeoIP(
+	authorization *ir.Authorization,
+	envoyProxy *egv1a1.EnvoyProxy,
+	clientIPDetection *ir.ClientIPDetectionSettings,
+) (*ir.GeoIPProvider, error) {
+	if clientIPDetection == nil {
+		return nil, errors.New("authorization clientIPGeoLocations requires ClientTrafficPolicy.spec.clientIPDetection to be configured")
+	}
+
+	if clientIPDetection.XForwardedFor != nil &&
+		len(clientIPDetection.XForwardedFor.TrustedCIDRs) > 0 {
+		return nil, errors.New("authorization clientIPGeoLocations does not support ClientIPDetection.XForwardedFor.TrustedCIDRs")
+	}
+
+	geoIPProvider, err := buildGeoIPProvider(envoyProxy)
+	if err != nil {
+		return nil, err
+	}
+	if geoIPProvider == nil || geoIPProvider.MaxMind == nil {
+		return nil, errors.New("authorization clientIPGeoLocations requires EnvoyProxy.spec.geoIP.provider to be configured")
+	}
+
+	country, region, city, asn, isp, anonymous := authorization.GeoIPRequirements()
+	maxMind := geoIPProvider.MaxMind
+
+	if country && maxMind.CountryDBPath == nil && maxMind.CityDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.country requires EnvoyProxy.spec.geoIP.provider.maxMind.countryDbSource or cityDbSource")
+	}
+	if region && maxMind.CityDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.region requires EnvoyProxy.spec.geoIP.provider.maxMind.cityDbSource")
+	}
+	if city && maxMind.CityDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.city requires EnvoyProxy.spec.geoIP.provider.maxMind.cityDbSource")
+	}
+	if asn && maxMind.ASNDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.asn requires EnvoyProxy.spec.geoIP.provider.maxMind.asnDbSource")
+	}
+	if isp && maxMind.ISPDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.isp requires EnvoyProxy.spec.geoIP.provider.maxMind.ispDbSource")
+	}
+	if anonymous && maxMind.AnonymousIPDBPath == nil {
+		return nil, errors.New("authorization clientIPGeoLocations.anonymous requires EnvoyProxy.spec.geoIP.provider.maxMind.anonymousIpDbSource")
+	}
+
+	return geoIPProvider, nil
+}
+
+func buildGeoIPProvider(envoyProxy *egv1a1.EnvoyProxy) (*ir.GeoIPProvider, error) {
+	if envoyProxy == nil || envoyProxy.Spec.GeoIP == nil {
+		return nil, nil
+	}
+
+	provider := envoyProxy.Spec.GeoIP.Provider
+	switch provider.Type {
+	case egv1a1.GeoIPProviderTypeMaxMind:
+		if provider.MaxMind == nil {
+			return nil, fmt.Errorf("geoIP provider MaxMind is missing maxMind configuration")
+		}
+
+		return &ir.GeoIPProvider{
+			MaxMind: &ir.GeoIPMaxMindProvider{
+				CityDBPath:        localGeoIPDBPath(provider.MaxMind.CityDBSource),
+				CountryDBPath:     localGeoIPDBPath(provider.MaxMind.CountryDBSource),
+				ASNDBPath:         localGeoIPDBPath(provider.MaxMind.ASNDBSource),
+				ISPDBPath:         localGeoIPDBPath(provider.MaxMind.ISPDBSource),
+				AnonymousIPDBPath: localGeoIPDBPath(provider.MaxMind.AnonymousIPDBSource),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported geoIP provider type %q", provider.Type)
+	}
+}
+
+func localGeoIPDBPath(source *egv1a1.GeoIPDBSource) *string {
+	if source == nil {
+		return nil
+	}
+	return &source.Local.Path
 }
 
 func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) string {
