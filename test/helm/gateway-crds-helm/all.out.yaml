@@ -23364,9 +23364,6 @@ spec:
                           - 120 => 1.2x
                           - 200 => 2.0x
 
-                          Note: In the internal IR/XDS configuration this value is converted back to a
-                          floating point multiplier (value / 100.0).
-
                           Must be non-negative.
                         format: int32
                         minimum: 0
@@ -28727,9 +28724,6 @@ spec:
                                     - 100 => 1.0x
                                     - 120 => 1.2x
                                     - 200 => 2.0x
-
-                                    Note: In the internal IR/XDS configuration this value is converted back to a
-                                    floating point multiplier (value / 100.0).
 
                                     Must be non-negative.
                                   format: int32
@@ -42957,9 +42951,6 @@ spec:
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
 
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
-
                                                       Must be non-negative.
                                                     format: int32
                                                     minimum: 0
@@ -44438,9 +44429,6 @@ spec:
                                                       - 100 => 1.0x
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
-
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
 
                                                       Must be non-negative.
                                                     format: int32
@@ -46080,9 +46068,6 @@ spec:
                                                 - 120 => 1.2x
                                                 - 200 => 2.0x
 
-                                                Note: In the internal IR/XDS configuration this value is converted back to a
-                                                floating point multiplier (value / 100.0).
-
                                                 Must be non-negative.
                                               format: int32
                                               minimum: 0
@@ -47636,9 +47621,6 @@ spec:
                                           - 120 => 1.2x
                                           - 200 => 2.0x
 
-                                          Note: In the internal IR/XDS configuration this value is converted back to a
-                                          floating point multiplier (value / 100.0).
-
                                           Must be non-negative.
                                         format: int32
                                         minimum: 0
@@ -48204,6 +48186,50 @@ spec:
                                   ResourceAttributes is a set of labels that describe the source of traces.
                                   It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
                                 type: object
+                              sampler:
+                                description: Sampler controls whether spans are exported.
+                                properties:
+                                  samplingPercentage:
+                                    description: |-
+                                      SamplingPercentage controls the percentage of traces to sample.
+                                      Defaults to 100% when not set.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                  type:
+                                    default: AlwaysOn
+                                    description: Type is the sampler type.
+                                    enum:
+                                    - AlwaysOn
+                                    - AlwaysOff
+                                    - TraceIdRatio
+                                    - ParentBasedAlwaysOn
+                                    - ParentBasedAlwaysOff
+                                    - ParentBasedTraceIdRatio
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: samplingPercentage can only be set with
+                                    TraceIdRatio or ParentBasedTraceIdRatio
+                                  rule: 'has(self.samplingPercentage) ? (self.type
+                                    == ''TraceIdRatio'' || self.type == ''ParentBasedTraceIdRatio'')
+                                    : true'
                             type: object
                           port:
                             default: 4317
@@ -48963,6 +48989,12 @@ spec:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
                 properties:
+                  appendXForwardedHost:
+                    description: |-
+                      AppendXForwardedHost controls whether the original Host header value is
+                      appended to the X-Forwarded-Host header when hostname rewriting is configured.
+                      Defaults to true for backward compatibility.
+                    type: boolean
                   hostname:
                     description: |-
                       Hostname is the value to be used to replace the Host header value during
@@ -50599,9 +50631,6 @@ spec:
                                       - 120 => 1.2x
                                       - 200 => 2.0x
 
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
-
                                       Must be non-negative.
                                     format: int32
                                     minimum: 0
@@ -51954,9 +51983,6 @@ spec:
                                       - 100 => 1.0x
                                       - 120 => 1.2x
                                       - 200 => 2.0x
-
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
 
                                       Must be non-negative.
                                     format: int32
@@ -53567,9 +53593,6 @@ spec:
                                             - 100 => 1.0x
                                             - 120 => 1.2x
                                             - 200 => 2.0x
-
-                                            Note: In the internal IR/XDS configuration this value is converted back to a
-                                            floating point multiplier (value / 100.0).
 
                                             Must be non-negative.
                                           format: int32
@@ -55202,9 +55225,6 @@ spec:
                                       - 100 => 1.0x
                                       - 120 => 1.2x
                                       - 200 => 2.0x
-
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
 
                                       Must be non-negative.
                                     format: int32
