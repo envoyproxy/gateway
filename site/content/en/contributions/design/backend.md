@@ -107,8 +107,8 @@ spec:
 ## Design Decisions
 
 * All instances of `BackendObjectReference` in Envoy Gateway MAY support referencing the `Backend` kind.
-* For security reasons, Envoy Gateway MUST reject references to a `Backend` in xRoute resources. For example, UDS and
-  localhost references will not be supported for xRoutes.
+* For security reasons, Envoy Gateway MUST reject localhost references to a `Backend` in xRoute resources.
+  Unix domain socket references are supported in xRoutes, but admins must ensure proper access controls.
 * All attributes of the Envoy Gateway extended `BackendRef` resource MUST be implemented for the `Backend` resource.
 * A `Backend` resource referenced by `BackendObjectReference` will be translated to Envoy Gateway's IR DestinationSetting.
   As such, all `BackendAdresses` are treated as equivalent endpoints with identical weights, TLS settings, etc.

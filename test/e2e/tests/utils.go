@@ -766,6 +766,31 @@ func CreateBackend(c client.Client, nn types.NamespacedName, clusterIP string, p
 	return c.Create(context.TODO(), backend)
 }
 
+func CreateMixedBackend(c client.Client, nn types.NamespacedName, clusterIP string, port int32, udsPath string) error {
+	backend := &egv1a1.Backend{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nn.Namespace,
+			Name:      nn.Name,
+		},
+		Spec: egv1a1.BackendSpec{
+			Endpoints: []egv1a1.BackendEndpoint{
+				{
+					IP: &egv1a1.IPEndpoint{
+						Address: clusterIP,
+						Port:    port,
+					},
+				},
+				{
+					Unix: &egv1a1.UnixSocket{
+						Path: udsPath,
+					},
+				},
+			},
+		},
+	}
+	return c.Create(context.TODO(), backend)
+}
+
 func DeleteBackend(c client.Client, nn types.NamespacedName) error {
 	backend := &egv1a1.Backend{}
 	if err := c.Get(context.Background(), nn, backend); err != nil {
