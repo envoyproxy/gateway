@@ -581,9 +581,8 @@ The backend should report these metrics in header/trailer as one of the followin
 - JSON: `endpoint-load-metrics` with JSON-encoded `OrcaLoadReport` proto, e.g., `JSON {"cpu_utilization": 0.3}`.
 - TEXT: `endpoint-load-metrics` with comma-separated key-value pairs, e.g., `TEXT cpu=0.3,mem=0.8`.
 
-By default, Envoy will forward these ORCA response headers/trailers from the upstream service to the downstream client.
-If the downstream client also uses this information for load balancing, it might lead to unexpected behavior.
-To avoid this, you can use the `HTTPRoute` or `BackendTrafficPolicy` to remove the load report headers before sending the response to the client.
+By default, Envoy Gateway removes these ORCA response headers/trailers before sending the response to the client
+(see KeepResponseHeaders). If you need the downstream client to see them, set KeepResponseHeaders to true.
 
 See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
 See ORCA Load Report proto: xds.data.orca.v3.orca_load_report.proto
@@ -596,7 +595,7 @@ _Appears in:_
 | `blackoutPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.<br />Default is 10s. |
 | `weightExpirationPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | If a given endpoint has not reported load metrics in this long, stop using the reported weight. Defaults to 3m. |
 | `weightUpdatePeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s. |
-| `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Note: In the internal IR/XDS configuration this value is converted back to a<br />floating point multiplier (value / 100.0).<br />Must be non-negative. |
+| `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
 
@@ -2642,6 +2641,7 @@ _Appears in:_
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
+| `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
 
 
 #### HTTP2KeepaliveSettings
@@ -4048,6 +4048,42 @@ _Appears in:_
 | `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
 
 
+#### OTelSampler
+
+
+
+OTelSampler configures the OpenTelemetry sampler.
+Type maps to OTEL_TRACES_SAMPLER.
+
+_Appears in:_
+- [OpenTelemetryTracingProvider](#opentelemetrytracingprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[OTelSamplerType](#otelsamplertype)_ |  true  | AlwaysOn | Type is the sampler type. |
+| `samplingPercentage` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingPercentage controls the percentage of traces to sample.<br />Defaults to 100% when not set. |
+
+
+#### OTelSamplerType
+
+_Underlying type:_ _string_
+
+OTelSamplerType specifies the sampler type.
+Values correspond to the OTEL_TRACES_SAMPLER environment variable.
+
+_Appears in:_
+- [OTelSampler](#otelsampler)
+
+| Value | Description |
+| ----- | ----------- |
+| `AlwaysOn` | OTelSamplerTypeAlwaysOn exports all spans.<br /> | 
+| `AlwaysOff` | OTelSamplerTypeAlwaysOff drops all spans.<br /> | 
+| `TraceIdRatio` | OTelSamplerTypeTraceIDRatio exports a percentage of spans based on trace ID.<br /> | 
+| `ParentBasedAlwaysOn` | OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.<br /> | 
+| `ParentBasedAlwaysOff` | OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.<br /> | 
+| `ParentBasedTraceIdRatio` | OTelSamplerTypeParentBasedTraceIDRatio respects the parent span's sampling decision, using trace ID ratio when no parent exists.<br /> | 
+
+
 #### OpenTelemetryEnvoyProxyAccessLog
 
 
@@ -4082,6 +4118,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 | `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of traces.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
+| `sampler` | _[OTelSampler](#otelsampler)_ |  false  |  | Sampler controls whether spans are exported. |
 
 
 #### Operation
@@ -5665,6 +5702,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)

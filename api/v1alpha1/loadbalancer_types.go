@@ -169,9 +169,8 @@ type Cookie struct {
 // - JSON: `endpoint-load-metrics` with JSON-encoded `OrcaLoadReport` proto, e.g., `JSON {"cpu_utilization": 0.3}`.
 // - TEXT: `endpoint-load-metrics` with comma-separated key-value pairs, e.g., `TEXT cpu=0.3,mem=0.8`.
 //
-// By default, Envoy will forward these ORCA response headers/trailers from the upstream service to the downstream client.
-// If the downstream client also uses this information for load balancing, it might lead to unexpected behavior.
-// To avoid this, you can use the `HTTPRoute` or `BackendTrafficPolicy` to remove the load report headers before sending the response to the client.
+// By default, Envoy Gateway removes these ORCA response headers/trailers before sending the response to the client
+// (see KeepResponseHeaders). If you need the downstream client to see them, set KeepResponseHeaders to true.
 //
 // See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
 // See ORCA Load Report proto: xds.data.orca.v3.orca_load_report.proto
@@ -196,9 +195,6 @@ type BackendUtilization struct {
 	// - 100 => 1.0x
 	// - 120 => 1.2x
 	// - 200 => 2.0x
-	//
-	// Note: In the internal IR/XDS configuration this value is converted back to a
-	// floating point multiplier (value / 100.0).
 	//
 	// Must be non-negative.
 	// +kubebuilder:validation:Minimum=0
