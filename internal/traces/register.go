@@ -65,9 +65,6 @@ func (r *Runner) Start(ctx context.Context) error {
 		"endpoint", endpoint,
 		"sampler", sampler.Description(),
 	)
-	// Get batch span processor options
-	batchOptions := r.getBatchSpanProcessorOptions(tracesConfig)
-
 	switch configObj.Protocol {
 	case egv1a1.HTTPProtocol:
 		// Create OTLP HTTP exporter
@@ -80,7 +77,7 @@ func (r *Runner) Start(ctx context.Context) error {
 			return err
 		}
 
-		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
+		bsp := trace.NewBatchSpanProcessor(exporter)
 		tp := trace.NewTracerProvider(
 			trace.WithSpanProcessor(bsp),
 			trace.WithResource(res),
@@ -102,7 +99,7 @@ func (r *Runner) Start(ctx context.Context) error {
 			return err
 		}
 
-		bsp := trace.NewBatchSpanProcessor(exporter, batchOptions...)
+		bsp := trace.NewBatchSpanProcessor(exporter)
 		tp := trace.NewTracerProvider(
 			trace.WithSpanProcessor(bsp),
 			trace.WithResource(res),
@@ -124,36 +121,6 @@ func (r *Runner) getSampler(tracesConfig *egv1a1.EnvoyGatewayTraces) trace.Sampl
 	}
 	// Default to always sample (100%)
 	return trace.AlwaysSample()
-}
-
-// getBatchSpanProcessorOptions returns the configured batch span processor options
-func (r *Runner) getBatchSpanProcessorOptions(tracesConfig *egv1a1.EnvoyGatewayTraces) []trace.BatchSpanProcessorOption {
-	var options []trace.BatchSpanProcessorOption
-
-	if tracesConfig.BatchSpanProcessorConfig != nil {
-		cfg := tracesConfig.BatchSpanProcessorConfig
-
-		if cfg.BatchTimeout != nil {
-			timeout, err := time.ParseDuration(string(*cfg.BatchTimeout))
-			if err == nil && timeout > 0 {
-				options = append(options, trace.WithBatchTimeout(timeout))
-			}
-		}
-
-		if cfg.MaxExportBatchSize != nil && *cfg.MaxExportBatchSize > 0 {
-			options = append(options, trace.WithMaxExportBatchSize(*cfg.MaxExportBatchSize))
-		}
-
-		if cfg.MaxQueueSize != nil && *cfg.MaxQueueSize > 0 {
-			options = append(options, trace.WithMaxQueueSize(*cfg.MaxQueueSize))
-		}
-	}
-
-	// If no options were configured, use defaults
-	// Default BatchTimeout is 5s, MaxExportBatchSize is 512, MaxQueueSize is 2048
-	// These are the OpenTelemetry SDK defaults
-
-	return options
 }
 
 func (r *Runner) Name() string {
