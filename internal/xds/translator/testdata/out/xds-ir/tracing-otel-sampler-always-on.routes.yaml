@@ -7,8 +7,8 @@
     routes:
     - match:
         prefix: /
-      name: first-route
+      name: direct-route
       route:
-        cluster: first-route-dest
+        cluster: direct-route-dest
         upgradeConfigs:
         - upgradeType: websocket
