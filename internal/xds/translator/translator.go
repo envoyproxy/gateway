@@ -155,7 +155,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	// All XDS resources is ready, let's do the patch.
-	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
+	if err := processJSONPatches(tCtx, xdsIR.GlobalResources, xdsIR.EnvoyPatchPolicies); err != nil {
 		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
 		// valid xDS resources can be sent to the proxy.
 		t.Logger.Error(err, "Failed to process JSON patches")
@@ -1011,6 +1011,10 @@ func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetype
 			continue
 		}
 		if name == "" || listener.Name == name {
+			// Skip to process ready listeners when name is empty.
+			if name == "" && strings.HasPrefix(listener.Name, readyListenerPrefix) {
+				continue
+			}
 			result = append(result, r)
 		}
 	}
@@ -1051,7 +1055,7 @@ func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachet
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	resources := findXdsClusters(tCtx, name)
+	resources := findXdsClusters(tCtx, nil, name)
 	if len(resources) > 0 {
 		return resources[0].(*clusterv3.Cluster)
 	}
@@ -1061,11 +1065,16 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 // findXdsClusters finds xds clusters.
 // If name is empty, returns all clusters.
 // If name is specified, returns only clusters with matching names.
-func findXdsClusters(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
+func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
 	}
 
+	skippedClusters := sets.New(getRateLimitServiceClusterName(), wasmHTTPServiceClusterName)
+	// skip. proxy service cluster
+	if gResources != nil && gResources.ProxyServiceCluster != nil {
+		skippedClusters.Insert(gResources.ProxyServiceCluster.Name)
+	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
 		cluster, ok := r.(*clusterv3.Cluster)
@@ -1073,6 +1082,9 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, name string) []cachetypes
 			continue
 		}
 		if name == "" || cluster.Name == name {
+			if name == "" && skippedClusters.Has(cluster.Name) {
+				continue
+			}
 			result = append(result, r)
 		}
 	}
@@ -1104,7 +1116,7 @@ func findXdsEndpoints(tCtx *types.ResourceVersionTable, name string) []cachetype
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
 func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
-	resources := findXdsSecrets(tCtx, name)
+	resources := findXdsSecrets(tCtx, nil, name)
 	if len(resources) > 0 {
 		return resources[0].(*tlsv3.Secret)
 	}
@@ -1114,11 +1126,18 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 // findXdsSecrets finds xds secrets.
 // If name is empty, returns all secrets.
 // If name is specified, returns only secrets with matching names.
-func findXdsSecrets(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
+func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name string) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
 		return nil
 	}
-
+	// skip secrets that are used for
+	skippedSecrets := sets.New(
+		"xds_trusted_ca", "jwt-sa-bearer",
+	)
+	// envoy client certificate
+	if gResources != nil && gResources.EnvoyClientCertificate != nil {
+		skippedSecrets.Insert(gResources.EnvoyClientCertificate.Name)
+	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
 		secret, ok := r.(*tlsv3.Secret)
@@ -1126,6 +1145,9 @@ func findXdsSecrets(tCtx *types.ResourceVersionTable, name string) []cachetypes.
 			continue
 		}
 		if name == "" || secret.Name == name {
+			if name == "" && skippedSecrets.Has(secret.Name) {
+				continue
+			}
 			result = append(result, r)
 		}
 	}
