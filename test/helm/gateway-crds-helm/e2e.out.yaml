@@ -1627,11 +1627,11 @@ spec:
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
-                - message: ZoneAware routing is not supported for BackendUtilization
-                    load balancers. BackendUtilization only handles picking endpoints
-                    within a single locality.
-                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                    : true'
+                - message: PreferLocal zone-aware routing is not currently supported
+                    for BackendUtilization load balancers. Only WeightedZones can
+                    be used with BackendUtilization.
+                  rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                    ? !has(self.zoneAware.preferLocal) : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
@@ -6963,11 +6963,11 @@ spec:
                               instead.
                             rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
-                          - message: ZoneAware routing is not supported for BackendUtilization
-                              load balancers. BackendUtilization only handles picking
-                              endpoints within a single locality.
-                            rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                              : true'
+                          - message: PreferLocal zone-aware routing is not currently
+                              supported for BackendUtilization load balancers. Only
+                              WeightedZones can be used with BackendUtilization.
+                            rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                              ? !has(self.zoneAware.preferLocal) : true'
                           - message: ZoneAware PreferLocal and WeightedZones cannot
                               be specified together.
                             rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -21218,12 +21218,13 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
-                                            - message: ZoneAware routing is not supported
-                                                for BackendUtilization load balancers.
-                                                BackendUtilization only handles picking
-                                                endpoints within a single locality.
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for BackendUtilization
+                                                load balancers. Only WeightedZones
+                                                can be used with BackendUtilization.
                                               rule: 'self.type == ''BackendUtilization''
-                                                ? !has(self.zoneAware) : true'
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -22697,12 +22698,13 @@ spec:
                                               rule: 'self.type == ''ConsistentHash''
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
-                                            - message: ZoneAware routing is not supported
-                                                for BackendUtilization load balancers.
-                                                BackendUtilization only handles picking
-                                                endpoints within a single locality.
+                                            - message: PreferLocal zone-aware routing
+                                                is not currently supported for BackendUtilization
+                                                load balancers. Only WeightedZones
+                                                can be used with BackendUtilization.
                                               rule: 'self.type == ''BackendUtilization''
-                                                ? !has(self.zoneAware) : true'
+                                                && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                                : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -24324,12 +24326,13 @@ spec:
                                         rule: 'self.type == ''ConsistentHash'' &&
                                           has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
-                                      - message: ZoneAware routing is not supported
-                                          for BackendUtilization load balancers. BackendUtilization
-                                          only handles picking endpoints within a
-                                          single locality.
+                                      - message: PreferLocal zone-aware routing is
+                                          not currently supported for BackendUtilization
+                                          load balancers. Only WeightedZones can be
+                                          used with BackendUtilization.
                                         rule: 'self.type == ''BackendUtilization''
-                                          ? !has(self.zoneAware) : true'
+                                          && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                          : true'
                                       - message: ZoneAware PreferLocal and WeightedZones
                                           cannot be specified together.
                                         rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -25867,12 +25870,11 @@ spec:
                                     instead.
                                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
-                                - message: ZoneAware routing is not supported for
-                                    BackendUtilization load balancers. BackendUtilization
-                                    only handles picking endpoints within a single
-                                    locality.
-                                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                    : true'
+                                - message: PreferLocal zone-aware routing is not currently
+                                    supported for BackendUtilization load balancers.
+                                    Only WeightedZones can be used with BackendUtilization.
+                                  rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                    ? !has(self.zoneAware.preferLocal) : true'
                                 - message: ZoneAware PreferLocal and WeightedZones
                                     cannot be specified together.
                                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -28829,11 +28831,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -30182,11 +30184,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -31798,11 +31800,12 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
-                                  - message: ZoneAware routing is not supported for
-                                      BackendUtilization load balancers. BackendUtilization
-                                      only handles picking endpoints within a single
-                                      locality.
-                                    rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
+                                  - message: PreferLocal zone-aware routing is not
+                                      currently supported for BackendUtilization load
+                                      balancers. Only WeightedZones can be used with
+                                      BackendUtilization.
+                                    rule: 'self.type == ''BackendUtilization'' &&
+                                      has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                       : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
@@ -33424,11 +33427,11 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
