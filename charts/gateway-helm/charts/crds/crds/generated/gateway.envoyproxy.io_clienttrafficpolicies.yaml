@@ -841,9 +841,9 @@ spec:
                           ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
-                  ignoreHTTP11Upgrade:
+                  ignoredUpgradeTypes:
                     description: |-
-                      IgnoreHTTP11Upgrade specifies a list of upgrade types for which
+                      IgnoredUpgradeTypes specifies a list of upgrade types for which
                       HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
                       rejected with a 403 response. When a client sends an HTTP/1.1 request
                       with Connection: Upgrade and an Upgrade header matching one of these

@@ -6,7 +6,7 @@ clientTrafficPolicies:
     name: target-gateway-1
   spec:
     http1:
-      ignoreHTTP11Upgrade:
+      ignoredUpgradeTypes:
       - type: Prefix
         value: "TLS/"
     targetRef:

@@ -615,7 +615,7 @@ type HTTP1Settings struct {
 	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
-	IgnoreHTTP11Upgrade              []*StringMatch  `json:"ignoreHTTP11Upgrade,omitempty" yaml:"ignoreHTTP11Upgrade,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

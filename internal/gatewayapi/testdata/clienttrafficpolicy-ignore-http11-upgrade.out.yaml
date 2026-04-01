@@ -6,7 +6,7 @@ clientTrafficPolicies:
     namespace: envoy-gateway
   spec:
     http1:
-      ignoreHTTP11Upgrade:
+      ignoredUpgradeTypes:
       - type: Prefix
         value: TLS/
     targetRef:
@@ -158,7 +158,7 @@ xdsIR:
       hostnames:
       - '*'
       http1:
-        ignoreHTTP11Upgrade:
+        ignoredUpgradeTypes:
         - distinct: false
           name: ""
           prefix: TLS/
@@ -177,7 +177,7 @@ xdsIR:
       hostnames:
       - '*'
       http1:
-        ignoreHTTP11Upgrade:
+        ignoredUpgradeTypes:
         - distinct: false
           name: ""
           prefix: TLS/

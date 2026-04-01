@@ -3851,8 +3851,8 @@ func (in *HTTP1Settings) DeepCopyInto(out *HTTP1Settings) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.IgnoreHTTP11Upgrade != nil {
-		in, out := &in.IgnoreHTTP11Upgrade, &out.IgnoreHTTP11Upgrade
+	if in.IgnoredUpgradeTypes != nil {
+		in, out := &in.IgnoredUpgradeTypes, &out.IgnoredUpgradeTypes
 		*out = make([]StringMatch, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

@@ -5,7 +5,7 @@ http:
   hostnames:
   - "*"
   http1:
-    ignoreHTTP11Upgrade:
+    ignoredUpgradeTypes:
     - prefix: "TLS/"
   path:
     mergeSlashes: true
