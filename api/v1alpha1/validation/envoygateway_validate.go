@@ -272,5 +272,11 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 			}
 		}
 	}
+
+	if telemetry.Traces != nil {
+		if telemetry.Traces.Sink.OpenTelemetry == nil {
+			return fmt.Errorf("OpenTelemetry is required when trace sink Type is OpenTelemetry")
+		}
+	}
 	return nil
 }
