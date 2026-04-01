@@ -49,6 +49,11 @@ docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-syn
 .PHONY: docs
 docs: docs-gen docs-check ## Generate docs and verify no changes are needed
 
+.PHONY: sync-benchmark-dashboard
+sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild tracked static assets. Requires VERSION=vX.Y.Z.
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make sync-benchmark-dashboard VERSION=v1.7.1" && exit 1)
+	@./tools/src/benchmark-dashboard-sync/sync.sh --version "$(VERSION)" --force
+
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
 	@$(LOG_TARGET)

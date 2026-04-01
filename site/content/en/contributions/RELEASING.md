@@ -237,14 +237,13 @@ export GITHUB_REMOTE=origin
 11. Confirm that the [release workflow][] completed successfully.
 12. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 13. Confirm that the [release][] was created.
-14. Update the benchmark explorer data for the new release:
+14. Update the benchmark dashboard data for the new release:
 
     ```shell
-    cd tools
-    ./src/benchmark-dashboard-sync/sync.sh --version v${MAJOR_VERSION}.${MINOR_VERSION}.0
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.0
     ```
 
-    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark explorer entry.
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
 
 15. Confirm that the steps in the [Quickstart][] work as expected.
 16. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
@@ -393,14 +392,13 @@ export GITHUB_REMOTE=origin
 12. Confirm that the [release workflow][] completed successfully.
 13. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 14. Confirm that the [release][] was created.
-15. Update the benchmark explorer data for the new release:
+15. Update the benchmark dashboard data for the new release:
 
     ```shell
-    cd tools
-    ./src/benchmark-dashboard-sync/sync.sh --version v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
     ```
 
-    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark explorer entry.
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
 
 16. Confirm that the steps in the [Quickstart][] work as expected.
 17. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
