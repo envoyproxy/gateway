@@ -27,7 +27,7 @@ An Add-ons Helm chart for Envoy Gateway
 | https://grafana.github.io/helm-charts | loki | 6.55.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.147.1 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 28.14.0 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 28.14.1 |
 
 ## Usage
 
@@ -172,7 +172,7 @@ helm uninstall eg-addons -n monitoring
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
-| opentelemetry-collector.image.tag | string | `"0.148.0"` |  |
+| opentelemetry-collector.image.tag | string | `"0.149.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
 | opentelemetry-collector.ports.datadog.containerPort | int | `8126` |  |
 | opentelemetry-collector.ports.datadog.enabled | bool | `true` |  |
