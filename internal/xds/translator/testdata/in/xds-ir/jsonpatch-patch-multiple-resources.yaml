@@ -58,7 +58,7 @@ envoyPatchPolicies:
           op: "replace"
           path: "/tls_certificate/certificate_chain/inline_bytes"
           # replaced-secret
-          value: "cmVwbGFjZWQtc2VjcmV0"  
+          value: "cmVwbGFjZWQtc2VjcmV0"
       - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
         name: "test-secret"
         operation:
