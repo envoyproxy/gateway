@@ -36,7 +36,7 @@ func (t typedName) String() string {
 }
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
-func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
+func processJSONPatches(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
 	var errs error
 
 	for _, e := range envoyPatchPolicies {
@@ -96,7 +96,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			}
 
 			// find the resources to patch and convert them to JSON
-			dests, err = findXdsResources(tCtx, p)
+			dests, err = findXdsResources(tCtx, gResources, p)
 			if err != nil {
 				tErrs = errors.Join(tErrs, err)
 				continue
@@ -217,7 +217,7 @@ var jsonMarshalOpts = protojson.MarshalOptions{
 // findXdsResources returns XDS resources to patch based on the patch configuration.
 // If p.Name is empty, all resources of the specified type are returned.
 // If p.Name is specified, only resources with matching names are returned.
-func findXdsResources(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
+func findXdsResources(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
 	var resources []cachetypes.Resource
 	switch p.Type {
 	case resourcev3.ListenerType:
@@ -225,11 +225,11 @@ func findXdsResources(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) (
 	case resourcev3.RouteType:
 		resources = findXdsRouteConfigs(tCtx, p.Name)
 	case resourcev3.ClusterType:
-		resources = findXdsClusters(tCtx, p.Name)
+		resources = findXdsClusters(tCtx, gResources, p.Name)
 	case resourcev3.EndpointType:
 		resources = findXdsEndpoints(tCtx, p.Name)
 	case resourcev3.SecretType:
-		resources = findXdsSecrets(tCtx, p.Name)
+		resources = findXdsSecrets(tCtx, gResources, p.Name)
 	default:
 		return nil, fmt.Errorf("unsupported patch type %s", p.Type)
 	}

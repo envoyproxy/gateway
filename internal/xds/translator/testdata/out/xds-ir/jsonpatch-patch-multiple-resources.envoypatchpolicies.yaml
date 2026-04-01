@@ -5,8 +5,8 @@
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: foobar
-        namespace: default
+        name: gateway-1
+        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Patches have been successfully applied.
