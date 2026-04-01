@@ -29,6 +29,7 @@ const (
 // BandwidthLimitSpec defines the desired state of BandwidthLimit.
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.fillInterval) || (duration(self.fillInterval) >= duration('20ms'))",message="fillInterval must be at least 20ms"
+// +kubebuilder:validation:XValidation:rule="!has(self.responseTrailers) || self.direction == 'Response' || self.direction == 'Both'",message="responseTrailers can only be specified when direction is Response or Both"
 type BandwidthLimitSpec struct {
 	// Limit specifies the bandwidth limit as a bytes-per-second throughput rate.
 	//
@@ -58,8 +59,8 @@ type BandwidthLimitSpec struct {
 }
 
 type BandwidthLimitResponseTrailers struct {
-	// Enable specifies whether to append trailer headers with delay metrics.
-	// Defaults to false.
+	// Prefix is prepended to each trailer header name with delay metrics.
+	// For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".
 	//
 	// The following four trailers can be added:
 	// "bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer
@@ -70,12 +71,6 @@ type BandwidthLimitResponseTrailers struct {
 	// "bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter.
 	//
 	// Only effective when Direction is Response or Both.
-	//
-	// +kubebuilder:default=false
-	Enable bool `json:"enable"`
-
-	// Prefix is prepended to each trailer header name.
-	// For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".
 	//
 	// +optional
 	Prefix *string `json:"prefix,omitempty"`
