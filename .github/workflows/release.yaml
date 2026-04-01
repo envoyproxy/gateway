@@ -85,7 +85,7 @@ jobs:
           path: test/benchmark/benchmark_report.zip
 
   release:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: [benchmark-test]
     permissions:
       contents: write
