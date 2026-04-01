@@ -193,6 +193,14 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			expected: defaultUpgradeConfig,
 		},
 		{
+			name: "request buffer disables default websocket upgrade",
+			trafficFeature: &ir.TrafficFeatures{
+				RequestBuffer: &ir.RequestBuffer{},
+				HTTPUpgrade:   nil,
+			},
+			expected: nil,
+		},
+		{
 			name: "spdy",
 			trafficFeature: &ir.TrafficFeatures{
 				HTTPUpgrade: []ir.HTTPUpgradeConfig{{Type: "spdy/3.1"}},
@@ -244,6 +252,59 @@ func TestBuildUpgradeConfig(t *testing.T) {
 			got := buildUpgradeConfig(tc.trafficFeature)
 			if !reflect.DeepEqual(got, tc.expected) {
 				t.Errorf("buildUpgradeConfig() got = %v, want %v", got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
+	baseRoute := &ir.HTTPRoute{
+		Name: "test-route",
+		Destination: &ir.RouteDestination{
+			Name: "test-dest",
+			Settings: []*ir.DestinationSetting{
+				{
+					Endpoints: []*ir.DestinationEndpoint{
+						{Host: "1.2.3.4", Port: 8080},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name                     string
+		appendXForwardedHost     *bool
+		wantAppendXForwardedHost bool
+	}{
+		{
+			name:                     "nil defaults to true",
+			appendXForwardedHost:     nil,
+			wantAppendXForwardedHost: true,
+		},
+		{
+			name:                     "explicit true",
+			appendXForwardedHost:     ptr.To(true),
+			wantAppendXForwardedHost: true,
+		},
+		{
+			name:                     "explicit false",
+			appendXForwardedHost:     ptr.To(false),
+			wantAppendXForwardedHost: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			urlRewrite := &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					Name: ptr.To("rewritten.example.com"),
+				},
+				AppendXForwardedHost: tt.appendXForwardedHost,
+			}
+			got := buildXdsURLRewriteAction(baseRoute, urlRewrite, nil)
+			if got.AppendXForwardedHost != tt.wantAppendXForwardedHost {
+				t.Errorf("AppendXForwardedHost = %v, want %v", got.AppendXForwardedHost, tt.wantAppendXForwardedHost)
 			}
 		})
 	}

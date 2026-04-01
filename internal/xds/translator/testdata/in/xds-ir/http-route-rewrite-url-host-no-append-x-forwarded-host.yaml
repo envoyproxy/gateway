@@ -1,0 +1,70 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "rewrite-route-no-append"
+    pathMatch:
+      prefix: "/origin"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      host:
+        name: "3.3.3.3"
+      path:
+        prefixMatchReplace: /rewrite
+      appendXForwardedHost: false
+  - name: "rewrite-host-header-no-append"
+    pathMatch:
+      prefix: "/host-header"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      host:
+        header: "foo"
+      path:
+        prefixMatchReplace: /rewrite
+      appendXForwardedHost: false
+  - name: "rewrite-host-backend-with-append"
+    pathMatch:
+      prefix: "/host-backend"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      host:
+        backend: true
+      path:
+        prefixMatchReplace: /rewrite
+      appendXForwardedHost: true
