@@ -1,0 +1,196 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: grpc-backend
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: envoy-gateway
+    name: endpointslice-grpc-backend
+    labels:
+      kubernetes.io/service-name: grpc-backend
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    # merge basicAuth check:
+    # - can resolve auth secret in parent ns (envoy-gateway)
+    basicAuth:
+      users:
+        name: users-secret
+    # merge extAuth check:
+    # - can resolve backendRef in parent ns (envoy-gateway)
+    # - replace contextExtensions entirely with the values configured in route policy
+    extAuth:
+      grpc:
+        backendRefs:
+        - name: grpc-backend
+          port: 9000
+      contextExtensions:
+      - name: shared
+        type: ValueRef
+        valueRef:
+          Group: ""
+          Kind: ConfigMap
+          Name: context-extension-for-gateway
+          key: data-shared
+      - name: parent-only
+        type: ValueRef
+        valueRef:
+          Group: ""
+          Kind: ConfigMap
+          Name: context-extension-for-gateway
+          key: data
+    # merge oidc check:
+    # - can resolve provider backendRef in parent ns (envoy-gateway)
+    # - can resolve client secret in parent ns (envoy-gateway)
+    oidc:
+      provider:
+        backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-ip
+          port: 3000
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client-secret"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    extAuth:
+      contextExtensions:
+      - name: shared
+        type: ValueRef
+        valueRef:
+          Group: ""
+          Kind: ConfigMap
+          Name: context-extension-for-route
+          key: data-shared
+      - name: route-only
+        type: ValueRef
+        valueRef:
+          Group: ""
+          Kind: ConfigMap
+          Name: context-extension-for-route
+          key: data
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    namespace: envoy-gateway
+    name: backend-ip
+  spec:
+    endpoints:
+    - ip:
+        address: 7.7.7.7
+        port: 3000
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: client-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway-system
+    name: envoy-oidc-hmac
+  data:
+    hmac-secret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+configmaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    namespace: envoy-gateway
+    name: context-extension-for-gateway
+  data:
+    data-shared: test-key-gateway
+    data: test-key-gateway
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    namespace: default
+    name: context-extension-for-route
+  data:
+    data-shared: test-key-route
+    data: test-key-route
