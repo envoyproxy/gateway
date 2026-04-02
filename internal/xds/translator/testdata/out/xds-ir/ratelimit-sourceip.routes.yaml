@@ -15,8 +15,13 @@
           - genericKey:
               descriptorKey: first-route
               descriptorValue: first-route
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/16
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -29,8 +34,13 @@
           - genericKey:
               descriptorKey: second-route
               descriptorValue: second-route
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 24
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 24
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/24
         upgradeConfigs:
         - upgradeType: websocket
     - match:
@@ -58,8 +68,19 @@
           - genericKey:
               descriptorKey: fourth-route
               descriptorValue: fourth-route
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
-          - remoteAddress: {}
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: masked_remote_address
+              descriptorValue: 192.168.0.0/16
+          - remoteAddressMatch:
+              addressMatcher:
+                ranges:
+                - addressPrefix: 192.168.0.0
+                  prefixLen: 16
+              descriptorKey: remote_address
+              descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
         upgradeConfigs:
         - upgradeType: websocket

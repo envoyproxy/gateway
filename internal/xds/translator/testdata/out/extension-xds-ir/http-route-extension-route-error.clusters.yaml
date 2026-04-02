@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: extension-post-xdsroute-hook-error-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

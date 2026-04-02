@@ -720,9 +720,14 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	if http1Settings == nil {
 		return nil
 	}
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoredUpgradeTypes))
+	for _, match := range http1Settings.IgnoredUpgradeTypes {
+		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
+	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
-		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
+		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		IgnoredUpgradeTypes: ignoreUpgrade,
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
@@ -881,23 +886,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		irTLSConfig.ClientValidationEnabled = true
-		switch mode {
-		case egv1a1.ClientValidationRequest:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationRequireAny:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationVerifyIfGiven:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = false
-		case egv1a1.ClientValidationRequireAndVerify:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		default:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		}
+		convertClientValidationModeType(mode, irTLSConfig)
 
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
