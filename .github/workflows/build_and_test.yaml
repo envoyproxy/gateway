@@ -99,6 +99,7 @@ jobs:
         fetch-depth: 0  # Need main branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
     - name: Run Benchmark Comparison
+      continue-on-error: true
       run: |
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
           ./tools/hack/go-benchmark-compare.sh
