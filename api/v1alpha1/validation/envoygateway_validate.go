@@ -258,6 +258,31 @@ func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
 	return nil
 }
 
+func validateEnvoyGatewayOpenTelemetrySink(sink *egv1a1.EnvoyGatewayOpenTelemetrySink) error {
+	if sink.Protocol != egv1a1.GRPCProtocol && sink.Protocol != egv1a1.HTTPProtocol {
+		return fmt.Errorf("unsupported protocol %s for OpenTelemetry sink, only 'grpc' and 'http' are supported", sink.Protocol)
+	}
+	if sink.ExportInterval != nil {
+		d, err := time.ParseDuration(string(*sink.ExportInterval))
+		if err != nil {
+			return fmt.Errorf("invalid exportInterval: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("exportInterval must be greater than zero")
+		}
+	}
+	if sink.ExportTimeout != nil {
+		d, err := time.ParseDuration(string(*sink.ExportTimeout))
+		if err != nil {
+			return fmt.Errorf("invalid exportTimeout: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("exportTimeout must be greater than zero")
+		}
+	}
+	return nil
+}
+
 func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) error {
 	if telemetry == nil {
 		return nil
@@ -269,6 +294,9 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 				if sink.OpenTelemetry == nil {
 					return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
 				}
+				if err := validateEnvoyGatewayOpenTelemetrySink(sink.OpenTelemetry); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -276,6 +304,9 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 	if telemetry.Traces != nil {
 		if telemetry.Traces.Sink.OpenTelemetry == nil {
 			return fmt.Errorf("OpenTelemetry is required when trace sink Type is OpenTelemetry")
+		}
+		if err := validateEnvoyGatewayOpenTelemetrySink(telemetry.Traces.Sink.OpenTelemetry); err != nil {
+			return err
 		}
 	}
 	return nil

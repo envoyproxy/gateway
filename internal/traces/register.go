@@ -65,6 +65,25 @@ func (r *Runner) Start(ctx context.Context) error {
 		"endpoint", endpoint,
 		"sampler", sampler.Description(),
 	)
+
+	var bspOptions []trace.BatchSpanProcessorOption
+	if configObj.ExportInterval != nil {
+		d, err := time.ParseDuration(string(*configObj.ExportInterval))
+		if err != nil {
+			// this should not happen as the duration is validated during validation, but just in case
+			return fmt.Errorf("invalid export interval: %w", err)
+		}
+		bspOptions = append(bspOptions, trace.WithBatchTimeout(d))
+	}
+	if configObj.ExportTimeout != nil {
+		d, err := time.ParseDuration(string(*configObj.ExportTimeout))
+		if err != nil {
+			// this should not happen as the duration is validated during validation, but just in case
+			return fmt.Errorf("invalid export timeout: %w", err)
+		}
+		bspOptions = append(bspOptions, trace.WithExportTimeout(d))
+	}
+
 	switch configObj.Protocol {
 	case egv1a1.HTTPProtocol:
 		// Create OTLP HTTP exporter
@@ -77,7 +96,29 @@ func (r *Runner) Start(ctx context.Context) error {
 			return err
 		}
 
-		bsp := trace.NewBatchSpanProcessor(exporter)
+		bsp := trace.NewBatchSpanProcessor(exporter, bspOptions...)
+		tp := trace.NewTracerProvider(
+			trace.WithSpanProcessor(bsp),
+			trace.WithResource(res),
+			trace.WithSampler(sampler),
+		)
+
+		otel.SetTracerProvider(tp)
+		r.tp = tp
+
+		return nil
+	case egv1a1.GRPCProtocol:
+		// Create OTLP gRPC exporter
+		exporter, err := otlptracegrpc.New(ctx,
+			otlptracegrpc.WithEndpoint(endpoint),
+			// TODO: support TLS configuration for OTLP exporter
+			otlptracegrpc.WithInsecure(),
+		)
+		if err != nil {
+			return err
+		}
+
+		bsp := trace.NewBatchSpanProcessor(exporter, bspOptions...)
 		tp := trace.NewTracerProvider(
 			trace.WithSpanProcessor(bsp),
 			trace.WithResource(res),
@@ -89,27 +130,7 @@ func (r *Runner) Start(ctx context.Context) error {
 
 		return nil
 	default:
-		// use GRPC protocol by default
-		exporter, err := otlptracegrpc.New(ctx,
-			otlptracegrpc.WithEndpoint(endpoint),
-			// TODO: support TLS configuration for OTLP exporter
-			otlptracegrpc.WithInsecure(),
-		)
-		if err != nil {
-			return err
-		}
-
-		bsp := trace.NewBatchSpanProcessor(exporter)
-		tp := trace.NewTracerProvider(
-			trace.WithSpanProcessor(bsp),
-			trace.WithResource(res),
-			trace.WithSampler(sampler),
-		)
-
-		otel.SetTracerProvider(tp)
-		r.tp = tp
-
-		return nil
+		return fmt.Errorf("unsupported protocol %s for OpenTelemetry sink", configObj.Protocol)
 	}
 }
 
