@@ -24,7 +24,7 @@ helm-package:
 helm-package.%: helm-generate.%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
-	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
+	$(GO_TOOL) helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
 
 .PHONY: helm-push
 helm-push: ## Push envoy gateway relevant helm charts to OCI registry.
@@ -38,7 +38,7 @@ helm-push:
 helm-push.%: helm-package.%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
-	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
+	$(GO_TOOL) helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
 .PHONY: helm-generate
 helm-generate:
