@@ -137,6 +137,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	if err := processSDSCluster(tCtx, xdsIR.SDS); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -1213,6 +1217,10 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
 	}
+	if ptr.Deref(tlsConfig.CACertificate.FromSDS, false) {
+		// get secret from SDS
+		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(tlsConfig.CACertificate.Name)
+	}
 	hasSANValidations := false
 
 	// 3. If SubjectAltNames are specified, Hostname can be used for certificate selection
@@ -1299,15 +1307,17 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 		tlsCtx.CommonTlsContext.AlpnProtocols = tlsConfig.ALPNProtocols
 	}
 
-	if len(tlsConfig.ClientCertificates) > 0 {
-		for _, cert := range tlsConfig.ClientCertificates {
-			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
-				tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
-				&tlsv3.SdsSecretConfig{
-					Name:      cert.Name,
-					SdsConfig: makeConfigSource(),
-				})
+	for _, clientCert := range tlsConfig.ClientCertificates {
+		if ptr.Deref(clientCert.FromSDS, false) {
+			sds := sdsSecretConfig(clientCert.Name)
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs, sds)
+			continue
 		}
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      clientCert.Name,
+				SdsConfig: makeConfigSource(),
+			})
 	}
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)

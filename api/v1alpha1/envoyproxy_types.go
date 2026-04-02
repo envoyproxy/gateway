@@ -163,6 +163,13 @@ type EnvoyProxySpec struct {
 	// +optional
 	BackendTLS *BackendTLSConfig `json:"backendTLS,omitempty"`
 
+	// SDS defines the configuration for Envoy's Secret Discovery Service (SDS) provider.
+	// This is used to delegate the management of SDS from Envoy Gateway to an external provider,
+	// such as the SPIRE or others.
+	//
+	// +optional
+	SDS *SDSProvider `json:"sds,omitempty"`
+
 	// IPFamily specifies the IP family for the EnvoyProxy fleet.
 	// This setting only affects the Gateway listener port and does not impact
 	// other aspects of the Envoy proxy configuration.
@@ -205,6 +212,16 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+}
+
+// SDSProvider defines the configuration for Envoy's Secret Discovery Service (SDS) provider.
+// This's used to delegate the management of SDS from Envoy Gateway to an external provider,
+// such as the SPIRE or others.
+type SDSProvider struct {
+	// BackendObjectReference references a Kubernetes object that represents the backend.
+	gwapiv1.BackendObjectReference `json:",inline"`
+
+	// TODO: Add support for ClusterSettings
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
