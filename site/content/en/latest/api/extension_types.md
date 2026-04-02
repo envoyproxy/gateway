@@ -4665,7 +4665,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  |  | Version of ProxyProtol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
+| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  |  | Version of ProxyProtocol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
 
 
 #### ProxyProtocolSettings
