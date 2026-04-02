@@ -396,10 +396,12 @@ ifeq ($(CONFORMANCE_RUN_TEST),)
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
-		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG)
+		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG) \
+		--cleanup-base-resources=$(E2E_CLEANUP)
 else
     # we didn't care about output when running single test
-	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST)
+	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
+		--run-test $(CONFORMANCE_RUN_TEST) --cleanup-base-resources=$(E2E_CLEANUP)
 endif
 
 

@@ -27,7 +27,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	backendRefs []egv1a1.BackendRef,
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
 ) (*ir.RouteDestination, error) {
@@ -67,7 +67,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			protocol,
 			resources,
-			envoyProxy,
+			gtwCtx,
 		); err != nil {
 			return nil, err
 		}
@@ -98,7 +98,7 @@ func (t *Translator) processExtServiceDestination(
 	policyKind string,
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 ) (*ir.DestinationSetting, error) {
 	var (
 		backendTLS *ir.TLSUpstreamConfig
@@ -110,12 +110,12 @@ func (t *Translator) processExtServiceDestination(
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, nil)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
 		if err != nil {
 			return nil, err
 		}
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy, nil)
+		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +136,7 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.IsServiceRouting(envoyProxy, nil) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+	if !t.IsServiceRouting(gtwCtx.envoyProxy, nil) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
 		return nil, errors.New(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
@@ -155,7 +155,7 @@ func (t *Translator) processExtServiceDestination(
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
 		resources,
-		envoyProxy,
+		gtwCtx,
 	)
 	if err != nil {
 		return nil, err

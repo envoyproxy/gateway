@@ -890,7 +890,6 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
 		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
-
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)

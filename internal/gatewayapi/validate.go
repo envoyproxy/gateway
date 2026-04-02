@@ -559,11 +559,10 @@ func (t *Translator) validateTLSConfiguration(
 		secrets, certs := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
 
-		listener.certDNSNames = make([]string, 0)
+		listener.tls.certDNSNames = make([]string, 0)
 		for _, cert := range certs {
-			listener.certDNSNames = append(listener.certDNSNames, cert.DNSNames...)
+			listener.tls.certDNSNames = append(listener.tls.certDNSNames, cert.DNSNames...)
 		}
-
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
 			listener.SetCondition(
@@ -600,6 +599,37 @@ func (t *Translator) validateTLSConfiguration(
 			secrets, _ := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 			listener.SetTLSSecrets(secrets)
 		}
+	}
+
+	if listener.tls.frontendTLSValidation != nil &&
+		listener.tls.frontendTLSValidation.ValidateError != nil {
+		reason := gwapiv1.ListenerReasonInvalidCACertificateRef
+		switch {
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrInvalidCACertificateKind):
+			reason = gwapiv1.ListenerReasonInvalidCACertificateKind
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrNoValidCACertificate):
+			reason = gwapiv1.ListenerReasonNoValidCACertificate
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrRefNotPermitted):
+			reason = gwapiv1.ListenerReasonRefNotPermitted
+		}
+		listener.SetCondition(
+			gwapiv1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			reason,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
+		listener.SetCondition(
+			gwapiv1.ListenerConditionProgrammed,
+			metav1.ConditionFalse,
+			reason,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
+		listener.SetCondition(
+			gwapiv1.ListenerConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.ListenerReasonNoValidCACertificate,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
 	}
 }
 
