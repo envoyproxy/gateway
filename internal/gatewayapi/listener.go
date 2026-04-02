@@ -70,8 +70,8 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 						TLSCACertificate: &ir.TLSCACertificate{
 							Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
 							Certificate: caCert,
-							Mode:        ptr.To(gtwDefaultFrontendTLSValidation.Validation.Mode),
 						},
+						Mode: frontendValidationMode(gtwDefaultFrontendTLSValidation.Validation.Mode),
 					}
 					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
 						allowInsecureFallback = true
@@ -103,8 +103,8 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 						TLSCACertificate: &ir.TLSCACertificate{
 							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
 							Certificate: caCert,
-							Mode:        ptr.To(portValidation.TLS.Validation.Mode),
 						},
+						Mode: frontendValidationMode(portValidation.TLS.Validation.Mode),
 					}
 					if portValidation.TLS.Validation.Mode == gwapiv1.AllowInsecureFallback {
 						allowInsecureFallback = true

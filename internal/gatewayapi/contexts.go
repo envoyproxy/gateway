@@ -152,6 +152,7 @@ type ListenerTLSConfig struct {
 type ListenerFrontendTLSValidation struct {
 	ValidateError error
 	*ir.TLSCACertificate
+	Mode egv1a1.ClientValidationModeType
 }
 
 func (l *ListenerContext) frontendTLSValidationInvalid() bool {

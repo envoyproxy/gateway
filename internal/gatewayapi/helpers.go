@@ -532,13 +532,32 @@ func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
 
 	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
 		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
-		if ptr.Deref(tlsListenerConfigs.CACertificate.Mode, gwapiv1.AllowValidOnly) == gwapiv1.AllowValidOnly {
-			tlsListenerConfigs.RequireClientCertificate = true
-		}
+		tlsListenerConfigs.ClientValidationEnabled = true
+		convertClientValidationModeType(config.frontendTLSValidation.Mode, tlsListenerConfigs)
 		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
+}
+
+func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
+	switch mode {
+	case egv1a1.ClientValidationRequest:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationRequireAny:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationVerifyIfGiven:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = false
+	case egv1a1.ClientValidationRequireAndVerify:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	default:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	}
 }
 
 func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
@@ -579,6 +598,17 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 
 func irGatewayTLSCACertName(gtw *gwapiv1.Gateway, suffix string) string {
 	return fmt.Sprintf("gateway/%s/%s/%s/%s", gtw.Namespace, gtw.Name, suffix, CACertKey)
+}
+
+func frontendValidationMode(mode gwapiv1.FrontendValidationModeType) egv1a1.ClientValidationModeType {
+	switch mode {
+	case gwapiv1.AllowValidOnly:
+		return egv1a1.ClientValidationRequireAndVerify
+	case gwapiv1.AllowInsecureFallback:
+		return egv1a1.ClientValidationRequest
+	default:
+		return egv1a1.ClientValidationRequireAndVerify
+	}
 }
 
 func irTLSCACertName(namespace, name string) string {
