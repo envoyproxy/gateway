@@ -206,7 +206,10 @@ type EnvoyProxySpec struct {
 	// +optional
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
 
-	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	// MergeType controls how this EnvoyProxy merges with less specific configurations
+	// in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
+	// If unset, this EnvoyProxy completely replaces less specific settings.
+	// Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
