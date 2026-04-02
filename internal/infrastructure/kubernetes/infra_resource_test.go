@@ -26,6 +26,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+// errSimulatedListFailure is the sentinel error returned by newListFailingClient.
+var errSimulatedListFailure = fmt.Errorf("simulated list failure")
+
 // newDeleteTrackingClient builds a fake client whose interceptor counts
 // DeleteAllOf invocations per concrete Go type (e.g. "*v1.DaemonSet").
 func newDeleteTrackingClient(mu *sync.Mutex, counts map[string]int) client.Client {
@@ -284,4 +287,67 @@ func TestReconcileIdempotencyDaemonSetMode(t *testing.T) {
 		"HPA DeleteAllOf must never be called across multiple no-op reconciles")
 	assert.Equal(t, 0, counts["*v1.PodDisruptionBudget"],
 		"PDB DeleteAllOf must never be called across multiple no-op reconciles")
+}
+
+// newListFailingClient builds a fake client whose List interceptor returns an
+// error for the specified object list type (e.g. "*v1.DaemonSetList"), while
+// delegating all other List calls to the underlying client.
+func newListFailingClient(failType string) client.Client {
+	return fakeclient.NewClientBuilder().
+		WithScheme(envoygateway.GetScheme()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Patch: interceptorFunc.Patch,
+			List: func(ctx context.Context, clnt client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if fmt.Sprintf("%T", list) == failType {
+					return errSimulatedListFailure
+				}
+				return clnt.List(ctx, list, opts...)
+			},
+		}).
+		Build()
+}
+
+// TestDeleteListFailureReturnsError verifies that when the pre-delete List()
+// call fails (e.g. RBAC/API errors), the error propagates and the failure
+// metric recording path is exercised.
+func TestDeleteListFailureReturnsError(t *testing.T) {
+	tests := []struct {
+		name     string
+		failType string
+		infra    func() *ir.Infra
+	}{
+		{
+			name:     "DaemonSet List failure in Deployment mode",
+			failType: "*v1.DaemonSetList",
+			infra:    standardDeploymentInfra,
+		},
+		{
+			name:     "Deployment List failure in DaemonSet mode",
+			failType: "*v1.DeploymentList",
+			infra:    daemonSetModeInfra,
+		},
+		{
+			name:     "HPA List failure in Deployment mode",
+			failType: "*v2.HorizontalPodAutoscalerList",
+			infra:    standardDeploymentInfra,
+		},
+		{
+			name:     "PDB List failure in Deployment mode",
+			failType: "*v1.PodDisruptionBudgetList",
+			infra:    standardDeploymentInfra,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cli := newListFailingClient(tc.failType)
+			kube := newTestInfraWithClient(t, cli)
+			ctx := context.Background()
+			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
+
+			err := kube.CreateOrUpdateProxyInfra(ctx, tc.infra())
+			require.Error(t, err, "reconcile should fail when pre-delete List returns an error")
+			assert.ErrorIs(t, err, errSimulatedListFailure)
+		})
+	}
 }
