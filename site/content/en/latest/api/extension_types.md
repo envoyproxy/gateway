@@ -1872,7 +1872,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[EnvoyResourceType](#envoyresourcetype)_ |  true  |  | Type is the typed URL of the Envoy xDS Resource |
-| `name` | _string_ |  true  |  | Name is the name of the resource.<br />When omitted or set to empty string (""), the patch will be applied to all resources of the specified Type.<br />When specified, the patch will only be applied to the resource with the matching name. |
+| `name` | _string_ |  true  |  | Name is the name of the resource.<br />When set to wildcard string ("*"), the patch will be applied to all resources of the specified Type.<br />When specified, the patch will only be applied to the resource with the matching name. |
 | `operation` | _[JSONPatchOperation](#jsonpatchoperation)_ |  true  |  | Patch defines the JSON Patch Operation |
 
 

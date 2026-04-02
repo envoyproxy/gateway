@@ -214,8 +214,10 @@ var jsonMarshalOpts = protojson.MarshalOptions{
 	UseProtoNames: true,
 }
 
+const wildcardName = "*"
+
 // findXdsResources returns XDS resources to patch based on the patch configuration.
-// If p.Name is empty, all resources of the specified type are returned.
+// If p.Name is set to wildcard string ("*"), all resources of the specified type are returned.
 // If p.Name is specified, only resources with matching names are returned.
 func findXdsResources(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
 	var resources []cachetypes.Resource

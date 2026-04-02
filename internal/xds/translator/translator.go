@@ -1010,9 +1010,9 @@ func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetype
 		if !ok {
 			continue
 		}
-		if name == "" || listener.Name == name {
-			// Skip to process ready listeners when name is empty.
-			if name == "" && strings.HasPrefix(listener.Name, readyListenerPrefix) {
+		if name == wildcardName || listener.Name == name {
+			// Skip to process ready listeners when name is wildcard.
+			if name == wildcardName && strings.HasPrefix(listener.Name, readyListenerPrefix) {
 				continue
 			}
 			result = append(result, r)
@@ -1045,7 +1045,7 @@ func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachet
 		if !ok {
 			continue
 		}
-		if name == "" || route.Name == name {
+		if name == wildcardName || route.Name == name {
 			result = append(result, r)
 		}
 	}
@@ -1081,8 +1081,8 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalReso
 		if !ok {
 			continue
 		}
-		if name == "" || cluster.Name == name {
-			if name == "" && skippedClusters.Has(cluster.Name) {
+		if name == wildcardName || cluster.Name == name {
+			if name == wildcardName && skippedClusters.Has(cluster.Name) {
 				continue
 			}
 			result = append(result, r)
@@ -1106,7 +1106,7 @@ func findXdsEndpoints(tCtx *types.ResourceVersionTable, name string) []cachetype
 		if !ok {
 			continue
 		}
-		if name == "" || endpoint.ClusterName == name {
+		if name == wildcardName || endpoint.ClusterName == name {
 			result = append(result, r)
 		}
 	}
@@ -1144,8 +1144,8 @@ func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResou
 		if !ok {
 			continue
 		}
-		if name == "" || secret.Name == name {
-			if name == "" && skippedSecrets.Has(secret.Name) {
+		if name == wildcardName || secret.Name == name {
+			if name == wildcardName && skippedSecrets.Has(secret.Name) {
 				continue
 			}
 			result = append(result, r)
