@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -88,7 +87,6 @@
       resourceApiVersion: V3
     serviceName: httproute/envoy-gateway/httproute-btls-2/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

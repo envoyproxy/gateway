@@ -339,7 +339,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		cluster.LoadBalancingPolicy = endpointOverridePolicy
 		// Clear CommonLbConfig fields that conflict with LoadBalancingPolicy
 		// This is required because Envoy doesn't allow both LoadBalancingPolicy and
@@ -348,7 +347,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			cluster.CommonLbConfig.LocalityConfigSpecifier = nil
 		}
 	case args.loadBalancer == nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 		leastRequest := &least_requestv3.LeastRequest{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -365,8 +363,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.LeastRequest != nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-
 		leastRequest := &least_requestv3.LeastRequest{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -388,7 +384,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.RoundRobin != nil:
-		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
 		roundRobin := &round_robinv3.RoundRobin{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -410,7 +405,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.Random != nil:
-		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 		random := &randomv3.Random{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -427,7 +421,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.ConsistentHash != nil:
-		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 		consistentHash := &maglevv3.Maglev{}
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
@@ -488,7 +481,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			Name:        dfpClusterTypeName,
 			TypedConfig: dfpAny,
 		}}
-		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		clusterProvided := &cluster_providedv3.ClusterProvided{}
 		typedClusterProvided, err := proto.ToAnyWithValidation(clusterProvided)
 		if err != nil {
