@@ -362,7 +362,7 @@ install-eg-addons: helm-generate.gateway-addons-helm
 .PHONY: uninstall-eg-addons
 uninstall-eg-addons:
 	@$(LOG_TARGET)
-	helm delete $(shell helm list -n monitoring -q) -n monitoring
+	$(GO_TOOL) helm delete $(shell $(GO_TOOL) helm list -n monitoring -q) -n monitoring
 
 .PHONY: create-cluster
 create-cluster: ## Create a kind cluster suitable for running Gateway API conformance.
