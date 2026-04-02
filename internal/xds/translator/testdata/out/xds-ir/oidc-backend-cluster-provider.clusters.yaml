@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: third-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -48,7 +47,6 @@
     timeout: 0.500s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadAssignment:
     clusterName: securitypolicy/envoy-gateway/policy-for-gateway/0
     endpoints:
