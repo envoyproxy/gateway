@@ -23677,7 +23677,7 @@ spec:
                 properties:
                   version:
                     description: |-
-                      Version of ProxyProtol
+                      Version of ProxyProtocol
                       Valid ProxyProtocolVersion values are
                       "V1"
                       "V2"
@@ -29040,7 +29040,7 @@ spec:
                           properties:
                             version:
                               description: |-
-                                Version of ProxyProtol
+                                Version of ProxyProtocol
                                 Valid ProxyProtocolVersion values are
                                 "V1"
                                 "V2"
@@ -43298,7 +43298,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -44777,7 +44777,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -46403,7 +46403,7 @@ spec:
                                       properties:
                                         version:
                                           description: |-
-                                            Version of ProxyProtol
+                                            Version of ProxyProtocol
                                             Valid ProxyProtocolVersion values are
                                             "V1"
                                             "V2"
@@ -47945,7 +47945,7 @@ spec:
                                 properties:
                                   version:
                                     description: |-
-                                      Version of ProxyProtol
+                                      Version of ProxyProtocol
                                       Valid ProxyProtocolVersion values are
                                       "V1"
                                       "V2"
@@ -50950,7 +50950,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -52303,7 +52303,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -53920,7 +53920,7 @@ spec:
                                   properties:
                                     version:
                                       description: |-
-                                        Version of ProxyProtol
+                                        Version of ProxyProtocol
                                         Valid ProxyProtocolVersion values are
                                         "V1"
                                         "V2"
@@ -55545,7 +55545,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
