@@ -44,6 +44,7 @@ new features: |
   Added support for OpenTelemetry sampler configuration for tracing.
 
 bug fixes: |
+  Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them

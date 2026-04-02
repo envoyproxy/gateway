@@ -27,8 +27,6 @@ import (
 
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
-	descriptorMaskedRemoteAddress  = "masked_remote_address"
-	descriptorRemoteAddress        = "remote_address"
 )
 
 func init() {
@@ -225,7 +223,7 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
 			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
 			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
-			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rule.CIDRMatch)
+			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.CIDRMatch)
 			// Pass header match count as offset to continue match index sequence
 			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
@@ -352,22 +350,25 @@ func buildPathMatchLocalRateLimitAction(
 func buildCIDRMatchLocalRateLimitActions(
 	rlActions *[]*routev3.RateLimit_Action,
 	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
 	cidrMatch *ir.CIDRMatch,
 ) {
 	if cidrMatch == nil {
 		return
 	}
 
-	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, descriptorMaskedRemoteAddress))
+	maskedKey := getRouteRuleMaskedRemoteAddressDescriptor(ruleIdx)
+	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, maskedKey))
 	*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
-		Key:   descriptorMaskedRemoteAddress,
+		Key:   maskedKey,
 		Value: exactCIDRDescriptorValue(cidrMatch.CIDR, cidrMatch.Invert),
 	})
 
 	if cidrMatch.Distinct {
-		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, descriptorRemoteAddress))
+		remoteKey := getRouteRuleRemoteAddressDescriptor(ruleIdx)
+		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, remoteKey))
 		*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
-			Key: descriptorRemoteAddress,
+			Key: remoteKey,
 		})
 	}
 }
