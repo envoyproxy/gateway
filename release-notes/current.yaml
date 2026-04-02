@@ -40,6 +40,7 @@ new features: |
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.
   Added support for upstrean access log.
   Added support for invert match in CIDR match RateLimit API.
+  Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
 
 bug fixes: |
@@ -60,7 +61,7 @@ bug fixes: |
   Fixed BackendTrafficPolicy `requestBuffer` coexisting with route upgrades by disabling the default WebSocket upgrade on buffered routes and rejecting explicit `requestBuffer` + `httpUpgrade` combinations.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
-
+  BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
 
 # Enhancements that improve performance.
 performance improvements: |
