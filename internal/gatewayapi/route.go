@@ -1313,12 +1313,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+	kind := obj.GetObjectKind().GroupVersionKind().Kind
+	if _, ok := obj.(*corev1.Service); ok && kind == "" {
+		kind = resource.KindService
+	}
+
 	metadata := &ir.ResourceMetadata{
-		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
-		Name:        resource.GetName(),
-		Namespace:   resource.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
+		Kind:        kind,
+		Name:        obj.GetName(),
+		Namespace:   obj.GetNamespace(),
+		Annotations: ir.MapToSlice(filterEGPrefix(obj.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1997,7 +2002,7 @@ func (t *Translator) applyServiceBackendHostname(setting *ir.DestinationSetting)
 		return
 	}
 
-	if setting.Metadata.Kind != "" { // if the kind is not empty, it means the destination setting is not a service
+	if setting.Metadata.Kind != resource.KindService {
 		return
 	}
 	if setting.Metadata.Name == "" || setting.Metadata.Namespace == "" {

@@ -1395,7 +1395,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		},
 	}
 	serviceEndpoints := []*ir.DestinationEndpoint{{Host: "7.7.7.7", Port: 4317}}
-	serviceMetadata := &ir.ResourceMetadata{Name: serviceName, Namespace: ns, SectionName: "4317"}
+	serviceMetadata := &ir.ResourceMetadata{Kind: resource.KindService, Name: serviceName, Namespace: ns, SectionName: "4317"}
 	servicePolicyTLS := &ir.TLSUpstreamConfig{
 		SNI: ptr.To("otel-svc.example.com"), UseSystemTrustStore: true,
 		CACertificate: &ir.TLSCACertificate{Name: "otel-svc-tls/test-ns-ca"}, SubjectAltNames: []ir.SubjectAltName{},
