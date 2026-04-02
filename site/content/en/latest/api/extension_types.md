@@ -1346,7 +1346,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
 | `lbPolicyName` | _string_ |  true  |  | LBPolicyName identifies a specific load balancer implementation within<br />the dynamic module. A single shared library can contain multiple LB<br />policy implementations. This value is passed to the module's<br />initialization function to select the appropriate implementation. |
-| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
 
 
 #### DynamicModuleSource
