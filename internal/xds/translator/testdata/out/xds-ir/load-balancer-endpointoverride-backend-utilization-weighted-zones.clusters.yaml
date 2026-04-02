@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: backend-utilization-weighted-zones-endpoint-override-dest/backend/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
