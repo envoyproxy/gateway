@@ -59,7 +59,7 @@ spec:
             name: backend-host-rewrite
       backendRefs:
         - name: infra-backend-v1
-          kind: Service # make sure explict service kind also works
+          kind: Service  # make sure explict service kind also works
           port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
