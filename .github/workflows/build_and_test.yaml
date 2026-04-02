@@ -113,6 +113,16 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      # For main branch builds, we need to fetch tags so go binary will be built with
+      # the recent vX.Y.Z-rc.0 tag, which helps avoid false positives in vulnerability scans.
+      # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
+      # As a workaround `filter: tree:0` is used to create a treeless clone.
+      # See:
+      # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
+      # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      with:
+        fetch-depth: ${{ github.ref == 'refs/heads/main' && '0' || '1' }}
+        filter: ${{ github.ref == 'refs/heads/main' && 'tree:0' || '' }}
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -304,6 +314,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
@@ -321,28 +332,23 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      if: github.event_name == 'push'
       uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2  # v4.0.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Setup Multiarch Environment
-      if: github.event_name == 'push'
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
-      if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
       run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
       run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
       # use `Always` image pull policy for latest version.
       run: |
