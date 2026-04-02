@@ -28,13 +28,11 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			expectedSpec: nil,
 		},
 		{
-			name: "only default spec - replace mode (default)",
+			name: "only default spec",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
-			expectedSpec: &egv1a1.EnvoyProxySpec{
-				Concurrency: ptr.To[int32](4),
-			},
+			expectedSpec: nil,
 		},
 		{
 			name: "replace mode - gatewayclass overrides default",
@@ -70,45 +68,10 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "strategic merge - combines configs from all levels",
+			// Gateway's MergeType controls step 1 (gateway over gatewayclass).
+			// GatewayClass has no MergeType so step 2 is Replace (defaults discarded).
+			name: "gateway mergeType controls gateway-over-gatewayclass step",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType:   ptr.To(egv1a1.StrategicMerge),
-				Concurrency: ptr.To[int32](4),
-				Logging: egv1a1.ProxyLogging{
-					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
-						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
-					},
-				},
-			},
-			gatewayClassProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					Logging: egv1a1.ProxyLogging{
-						Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
-							egv1a1.LogComponentAdmin: egv1a1.LogLevelDebug,
-						},
-					},
-				},
-			},
-			gatewayProxy: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](16),
-				},
-			},
-			expectedSpec: &egv1a1.EnvoyProxySpec{
-				MergeType:   ptr.To(egv1a1.StrategicMerge),
-				Concurrency: ptr.To[int32](16), // Gateway overrides
-				Logging: egv1a1.ProxyLogging{
-					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
-						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,  // From default
-						egv1a1.LogComponentAdmin:   egv1a1.LogLevelDebug, // From gatewayclass
-					},
-				},
-			},
-		},
-		{
-			name: "merge type from gateway takes precedence",
-			defaultSpec: &egv1a1.EnvoyProxySpec{
-				// No MergeType (replace mode)
 				Concurrency: ptr.To[int32](4),
 			},
 			gatewayClassProxy: &egv1a1.EnvoyProxy{
@@ -122,16 +85,41 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 					Concurrency: ptr.To[int32](16),
 				},
 			},
-			// Gateway specifies StrategicMerge, so configs should be merged
 			expectedSpec: &egv1a1.EnvoyProxySpec{
 				MergeType:   ptr.To(egv1a1.StrategicMerge),
 				Concurrency: ptr.To[int32](16),
 			},
 		},
 		{
-			name: "json merge mode",
+			// Gateway has no MergeType → step 1 is Replace, gatewayclass fields discarded.
+			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
+			name: "gateway nil mergeType - step1 Replace discards gatewayclass fields",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeType:   ptr.To(egv1a1.JSONMerge),
+				Concurrency: ptr.To[int32](4),
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](8),
+					Logging: egv1a1.ProxyLogging{
+						Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+							egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](16),
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](16),
+			},
+		},
+		{
+			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
+			name: "gatewayclass nil mergeType - step2 Replace discards defaults",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 				Logging: egv1a1.ProxyLogging{
 					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
@@ -141,6 +129,61 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 			gatewayClassProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](8),
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](8),
+			},
+		},
+		{
+			// Gateway StrategicMerge → step 1 merges gateway+gatewayclass fields.
+			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
+			name: "gateway StrategicMerge - merges gateway+gatewayclass, defaults discarded",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](4),
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](8),
+					Logging: egv1a1.ProxyLogging{
+						Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+							egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+						},
+					},
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType:   ptr.To(egv1a1.StrategicMerge),
+					Concurrency: ptr.To[int32](16),
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType:   ptr.To(egv1a1.StrategicMerge),
+				Concurrency: ptr.To[int32](16),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+			},
+		},
+		{
+			// GatewayClass StrategicMerge → step 2 merges step-1 result with defaults.
+			// No gateway proxy, so step 1 result is just the gatewayclass proxy.
+			name: "gatewayclass StrategicMerge - merges result with defaults",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](4),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
 					Logging: egv1a1.ProxyLogging{
 						Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 							egv1a1.LogComponentAdmin: egv1a1.LogLevelDebug,
@@ -149,15 +192,36 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 				},
 			},
 			expectedSpec: &egv1a1.EnvoyProxySpec{
-				MergeType:   ptr.To(egv1a1.JSONMerge),
+				MergeType:   ptr.To(egv1a1.StrategicMerge),
 				Concurrency: ptr.To[int32](4),
 				Logging: egv1a1.ProxyLogging{
-					// JSONMerge (RFC 7396) merges objects recursively, so both keys are present
 					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 						egv1a1.LogComponentAdmin:   egv1a1.LogLevelDebug,
 					},
 				},
+			},
+		},
+		{
+			// MergeType in defaultSpec is treated as an ordinary data field and has
+			// no effect on merge behavior. GatewayClass nil MergeType → Replace.
+			name: "defaultSpec mergeType has no effect on merge strategy",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeType:   ptr.To(egv1a1.StrategicMerge),
+				Concurrency: ptr.To[int32](4),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](8),
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](8),
 			},
 		},
 	}
@@ -185,64 +249,6 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			if len(tc.expectedSpec.Logging.Level) > 0 {
 				require.Equal(t, tc.expectedSpec.Logging.Level, result.Spec.Logging.Level)
 			}
-		})
-	}
-}
-
-func TestDetermineMergeType(t *testing.T) {
-	testCases := []struct {
-		name     string
-		base     *egv1a1.EnvoyProxy
-		override *egv1a1.EnvoyProxy
-		expected egv1a1.MergeType
-	}{
-		{
-			name:     "no configs - returns Replace (default)",
-			expected: egv1a1.Replace,
-		},
-		{
-			name: "base specifies StrategicMerge",
-			base: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
-				},
-			},
-			expected: egv1a1.StrategicMerge,
-		},
-		{
-			name: "override overrides base",
-			base: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
-				},
-			},
-			override: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.JSONMerge),
-				},
-			},
-			expected: egv1a1.JSONMerge,
-		},
-		{
-			name: "override with nil MergeType falls back to base",
-			base: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					MergeType: ptr.To(egv1a1.JSONMerge),
-				},
-			},
-			override: &egv1a1.EnvoyProxy{
-				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](4), // No MergeType specified
-				},
-			},
-			expected: egv1a1.JSONMerge,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := determineMergeType(tc.base, tc.override)
-			require.Equal(t, tc.expected, result)
 		})
 	}
 }

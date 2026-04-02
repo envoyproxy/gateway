@@ -12,28 +12,27 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-// MergeEnvoyProxyConfigs merges EnvoyProxy configurations using a 3-level hierarchy:
-// 1. defaultSpec - EnvoyProxySpec from EnvoyGateway.Provider.Kubernetes.EnvoyProxyDefault (base defaults)
-// 2. gatewayClassProxy - EnvoyProxy from GatewayClass parametersRef (overrides defaults)
-// 3. gatewayProxy - EnvoyProxy from Gateway parametersRef (highest priority). Note that this is only present if the MergeGateways option is false.
+// MergeEnvoyProxyConfigs merges EnvoyProxy configurations using a 3-level hierarchy.
+// The merge is performed in two steps, with the MergeType on the more specific
+// (override) resource at each step exclusively controlling the merge strategy:
 //
-// The merge behavior depends on the MergeType field:
-// - nil or Replace: More specific configs completely replace less specific ones (no merging)
-// - StrategicMerge: Configs are merged using Kubernetes strategic merge patch
-// - JSONMerge: Configs are merged using JSON merge patch
+// Step 1 - Gateway over GatewayClass:
+//   - base: gatewayClassProxy
+//   - override: gatewayProxy
+//   - mergeType: gatewayProxy.Spec.MergeType (nil → Replace)
 //
-// The MergeType is determined by looking at all provided configs in priority order (gateway > gatewayClass > default).
+// Step 2 - Step 1 result over EnvoyGateway defaults:
+//   - base: defaultSpec
+//   - override: Step 1 result
+//   - mergeType: gatewayClassProxy.Spec.MergeType (nil → Replace)
 //
-// Note:  If the MergeGateways option is specified then the gatewayProxy will be nil thus will
-// not affect the resulting merged configuration.  Furthermore, if there are settings not
-// supplied by the merged EnvoyProxy, those are applied later at infrastructure creation time
-// via GetEnvoyProxyKubeProvider() which calls the existing default functions.
+// The MergeType field in EnvoyGateway defaultSpec has no effect on merge
+// behavior; it is treated as an ordinary data field.
 //
-// Returns:
-//   - merged: The merged EnvoyProxy configuration. On error, this contains the fallback configuration
-//     using priority-based selection so the gateway can continue to function.
-//   - err: Any error that occurred during merging. Even when err is non-nil, merged will contain
-//     a valid fallback configuration.
+// Note: If the MergeGateways option is specified then gatewayProxy will be nil
+// and will not affect the resulting configuration. Settings not supplied by the
+// merged EnvoyProxy are applied later at infrastructure creation time via
+// GetEnvoyProxyKubeProvider().
 func MergeEnvoyProxyConfigs(
 	defaultSpec *egv1a1.EnvoyProxySpec,
 	gatewayClassProxy *egv1a1.EnvoyProxy,
@@ -44,46 +43,42 @@ func MergeEnvoyProxyConfigs(
 		defaultProxy = &egv1a1.EnvoyProxy{Spec: *defaultSpec}
 	}
 
-	// Merge GatewayClass over any EnvoyGateway defaults
-	base, err := mergeEnvoyProxies(defaultProxy, gatewayClassProxy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to merge GatewayClass EnvoyProxy with EnvoyGateway defaults: %w", err)
-	}
-
-	// Merge Gateway over the GatewayClass result
-	merged, err := mergeEnvoyProxies(base, gatewayProxy)
+	// Step 1: Merge Gateway over GatewayClass. Gateway's MergeType controls this step.
+	gatewayMerged, err := mergeEnvoyProxies(gatewayClassProxy, gatewayProxy, mergeTypeOf(gatewayProxy))
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge Gateway EnvoyProxy with GatewayClass config: %w", err)
+	}
+
+	// If neither gatewayClassProxy nor gatewayProxy defined an EnvoyProxy, there is
+	// nothing to apply defaults to — return nil regardless of defaultSpec.
+	if gatewayMerged == nil {
+		return nil, nil
+	}
+
+	// Step 2: Merge Step 1 result over EnvoyGateway defaults. GatewayClass's MergeType controls this step.
+	merged, err := mergeEnvoyProxies(defaultProxy, gatewayMerged, mergeTypeOf(gatewayClassProxy))
+	if err != nil {
+		return nil, fmt.Errorf("failed to merge GatewayClass result with EnvoyGateway defaults: %w", err)
 	}
 
 	return merged, nil
 }
 
-// determineMergeType finds the MergeType to use for a base and override EnvoyProxy.
-func determineMergeType(
-	base *egv1a1.EnvoyProxy,
-	override *egv1a1.EnvoyProxy,
-) egv1a1.MergeType {
-	// Check the override first as that will have higher priority.
-	if override != nil && override.Spec.MergeType != nil {
-		return *override.Spec.MergeType
+// mergeTypeOf returns the MergeType from ep, defaulting to Replace if unset.
+func mergeTypeOf(ep *egv1a1.EnvoyProxy) egv1a1.MergeType {
+	if ep != nil && ep.Spec.MergeType != nil {
+		return *ep.Spec.MergeType
 	}
-
-	if base != nil && base.Spec.MergeType != nil {
-		return *base.Spec.MergeType
-	}
-
-	// No MergeType specified anywhere, return default Replace
 	return egv1a1.Replace
 }
 
-// mergeEnvoyProxies merges an override EnvoyProxy over a base EnvoyProxy.
-// If base is nil, returns override. If override is nil, returns base.
-// For Replace strategy, override completely replaces base (no field-level merging).
-// For StrategicMerge or JSONMerge, fields are merged according to the strategy.
+// mergeEnvoyProxies merges an override EnvoyProxy over a base EnvoyProxy using
+// the given mergeType. If base is nil, override is returned unchanged. If
+// override is nil, base is returned unchanged.
 func mergeEnvoyProxies(
 	base *egv1a1.EnvoyProxy,
 	override *egv1a1.EnvoyProxy,
+	mergeType egv1a1.MergeType,
 ) (*egv1a1.EnvoyProxy, error) {
 	if override == nil {
 		return base, nil
@@ -91,8 +86,6 @@ func mergeEnvoyProxies(
 	if base == nil {
 		return override, nil
 	}
-
-	mergeType := determineMergeType(base, override)
 
 	if mergeType == egv1a1.Replace {
 		return override, nil
