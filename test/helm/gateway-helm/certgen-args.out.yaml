@@ -633,6 +633,7 @@ spec:
       containers:
       - args:
         - --overwrite
+        - --topology-webhook-name=envoy-gateway-topology-injector.envoy-gateway-system
         command:
         - envoy-gateway
         - certgen

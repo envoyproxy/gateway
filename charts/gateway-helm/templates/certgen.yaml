@@ -30,6 +30,8 @@ spec:
       {{- $args := .Values.certgen.job.args }}
       {{- if not .Values.topologyInjector.enabled }}
         {{- $args = append $args "--disable-topology-injector" }}
+      {{- else }}
+        {{- $args = append $args (printf "--topology-webhook-name=envoy-gateway-topology-injector.%s" (include "eg.namespace" .)) }}
       {{- end }}
       {{- if $args }}
       - args:

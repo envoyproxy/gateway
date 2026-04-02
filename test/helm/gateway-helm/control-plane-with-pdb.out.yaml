@@ -646,7 +646,9 @@ spec:
         app: certgen
     spec:
       containers:
-      - command:
+      - args:
+        - --topology-webhook-name=envoy-gateway-topology-injector.envoy-gateway-system
+        command:
         - envoy-gateway
         - certgen
         env:
