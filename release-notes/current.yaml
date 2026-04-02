@@ -61,7 +61,7 @@ bug fixes: |
   Fixed BackendTrafficPolicy `requestBuffer` coexisting with route upgrades by disabling the default WebSocket upgrade on buffered routes and rejecting explicit `requestBuffer` + `httpUpgrade` combinations.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
-
+  BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
 
 # Enhancements that improve performance.
 performance improvements: |
