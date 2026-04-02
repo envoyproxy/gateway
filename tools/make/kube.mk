@@ -9,7 +9,7 @@ ENVTEST_K8S_VERSIONS ?= 1.32.0 1.33.0 1.34.1 1.35.0
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api
 GATEWAY_API_MINOR_VERSION ?= 1.5
-GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).0
+GATEWAY_API_VERSION ?= v$(GATEWAY_API_MINOR_VERSION).1
 
 GATEWAY_API_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}
 EXPERIMENTAL_GATEWAY_API_RELEASE_URL ?= ${GATEWAY_API_RELEASE_URL}/experimental-install.yaml
@@ -299,7 +299,7 @@ setup-mac-net-connect:
 .PHONY: run-e2e
 run-e2e: ## Run e2e tests
 	@$(LOG_TARGET)
-	
+
 ifeq ($(E2E_RUN_TEST),)
 	cd test/ && go test $(E2E_TEST_ARGS) ./e2e $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway  --cleanup-base-resources=false $(E2E_REDIRECT)
 	cd test/ && go test $(E2E_TEST_ARGS) ./e2e/merge_gateways $(E2E_TEST_SUITE_ARGS)  --gateway-class=merge-gateways --cleanup-base-resources=false

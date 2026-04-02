@@ -7,4 +7,8 @@ adopters:
     logo: "/logos/tasrie-it-services.png"
     url: "https://tasrieit.com"
     description: "Enterprise support and consulting for Envoy Gateway and Envoy-based ingress on Kubernetes."
+  - name: "Procedure – Enterprise Support for Envoy Gateway"
+    logo: "/logos/procedure.svg"
+    url: "https://procedure.tech"
+    description: "Cloud-native consulting and enterprise support for Envoy Gateway, API gateway, and Kubernetes ingress deployments."
 

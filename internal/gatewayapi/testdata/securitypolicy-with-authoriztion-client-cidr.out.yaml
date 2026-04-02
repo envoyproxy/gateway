@@ -316,7 +316,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -401,12 +400,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 192.168.1.0/24
                   distinct: false
-                  ip: 192.168.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 192.168.2.0/24
                   distinct: false
-                  ip: 192.168.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
             - action: Deny
@@ -415,12 +414,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.75.1.0/24
                   distinct: false
-                  ip: 10.75.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 10.75.2.0/24
                   distinct: false
-                  ip: 10.75.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
       - destination:
@@ -463,12 +462,12 @@ xdsIR:
                 clientCIDRs:
                 - cidr: 10.0.1.0/24
                   distinct: false
-                  ip: 10.0.1.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
                 - cidr: 10.0.2.0/24
                   distinct: false
-                  ip: 10.0.2.0
+                  invert: false
                   isIPv6: false
                   maskLen: 24
     readyListener:

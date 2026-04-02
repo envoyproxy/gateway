@@ -20,6 +20,7 @@ import (
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
+	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
@@ -446,6 +447,41 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				},
 			}},
 		}
+	case args.loadBalancer.BackendUtilization != nil:
+		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+		v := args.loadBalancer.BackendUtilization
+		if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
+			cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+		}
+		if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
+			cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
+		}
+		if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
+			cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
+		}
+		if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
+			cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
+				SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
+			}
+		}
+		if v.ErrorUtilizationPenaltyPercent != nil {
+			cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
+		}
+		if len(v.MetricNamesForComputingUtilization) > 0 {
+			cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
+		}
+		typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
+					TypedConfig: typedCSWRR,
+				},
+			}},
+		}
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -720,6 +756,10 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 			Value: uint32(1024),
 		},
 	}
+	if circuitBreaker != nil {
+		cbt.RetryBudget = buildCircuitBreakerRetryBudget(circuitBreaker.RetryBudget)
+	}
+
 	cbtPerEndpoint := []*clusterv3.CircuitBreakers_Thresholds{}
 
 	if circuitBreaker != nil {
@@ -766,6 +806,22 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 	}
 
 	return ecb
+}
+
+func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreakers_Thresholds_RetryBudget {
+	if rb == nil {
+		return nil
+	}
+
+	trb := &clusterv3.CircuitBreakers_Thresholds_RetryBudget{
+		BudgetPercent: &xdstype.Percent{
+			Value: rb.Percent,
+		},
+	}
+	if rb.MinRetryConcurrency != 3 {
+		trb.MinRetryConcurrency = wrapperspb.UInt32(rb.MinRetryConcurrency)
+	}
+	return trb
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
@@ -817,7 +873,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, 
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc),
+					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -868,7 +924,7 @@ func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationS
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc),
+					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -919,7 +975,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc),
+					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
 				},
 			},
 			HealthStatus: healthStatus,
@@ -949,14 +1005,48 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildHealthCheckConfig(hc *ir.HealthCheck) *endpointv3.Endpoint_HealthCheckConfig {
-	if hc == nil || hc.Active == nil || hc.Active.Overrides == nil {
+func buildHealthCheckConfig(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) *endpointv3.Endpoint_HealthCheckConfig {
+	if hc == nil || hc.Active == nil {
+		return nil
+	}
+	hostname := getHealthCheckOverridesHostname(hc, ep)
+	port := getHealthCheckOverridesPort(hc)
+
+	if hostname == "" && port == nil {
+		return nil
+	}
+	epHC := &endpointv3.Endpoint_HealthCheckConfig{}
+	if hostname != "" {
+		epHC.Hostname = hostname
+	}
+
+	if port != nil {
+		epHC.PortValue = *port
+	}
+
+	return epHC
+}
+
+func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
+	if hc.Active.Overrides == nil {
 		return nil
 	}
 
-	return &endpointv3.Endpoint_HealthCheckConfig{
-		PortValue: hc.Active.Overrides.Port,
+	return ptr.To(hc.Active.Overrides.Port)
+}
+
+func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
+	// If Active Health Check has an explicit hostname override, it will be used on Cluster.
+	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
+	// so that Envoy can use it for health checking.
+	// Note: The "*" wildcard is not an explicit user-provided hostname
+	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
+		return ""
 	}
+	if ep == nil || ep.Hostname == nil {
+		return ""
+	}
+	return *ep.Hostname
 }
 
 func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
@@ -1354,17 +1444,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 	}
 
 	// Populate traffic features.
-	bt := httpRoute.Traffic
-	if bt != nil {
-		clusterArgs.loadBalancer = bt.LoadBalancer
-		clusterArgs.proxyProtocol = bt.ProxyProtocol
-		clusterArgs.circuitBreaker = bt.CircuitBreaker
-		clusterArgs.healthCheck = bt.HealthCheck
-		clusterArgs.timeout = bt.Timeout
-		clusterArgs.tcpkeepalive = bt.TCPKeepalive
-		clusterArgs.backendConnection = bt.BackendConnection
-		clusterArgs.dns = bt.DNS
-	}
+	applyTraffic(clusterArgs, httpRoute.Traffic)
 
 	return clusterArgs
 }
@@ -1420,6 +1500,23 @@ func buildHTTP2Settings(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		}
 	}
 
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &xdstype.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.IdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.IdleInterval.Duration)
+		}
+		out.ConnectionKeepalive = keepalive
+	}
+
 	return out
 }
 
@@ -1449,6 +1546,8 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.RandomLoadBalancer
 	case loadBalancer.ConsistentHash != nil:
 		fallbackType = ir.ConsistentHashLoadBalancer
+	case loadBalancer.BackendUtilization != nil:
+		fallbackType = ir.BackendUtilizationLoadBalancer
 	default:
 		// Default to LeastRequest if no specific type is set
 		fallbackType = ir.LeastRequestLoadBalancer
@@ -1539,6 +1638,21 @@ func buildFallbackLoadBalancingPolicy(fallbackType ir.LoadBalancerType) (*cluste
 				{
 					TypedExtensionConfig: &corev3.TypedExtensionConfig{
 						Name:        "envoy.load_balancing_policies.maglev",
+						TypedConfig: fallbackPolicyAny,
+					},
+				},
+			},
+		}, nil
+	case ir.BackendUtilizationLoadBalancer:
+		fallbackPolicyAny, err := anypb.New(&cswrrv3.ClientSideWeightedRoundRobin{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal BackendUtilization policy: %w", err)
+		}
+		return &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{
+				{
+					TypedExtensionConfig: &corev3.TypedExtensionConfig{
+						Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
 						TypedConfig: fallbackPolicyAny,
 					},
 				},

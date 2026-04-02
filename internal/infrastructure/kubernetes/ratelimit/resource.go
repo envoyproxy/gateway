@@ -149,6 +149,14 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
+	if enablePrometheus(rateLimit) {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: PrometheusPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:            InfraName,

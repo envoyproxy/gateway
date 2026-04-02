@@ -175,9 +175,11 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
+      grpc:
+        enableGRPCStats: true
+        enableGRPCWeb: true
       hostnames:
       - '*'
-      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -226,7 +228,7 @@ xdsIR:
               - cidrMatch:
                   cidr: 192.168.0.0/16
                   distinct: true
-                  ip: 192.168.0.0
+                  invert: false
                   isIPv6: false
                   maskLen: 16
                 headerMatches: []

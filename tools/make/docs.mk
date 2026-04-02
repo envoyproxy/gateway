@@ -5,6 +5,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
 LINKINATOR_IGNORE := "opentelemetry.io \
+	blog.envoyproxy.io \
 	gateway-api.sigs.k8s.io/reference/1.3 \
 	ntia.gov \
 	github.com \
@@ -47,6 +48,11 @@ docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-syn
 
 .PHONY: docs
 docs: docs-gen docs-check ## Generate docs and verify no changes are needed
+
+.PHONY: sync-benchmark-dashboard
+sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild tracked static assets. Requires VERSION=vX.Y.Z.
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make sync-benchmark-dashboard VERSION=v1.7.1" && exit 1)
+	@./tools/src/benchmark-dashboard-sync/sync.sh --version "$(VERSION)" --force
 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
