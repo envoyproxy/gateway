@@ -342,6 +342,7 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	)
 
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -476,6 +477,7 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
 	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 	if len(deployList.Items) == 0 {
@@ -524,6 +526,7 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
 	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 	if len(dsList.Items) == 0 {
@@ -642,6 +645,7 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
 	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 	if len(hpaList.Items) == 0 {
@@ -690,6 +694,7 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
 	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 	if len(pdbList.Items) == 0 {
