@@ -780,7 +780,9 @@ spec:
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
-                  If not specified, the default upgrade configuration(websocket) will be used.
+                  If not specified, the default upgrade configuration (websocket) will be used.
+                  However, if requestBuffer is configured, the default upgrade configuration
+                  will be ignored.
                 items:
                   description: ProtocolUpgradeConfig specifies the configuration for
                     protocol upgrades.
@@ -833,9 +835,6 @@ spec:
                           - 100 => 1.0x
                           - 120 => 1.2x
                           - 200 => 2.0x
-
-                          Note: In the internal IR/XDS configuration this value is converted back to a
-                          floating point multiplier (value / 100.0).
 
                           Must be non-negative.
                         format: int32
@@ -1352,6 +1351,12 @@ spec:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: |-
+                                          Invert specifies whether the source range match result will be inverted.
+                                          When true, the rule matches when the client IP is not in the specified range(s).
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -1715,6 +1720,12 @@ spec:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: |-
+                                          Invert specifies whether the source range match result will be inverted.
+                                          When true, the rule matches when the client IP is not in the specified range(s).
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -1918,6 +1929,9 @@ spec:
 
                   When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
                   increase in memory usage for Envoy that should be accounted for in your deployment settings.
+
+                  Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
+                  on routes that need those protocols, because requests can hang instead of being forwarded upstream.
                 properties:
                   limit:
                     allOf:
@@ -2858,6 +2872,9 @@ spec:
                 : true '
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: requestBuffer cannot be used together with httpUpgrade
+              rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
+                == 0'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

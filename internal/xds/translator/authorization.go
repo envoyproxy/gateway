@@ -347,7 +347,7 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 
 	for _, cidr := range clientCIDRs {
 		ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
-			AddressPrefix: cidr.IP,
+			AddressPrefix: cidr.AddressPrefix(),
 			PrefixLen: &wrapperspb.UInt32Value{
 				Value: cidr.MaskLen,
 			},

@@ -35,7 +35,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -52,7 +52,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -307,7 +307,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -452,6 +452,13 @@ data:
                 prometheus:
                   host: localhost
                   port: 8888
+        resource:
+          host.name: ${env:OTEL_K8S_NODE_NAME}
+          k8s.namespace.name: ${env:OTEL_K8S_NAMESPACE}
+          k8s.node.ip: ${env:OTEL_K8S_NODE_IP}
+          k8s.node.name: ${env:OTEL_K8S_NODE_NAME}
+          k8s.pod.ip: ${env:OTEL_K8S_POD_IP}
+          k8s.pod.name: ${env:OTEL_K8S_POD_NAME}
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -462,7 +469,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10241,7 +10248,7 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -10268,7 +10275,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10355,7 +10362,7 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -10380,7 +10387,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10502,7 +10509,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -10563,7 +10570,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10725,7 +10732,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.147.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.147.0"
@@ -10745,7 +10752,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 3578231efb501c9805a3b2e1af75f4d4d5afbf18c99906e4aaf9758d3b7f9ac5
+        checksum/config: 4308d6323756ee1d670efa46c6c68342f4ae98184afdd1b6bbe7cff8abb109fc
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10764,7 +10771,7 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.147.0"
+          image: "otel/opentelemetry-collector-contrib:0.149.0"
           imagePullPolicy: IfNotPresent
           ports:
             
@@ -10794,6 +10801,29 @@ spec:
               protocol: TCP
           env:
             - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: OTEL_K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: OTEL_K8S_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: OTEL_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: OTEL_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: OTEL_K8S_POD_IP
               valueFrom:
                 fieldRef:
                   apiVersion: v1
@@ -10828,7 +10858,7 @@ metadata:
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: v3.10.0
-    helm.sh/chart: prometheus-28.13.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10850,14 +10880,14 @@ spec:
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
         app.kubernetes.io/version: v3.10.0
-        helm.sh/chart: prometheus-28.13.0
+        helm.sh/chart: prometheus-28.14.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.89.0"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.90.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
