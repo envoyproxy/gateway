@@ -2697,7 +2697,7 @@ type JSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
 	Type string `json:"type" yaml:"type"`
 	// Name is the name of the resource.
-	// When empty, the patch will be applied to all resources of the specified Type.
+	// When set to wildcard string ("*"), the patch will be applied to all resources of the specified Type.
 	Name string `json:"name" yaml:"name"`
 	// Patch defines the JSON Patch Operation
 	Operation JSONPatchOperation `json:"operation" yaml:"operation"`

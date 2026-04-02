@@ -10,13 +10,13 @@ envoyPatchPolicies:
     namespace: "default"
     jsonPatches:
       - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-        name: ""
+        name: "*"
         operation:
           op: add
           path: "/filter_chains/0/filters/0/typed_config/preserve_external_request_id"
           value: true
       - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-        name: ""
+        name: "*"
         operation:
           op: "add"
           path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
@@ -33,7 +33,7 @@ envoyPatchPolicies:
                     cluster_name: rate-limit-cluster
                 transport_api_version: V3
       - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-        name: ""
+        name: "*"
         operation:
           op: "add"
           path: "/virtual_hosts/0/rate_limits"
@@ -41,7 +41,7 @@ envoyPatchPolicies:
             - actions:
                 - remote_address: {}
       - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-        name: ""
+        name: "*"
         operation:
           op: add
           path: "/altStatName"
@@ -53,7 +53,7 @@ envoyPatchPolicies:
           path: "/endpoints/0/load_balancing_weight"
           value: "50"
       - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-        name: ""
+        name: "*"
         operation:
           op: "replace"
           path: "/tls_certificate/certificate_chain/inline_bytes"
