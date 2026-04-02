@@ -977,6 +977,14 @@ func getRouteRulePathDescriptor(ruleIndex int) string {
 	return "rule-" + strconv.Itoa(ruleIndex) + "-path"
 }
 
+func getRouteRuleMaskedRemoteAddressDescriptor(ruleIndex int) string {
+	return "rule-" + strconv.Itoa(ruleIndex) + "-masked-remote-address"
+}
+
+func getRouteRuleRemoteAddressDescriptor(ruleIndex int) string {
+	return "rule-" + strconv.Itoa(ruleIndex) + "-remote-address"
+}
+
 func getRouteDescriptor(routeName string) string {
 	return routeName
 }
