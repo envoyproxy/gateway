@@ -26,7 +26,7 @@ bug fixes: |
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
-
+  BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
 
 # Enhancements that improve performance.
 performance improvements: |
