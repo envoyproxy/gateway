@@ -69,14 +69,13 @@ xdsIR:
         ancestors:
         - ancestorRef:
             group: gateway.networking.k8s.io
-            kind: Gateway
+            kind: MyGateway
             name: gateway-1
             namespace: envoy-gateway
           conditions:
           - lastTransitionTime: null
-            message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
-              only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
-              is supported.
+            message: TargetRef.Kind:MyGateway is not supported in default mode, only
+              TargetRef.Kind:Gateway is supported.
             reason: Invalid
             status: "False"
             type: Accepted

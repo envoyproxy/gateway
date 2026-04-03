@@ -24,23 +24,112 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		var (
 			ancestorRef gwapiv1.ParentReference
 			resolveErr  *status.PolicyResolveError
-			targetKind  string
 			irKey       string
 		)
 
 		refKind, refName := policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
+
+		// Determine the expected target kind and IR key based on mode
 		if t.MergeGateways {
-			targetKind = resource.KindGatewayClass
-			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L53.
+			// In MergeGateways mode, only GatewayClass targetRef is supported
+			if string(refKind) == resource.KindGateway {
+				// Gateway targetRef is not supported in MergeGateways mode
+				ancestorRef = gwapiv1.ParentReference{
+					Group:     GroupPtr(gwapiv1.GroupName),
+					Kind:      KindPtr(resource.KindGateway),
+					Name:      refName,
+					Namespace: NamespacePtr(policy.Namespace),
+				}
+				
+				message := fmt.Sprintf("TargetRef.Kind:%s is not supported in MergeGateways mode, only TargetRef.Kind:%s is supported.",
+					refKind, resource.KindGatewayClass)
+				resolveErr = &status.PolicyResolveError{
+					Reason:  gwapiv1.PolicyReasonInvalid,
+					Message: message,
+				}
+				
+				// Create a minimal IR entry to publish the error status
+				policyIR := ir.EnvoyPatchPolicy{}
+				policyIR.Name = policy.Name
+				policyIR.Namespace = policy.Namespace
+				policyIR.Generation = policy.Generation
+				policyIR.Status = &policy.Status
+				
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+				
+				// We still need to add this to an IR so the status gets published
+				// Use the GatewayClassName as the key since that's the merged IR key
+				irKey = string(t.GatewayClassName)
+				if gwXdsIR, ok := xdsIR[irKey]; ok {
+					gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+				}
+				
+				continue
+			}
+			
+			// GatewayClass targetRef
 			irKey = string(refName)
 			ancestorRef = gwapiv1.ParentReference{
 				Group: GroupPtr(gwapiv1.GroupName),
-				Kind:  KindPtr(targetKind),
+				Kind:  KindPtr(resource.KindGatewayClass),
 				Name:  refName,
 			}
-
 		} else {
-			targetKind = resource.KindGateway
+			// In default mode, only Gateway targetRef is supported
+			if string(refKind) != resource.KindGateway {
+				// Non-Gateway targetRef is not supported in default mode
+				gatewayNN := types.NamespacedName{
+					Namespace: policy.Namespace,
+					Name:      string(refName),
+				}
+				// GatewayClass is cluster-scoped; other kinds are namespace-scoped
+				var nsPtr *gwapiv1.Namespace
+				if string(refKind) != resource.KindGatewayClass {
+					nsPtr = NamespacePtr(policy.Namespace)
+				}
+				ancestorRef = gwapiv1.ParentReference{
+					Group:     GroupPtr(gwapiv1.GroupName),
+					Kind:      KindPtr(gwapiv1.Kind(refKind)),
+					Name:      refName,
+					Namespace: nsPtr,
+				}
+
+				message := fmt.Sprintf("TargetRef.Kind:%s is not supported in default mode, only TargetRef.Kind:%s is supported.",
+					refKind, resource.KindGateway)
+				resolveErr = &status.PolicyResolveError{
+					Reason:  gwapiv1.PolicyReasonInvalid,
+					Message: message,
+				}
+
+				// Create a minimal IR entry to publish the error status
+				policyIR := ir.EnvoyPatchPolicy{}
+				policyIR.Name = policy.Name
+				policyIR.Namespace = policy.Namespace
+				policyIR.Generation = policy.Generation
+				policyIR.Status = &policy.Status
+
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+
+				// Try to find a matching Gateway IR to attach the status
+				irKey = t.IRKey(gatewayNN)
+				if gwXdsIR, ok := xdsIR[irKey]; ok {
+					gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+				}
+
+				continue
+			}
+
+			// Gateway targetRef
 			gatewayNN := types.NamespacedName{
 				Namespace: policy.Namespace,
 				Name:      string(refName),
@@ -51,7 +140,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
-			// The TargetRef Gateway is not an accepted Gateway, then skip processing.
+			// The TargetRef resource is not found or not accepted, skip processing without status.
+			// Status will not be published for policies targeting non-existent or non-accepted resources.
 			continue
 		}
 
@@ -81,10 +171,10 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			continue
 		}
 
-		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(refKind) != targetKind {
-			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
+		// Validate targetRef group
+		if policy.Spec.TargetRef.Group != gwapiv1.GroupName {
+			message := fmt.Sprintf("TargetRef.Group:%s is not supported, only TargetRef.Group:%s is supported.",
+				policy.Spec.TargetRef.Group, gwapiv1.GroupName)
 
 			resolveErr = &status.PolicyResolveError{
 				Reason:  gwapiv1.PolicyReasonInvalid,
