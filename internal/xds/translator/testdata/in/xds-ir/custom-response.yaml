@@ -98,3 +98,26 @@ http:
                 name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/0
                 response:
                   statusCode: 404
+              - match:
+                  statusCodes:
+                    - value: 500
+                  headers:
+                    - Name: accept
+                      Type: Contains
+                      Value: application/json
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
+                response:
+                  body: eyJlcnJvciI6ICJzZXJ2ZXIgZXJyb3IifQ==
+                  contentType: application/json
+              - match:
+                  statusCodes:
+                    - value: 502
+                    - value: 503
+                  headers:
+                    - Name: x-custom-header
+                      Type: Exact
+                      Value: error-page
+                name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2
+                response:
+                  body: Y3VzdG9tIGVycm9yIHBhZ2U=
+                  contentType: text/plain

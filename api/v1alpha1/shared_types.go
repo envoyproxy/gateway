@@ -780,6 +780,39 @@ type CustomResponseMatch struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
 	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	// Headers specifies request header match conditions to further refine the match.
+	// All specified header conditions must be met (AND logic).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=16
+	Headers []ResponseHeaderMatch `json:"headers,omitempty"`
+}
+
+// ResponseHeaderMatchType specifies the semantics of how HTTP header values should be compared.
+// +kubebuilder:validation:Enum=Exact;Contains
+type ResponseHeaderMatchType string
+
+const (
+	// ResponseHeaderMatchExact matches the header value exactly.
+	ResponseHeaderMatchExact ResponseHeaderMatchType = "Exact"
+	// ResponseHeaderMatchContains matches if the header value contains the specified substring.
+	ResponseHeaderMatchContains ResponseHeaderMatchType = "Contains"
+)
+
+// ResponseHeaderMatch defines a match condition for a request header.
+type ResponseHeaderMatch struct {
+	// Name of the HTTP header to match on.
+	Name string `json:"name"`
+	// Type specifies how to match against the value of the header.
+	// Valid values are Exact and Contains, default is Exact.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *ResponseHeaderMatchType `json:"type,omitempty"`
+	// Value of the HTTP header to match on.
+	//
+	// +optional
+	Value *string `json:"value,omitempty"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.

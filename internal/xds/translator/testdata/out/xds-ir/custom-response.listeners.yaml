@@ -157,6 +157,126 @@
                           '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
                       valueMatch:
                         exact: "403"
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/1
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error": "server error"}'
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "500"
+                      - singlePredicate:
+                          customMatch:
+                            name: cel-matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
+                              exprMatch:
+                                parsedExpr:
+                                  expr:
+                                    callExpr:
+                                      args:
+                                      - constExpr:
+                                          stringValue: application/json
+                                        id: "6"
+                                      function: contains
+                                      target:
+                                        callExpr:
+                                          args:
+                                          - id: "3"
+                                            selectExpr:
+                                              field: headers
+                                              operand:
+                                                id: "4"
+                                                identExpr:
+                                                  name: request
+                                          - constExpr:
+                                              stringValue: accept
+                                            id: "5"
+                                          function: _[_]
+                                        id: "2"
+                                    id: "1"
+                          input:
+                            name: http-attributes-cel-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-for-route/responseoverride/rule/2
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: custom error page
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: text/plain
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - orMatcher:
+                          predicate:
+                          - singlePredicate:
+                              input:
+                                name: http-response-status-code-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                              valueMatch:
+                                exact: "502"
+                          - singlePredicate:
+                              input:
+                                name: http-response-status-code-match-input
+                                typedConfig:
+                                  '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                              valueMatch:
+                                exact: "503"
+                      - singlePredicate:
+                          customMatch:
+                            name: cel-matcher
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.CelMatcher
+                              exprMatch:
+                                parsedExpr:
+                                  expr:
+                                    callExpr:
+                                      args:
+                                      - callExpr:
+                                          args:
+                                          - id: "3"
+                                            selectExpr:
+                                              field: headers
+                                              operand:
+                                                id: "4"
+                                                identExpr:
+                                                  name: request
+                                          - constExpr:
+                                              stringValue: x-custom-header
+                                            id: "5"
+                                          function: _[_]
+                                        id: "2"
+                                      - constExpr:
+                                          stringValue: error-page
+                                        id: "6"
+                                      function: _==_
+                                    id: "1"
+                          input:
+                            name: http-attributes-cel-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/xds.type.matcher.v3.HttpAttributesCelMatchInput
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

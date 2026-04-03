@@ -1755,6 +1755,25 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			StatusCodes: make([]ir.StatusCodeMatch, 0, len(ro.Match.StatusCodes)),
 		}
 
+		if len(ro.Match.Headers) > 0 {
+			match.Headers = make([]ir.ResponseHeaderMatch, len(ro.Match.Headers))
+			for i, h := range ro.Match.Headers {
+				matchType := ir.ResponseHeaderMatchExact
+				if h.Type != nil && *h.Type == egv1a1.ResponseHeaderMatchContains {
+					matchType = ir.ResponseHeaderMatchContains
+				}
+				value := ""
+				if h.Value != nil {
+					value = *h.Value
+				}
+				match.Headers[i] = ir.ResponseHeaderMatch{
+					Name:  h.Name,
+					Type:  matchType,
+					Value: value,
+				}
+			}
+		}
+
 		for _, code := range ro.Match.StatusCodes {
 			if code.Type != nil && *code.Type == egv1a1.StatusCodeValueTypeRange {
 				match.StatusCodes = append(match.StatusCodes, ir.StatusCodeMatch{

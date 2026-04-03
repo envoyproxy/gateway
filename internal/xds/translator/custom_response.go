@@ -106,9 +106,9 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 
 	for _, r := range ro.Rules {
 		var (
-			action    *matcherv3.Matcher_OnMatch_Action
-			predicate *matcherv3.Matcher_MatcherList_Predicate
-			err       error
+			action         *matcherv3.Matcher_OnMatch_Action
+			statusPredicate *matcherv3.Matcher_MatcherList_Predicate
+			err            error
 		)
 
 		if action, err = c.buildAction(r); err != nil {
@@ -120,48 +120,59 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			// This is just a sanity check, as the CRD validation should have caught this.
 			return nil, fmt.Errorf("missing status code in response override rule")
 		case len(r.Match.StatusCodes) == 1:
-			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
+			if statusPredicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
 				return nil, err
 			}
-
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: predicate,
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
-			}
-
-			matchers = append(matchers, matcher)
 		case len(r.Match.StatusCodes) > 1:
 			var predicates []*matcherv3.Matcher_MatcherList_Predicate
 
 			for _, codeMatch := range r.Match.StatusCodes {
-				if predicate, err = c.buildSinglePredicate(codeMatch); err != nil {
+				var p *matcherv3.Matcher_MatcherList_Predicate
+				if p, err = c.buildSinglePredicate(codeMatch); err != nil {
 					return nil, err
 				}
 
-				predicates = append(predicates, predicate)
+				predicates = append(predicates, p)
 			}
 
-			// Create a single matcher that ORs all the predicates together.
-			// The rule will match if any of the codes match.
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: &matcherv3.Matcher_MatcherList_Predicate{
-					MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
-						OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-							Predicate: predicates,
-						},
+			// Create a single predicate that ORs all the status code predicates together.
+			statusPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicates,
 					},
 				},
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
 			}
-
-			matchers = append(matchers, matcher)
 		}
 
+		// If headers are specified, AND each header predicate with the status code predicate.
+		finalPredicate := statusPredicate
+		if len(r.Match.Headers) > 0 {
+			andPredicates := []*matcherv3.Matcher_MatcherList_Predicate{statusPredicate}
+			for _, h := range r.Match.Headers {
+				hp, err := c.buildHeaderCELPredicate(h)
+				if err != nil {
+					return nil, err
+				}
+				andPredicates = append(andPredicates, hp)
+			}
+			finalPredicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: andPredicates,
+					},
+				},
+			}
+		}
+
+		matchers = append(matchers, &matcherv3.Matcher_MatcherList_FieldMatcher{
+			Predicate: finalPredicate,
+			OnMatch: &matcherv3.Matcher_OnMatch{
+				OnMatch: action,
+			},
+		})
 	}
+
 
 	// Create a MatcherList.
 	// The rules will be evaluated in order, and the first match wins.
@@ -365,6 +376,132 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 	return &cncfv3.TypedExtensionConfig{
 		Name:        "cel-matcher",
 		TypedConfig: pb,
+	}, nil
+}
+
+// buildHeaderCELPredicate builds a CEL-based predicate for matching a single request header.
+// For Exact match: request.headers['name'] == value
+// For Contains match: request.headers['name'].contains(value)
+func (c *customResponse) buildHeaderCELPredicate(h ir.ResponseHeaderMatch) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	httpAttributeCELInput, err := c.buildHTTPAttributeCELInput()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build the index expression: request.headers['name']
+	indexExpr := &expr.Expr{
+		Id: 2,
+		ExprKind: &expr.Expr_CallExpr{
+			CallExpr: &expr.Expr_Call{
+				Function: "_[_]",
+				Args: []*expr.Expr{
+					{
+						Id: 3,
+						ExprKind: &expr.Expr_SelectExpr{
+							SelectExpr: &expr.Expr_Select{
+								Operand: &expr.Expr{
+									Id: 4,
+									ExprKind: &expr.Expr_IdentExpr{
+										IdentExpr: &expr.Expr_Ident{
+											Name: "request",
+										},
+									},
+								},
+								Field: "headers",
+							},
+						},
+					},
+					{
+						Id: 5,
+						ExprKind: &expr.Expr_ConstExpr{
+							ConstExpr: &expr.Constant{
+								ConstantKind: &expr.Constant_StringValue{
+									StringValue: h.Name,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	var rootExpr *expr.Expr
+	if h.Type == ir.ResponseHeaderMatchContains {
+		// request.headers['name'].contains(value)
+		rootExpr = &expr.Expr{
+			Id: 1,
+			ExprKind: &expr.Expr_CallExpr{
+				CallExpr: &expr.Expr_Call{
+					Function: "contains",
+					Target:   indexExpr,
+					Args: []*expr.Expr{
+						{
+							Id: 6,
+							ExprKind: &expr.Expr_ConstExpr{
+								ConstExpr: &expr.Constant{
+									ConstantKind: &expr.Constant_StringValue{
+										StringValue: h.Value,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	} else {
+		// request.headers['name'] == value
+		rootExpr = &expr.Expr{
+			Id: 1,
+			ExprKind: &expr.Expr_CallExpr{
+				CallExpr: &expr.Expr_Call{
+					Function: "_==_",
+					Args: []*expr.Expr{
+						indexExpr,
+						{
+							Id: 6,
+							ExprKind: &expr.Expr_ConstExpr{
+								ConstExpr: &expr.Constant{
+									ConstantKind: &expr.Constant_StringValue{
+										StringValue: h.Value,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	matcher := &matcherv3.CelMatcher{
+		ExprMatch: &typev3.CelExpression{
+			ExprSpecifier: &typev3.CelExpression_ParsedExpr{
+				ParsedExpr: &expr.ParsedExpr{
+					Expr: rootExpr,
+				},
+			},
+		},
+	}
+
+	pb, err := proto.ToAnyWithValidation(matcher)
+	if err != nil {
+		return nil, err
+	}
+
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: httpAttributeCELInput,
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "cel-matcher",
+						TypedConfig: pb,
+					},
+				},
+			},
+		},
 	}, nil
 }
 
