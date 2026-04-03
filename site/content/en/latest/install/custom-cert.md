@@ -145,67 +145,27 @@ We use Cert-Manager to manage the certificates. You can install it by following 
 
 5. Now you can follow the helm chart [installation guide](../install-helm) to install envoy gateway with custom certs.
 
-## Non-Disruptive CA Rotation
+## Configurable CA Path for xDS mTLS
 
-When cert-manager rotates the CA certificate (`envoy-gateway-ca`), the leaf cert secrets
-(`envoy`, `envoy-gateway`) still contain the old CA in their `ca.crt` field until they are
-themselves renewed. This causes xDS connection failures (`CERTIFICATE_VERIFY_FAILED`) for
-any proxy pod that reconnects after the old CA expires.
+By default, the CA used for xDS mTLS comes from the `ca.crt` field in the leaf cert
+secrets. You can override this on both the controller and proxy to point at a
+separately managed CA file.
 
-To solve this, use [trust-manager](https://cert-manager.io/docs/trust/trust-manager/) to
-distribute the CA independently, and configure Envoy Gateway to read the CA from that
-separate path.
+### Controller side
 
-### Install trust-manager
-
-trust-manager needs access to the CA secret, so its `trust.namespace` must be set to the
-namespace where the CA issuer secret lives (i.e. the namespace where you created the
-`envoy-gateway-ca` Certificate above).
-
-```shell
-helm install trust-manager jetstack/trust-manager \
-  --namespace cert-manager \
-  --set app.trust.namespace=envoy-gateway-system
-```
-
-### Create a Bundle to sync the CA
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: trust.cert-manager.io/v1alpha1
-kind: Bundle
-metadata:
-  name: envoy-gateway-ca-bundle
-spec:
-  sources:
-  - secret:
-      name: envoy-gateway-ca
-      key: ca.crt
-  target:
-    configMap:
-      key: ca.crt
-    namespaceSelector:
-      matchLabels:
-        kubernetes.io/metadata.name: envoy-gateway-system
-EOF
-```
-
-When the CA rotates, trust-manager immediately syncs the new CA to the
-`envoy-gateway-ca-bundle` ConfigMap.
-
-### Configure Envoy Gateway to use the CA bundle
-
-On the **controller side**, set the CA path and bundle ConfigMap name in your Helm values.
-`xdsTLSCABundle` is the name of the ConfigMap created by trust-manager, and it will be
-mounted at `/ca-bundle` in the controller pod.
+Set these Helm values to mount a ConfigMap containing your CA and tell the controller
+to use it:
 
 ```yaml
+# Path the controller reads the CA from
 xdsTLSCAPath: /ca-bundle/ca.crt
-xdsTLSCABundle: envoy-gateway-ca-bundle
+# ConfigMap to mount at /ca-bundle (must exist in the release namespace)
+xdsTLSCABundle: my-ca-bundle
 ```
 
-On the **proxy side**, set `xdsTLSCAPath` in the EnvoyProxy resource and mount the same
-ConfigMap:
+### Proxy side
+
+Set `xdsTLSCAPath` in the EnvoyProxy resource and mount the CA file:
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -228,15 +188,13 @@ spec:
           volumes:
           - name: ca-bundle
             configMap:
-              name: envoy-gateway-ca-bundle
+              name: my-ca-bundle
 ```
 
-With this configuration, when the CA rotates:
+The controller re-reads the CA file on each TLS handshake. The proxy picks up
+changes via SDS file watch. No pod restarts are required when the CA file is updated.
 
-1. cert-manager updates the `envoy-gateway-ca` secret
-2. trust-manager syncs the new CA to the `envoy-gateway-ca-bundle` ConfigMap
-3. Kubernetes propagates the ConfigMap volume update (~60s)
-4. The controller picks up the new CA on the next TLS handshake
-5. Envoy proxy picks up the new CA via SDS file watch
-
-No pod restarts required.
+The CA file supports multiple PEM-encoded certificates. During a CA rotation,
+include both the old and new CA in the file so that leaf certs signed by either
+CA are accepted. Once all leaf certs have been reissued by the new CA, remove
+the old one.
