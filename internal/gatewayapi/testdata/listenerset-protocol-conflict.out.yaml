@@ -25,7 +25,7 @@ gateways:
       port: 80
       protocol: HTTP
   status:
-    attachedListenerSets: 2
+    attachedListenerSets: 3
     listeners:
     - attachedRoutes: 0
       conditions:
@@ -83,6 +83,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: gateway-conformance-infra/gateway-with-listenerset-protocol-conflict/gateway-conformance-infra/listenerset-invalid-first-should-not-block-valid/valid-http-after-invalid
+        ports:
+        - containerPort: 10081
+          name: http-81
+          protocol: HTTP
+          servicePort: 81
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-with-listenerset-protocol-conflict
@@ -426,6 +432,90 @@ listenerSets:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: ListenerSet
+  metadata:
+    name: listenerset-invalid-first-should-not-block-valid
+    namespace: gateway-conformance-infra
+  spec:
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: invalid-unsupported-protocol-first
+      port: 81
+      protocol: SCTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: valid-http-after-invalid.com
+      name: valid-http-after-invalid
+      port: 81
+      protocol: HTTP
+    parentRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-with-listenerset-protocol-conflict
+      namespace: gateway-conformance-infra
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: ListenersNotValid
+      status: "True"
+      type: Accepted
+    - lastTransitionTime: null
+      message: Some listeners are invalid
+      reason: Programmed
+      status: "True"
+      type: Programmed
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Protocol SCTP is unsupported, must be HTTP, HTTPS, TCP or UDP.
+        reason: UnsupportedProtocol
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: ListenersNotValid
+        status: "False"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: invalid-unsupported-protocol-first
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: No conflicts detected
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      name: valid-http-after-invalid
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 xdsIR:
   gateway-conformance-infra/gateway-with-listenerset-protocol-conflict:
     accessLog:
@@ -523,6 +613,20 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+    - address: 0.0.0.0
+      externalPort: 81
+      hostnames:
+      - valid-http-after-invalid.com
+      metadata:
+        kind: Gateway
+        name: gateway-with-listenerset-protocol-conflict
+        namespace: gateway-conformance-infra
+        sectionName: valid-http-after-invalid
+      name: gateway-conformance-infra/gateway-with-listenerset-protocol-conflict/gateway-conformance-infra/listenerset-invalid-first-should-not-block-valid/valid-http-after-invalid
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10081
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

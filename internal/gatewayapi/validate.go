@@ -743,6 +743,12 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 	for _, gateway := range gateways {
 		portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
+			// Skip unsupported protocols here so invalid listeners do not
+			// participate in protocol winner selection for the port.
+			if !isSupportedListenerProtocol(listener.Protocol) {
+				continue
+			}
+
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
 					hostnames: map[string]int{},
@@ -886,6 +892,16 @@ func getProtocolForListener(listener *ListenerContext) string {
 		protocol = string(listener.Protocol)
 	}
 	return protocol
+}
+
+func isSupportedListenerProtocol(protocol gwapiv1.ProtocolType) bool {
+	switch protocol {
+	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType,
+		gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType:
+		return true
+	default:
+		return false
+	}
 }
 
 func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContext, protocols ...gwapiv1.ProtocolType) {

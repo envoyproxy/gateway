@@ -133,3 +133,30 @@ listenerSets:
           allowedRoutes:
             namespaces:
               from: All
+  # The first listener is invalid due to unsupported protocol and should not block
+  # the following valid listener on the same port.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: ListenerSet
+    metadata:
+      name: listenerset-invalid-first-should-not-block-valid
+      namespace: gateway-conformance-infra
+    spec:
+      parentRef:
+        kind: Gateway
+        group: gateway.networking.k8s.io
+        name: gateway-with-listenerset-protocol-conflict
+        namespace: gateway-conformance-infra
+      listeners:
+        - name: invalid-unsupported-protocol-first
+          port: 81
+          protocol: SCTP
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: valid-http-after-invalid
+          port: 81
+          protocol: HTTP
+          hostname: "valid-http-after-invalid.com"
+          allowedRoutes:
+            namespaces:
+              from: All
