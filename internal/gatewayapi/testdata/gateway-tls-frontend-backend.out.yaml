@@ -156,17 +156,20 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap does-not-exist not found in namespace envoy-gateway'
         reason: InvalidCACertificateRef
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap does-not-exist not found in namespace envoy-gateway'
         reason: InvalidCACertificateRef
         status: "False"
         type: Programmed
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap does-not-exist not found in namespace envoy-gateway'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
@@ -498,7 +501,8 @@ gateways:
     conditions:
     - lastTransitionTime: null
       message: 'Failed to get frontend CA certs for gateway: cross-namespace reference
-        is not permitted by any ReferenceGrant'
+        is not permitted by any ReferenceGrant for caCertificateRef /web-backend-cm
+        (kind: ConfigMap, namespace: default)'
       reason: InvalidParameters
       status: "False"
       type: ResolvedRefs
@@ -529,17 +533,20 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap non-exisitng-cm not found in namespace envoy-gateway'
         reason: InvalidCACertificateRef
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap non-exisitng-cm not found in namespace envoy-gateway'
         reason: InvalidCACertificateRef
         status: "False"
         type: Programmed
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          configmap non-exisitng-cm not found in namespace envoy-gateway'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
@@ -552,17 +559,23 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle
+          in caCertificateRefs'
         reason: InvalidCACertificateKind
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle
+          in caCertificateRefs'
         reason: InvalidCACertificateKind
         status: "False"
         type: Programmed
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle
+          in caCertificateRefs'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
@@ -575,17 +588,23 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          cross-namespace reference is not permitted by any ReferenceGrant for caCertificateRef
+          /web-backend-cm (kind: ConfigMap, namespace: default)'
         reason: RefNotPermitted
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          cross-namespace reference is not permitted by any ReferenceGrant for caCertificateRef
+          /web-backend-cm (kind: ConfigMap, namespace: default)'
         reason: RefNotPermitted
         status: "False"
         type: Programmed
       - lastTransitionTime: null
-        message: Listener has invalid CA certificate for frontend TLS validation.
+        message: 'Listener has invalid caCertificateRef for frontend TLS validation:
+          cross-namespace reference is not permitted by any ReferenceGrant for caCertificateRef
+          /web-backend-cm (kind: ConfigMap, namespace: default)'
         reason: NoValidCACertificate
         status: "False"
         type: Accepted
