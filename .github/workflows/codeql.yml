@@ -17,7 +17,7 @@ permissions:
 jobs:
   analyze:
     name: Analyze
-    runs-on: 'ubuntu-22.04'
+    runs-on: 'ubuntu-latest'
     timeout-minutes: 360
     permissions:
       actions: read
