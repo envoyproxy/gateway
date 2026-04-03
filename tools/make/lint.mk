@@ -125,3 +125,9 @@ lint: lint.release-notes-filenames
 lint.release-notes-filenames: ## Check if release notes filenames follow naming conventions
 	@$(LOG_TARGET)
 	@tools/hack/check-release-notes-filenames.sh
+
+.PHONY: lint.workflows-runs-on
+lint: lint.workflows-runs-on
+lint.workflows-runs-on: ## Check all workflow jobs use ubuntu-latest
+	@$(LOG_TARGET)
+	@tools/hack/check-workflows-runs-on.sh
