@@ -1,3 +1,34 @@
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: BackendTLSPolicy
+  metadata:
+    name: tls-backend-policy
+    namespace: default
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: tls-backend
+    validation:
+      hostname: backend.example.org
+      wellKnownCACertificates: System
+  status:
+    ancestors:
+    - ancestorRef:
+        name: invalid-gateway-backend-client-cert-no-fallback
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -607,6 +638,58 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
+    name: invalid-gateway-backend-client-cert-no-fallback
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 8080
+      protocol: HTTP
+    tls:
+      backend:
+        clientCertificateRef:
+          group: ""
+          kind: ConfigMap
+          name: invalid-kind
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid backend client certificate reference for gateway: invalid
+        client certificate reference kind: ConfigMap'
+      reason: InvalidClientCertificateRef
+      status: "False"
+      type: ResolvedRefs
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
     name: gateway-with-invalid-client-cert-validation
     namespace: envoy-gateway
   spec:
@@ -873,9 +956,56 @@ httpRoutes:
       parentRef:
         name: invalid-default-client-validation-config
         namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: invalid-gateway-backend-client-cert-no-fallback
+    namespace: default
+  spec:
+    hostnames:
+    - mTLS.example.org
+    parentRefs:
+    - name: invalid-gateway-backend-client-cert-no-fallback
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: tls-backend
+        namespace: default
+        port: 443
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: invalid-gateway-backend-client-cert-no-fallback
+        namespace: envoy-gateway
 infraIR:
   envoy-gateway/client-validation-default:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/client-validation-default/https
         ports:
@@ -900,6 +1030,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/client-validation-insecure-fallback:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/client-validation-insecure-fallback/https
         ports:
@@ -924,6 +1068,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/client-validation-per-port-disable-default:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/client-validation-per-port-disable-default/https
         ports:
@@ -948,6 +1106,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/client-validation-per-port-disable-invalid-default:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/client-validation-per-port-disable-invalid-default/https-disable-default-validation
         ports:
@@ -966,6 +1138,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/gateway-tls-frontend-backend:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/gateway-tls-frontend-backend/http
         ports:
@@ -990,6 +1176,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/gateway-with-invalid-client-cert-validation:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/gateway-with-invalid-client-cert-validation/https
         ports:
@@ -1008,6 +1208,20 @@ infraIR:
       namespace: envoy-gateway-system
   envoy-gateway/invalid-default-client-validation-config:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
       listeners:
       - name: envoy-gateway/invalid-default-client-validation-config/http
         ports:
@@ -1023,6 +1237,38 @@ infraIR:
           kind: GatewayClass
           name: envoy-gateway-class
       name: envoy-gateway/invalid-default-client-validation-config
+      namespace: envoy-gateway-system
+  envoy-gateway/invalid-gateway-backend-client-cert-no-fallback:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: backend-client-cert-default
+          namespace: envoy-gateway-system
+        spec:
+          backendTLS:
+            clientCertificateRef:
+              group: ""
+              kind: Secret
+              name: global-backend-client-cert
+          logging: {}
+        status: {}
+      listeners:
+      - name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback/http
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: invalid-gateway-backend-client-cert-no-fallback
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
       namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/client-validation-default:
@@ -1534,6 +1780,84 @@ xdsIR:
           name: invalid-default-client-validation-config
           namespace: default
         name: httproute/default/invalid-default-client-validation-config/rule/0/match/-1/example_org
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+  envoy-gateway/invalid-gateway-backend-client-cert-no-fallback:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-invalid-gateway-backend-client-cer-6dc6606f
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: invalid-gateway-backend-client-cert-no-fallback
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/invalid-gateway-backend-client-cert-no-fallback/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: invalid-gateway-backend-client-cert-no-fallback
+            namespace: default
+          name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.22
+              port: 443
+            metadata:
+              kind: Service
+              name: tls-backend
+              namespace: default
+              sectionName: "443"
+            name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0/backend/0
+            protocol: HTTP
+            tls:
+              alpnProtocols: null
+              caCertificate:
+                name: tls-backend-policy/default-ca
+              sni: backend.example.org
+              useSystemTrustStore: true
+            weight: 1
+        hostname: mTLS.example.org
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: invalid-gateway-backend-client-cert-no-fallback
+          namespace: default
+        name: httproute/default/invalid-gateway-backend-client-cert-no-fallback/rule/0/match/-1/mTLS_example_org
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
