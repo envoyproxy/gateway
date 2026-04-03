@@ -462,6 +462,15 @@ func TestApplyServiceBackendHostname(t *testing.T) {
 		require.Equal(t, "8080", metadata.SectionName)
 	})
 
+	t.Run("ignores missing metadata", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}}}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Nil(t, setting.Endpoints[0].Hostname)
+	})
+
 	t.Run("uses default cluster domain", func(t *testing.T) {
 		translator := &Translator{}
 		setting := &ir.DestinationSetting{
@@ -494,6 +503,52 @@ func TestApplyServiceBackendHostname(t *testing.T) {
 		require.Equal(t, ptr.To("service-1.default.svc.example.internal"), setting.Endpoints[0].Hostname)
 	})
 
+	t.Run("ignores missing name", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind:      resource.KindService,
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Nil(t, setting.Endpoints[0].Hostname)
+	})
+
+	t.Run("ignores missing namespace", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind: resource.KindService,
+				Name: "service-1",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Nil(t, setting.Endpoints[0].Hostname)
+	})
+
+	t.Run("skips nil endpoints and updates valid endpoints", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind:      resource.KindService,
+				Name:      "service-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{nil, &ir.DestinationEndpoint{Host: "10.0.0.1", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostname(setting)
+
+		require.Equal(t, ptr.To("service-1.default.svc.cluster.local"), setting.Endpoints[1].Hostname)
+	})
+
 	t.Run("ignores non-service backends", func(t *testing.T) {
 		translator := &Translator{}
 		setting := &ir.DestinationSetting{
@@ -508,5 +563,30 @@ func TestApplyServiceBackendHostname(t *testing.T) {
 		translator.applyServiceBackendHostname(setting)
 
 		require.Nil(t, setting.Endpoints[0].Hostname)
+	})
+
+	t.Run("applies hostnames across settings slice", func(t *testing.T) {
+		translator := &Translator{}
+		serviceSetting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind:      resource.KindService,
+				Name:      "service-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.1", Port: 8080}},
+		}
+		backendSetting := &ir.DestinationSetting{
+			Metadata: &ir.ResourceMetadata{
+				Kind:      egv1a1.KindBackend,
+				Name:      "backend-1",
+				Namespace: "default",
+			},
+			Endpoints: []*ir.DestinationEndpoint{{Host: "10.0.0.2", Port: 8080}},
+		}
+
+		translator.applyServiceBackendHostnames([]*ir.DestinationSetting{serviceSetting, backendSetting, nil})
+
+		require.Equal(t, ptr.To("service-1.default.svc.cluster.local"), serviceSetting.Endpoints[0].Hostname)
+		require.Nil(t, backendSetting.Endpoints[0].Hostname)
 	})
 }
