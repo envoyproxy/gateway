@@ -531,7 +531,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 				},
 				resources.ReferenceGrants,
 			) {
-				return nil, ErrRefNotPermitted
+				return nil, fmt.Errorf("%w for caCertificateRef %s/%s (kind: %s, namespace: %s)", ErrRefNotPermitted, caRef.Group, caRef.Name, kind, caRefNs)
 			}
 		}
 
@@ -582,7 +582,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 
 	if ca == "" {
 		if !foundSupportedRef {
-			return nil, ErrInvalidCACertificateKind
+			return nil, fmt.Errorf("%w in caCertificateRefs", ErrInvalidCACertificateKind)
 		}
 		return nil, ErrNoValidCACertificate
 	}
