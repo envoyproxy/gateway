@@ -1159,10 +1159,10 @@ spec:
                     needs to be set.
                   rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
                     : !has(self.dynamicModule)'
-                - message: SlowStart is not supported for Random, ConsistentHash,
-                    and DynamicModule load balancers.
+                - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
+                    and BackendUtilization load balancers.
                   rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
-                    ? !has(self.slowStart) : true '
+                    ? !has(self.slowStart) : true'
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
