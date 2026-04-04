@@ -163,7 +163,6 @@ func (t *testingExtensionServer) PostClusterModify(_ context.Context, req *pb.Po
 
 			modifiedCluster.EdsClusterConfig = nil
 			modifiedCluster.LoadAssignment = nil
-			modifiedCluster.LbPolicy = clusterV3.Cluster_CLUSTER_PROVIDED
 			modifiedCluster.CommonLbConfig = nil
 			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_ORIGINAL_DST}
 			poolCount++

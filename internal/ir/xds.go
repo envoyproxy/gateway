@@ -615,6 +615,7 @@ type HTTP1Settings struct {
 	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -2027,6 +2028,10 @@ type URLRewrite struct {
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Host configures the replacement of the request's host header.
 	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
+	// AppendXForwardedHost controls whether the original Host value is appended
+	// to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true when nil.
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty" yaml:"appendXForwardedHost,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -3584,7 +3589,10 @@ type DynamicModule struct {
 	Name string `json:"name"`
 
 	// Path is the absolute filesystem path to the dynamic module shared library.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// Remote is the remote source of the dynamic module shared library.
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
@@ -3600,6 +3608,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// RemoteDynamicModuleSource holds the remote source information for a dynamic module.
+// +k8s:deepcopy-gen=true
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP(S) URL of the dynamic module shared library.
+	URL string `json:"url"`
+
+	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

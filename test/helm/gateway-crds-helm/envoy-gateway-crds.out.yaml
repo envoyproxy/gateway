@@ -1337,9 +1337,6 @@ spec:
                           - 120 => 1.2x
                           - 200 => 2.0x
 
-                          Note: In the internal IR/XDS configuration this value is converted back to a
-                          floating point multiplier (value / 100.0).
-
                           Must be non-negative.
                         format: int32
                         minimum: 0
@@ -1653,7 +1650,7 @@ spec:
                 properties:
                   version:
                     description: |-
-                      Version of ProxyProtol
+                      Version of ProxyProtocol
                       Valid ProxyProtocolVersion values are
                       "V1"
                       "V2"
@@ -4564,6 +4561,41 @@ spec:
                           ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
+                  ignoredUpgradeTypes:
+                    description: |-
+                      IgnoredUpgradeTypes specifies a list of upgrade types for which
+                      HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
+                      rejected with a 403 response. When a client sends an HTTP/1.1 request
+                      with Connection: Upgrade and an Upgrade header matching one of these
+                      matchers, Envoy will strip the upgrade headers and process the request
+                      as a normal HTTP/1.1 request.
+
+                      Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
+                    items:
+                      description: |-
+                        StringMatch defines how to match any strings.
+                        This is a general purpose match condition that can be used by other EG APIs
+                        that need to match against a string.
+                      properties:
+                        type:
+                          default: Exact
+                          description: Type specifies how to match against a string.
+                          enum:
+                          - Exact
+                          - Prefix
+                          - Suffix
+                          - RegularExpression
+                          type: string
+                        value:
+                          description: Value specifies the string value that the match
+                            must have.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                      required:
+                      - value
+                      type: object
+                    type: array
                   preserveHeaderCase:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
@@ -6666,9 +6698,6 @@ spec:
                                     - 120 => 1.2x
                                     - 200 => 2.0x
 
-                                    Note: In the internal IR/XDS configuration this value is converted back to a
-                                    floating point multiplier (value / 100.0).
-
                                     Must be non-negative.
                                   format: int32
                                   minimum: 0
@@ -6984,7 +7013,7 @@ spec:
                           properties:
                             version:
                               description: |-
-                                Version of ProxyProtol
+                                Version of ProxyProtocol
                                 Valid ProxyProtocolVersion values are
                                 "V1"
                                 "V2"
@@ -9043,6 +9072,22 @@ spec:
                           description: |-
                             Remote specifies a module fetched from a remote source.
                             The module binary is downloaded and cached by Envoy.
+                          properties:
+                            sha256:
+                              description: SHA256 checksum that Envoy will use to
+                                verify the downloaded module binary.
+                              pattern: ^[a-f0-9]{64}$
+                              type: string
+                            url:
+                              description: URL is the HTTP or HTTPS URL of the dynamic
+                                module shared library (.so file).
+                              maxLength: 4096
+                              minLength: 1
+                              pattern: ^https?://[^/?#]+(?:[/?#].*)?$
+                              type: string
+                          required:
+                          - sha256
+                          - url
                           type: object
                         type:
                           default: Local
@@ -9059,6 +9104,8 @@ spec:
                         rule: 'self.type == ''Remote'' ? has(self.remote) : !has(self.remote)'
                       - message: If type is Local, local field needs to be set.
                         rule: self.type != 'Local' || has(self.local)
+                      - message: If type is Remote, local field must not be set.
+                        rule: 'self.type == ''Remote'' ? !has(self.local) : true'
                   required:
                   - name
                   - source
@@ -20877,9 +20924,6 @@ spec:
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
 
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
-
                                                       Must be non-negative.
                                                     format: int32
                                                     minimum: 0
@@ -21227,7 +21271,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -22359,9 +22403,6 @@ spec:
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
 
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
-
                                                       Must be non-negative.
                                                     format: int32
                                                     minimum: 0
@@ -22709,7 +22750,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -24000,9 +24041,6 @@ spec:
                                                 - 120 => 1.2x
                                                 - 200 => 2.0x
 
-                                                Note: In the internal IR/XDS configuration this value is converted back to a
-                                                floating point multiplier (value / 100.0).
-
                                                 Must be non-negative.
                                               format: int32
                                               minimum: 0
@@ -24338,7 +24376,7 @@ spec:
                                       properties:
                                         version:
                                           description: |-
-                                            Version of ProxyProtol
+                                            Version of ProxyProtocol
                                             Valid ProxyProtocolVersion values are
                                             "V1"
                                             "V2"
@@ -25556,9 +25594,6 @@ spec:
                                           - 120 => 1.2x
                                           - 200 => 2.0x
 
-                                          Note: In the internal IR/XDS configuration this value is converted back to a
-                                          floating point multiplier (value / 100.0).
-
                                           Must be non-negative.
                                         format: int32
                                         minimum: 0
@@ -25883,7 +25918,7 @@ spec:
                                 properties:
                                   version:
                                     description: |-
-                                      Version of ProxyProtol
+                                      Version of ProxyProtocol
                                       Valid ProxyProtocolVersion values are
                                       "V1"
                                       "V2"
@@ -26124,6 +26159,50 @@ spec:
                                   ResourceAttributes is a set of labels that describe the source of traces.
                                   It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
                                 type: object
+                              sampler:
+                                description: Sampler controls whether spans are exported.
+                                properties:
+                                  samplingPercentage:
+                                    description: |-
+                                      SamplingPercentage controls the percentage of traces to sample.
+                                      Defaults to 100% when not set.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                  type:
+                                    default: AlwaysOn
+                                    description: Type is the sampler type.
+                                    enum:
+                                    - AlwaysOn
+                                    - AlwaysOff
+                                    - TraceIdRatio
+                                    - ParentBasedAlwaysOn
+                                    - ParentBasedAlwaysOff
+                                    - ParentBasedTraceIdRatio
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: samplingPercentage can only be set with
+                                    TraceIdRatio or ParentBasedTraceIdRatio
+                                  rule: 'has(self.samplingPercentage) ? (self.type
+                                    == ''TraceIdRatio'' || self.type == ''ParentBasedTraceIdRatio'')
+                                    : true'
                             type: object
                           port:
                             default: 4317
@@ -26883,6 +26962,12 @@ spec:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
                 properties:
+                  appendXForwardedHost:
+                    description: |-
+                      AppendXForwardedHost controls whether the original Host header value is
+                      appended to the X-Forwarded-Host header when hostname rewriting is configured.
+                      Defaults to true for backward compatibility.
+                    type: boolean
                   hostname:
                     description: |-
                       Hostname is the value to be used to replace the Host header value during
@@ -28519,9 +28604,6 @@ spec:
                                       - 120 => 1.2x
                                       - 200 => 2.0x
 
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
-
                                       Must be non-negative.
                                     format: int32
                                     minimum: 0
@@ -28841,7 +28923,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -29875,9 +29957,6 @@ spec:
                                       - 120 => 1.2x
                                       - 200 => 2.0x
 
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
-
                                       Must be non-negative.
                                     format: int32
                                     minimum: 0
@@ -30197,7 +30276,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -31488,9 +31567,6 @@ spec:
                                             - 120 => 1.2x
                                             - 200 => 2.0x
 
-                                            Note: In the internal IR/XDS configuration this value is converted back to a
-                                            floating point multiplier (value / 100.0).
-
                                             Must be non-negative.
                                           format: int32
                                           minimum: 0
@@ -31817,7 +31893,7 @@ spec:
                                   properties:
                                     version:
                                       description: |-
-                                        Version of ProxyProtol
+                                        Version of ProxyProtocol
                                         Valid ProxyProtocolVersion values are
                                         "V1"
                                         "V2"
@@ -33123,9 +33199,6 @@ spec:
                                       - 120 => 1.2x
                                       - 200 => 2.0x
 
-                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                      floating point multiplier (value / 100.0).
-
                                       Must be non-negative.
                                     format: int32
                                     minimum: 0
@@ -33445,7 +33518,7 @@ spec:
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
