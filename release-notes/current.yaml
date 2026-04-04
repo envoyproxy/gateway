@@ -42,6 +42,7 @@ new features: |
   Added support for invert match in CIDR match RateLimit API.
   Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
+  Added support for patching multiple resources with empty name in EnvoyExtensionPolicy.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.

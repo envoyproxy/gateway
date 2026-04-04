@@ -82,7 +82,9 @@ const (
 type EnvoyJSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
 	Type EnvoyResourceType `json:"type"`
-	// Name is the name of the resource
+	// Name is the name of the resource.
+	// When set to wildcard string ("*"), the patch will be applied to all resources of the specified Type.
+	// When specified, the patch will only be applied to the resource with the matching name.
 	Name string `json:"name"`
 	// Patch defines the JSON Patch Operation
 	Operation JSONPatchOperation `json:"operation"`
