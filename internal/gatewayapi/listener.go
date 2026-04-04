@@ -217,25 +217,11 @@ func validClientCertificateRef(ref *gwapiv1.SecretObjectReference) error {
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
-	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
-	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
-	if t.MergeGateways {
-		t.validateConflictedMergedListeners(gateways)
-	}
 
-	// Iterate through all listeners to validate spec
-	// and compute status for each, and add valid ones
-	// to the Xds IR.
+	// Phase 1: Validate each listener's spec independently.
+	// This must happen before conflict resolution so that invalid listeners
+	// don't block valid ones during conflict detection.
 	for _, gateway := range gateways {
-		irKey := t.getIRKey(gateway.Gateway)
-
-		if gateway.envoyProxy != nil {
-			infraIR[irKey].Proxy.Config = gateway.envoyProxy
-		}
-		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
-		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
-
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -277,9 +263,35 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 
 			// Process Hostname configuration
 			t.validateHostName(listener)
+		}
+	}
 
+	// Phase 2: Run conflict detection.
+	// Only listeners that haven't been marked as invalid will participate in conflict resolution.
+	t.validateConflictedLayer7Listeners(gateways)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	if t.MergeGateways {
+		t.validateConflictedMergedListeners(gateways)
+	}
+
+	// Phase 3: Build IR for valid listeners.
+	for _, gateway := range gateways {
+		irKey := t.getIRKey(gateway.Gateway)
+
+		if gateway.envoyProxy != nil {
+			infraIR[irKey].Proxy.Config = gateway.envoyProxy
+		}
+		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
+		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
+
+		for _, listener := range gateway.listeners {
 			// Process conditions and check if the listener is ready
-			t.validateListenerConditions(listener)
+			isReady := t.validateListenerConditions(listener)
+			if !isReady {
+				// Skip invalid listeners from IR building
+				continue
+			}
 
 			// Skip listeners with invalid frontend TLS validation as they are not functional.
 			if listener.frontendTLSValidationInvalid() {
@@ -421,8 +433,16 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
@@ -503,8 +523,16 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
