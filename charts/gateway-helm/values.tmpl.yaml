@@ -1,3 +1,8 @@
+# -- Override the name of the chart
+nameOverride: ""
+# -- Override the full name of resources
+fullnameOverride: ""
+
 # Global settings
 global:
   # If set, these take highest precedence and change both envoyGateway and ratelimit's container registry and pull secrets.
