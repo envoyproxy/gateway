@@ -25,6 +25,7 @@ In addition to that the entire origin (with or without specifying a scheme) can 
 ### Configuring CORS with SecurityPolicy
 
 The below example defines a SecurityPolicy that allows CORS for requests originating from `http://*.foo.com`.
+It also enables credentialed requests with `allowCredentials: true`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -43,6 +44,7 @@ spec:
   cors:
     allowOrigins:
     - "http://*.foo.com"
+    allowCredentials: true
     allowMethods:
     - GET
     - POST
@@ -73,6 +75,7 @@ spec:
   cors:
     allowOrigins:
     - "http://*.foo.com"
+    allowCredentials: true
     allowMethods:
     - GET
     - POST
@@ -99,6 +102,7 @@ Alternatively, you can configure CORS using the Gateway API's `HTTPCORSFilter`. 
 within an `HTTPRoute` resource, which is simpler if you only need to apply CORS to a specific route.
 
 The below example applies CORS to the `backend` HTTPRoute, allowing requests from `http://*.foo.com`.
+It also enables credentialed requests with `allowCredentials: true`.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -127,6 +131,7 @@ spec:
       cors:
         allowOrigins:
         - "http://*.foo.com"
+        allowCredentials: true
         allowMethods:
         - GET
         - POST
@@ -167,6 +172,7 @@ spec:
       cors:
         allowOrigins:
         - "http://*.foo.com"
+        allowCredentials: true
         allowMethods:
         - GET
         - POST
@@ -211,6 +217,7 @@ You should see the below response, indicating that the request from `http://www.
 
 ```shell
 < access-control-allow-origin: http://www.foo.com
+< access-control-allow-credentials: true
 < access-control-allow-methods: GET, POST
 < access-control-allow-headers: x-header-1, x-header-2
 < access-control-max-age: 86400
