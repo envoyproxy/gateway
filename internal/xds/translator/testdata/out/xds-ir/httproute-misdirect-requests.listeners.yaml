@@ -2,25 +2,37 @@
     socketAddress:
       address: 0.0.0.0
       portValue: 10443
-      protocol: UDP
-  drainType: MODIFY_ONLY
   filterChains:
-  - filterChainMatch:
-      serverNames:
-      - '*.example.com'
-    filters:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        codecType: HTTP3
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
-        http3ProtocolOptions: {}
         httpFilters:
+        - name: set downstream protocol
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
+            onRequestHeaders:
+            - factoryKey: envoy.string
+              formatString:
+                textFormatSource:
+                  inlineString: '%PROTOCOL%'
+              objectKey: eg.downstream_protocol
+              sharedWithUpstream: ONCE
+              skipIfEmpty: true
+        - name: clear route cache
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: |
+                function envoy_on_request(handle)
+                  handle:clearRouteCache()
+                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -32,168 +44,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-wildcard
+          routeConfigName: envoy-gateway/gateway-1/https
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-wildcard
-    transportSocket:
-      name: envoy.transport_sockets.quic
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
-        downstreamTlsContext:
-          commonTlsContext:
-            alpnProtocols:
-            - h3
-            tlsCertificateSdsSecretConfigs:
-            - name: envoy-gateway/tls-secret-1
-              sdsConfig:
-                ads: {}
-                resourceApiVersion: V3
-            tlsParams:
-              tlsMaximumProtocolVersion: TLSv1_3
-              tlsMinimumProtocolVersion: TLSv1_2
-          disableStatefulSessionResumption: true
-          disableStatelessSessionResumption: true
-  - filterChainMatch:
-      serverNames:
-      - foo.example.com
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        codecType: HTTP3
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        http3ProtocolOptions: {}
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-foo
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
-        useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-foo
-    transportSocket:
-      name: envoy.transport_sockets.quic
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
-        downstreamTlsContext:
-          commonTlsContext:
-            alpnProtocols:
-            - h3
-            tlsCertificateSdsSecretConfigs:
-            - name: envoy-gateway/tls-secret-1
-              sdsConfig:
-                ads: {}
-                resourceApiVersion: V3
-            tlsParams:
-              tlsMaximumProtocolVersion: TLSv1_3
-              tlsMinimumProtocolVersion: TLSv1_2
-          disableStatefulSessionResumption: true
-          disableStatelessSessionResumption: true
-  - filterChainMatch:
-      serverNames:
-      - bar.example.com
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        codecType: HTTP3
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        http3ProtocolOptions: {}
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-bar
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
-        useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-bar
-    transportSocket:
-      name: envoy.transport_sockets.quic
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.quic.v3.QuicDownstreamTransport
-        downstreamTlsContext:
-          commonTlsContext:
-            alpnProtocols:
-            - h3
-            tlsCertificateSdsSecretConfigs:
-            - name: envoy-gateway/tls-secret-1
-              sdsConfig:
-                ads: {}
-                resourceApiVersion: V3
-            tlsParams:
-              tlsMaximumProtocolVersion: TLSv1_3
-              tlsMinimumProtocolVersion: TLSv1_2
-          disableStatefulSessionResumption: true
-          disableStatelessSessionResumption: true
-  name: envoy-gateway/gateway-1/https-wildcard-quic
-  udpListenerConfig:
-    downstreamSocketConfig: {}
-    quicOptions: {}
-- address:
-    socketAddress:
-      address: 0.0.0.0
-      portValue: 10443
-  filterChains:
-  - filterChainMatch:
-      serverNames:
-      - '*.example.com'
-    filters:
-    - name: envoy.filters.network.http_connection_manager
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        commonHttpProtocolOptions:
-          headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            suppressEnvoyHeaders: true
-        mergeSlashes: true
-        normalizePath: true
-        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
-        rds:
-          configSource:
-            ads: {}
-            resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-wildcard
-        serverHeaderTransformation: PASS_THROUGH
-        statPrefix: https-10443
-        useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-wildcard
+    name: envoy-gateway/gateway-1/https
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -207,14 +62,11 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-          tlsParams:
-            tlsMaximumProtocolVersion: TLSv1_3
-            tlsMinimumProtocolVersion: TLSv1_2
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
       serverNames:
-      - foo.example.com
+      - second-example.org
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -226,6 +78,25 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - name: set downstream protocol
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
+            onRequestHeaders:
+            - factoryKey: envoy.string
+              formatString:
+                textFormatSource:
+                  inlineString: '%PROTOCOL%'
+              objectKey: eg.downstream_protocol
+              sharedWithUpstream: ONCE
+              skipIfEmpty: true
+        - name: clear route cache
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: |
+                function envoy_on_request(handle)
+                  handle:clearRouteCache()
+                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -237,11 +108,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-foo
+          routeConfigName: envoy-gateway/gateway-1/https-with-hostname
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-foo
+    name: envoy-gateway/gateway-1/https-with-hostname
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -255,14 +126,11 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-          tlsParams:
-            tlsMaximumProtocolVersion: TLSv1_3
-            tlsMinimumProtocolVersion: TLSv1_2
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   - filterChainMatch:
       serverNames:
-      - bar.example.com
+      - '*.wildcard.org'
     filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
@@ -274,6 +142,25 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - name: set downstream protocol
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
+            onRequestHeaders:
+            - factoryKey: envoy.string
+              formatString:
+                textFormatSource:
+                  inlineString: '%PROTOCOL%'
+              objectKey: eg.downstream_protocol
+              sharedWithUpstream: ONCE
+              skipIfEmpty: true
+        - name: clear route cache
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: |
+                function envoy_on_request(handle)
+                  handle:clearRouteCache()
+                end
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -285,11 +172,11 @@
           configSource:
             ads: {}
             resourceApiVersion: V3
-          routeConfigName: envoy-gateway/gateway-1/https-bar
+          routeConfigName: envoy-gateway/gateway-1/https-with-wildcard-hostname
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: https-10443
         useRemoteAddress: true
-    name: envoy-gateway/gateway-1/https-bar
+    name: envoy-gateway/gateway-1/https-with-wildcard-hostname
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
@@ -303,9 +190,70 @@
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
-          tlsParams:
-            tlsMaximumProtocolVersion: TLSv1_3
-            tlsMinimumProtocolVersion: TLSv1_2
+        disableStatefulSessionResumption: true
+        disableStatelessSessionResumption: true
+  - filterChainMatch:
+      serverNames:
+      - fourth-example.wildcard.org
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: set downstream protocol
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.set_filter_state.v3.Config
+            onRequestHeaders:
+            - factoryKey: envoy.string
+              formatString:
+                textFormatSource:
+                  inlineString: '%PROTOCOL%'
+              objectKey: eg.downstream_protocol
+              sharedWithUpstream: ONCE
+              skipIfEmpty: true
+        - name: clear route cache
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            defaultSourceCode:
+              inlineString: |
+                function envoy_on_request(handle)
+                  handle:clearRouteCache()
+                end
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: https-10443
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/https-with-hostname-matching-wildcard
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
+          tlsCertificateSdsSecretConfigs:
+          - name: envoy-gateway/tls-secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
   listenerFilters:
@@ -313,5 +261,5 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
-  name: envoy-gateway/gateway-1/https-wildcard
+  name: envoy-gateway/gateway-1/https
   perConnectionBufferLimitBytes: 32768
