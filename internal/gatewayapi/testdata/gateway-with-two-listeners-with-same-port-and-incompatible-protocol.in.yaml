@@ -21,6 +21,26 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: udp-8162
+          port: 8162
+          protocol: UDP
+        # This listener(http-8162) is valid because HTTP + UDP are compatible protocols.
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: http-8162
+          port: 8162
+          protocol: HTTP
+        # This listener(tcp-8162) is invalid because TCP is not compatible with HTTP.
+        - allowedRoutes:
+            namespaces:
+              from: All
+          name: tcp-8162
+          port: 8162
+          protocol: TCP
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute

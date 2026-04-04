@@ -45,6 +45,16 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
+        status: "True"
+        type: Conflicted
+      - lastTransitionTime: null
+        message: All listeners for a given port must use a compatible protocol
+        reason: ProtocolConflict
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
@@ -69,12 +79,6 @@ infraIR:
         - containerPort: 10162
           name: tcp-162
           protocol: TCP
-          servicePort: 162
-      - name: envoy-gateway/gateway-1/tcp2
-        ports:
-        - containerPort: 10162
-          name: tls-162
-          protocol: TLS
           servicePort: 162
       metadata:
         labels:
@@ -182,12 +186,3 @@ xdsIR:
           name: tcproute-1
           namespace: default
         name: tcproute/default/tcproute-1
-    - address: 0.0.0.0
-      externalPort: 162
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: tcp2
-      name: envoy-gateway/gateway-1/tcp2
-      port: 10162

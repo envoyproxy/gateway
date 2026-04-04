@@ -17,6 +17,7 @@ import (
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
@@ -220,6 +221,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	t.validateConflictedProtocolsListeners(gateways)
 	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
 	}
@@ -235,7 +237,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		}
 		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
-
+		gatewayAttachedListenerSets := sets.New[string]()
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -279,7 +281,19 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			t.validateListenerConditions(listener)
+			isReady := t.validateListenerConditions(listener)
+			if !isReady {
+				// Don't process further or add to the Xds IR if the listener is not ready.
+				continue
+			}
+
+			if listener.isFromListenerSet() {
+				lsKey := types.NamespacedName{
+					Namespace: listener.listenerSet.Namespace,
+					Name:      listener.listenerSet.Name,
+				}.String()
+				gatewayAttachedListenerSets.Insert(lsKey)
+			}
 
 			// Skip listeners with invalid frontend TLS validation as they are not functional.
 			if listener.frontendTLSValidationInvalid() {
@@ -363,10 +377,35 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				t.processInfraIRListener(listener, infraIR, irKey, servicePort, containerPort)
 				foundPorts[irKey] = append(foundPorts[irKey], servicePort)
 			}
+
 		}
+		gateway.IncreaseAttachedListenerSets(uint32(len(gatewayAttachedListenerSets)))
 	}
 
 	t.checkOverlappingTLSConfig(gateways)
+}
+
+// isListenerReady returns true if the listener is ready (Accepted=True and Programmed=True or no conditions yet).
+// A listener is not ready if it has Accepted=False or Programmed=False.
+func isListenerReady(listener *ListenerContext) bool {
+	conditions := listener.GetConditions()
+
+	// No conditions yet means it will be set to ready during validation.
+	if len(conditions) == 0 {
+		return true
+	}
+
+	// Check if Accepted=False or Programmed=False exists.
+	for _, cond := range conditions {
+		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
+			return false
+		}
+		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionFalse {
+			return false
+		}
+	}
+
+	return true
 }
 
 // checkOverlappingTLSConfig checks for overlapping hostnames and certificates between listeners and sets
@@ -377,7 +416,7 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		httpsListeners := []*ListenerContext{}
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType && isListenerReady(listener) {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}
@@ -392,7 +431,7 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		for _, gateway := range gateways {
 			httpsListeners := []*ListenerContext{}
 			for _, listener := range gateway.listeners {
-				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType && isListenerReady(listener) {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}
