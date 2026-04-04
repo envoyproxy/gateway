@@ -30,8 +30,8 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: |-
-          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry
-          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has no key ca.crt and more than one entry.
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has none of the expected keys [ca.crt] and more than one entry
+          TLS: failed to get certificate from ref: ref secret [tls-secret-1] has none of the expected keys [ca.crt] and more than one entry.
         reason: Invalid
         status: "False"
         type: Accepted
