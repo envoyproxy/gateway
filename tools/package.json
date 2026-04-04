@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "markdownlint-cli": "0.47.0",
-    "linkinator": "7.4.0"
+    "linkinator": "7.6.1",
+    "markdownlint-cli": "0.48.0"
   }
 }
