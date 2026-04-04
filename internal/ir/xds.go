@@ -3037,6 +3037,9 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// IgnoreNewHostsUntilFirstHealthCheck prevents newly added hosts
+    // from receiving traffic until they pass their first health check.
+    IgnoreNewHostsUntilFirstHealthCheck *bool
 }
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {

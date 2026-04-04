@@ -158,6 +158,13 @@ type ActiveHealthCheck struct {
 	// from the main service configuration.
 	// +optional
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+
+	// IgnoreNewHostsUntilFirstHealthCheck prevents newly added hosts
+    // from receiving traffic until they pass their first health check.
+    //
+    // This maps to Envoy's common_lb_config.ignore_new_hosts_until_first_hc.
+   // +optional
+   IgnoreNewHostsUntilFirstHealthCheck *bool `json:"ignoreNewHostsUntilFirstHealthCheck,omitempty"`
 }
 
 // ActiveHealthCheckerType is the type of health checker.

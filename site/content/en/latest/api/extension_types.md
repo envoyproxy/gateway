@@ -139,6 +139,7 @@ _Appears in:_
 | `tcp` | _[TCPActiveHealthChecker](#tcpactivehealthchecker)_ |  false  |  | TCP defines the configuration of tcp health checker.<br />It's required while the health checker type is TCP. |
 | `grpc` | _[GRPCActiveHealthChecker](#grpcactivehealthchecker)_ |  false  |  | GRPC defines the configuration of the GRPC health checker.<br />It's optional, and can only be used if the specified type is GRPC. |
 | `overrides` | _[HealthCheckOverrides](#healthcheckoverrides)_ |  false  |  | Overrides defines the configuration of the overriding health check settings for all endpoints<br />in the backend cluster. This allows customization of port and other settings that may differ<br />from the main service configuration. |
+| `ignoreNewHostsUntilFirstHealthCheck` | _boolean_ |  false  |  | IgnoreNewHostsUntilFirstHealthCheck prevents newly added hosts<br />from receiving traffic until they pass their first health check.<br />This maps to Envoy's common_lb_config.ignore_new_hosts_until_first_hc. |
 
 
 #### ActiveHealthCheckPayload
