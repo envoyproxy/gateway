@@ -97,3 +97,8 @@ you may need to configure service annotations or change the service type dependi
 on your Kubernetes environment and network restrictions.
 
 For detailed service configuration options including annotations, service types, and other networking customizations, see [Customize EnvoyProxy](customize-envoyproxy).
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)

@@ -503,6 +503,11 @@ across versions for these reasons
 * Envoy Gateway might alter the xDS translation creating a different xDS output
 such as changing the `name` field of resources.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [EnvoyPatchPolicy API reference](../../../api/extension_types#envoypatchpolicy)
+
 [EnvoyPatchPolicy]: ../../../api/extension_types#envoypatchpolicy
 [EnvoyGateway]: ../../../api/extension_types#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902

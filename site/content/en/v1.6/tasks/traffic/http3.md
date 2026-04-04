@@ -132,6 +132,11 @@ Hence we need external loadbalancer to test this feature out.
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
+
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [ClientTrafficPolicy]: ../../../api/extension_types#clienttrafficpolicy
 [Secret]: https://kubernetes.io/docs/concepts/configuration/secret/

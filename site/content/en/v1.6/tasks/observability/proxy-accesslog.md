@@ -307,3 +307,8 @@ spec:
                   k8s.cluster.name: "cluster-1"
 EOF
 ```
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
