@@ -151,13 +151,6 @@ func (*dynamicForwardProxy) patchRoute(route *routev3.Route, irRoute *ir.HTTPRou
 	filterName := dfpFilterName(dfpCacheName(determineIPFamily(irRoute.Destination.Settings), routeDNS(irRoute)))
 	route.TypedPerFilterConfig[filterName] = perRouteAny
 
-	// Clear out any existing host rewrite specifier to avoid conflicts.
-	routeAction := route.GetRoute()
-	if routeAction != nil {
-		routeAction.HostRewriteSpecifier = nil
-		routeAction.AppendXForwardedHost = false
-	}
-
 	return nil
 }
 
