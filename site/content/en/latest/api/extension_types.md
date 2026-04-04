@@ -1329,6 +1329,26 @@ _Appears in:_
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
 
 
+#### DynamicModuleLBPolicy
+
+
+
+DynamicModuleLBPolicy configures a custom load balancing algorithm
+implemented as a dynamic module (runtime-loaded shared library).
+The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
+
+See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
+| `lbPolicyName` | _string_ |  true  |  | LBPolicyName identifies a specific load balancer implementation within<br />the dynamic module. A single shared library can contain multiple LB<br />policy implementations. This value is passed to the module's<br />initialization function to select the appropriate implementation. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
+
+
 #### DynamicModuleSource
 
 
@@ -2035,7 +2055,7 @@ _Appears in:_
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
-| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 
 
@@ -3699,7 +3719,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization". |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
@@ -3723,6 +3743,7 @@ _Appears in:_
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 | `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
+| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
 
 
 #### LocalDynamicModuleSource
