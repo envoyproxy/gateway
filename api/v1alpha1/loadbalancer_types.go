@@ -14,7 +14,7 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? has(self.backendUtilization) : !has(self.backendUtilization)",message="If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not supported for ConsistentHash load balancers. Use weightedZones instead."
-// +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? !has(self.zoneAware) : true",message="ZoneAware routing is not supported for BackendUtilization load balancers. BackendUtilization only handles picking endpoints within a single locality."
+// +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not currently supported for BackendUtilization load balancers. Only WeightedZones can be used with BackendUtilization."
 // +kubebuilder:validation:XValidation:rule="has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) && has(self.zoneAware.weightedZones)) : true",message="ZoneAware PreferLocal and WeightedZones cannot be specified together."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.

@@ -30,3 +30,14 @@
           clusters:
           - name: route-with-weighted-zones-maglev-dest/backend/0
             weight: 1
+    - match:
+        prefix: /
+      name: route-with-weighted-zones-backend-utilization
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: route-with-weighted-zones-backend-utilization-dest/backend/0
+            weight: 1
