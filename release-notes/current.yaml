@@ -42,6 +42,7 @@ new features: |
   Added support for invert match in CIDR match RateLimit API.
   Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
+  Added `--topology-webhook-name` flag to certgen to explicitly target a MutatingWebhookConfiguration by name.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
@@ -63,6 +64,7 @@ bug fixes: |
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
+  Fixed certgen job unable to find the topology injector webhook when deployed to a custom namespace.
 
 # Enhancements that improve performance.
 performance improvements: |

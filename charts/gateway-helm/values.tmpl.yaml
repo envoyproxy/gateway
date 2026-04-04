@@ -124,6 +124,10 @@ kubernetesClusterDomain: cluster.local
 certgen:
   job:
     annotations: {}
+    # -- Additional arguments to pass to the certgen job.
+    # To explicitly target a MutatingWebhookConfiguration by name (e.g. in multi-tenant
+    # or Kustomize deployments where the webhook name may not match the runtime namespace),
+    # set: args: ["--topology-webhook-name=envoy-gateway-topology-injector.<namespace>"]
     args: []
     pod:
       annotations: {}
