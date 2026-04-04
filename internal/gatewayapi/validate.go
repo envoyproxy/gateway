@@ -341,7 +341,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) bool 
 }
 
 // hasInvalidCondition checks if a listener has been marked as invalid during per-listener validation.
-// A listener is considered invalid if it has Programmed=False or Accepted=False conditions.
+// A listener is considered invalid if it has Programmed=False, Accepted=False, or ResolvedRefs=False
+// (except for the special case of PartiallyInvalidCertificateRef which is allowed).
 // This is used during conflict resolution to skip invalid listeners so they don't block valid ones.
 func hasInvalidCondition(listener *ListenerContext) bool {
 	conditions := listener.GetConditions()
@@ -350,6 +351,13 @@ func hasInvalidCondition(listener *ListenerContext) bool {
 			return true
 		}
 		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+		// ResolvedRefs=False is invalid except for PartiallyInvalidCertificateRef which allows
+		// the listener to still be programmed with valid certificates
+		if cond.Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
+			cond.Status == metav1.ConditionFalse &&
+			cond.Reason != string(status.ListenerReasonPartiallyInvalidCertificateRef) {
 			return true
 		}
 	}

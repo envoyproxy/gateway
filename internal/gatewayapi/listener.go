@@ -433,8 +433,16 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
@@ -515,8 +523,16 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
