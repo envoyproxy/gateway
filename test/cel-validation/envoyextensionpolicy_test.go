@@ -1333,6 +1333,49 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{},
 		},
+		{
+			desc: "invalid ExtProc with FullDuplexStreamed response/request body and invalid body processing mode",
+			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
+				sp.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					ExtProc: []egv1a1.ExtProc{
+						{
+							BackendCluster: egv1a1.BackendCluster{
+								BackendRefs: []egv1a1.BackendRef{
+									{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "grpc-proc-service",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
+										},
+									},
+								},
+							},
+							ProcessingMode: &egv1a1.ExtProcProcessingMode{
+								Request: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+								Response: &egv1a1.ProcessingModeOptions{
+									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+								},
+							},
+							ObservabilityMode: ptr.To(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.extProc[0]: Invalid value:",
+				": If observabilityMode is enabled, body processing mode must be Streamed or unset.",
+			},
+		}
 	}
 
 	for _, tc := range cases {
