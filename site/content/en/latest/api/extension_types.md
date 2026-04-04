@@ -2037,6 +2037,7 @@ _Appears in:_
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
+| `xdsTLSCAPath` | _string_ |  false  |  | XDSTLSCAPath overrides the default CA certificate path (/certs/ca.crt) used for<br />xDS mTLS between the Envoy proxy and the Envoy Gateway controller.<br />When set, the SDS trusted CA config will reference this path instead of the default.<br />This allows using a separately managed CA bundle (e.g. from trust-manager) that<br />updates independently of the leaf certificate secret, enabling non-disruptive CA rotation. |
 
 
 #### EnvoyProxyStatus

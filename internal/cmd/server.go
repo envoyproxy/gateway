@@ -37,8 +37,12 @@ type Runner interface {
 	Close() error
 }
 
-// cfgPath is the path to the EnvoyGateway configuration file.
-var cfgPath string
+var (
+	// cfgPath is the path to the EnvoyGateway configuration file.
+	cfgPath string
+	// xdsTLSCAPath overrides the default CA certificate path for xDS mTLS.
+	xdsTLSCAPath string
+)
 
 // GetServerCommand returns the server cobra command to be executed.
 // This command receives an async error handler to let the main process decide how to
@@ -78,6 +82,8 @@ func GetServerCommand(asyncErrHandler func(string, error)) *cobra.Command {
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
 		"The path to the configuration file.")
+	cmd.PersistentFlags().StringVar(&xdsTLSCAPath, "xds-tls-ca-path", "",
+		"Override the CA certificate path for xDS mTLS. Use with a separately managed CA bundle (e.g. trust-manager) for non-disruptive CA rotation.")
 	return cmd
 }
 
@@ -227,6 +233,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 				ExtensionManager:  extMgr,
 				ProviderResources: channels.pResources,
 				RunnerErrors:      runnerErrors,
+				TLSCaPath:         xdsTLSCAPath,
 			}),
 		},
 		{

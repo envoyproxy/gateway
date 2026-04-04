@@ -144,3 +144,57 @@ We use Cert-Manager to manage the certificates. You can install it by following 
    ```
 
 5. Now you can follow the helm chart [installation guide](../install-helm) to install envoy gateway with custom certs.
+
+## Configurable CA Path for xDS mTLS
+
+By default, the CA used for xDS mTLS comes from the `ca.crt` field in the leaf cert
+secrets. You can override this on both the controller and proxy to point at a
+separately managed CA file.
+
+### Controller side
+
+Set these Helm values to mount a ConfigMap containing your CA and tell the controller
+to use it:
+
+```yaml
+# Path the controller reads the CA from
+xdsTLSCAPath: /ca-bundle/ca.crt
+# ConfigMap to mount at /ca-bundle (must exist in the release namespace)
+xdsTLSCABundle: my-ca-bundle
+```
+
+### Proxy side
+
+Set `xdsTLSCAPath` in the EnvoyProxy resource and mount the CA file:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy
+  namespace: envoy-gateway-system
+spec:
+  xdsTLSCAPath: /ca-bundle/ca.crt
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+          - mountPath: /ca-bundle
+            name: ca-bundle
+            readOnly: true
+        pod:
+          volumes:
+          - name: ca-bundle
+            configMap:
+              name: my-ca-bundle
+```
+
+The controller re-reads the CA file on each TLS handshake. The proxy picks up
+changes via SDS file watch. No pod restarts are required when the CA file is updated.
+
+The CA file supports multiple PEM-encoded certificates. During a CA rotation,
+include both the old and new CA in the file so that leaf certs signed by either
+CA are accepted. Once all leaf certs have been reissued by the new CA, remove
+the old one.

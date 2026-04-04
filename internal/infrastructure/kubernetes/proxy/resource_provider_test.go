@@ -1438,6 +1438,15 @@ func TestConfigMap(t *testing.T) {
 			}),
 		},
 		{
+			name: "custom-ca-path",
+			infra: func() *ir.Infra {
+				i := newTestInfra()
+				i.Proxy.Config = new(egv1a1.EnvoyProxy)
+				i.Proxy.Config.Spec.XDSTLSCAPath = ptr.To("/ca-bundle/ca.crt")
+				return i
+			}(),
+		},
+		{
 			name:                 "gateway-namespace-mode",
 			infra:                newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "ns1", Name: "gateway-1"}),
 			gatewayNamespaceMode: true,
