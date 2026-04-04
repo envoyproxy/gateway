@@ -600,6 +600,53 @@ _Appears in:_
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
 
 
+#### BandwidthLimitDirection
+
+_Underlying type:_ _string_
+
+BandwidthLimitDirection specifies which direction of traffic the bandwidth limit applies to.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Value | Description |
+| ----- | ----------- |
+| `Request` | BandwidthLimitDirectionRequest limits traffic from the client to the upstream.<br /> | 
+| `Response` | BandwidthLimitDirectionResponse limits traffic from the upstream to the client.<br /> | 
+| `Both` | BandwidthLimitDirectionBoth limits traffic in both directions.<br /> | 
+
+
+#### BandwidthLimitResponseTrailers
+
+
+
+
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name with delay metrics.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter.<br />Only effective when Direction is Response or Both. |
+
+
+#### BandwidthLimitSpec
+
+
+
+BandwidthLimitSpec defines the desired state of BandwidthLimit.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-second throughput rate. |
+| `direction` | _[BandwidthLimitDirection](#bandwidthlimitdirection)_ |  true  | Both | Direction controls which traffic direction the bandwidth limit applies to.<br />Request limits traffic from the client to the upstream (ingress).<br />Response limits traffic from the upstream to the client (egress).<br />Both limits traffic in both directions. |
+| `fillInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | FillInterval is the token bucket refill interval.<br />Minimum allowed value is 20ms. Defaults to 50ms if not specified. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | BandwidthLimitResponseTrailers configures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+
+
 #### BasicAuth
 
 
