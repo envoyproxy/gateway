@@ -892,23 +892,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		irTLSConfig.ClientValidationEnabled = true
-		switch mode {
-		case egv1a1.ClientValidationRequest:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationRequireAny:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationVerifyIfGiven:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = false
-		case egv1a1.ClientValidationRequireAndVerify:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		default:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		}
+		convertClientValidationModeType(mode, irTLSConfig)
 
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
