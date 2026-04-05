@@ -6,6 +6,7 @@
 package filters
 
 import (
+	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	grpcstats "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_stats/v3"
 	grpcweb "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
@@ -50,10 +51,17 @@ func init() {
 	}
 }
 
-func GenerateRouterFilter(enableEnvoyHeaders bool) (*hcm.HttpFilter, error) {
-	anyCfg, err := proto.ToAnyWithValidation(&httprouter.Router{
+func GenerateRouterFilter(enableEnvoyHeaders bool, upstreamAccessLogs []*accesslogv3.AccessLog) (*hcm.HttpFilter, error) {
+	routerFilter := &httprouter.Router{
 		SuppressEnvoyHeaders: !enableEnvoyHeaders,
-	})
+		UpstreamLog:          upstreamAccessLogs,
+	}
+	if len(upstreamAccessLogs) > 0 {
+		routerFilter.UpstreamLogOptions = &httprouter.Router_UpstreamAccessLogOptions{
+			FlushUpstreamLogOnUpstreamStream: true,
+		}
+	}
+	anyCfg, err := proto.ToAnyWithValidation(routerFilter)
 	if err != nil {
 		return nil, err
 	}

@@ -8,15 +8,52 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*.*.*"
-      # Exclude rc.0 tags — they’re not real release candidates but markers for main
-      # See: https://github.com/envoyproxy/gateway/issues/7248
-      - "!v*.*.*-rc.0"
 
 
 jobs:
+  verify-build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      - name: Verify Build and Test Success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=$(gh run list \
+            --workflow build_and_test.yaml \
+            --commit ${{ github.sha }} \
+            --limit 1 \
+            --json status,conclusion \
+            --jq '.[0]')
+
+          if [ -z "$RUN" ] || [ "$RUN" = "null" ]; then
+            echo "❌ ERROR: No 'Build and Test' workflow run found for this commit."
+            exit 1
+          fi
+
+          STATUS=$(echo "$RUN" | jq -r '.status')
+          CONCLUSION=$(echo "$RUN" | jq -r '.conclusion')
+          echo "Latest 'Build and Test' run: status=$STATUS, conclusion=$CONCLUSION"
+
+          if [ "$STATUS" != "completed" ]; then
+            echo "❌ ERROR: The latest 'Build and Test' workflow run is still $STATUS."
+            exit 1
+          fi
+
+          if [ "$CONCLUSION" != "success" ]; then
+            echo "❌ ERROR: The latest 'Build and Test' workflow run concluded with: $CONCLUSION"
+            exit 1
+          fi
+
+          echo "✅ SUCCESS: The latest 'Build and Test' workflow succeeded."
+
   # For push event, we run benchmark test here because we need to
   # include benchmark report in the release.
+  # rc.0 tags are branch markers, not real releases — skip the benchmark
+  # so we can still publish the Docker image and Helm chart without a full release run.
   benchmark-test:
+    needs: [verify-build-and-test]
+    if: ${{ !contains(github.ref, '-rc.0') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
@@ -26,7 +63,6 @@ jobs:
       # Benchmark
       - name: Run Benchmark tests
         env:
-          KIND_NODE_TAG: v1.29.10
           IMAGE_PULL_POLICY: IfNotPresent
           # Args for benchmark test
           BENCHMARK_BASELINE_RPS: 100
@@ -48,8 +84,12 @@ jobs:
           path: test/benchmark/benchmark_report.zip
 
   release:
-    runs-on: ubuntu-22.04
-    needs: [benchmark-test]
+    runs-on: ubuntu-latest
+    needs: [verify-build-and-test, benchmark-test]
+    # always() prevents GitHub from auto-skipping this job when benchmark-test is skipped (rc.0).
+    # We explicitly require verify-build-and-test to succeed, and allow benchmark-test to be
+    # either successful (normal release) or skipped (rc.0).
+    if: ${{ always() && needs.verify-build-and-test.result == 'success' && (needs.benchmark-test.result == 'success' || needs.benchmark-test.result == 'skipped') }}
     permissions:
       contents: write
     steps:
@@ -71,9 +111,11 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - name: Retag and push existing gateway-dev image
-        run: |
-          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://docker.io/envoyproxy/gateway:${{ env.release_tag }}
+      - name: Build multiarch binaries
+        run: make build-multiarch
+
+      - name: Build and push multiarch image
+        run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
 
       - name: Generate Release Artifacts
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
@@ -83,7 +125,10 @@ jobs:
           IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
           IMAGE_PULL_POLICY=IfNotPresent OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.without_v_release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
+      # The following steps (benchmark report + GitHub release) are skipped for rc.0 tags.
+      # Docker image and Helm chart (above) still publish for all tags including rc.0.
       - name: Download Benchmark Report
+        if: ${{ !contains(github.ref, '-rc.0') }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: benchmark_report
@@ -92,12 +137,12 @@ jobs:
       # Make the JSON report be part of the release, so it would be easy to integrate with
       # Performance Benchmark Report Explorer
       - name: Unzip Benchmark Report
+        if: ${{ !contains(github.ref, '-rc.0') }}
         run: |
           cd release-artifacts && unzip benchmark_report.zip
 
-      - name: Build egctl multiarch binaries
+      - name: Package EG multiarch binaries
         run: |
-          make build-multiarch
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_darwin_amd64.tar.gz bin/darwin/amd64/envoy-gateway
@@ -109,6 +154,7 @@ jobs:
           zip -r egctl_${{ env.release_tag }}_windows_amd64.zip bin/windows/amd64/egctl
 
       - name: Upload Release Manifests
+        if: ${{ !contains(github.ref, '-rc.0') }}
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
         with:
           files: |

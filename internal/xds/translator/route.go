@@ -59,6 +59,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*rou
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
+	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeadersToRemove(httpListener)...)
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
 		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
@@ -167,7 +168,18 @@ func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
 }
 
 func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
-	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+	if trafficFeatures == nil {
+		return defaultUpgradeConfig
+	}
+
+	if len(trafficFeatures.HTTPUpgrade) == 0 {
+		// If requestBuffer is configured, return nil to disable HTTP upgrades.
+		// Buffering is not compatible with upgrades because the buffer filter waits
+		// for the entire request body before processing, which can cause the client
+		// to time out.
+		if trafficFeatures.RequestBuffer != nil {
+			return nil
+		}
 		return defaultUpgradeConfig
 	}
 
@@ -587,7 +599,9 @@ func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pa
 			}
 		}
 
-		routeAction.AppendXForwardedHost = true
+		if urlRewrite.AppendXForwardedHost == nil || *urlRewrite.AppendXForwardedHost {
+			routeAction.AppendXForwardedHost = true
+		}
 	}
 
 	return routeAction

@@ -1337,6 +1337,17 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: ErrLoadBalancerInvalid,
 		},
+		{
+			name: "backend utilization set",
+			input: LoadBalancer{
+				BackendUtilization: &BackendUtilization{
+					BlackoutPeriod:                     MetaV1DurationPtr(30 * time.Second),
+					WeightExpirationPeriod:             MetaV1DurationPtr(10 * time.Second),
+					WeightUpdatePeriod:                 MetaV1DurationPtr(1 * time.Second),
+					MetricNamesForComputingUtilization: []string{"named_metrics.foo"},
+				},
+			},
+		},
 	}
 	for i := range tests {
 		test := tests[i]
