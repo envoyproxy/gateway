@@ -693,6 +693,54 @@ $ curl -L -vvv --header "Host: host.header.rewrite.example" --header "x-custom-h
 You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided
 `x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
 
+## Disabling X-Forwarded-Host Header
+
+By default, when hostname rewriting is configured, Envoy Gateway appends the original `Host` header value to the
+`X-Forwarded-Host` header on upstream requests. You can disable this behavior by setting `appendXForwardedHost` to
+`false` in the [HTTPRouteFilter][] API.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-no-xfh
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host
+    appendXForwardedHost: false
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-no-xfh
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host
+    appendXForwardedHost: false
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+When `appendXForwardedHost` is set to `false`, the `X-Forwarded-Host` header will not be added to the upstream
+request even though the host is being rewritten. This is useful when the upstream service does not need or should
+not receive the original host information.
 
 [HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter

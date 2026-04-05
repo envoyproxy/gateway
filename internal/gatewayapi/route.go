@@ -1894,7 +1894,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			Port:        parentRef.Port,
 		},
 		resources,
-		envoyProxy,
+		gatewayCtx,
 	)
 	if tlsErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)
