@@ -68,8 +68,6 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// Gateway's MergeType controls step 1 (gateway over gatewayclass).
-			// GatewayClass has no MergeType so step 2 is Replace (defaults discarded).
 			name: "gateway mergeType controls gateway-over-gatewayclass step",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
@@ -91,8 +89,6 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// Gateway has no MergeType → step 1 is Replace, gatewayclass fields discarded.
-			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
 			name: "gateway nil mergeType - step1 Replace discards gatewayclass fields",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
@@ -117,8 +113,6 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
-			name: "gatewayclass nil mergeType - step2 Replace discards defaults",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 				Logging: egv1a1.ProxyLogging{
@@ -137,9 +131,7 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// Gateway StrategicMerge → step 1 merges gateway+gatewayclass fields.
-			// GatewayClass has no MergeType → step 2 is Replace, defaults discarded.
-			name: "gateway StrategicMerge - merges gateway+gatewayclass, defaults discarded",
+			name: "gateway StrategicMerge - merges gateway+gatewayclass and defaults",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
@@ -170,8 +162,37 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// GatewayClass StrategicMerge → step 2 merges step-1 result with defaults.
-			// No gateway proxy, so step 1 result is just the gatewayclass proxy.
+			name: "gateway StrategicMerge propagates to defaults merge - preserves default-only fields",
+			defaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](4),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+			},
+			gatewayClassProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: ptr.To[int32](8),
+				},
+			},
+			gatewayProxy: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeType:   ptr.To(egv1a1.StrategicMerge),
+					Concurrency: ptr.To[int32](16),
+				},
+			},
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				MergeType:   ptr.To(egv1a1.StrategicMerge),
+				Concurrency: ptr.To[int32](16),
+				Logging: egv1a1.ProxyLogging{
+					Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+						egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					},
+				},
+			},
+		},
+		{
 			name: "gatewayclass StrategicMerge - merges result with defaults",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
@@ -203,8 +224,6 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			},
 		},
 		{
-			// MergeType in defaultSpec is treated as an ordinary data field and has
-			// no effect on merge behavior. GatewayClass nil MergeType → Replace.
 			name: "defaultSpec mergeType has no effect on merge strategy",
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				MergeType:   ptr.To(egv1a1.StrategicMerge),

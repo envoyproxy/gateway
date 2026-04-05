@@ -24,7 +24,7 @@ import (
 // Step 2 - Step 1 result over EnvoyGateway defaults:
 //   - base: defaultSpec
 //   - override: Step 1 result
-//   - mergeType: gatewayClassProxy.Spec.MergeType (nil → Replace)
+//   - mergeType: gatewayClassProxy.Spec.MergeType if set, else gatewayProxy.Spec.MergeType (nil → Replace)
 //
 // The MergeType field in EnvoyGateway defaultSpec has no effect on merge
 // behavior; it is treated as an ordinary data field.
@@ -55,8 +55,9 @@ func MergeEnvoyProxyConfigs(
 		return nil, nil
 	}
 
-	// Step 2: Merge Step 1 result over EnvoyGateway defaults. GatewayClass's MergeType controls this step.
-	merged, err := mergeEnvoyProxies(defaultProxy, gatewayMerged, mergeTypeOf(gatewayClassProxy))
+	// Step 2: Merge Step 1 result over EnvoyGateway defaults. GatewayClass's MergeType controls
+	// this step, falling back to the Gateway's MergeType so a non-nil value propagates upward.
+	merged, err := mergeEnvoyProxies(defaultProxy, gatewayMerged, mergeTypeOf(gatewayClassProxy, gatewayProxy))
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge GatewayClass result with EnvoyGateway defaults: %w", err)
 	}
@@ -64,10 +65,14 @@ func MergeEnvoyProxyConfigs(
 	return merged, nil
 }
 
-// mergeTypeOf returns the MergeType from ep, defaulting to Replace if unset.
-func mergeTypeOf(ep *egv1a1.EnvoyProxy) egv1a1.MergeType {
-	if ep != nil && ep.Spec.MergeType != nil {
-		return *ep.Spec.MergeType
+// mergeTypeOf returns the first non-nil MergeType from the given proxies,
+// defaulting to Replace if none is set. This allows a more specific proxy's
+// MergeType to propagate upward when a less specific proxy has none set.
+func mergeTypeOf(proxies ...*egv1a1.EnvoyProxy) egv1a1.MergeType {
+	for _, ep := range proxies {
+		if ep != nil && ep.Spec.MergeType != nil {
+			return *ep.Spec.MergeType
+		}
 	}
 	return egv1a1.Replace
 }
