@@ -33,7 +33,7 @@ func MergeFunctionOptionFn(name protoreflect.FullName, function MergeFunction) O
 
 // ReplaceMergeFn instead of merging all subfields one by one, takes src and set it to dest
 var ReplaceMergeFn MergeFunction = func(dst, src protoreflect.Message) {
-	dst.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+	dst.Range(func(fd protoreflect.FieldDescriptor, _ protoreflect.Value) bool {
 		dst.Clear(fd)
 		return true
 	})

@@ -23,9 +23,11 @@ xds:
             transportApiVersion: V3
           cdsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           ldsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
         layeredRuntime:
           layers:
@@ -189,6 +191,7 @@ xds:
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
                       domain: eag-ratelimit
+                      disableXEnvoyRatelimitedHeader: true
                       failureModeDeny: true
                       rateLimitService:
                         grpcService:

@@ -18,6 +18,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
     security:
       oidc:
         name: securitypolicy/default/policy-for-first-route
@@ -41,6 +42,7 @@ http:
         defaultTokenTTL: 1h
         refreshToken: true
         defaultRefreshTokenTTL: 48h
+        csrfTokenTTL: 35m
   - name: "second-route"
     hostname: "*"
     pathMatch:
@@ -51,6 +53,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
     security:
       oidc:
         name: securitypolicy/default/policy-for-second-route
@@ -68,9 +71,27 @@ http:
         - api
         redirectURL: "https://www.example.com/bar/oauth2/callback"
         redirectPath: "/bar/oauth2/callback"
+        denyRedirect:
+          headers:
+          - name: test-exact
+            type: Exact
+            value: /api
+          - name: test-regex
+            type: RegularExpression
+            value: .*
+          - name: test-suffix
+            type: Suffix
+            value: bar
+          - name: test-prefix
+            type: Prefix
+            value: foo
+          - name: test-no-type
+            value: foobar
         logoutPath: "/bar/logout"
         cookieSuffix: 5f93c2e4
         cookieNameOverrides:
           idToken: "CustomIdTokenOverride"
           accessToken: "CustomAccessTokenOverride"
         cookieDomain: "example.com"
+        disableTokenEncryption: true
+        refreshToken: false

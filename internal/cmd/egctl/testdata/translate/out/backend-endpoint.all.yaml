@@ -1,7 +1,39 @@
-backends:
-- kind: Backend
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
+    name: example-com-tls-policy
+    namespace: envoy-gateway-system
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend
+    validation:
+      hostname: www.example.com
+      wellKnownCACertificates: System
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
     name: backend
     namespace: envoy-gateway-system
   spec:
@@ -9,6 +41,7 @@ backends:
     - ip:
         address: 0.0.0.0
         port: 3000
+    type: Endpoints
   status:
     conditions:
     - lastTransitionTime: null
@@ -16,12 +49,48 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: ext-proc-example
+    namespace: envoy-gateway-system
+  spec:
+    extProc:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: grpc-ext-proc
+        port: 9002
+        weight: 1
+      failOpen: false
+      processingMode:
+        request: {}
+        response:
+          body: Streamed
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: eg
+        namespace: envoy-gateway-system
+      conditions:
+      - lastTransitionTime: null
+        message: 'ExtProc: service envoy-gateway-system/grpc-ext-proc not found.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
-    namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status:
@@ -32,15 +101,18 @@ gatewayClass:
       status: "True"
       type: Accepted
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
   spec:
     gatewayClassName: eg
     listeners:
-    - name: http
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http
       port: 80
       protocol: HTTP
   status:
@@ -69,21 +141,24 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- kind: HTTPRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
     hostnames:
     - www.example.com
     parentRefs:
-    - name: eg
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
     rules:
     - backendRefs:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend
+        weight: 1
       matches:
       - path:
           type: PathPrefix
@@ -103,4 +178,6 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: eg

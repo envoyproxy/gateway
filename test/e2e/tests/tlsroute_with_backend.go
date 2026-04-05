@@ -14,15 +14,15 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	tlsutils "sigs.k8s.io/gateway-api/conformance/utils/tls"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, TLSRouteBackendFQDNTest)
-	ConformanceTests = append(ConformanceTests, TLSRouteBackendIPTest)
+	ConformanceTests = append(ConformanceTests, TLSRouteBackendFQDNTest, TLSRouteBackendIPTest)
 }
 
 var TLSRouteBackendFQDNTest = suite.ConformanceTest{
-	ShortName:   "TLSRouteBackendFQDNTest",
+	ShortName:   "TLSRouteBackendFQDN",
 	Description: "TLSRoutes with a backend ref to a Backend",
 	Manifests: []string{
 		"testdata/tlsroute-to-backend-fqdn.yaml",
@@ -82,28 +82,18 @@ func testTLSRouteWithBackend(t *testing.T, suite *suite.ConformanceTestSuite, ro
 			Path: "/",
 		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
 
-	req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-
 	// This test uses the same key/cert pair as both a client cert and server cert
 	// Both backend and client treat the self-signed cert as a trusted CA
-	cPem, keyPem, err := GetTLSSecret(suite.Client, certNN)
+	serverCertificate, _, _, err := GetTLSSecret(suite.Client, certNN)
 	if err != nil {
 		t.Fatalf("unexpected error finding TLS secret: %v", err)
 	}
 
-	WaitForConsistentMTLSResponse(
-		t,
-		suite.RoundTripper,
-		req,
-		expected,
-		suite.TimeoutConfig.RequiredConsecutiveSuccesses,
-		suite.TimeoutConfig.MaxTimeToConsistency,
-		cPem,
-		keyPem,
-		"example.com")
+	tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig,
+		gwAddr, serverCertificate, nil, nil, "example.com", expected)
 }

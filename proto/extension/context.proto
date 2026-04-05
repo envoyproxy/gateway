@@ -29,6 +29,21 @@ message PostVirtualHostExtensionContext {
 }
 
 
+// PostClusterExtensionContext provides context information for cluster modification
+// additional context information can be added to this message as more use-cases are discovered
+message PostClusterExtensionContext {
+    // Resources introduced by the extension that were used as custom backendRefs
+    repeated ExtensionResource backend_extension_resources = 1;
+}
+
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
+// additional context information can be added to this message as more use-cases are discovered
+message PostEndpointsExtensionContext {
+
+}
+
+
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
@@ -43,13 +58,15 @@ message PostHTTPListenerExtensionContext {
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
 message PostTranslateExtensionContext {
-
+    // Resources/Policies introduced by the extension that were used as extension server
+    // policies targeting the clusters
+    repeated ExtensionResource extension_resources = 1;
 }
 
 
 // ExtensionResource stores the data for a K8s API object referenced in an HTTPRouteFilter
 // extensionRef. It is constructed from an unstructured.Unstructured marshalled to JSON. An extension
-// can marshal the bytes from this resource back into an unstructured.Unstructured and then 
+// can marshal the bytes from this resource back into an unstructured.Unstructured and then
 // perform type checking to obtain the resource.
 message ExtensionResource {
     bytes unstructured_bytes = 1;

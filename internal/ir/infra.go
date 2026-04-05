@@ -6,21 +6,20 @@
 package ir
 
 import (
-	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
 
-	"golang.org/x/exp/slices"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
-	DefaultProxyName = "default"
+	DefaultProxyName       = "default"
+	MaxPort          int32 = 65535
 )
 
 // Infra defines managed infrastructure.
@@ -47,6 +46,8 @@ type ProxyInfra struct {
 	Metadata *InfraMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// Name is the name used for managed proxy infrastructure.
 	Name string `json:"name" yaml:"name"`
+	// Namespace is the namespace used for managed proxy infrastructure.
+	Namespace string `json:"namespace" yaml:"namespace"`
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *egv1a1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 	// Listeners define the listeners exposed by the proxy infrastructure.
@@ -54,6 +55,27 @@ type ProxyInfra struct {
 	// Addresses contain the external addresses this gateway has been
 	// requested to be available at.
 	Addresses []string `json:"addresses,omitempty" yaml:"addresses,omitempty"`
+	// ResolvedMetricSinks contains pre-resolved OpenTelemetry metric sink destinations.
+	// This is populated during gateway-api translation when BackendRefs point to Backend resources.
+	ResolvedMetricSinks []ResolvedMetricSink `json:"resolvedMetricSinks,omitempty" yaml:"resolvedMetricSinks,omitempty"`
+}
+
+// ResolvedMetricSink defines a resolved OpenTelemetry metrics sink.
+// Follows the same pattern as ir.Tracing: uses RouteDestination for endpoint+TLS and gwapiv1.HTTPHeader for headers.
+// +k8s:deepcopy-gen=true
+type ResolvedMetricSink struct {
+	// Destination contains the endpoint and TLS configuration.
+	Destination RouteDestination `json:"destination" yaml:"destination"`
+	// Authority is the gRPC authority header value (typically SNI or hostname).
+	Authority string `json:"authority,omitempty" yaml:"authority,omitempty"`
+	// Headers to send with OTLP export requests.
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty" yaml:"headers,omitempty"`
+	// ResourceAttributes is a map of resource attributes for the metrics sink.
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty" yaml:"resourceAttributes,omitempty"`
+	// ReportCountersAsDeltas configures counters to use delta temporality.
+	ReportCountersAsDeltas bool `json:"reportCountersAsDeltas,omitempty" yaml:"reportCountersAsDeltas,omitempty"`
+	// ReportHistogramsAsDeltas configures histograms to use delta temporality.
+	ReportHistogramsAsDeltas bool `json:"reportHistogramsAsDeltas,omitempty" yaml:"reportHistogramsAsDeltas,omitempty"`
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.
@@ -65,6 +87,8 @@ type InfraMetadata struct {
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
 	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
+	// OwnerReference define the values that be used to set ownerReference for proxy infrastructure objects.
+	OwnerReference *ResourceMetadata `json:"ownerReference,omitempty" yaml:"ownerReference,omitempty"`
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.
@@ -72,8 +96,6 @@ type InfraMetadata struct {
 type ProxyListener struct {
 	// Name of the ProxyListener
 	Name string `json:"name" yaml:"name"`
-	// Address is the address that the listener should listen on.
-	Address *string `json:"address" yaml:"address"`
 	// Ports define network ports of the listener.
 	Ports []ListenerPort `json:"ports,omitempty" yaml:"ports,omitempty"`
 	// HTTP3 provides HTTP/3 configuration on the listener.
@@ -82,9 +104,7 @@ type ProxyListener struct {
 }
 
 // HTTP3Settings provides HTTP/3 configuration on the listener.
-type HTTP3Settings struct {
-	QUICPort int32 `json:"quicPort" yaml:"quicPort"`
-}
+type HTTP3Settings struct{}
 
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true
@@ -225,10 +245,10 @@ func (p *ProxyInfra) Validate() error {
 				if len(listener.Ports[j].Name) == 0 {
 					errs = append(errs, errors.New("listener name field required"))
 				}
-				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
+				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > MaxPort {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
 				}
-				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > 65353 {
+				if listener.Ports[j].ContainerPort < 1 || listener.Ports[j].ContainerPort > MaxPort {
 					errs = append(errs, errors.New("listener container port must be a valid port number"))
 				}
 			}
@@ -244,21 +264,4 @@ func (p *ProxyInfra) ObjectName() string {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
 	}
 	return "envoy-" + p.Name
-}
-
-// Equal implements the Comparable interface used by watchable.DeepEqual to skip unnecessary updates.
-func (p *ProxyInfra) Equal(y *ProxyInfra) bool {
-	// Deep copy to avoid modifying the original ordering.
-	p = p.DeepCopy()
-	p.sort()
-	y = y.DeepCopy()
-	y.sort()
-	return reflect.DeepEqual(p, y)
-}
-
-// sort ensures the listeners are in a consistent order.
-func (p *ProxyInfra) sort() {
-	slices.SortFunc(p.Listeners, func(l1, l2 *ProxyListener) int {
-		return cmp.Compare(l1.Name, l2.Name)
-	})
 }

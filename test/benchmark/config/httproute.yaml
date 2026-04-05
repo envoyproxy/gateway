@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: "{REF_GATEWAY_NAME}"
   hostnames:
-    - "www.benchmark.com"
+    - "{HTTPROUTE_HOSTNAME}"
   rules:
     - backendRefs:
         - group: ""

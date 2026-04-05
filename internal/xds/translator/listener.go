@@ -7,13 +7,13 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
-	mutation_rulesv3 "github.com/envoyproxy/go-control-plane/envoy/config/common/mutation_rules/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -25,12 +25,14 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	customheaderv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/custom_header/v3"
 	xffv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/original_ip_detection/xff/v3"
+	uuidv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/request_id/uuid/v3"
 	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/proto"
+	protobuf "google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -38,7 +40,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
@@ -52,14 +54,15 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/connection_limit/v3/connection_limit.proto
-	networkConnectionLimit = "envoy.filters.network.connection_limit"
+	networkConnectionLimit                    = "envoy.filters.network.connection_limit"
+	defaultMaxAcceptConnectionsPerSocketEvent = 1
 )
 
 func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts == nil {
 		return nil
 	}
-	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil {
+	if !opts.EnableTrailers && !opts.PreserveHeaderCase && opts.HTTP10 == nil && len(opts.IgnoredUpgradeTypes) == 0 {
 		return nil
 	}
 	// If PreserveHeaderCase is true and EnableTrailers is false then setting the EnableTrailers field to false
@@ -68,7 +71,7 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 		EnableTrailers: opts.EnableTrailers,
 	}
 	if opts.PreserveHeaderCase {
-		preservecaseAny, _ := protocov.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
+		preservecaseAny, _ := proto.ToAnyWithValidation(&preservecasev3.PreserveCaseFormatterConfig{})
 		r.HeaderKeyFormat = &corev3.Http1ProtocolOptions_HeaderKeyFormat{
 			HeaderFormat: &corev3.Http1ProtocolOptions_HeaderKeyFormat_StatefulFormatter{
 				StatefulFormatter: &corev3.TypedExtensionConfig{
@@ -81,6 +84,13 @@ func http1ProtocolOptions(opts *ir.HTTP1Settings) *corev3.Http1ProtocolOptions {
 	if opts.HTTP10 != nil {
 		r.AcceptHttp_10 = true
 		r.DefaultHostForHttp_10 = ptr.Deref(opts.HTTP10.DefaultHost, "")
+	}
+	if len(opts.IgnoredUpgradeTypes) > 0 {
+		matchers := make([]*matcherv3.StringMatcher, 0, len(opts.IgnoredUpgradeTypes))
+		for _, m := range opts.IgnoredUpgradeTypes {
+			matchers = append(matchers, buildXdsStringMatcher(m))
+		}
+		r.IgnoreHttp_11Upgrade = matchers
 	}
 	return r
 }
@@ -106,6 +116,23 @@ func http2ProtocolOptions(opts *ir.HTTP2Settings) *corev3.Http2ProtocolOptions {
 		out.OverrideStreamErrorOnInvalidHttpMessage = &wrapperspb.BoolValue{
 			Value: *opts.ResetStreamOnError,
 		}
+	}
+
+	if opts.ConnectionKeepalive != nil {
+		keepalive := &corev3.KeepaliveSettings{}
+		if opts.ConnectionKeepalive.Interval != nil {
+			keepalive.Interval = durationpb.New(opts.ConnectionKeepalive.Interval.Duration)
+		}
+		if opts.ConnectionKeepalive.Timeout != nil {
+			keepalive.Timeout = durationpb.New(opts.ConnectionKeepalive.Timeout.Duration)
+		}
+		if opts.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = &typev3.Percent{Value: float64(*opts.ConnectionKeepalive.IntervalJitter)}
+		}
+		if opts.ConnectionKeepalive.IdleInterval != nil {
+			keepalive.ConnectionIdleInterval = durationpb.New(opts.ConnectionKeepalive.IdleInterval.Duration)
+		}
+		out.ConnectionKeepalive = keepalive
 	}
 
 	return out
@@ -137,7 +164,7 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 			rejectWithStatus = &typev3.HttpStatus{Code: typev3.StatusCode_Forbidden}
 		}
 
-		customHeaderConfigAny, _ := protocov.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
+		customHeaderConfigAny, _ := proto.ToAnyWithValidation(&customheaderv3.CustomHeaderConfig{
 			HeaderName:       clientIPDetection.CustomHeader.Name,
 			RejectWithStatus: rejectWithStatus,
 
@@ -160,14 +187,14 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 					PrefixLen:     wrapperspb.UInt32(uint32(prefixLen)),
 				})
 			}
-			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffTrustedCidrs: &xffv3.XffTrustedCidrs{
 					Cidrs: trustedCidrs,
 				},
 				SkipXffAppend: wrapperspb.Bool(false),
 			})
 		} else if clientIPDetection.XForwardedFor.NumTrustedHops != nil {
-			xffHeaderConfigAny, _ = protocov.ToAnyWithValidation(&xffv3.XffConfig{
+			xffHeaderConfigAny, _ = proto.ToAnyWithValidation(&xffv3.XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(clientIPDetection),
 				SkipXffAppend:     wrapperspb.Bool(false),
 			})
@@ -182,11 +209,8 @@ func originalIPDetectionExtensions(clientIPDetection *ir.ClientIPDetectionSettin
 }
 
 // buildXdsTCPListener creates a xds Listener resource
-// TODO: Improve function parameters
-func buildXdsTCPListener(
-	name, address string,
-	port uint32,
-	ipFamily *egv1a1.IPFamily,
+func (t *Translator) buildXdsTCPListener(
+	listenerDetails *ir.CoreListenerDetails,
 	keepalive *ir.TCPKeepalive,
 	connection *ir.ClientConnection,
 	accesslog *ir.AccessLog,
@@ -197,30 +221,51 @@ func buildXdsTCPListener(
 		return nil, err
 	}
 	bufferLimitBytes := buildPerConnectionBufferLimitBytes(connection)
+	maxAcceptPerSocketEvent := buildMaxAcceptPerSocketEvent(connection)
 	listener := &listenerv3.Listener{
-		Name:                          name,
-		AccessLog:                     al,
-		SocketOptions:                 socketOptions,
-		PerConnectionBufferLimitBytes: bufferLimitBytes,
+		Name: xdsListenerName(
+			listenerDetails.Name, listenerDetails.ExternalPort,
+			corev3.SocketAddress_TCP, t.xdsNameSchemeV2()),
+		AccessLog:                            al,
+		SocketOptions:                        socketOptions,
+		PerConnectionBufferLimitBytes:        bufferLimitBytes,
+		MaxConnectionsToAcceptPerSocketEvent: maxAcceptPerSocketEvent,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
 					Protocol: corev3.SocketAddress_TCP,
-					Address:  address,
+					Address:  listenerDetails.Address,
 					PortSpecifier: &corev3.SocketAddress_PortValue{
-						PortValue: port,
+						PortValue: listenerDetails.Port,
 					},
 				},
 			},
 		},
 	}
 
-	if ipFamily != nil && *ipFamily == egv1a1.DualStack {
+	if listenerDetails.IPFamily != nil && *listenerDetails.IPFamily == egv1a1.DualStack {
 		socketAddress := listener.Address.GetSocketAddress()
 		socketAddress.Ipv4Compat = true
 	}
 
 	return listener, nil
+}
+
+// xdsListenerName returns the name of the xDS listener in two formats:
+// 1. "tcp-80" if xdsNameSchemeV2 is true.
+// 2. "default/gateway-1/http" if xdsNameSchemeV2 is false.
+// The second format can cause unnecessary listener drains and will be removed in the future.
+// https://github.com/envoyproxy/gateway/issues/6534
+func xdsListenerName(name string, externalPort uint32, protocol corev3.SocketAddress_Protocol, xdsNameSchemeV2 bool) string {
+	if xdsNameSchemeV2 {
+		protocolType := "tcp"
+		if protocol == corev3.SocketAddress_UDP {
+			protocolType = "udp"
+		}
+		return fmt.Sprintf("%s-%d", protocolType, externalPort)
+	}
+
+	return name
 }
 
 func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
@@ -230,22 +275,41 @@ func buildPerConnectionBufferLimitBytes(connection *ir.ClientConnection) *wrappe
 	return wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes)
 }
 
+func buildMaxAcceptPerSocketEvent(connection *ir.ClientConnection) *wrapperspb.UInt32Value {
+	if connection == nil || connection.MaxAcceptPerSocketEvent == nil {
+		return wrapperspb.UInt32(defaultMaxAcceptConnectionsPerSocketEvent)
+	}
+	if *connection.MaxAcceptPerSocketEvent == 0 {
+		return nil
+	}
+	return wrapperspb.UInt32(*connection.MaxAcceptPerSocketEvent)
+}
+
 // buildXdsQuicListener creates a xds Listener resource for quic
-func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IPFamily, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func (t *Translator) buildXdsQuicListener(
+	listenerDetails *ir.CoreListenerDetails,
+	ipFamily *egv1a1.IPFamily,
+	accesslog *ir.AccessLog,
+) (*listenerv3.Listener, error) {
 	log, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeListener)
 	if err != nil {
 		return nil, err
 	}
+	// Keep the listener name compatible with the old naming scheme
+	listenerName := listenerDetails.Name + "-quic"
+	if t.xdsNameSchemeV2() {
+		listenerName = xdsListenerName(listenerDetails.Name, listenerDetails.ExternalPort, corev3.SocketAddress_UDP, true)
+	}
 	xdsListener := &listenerv3.Listener{
-		Name:      name + "-quic",
+		Name:      listenerName,
 		AccessLog: log,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
 					Protocol: corev3.SocketAddress_UDP,
-					Address:  address,
+					Address:  listenerDetails.Address,
 					PortSpecifier: &corev3.SocketAddress_PortValue{
-						PortValue: port,
+						PortValue: listenerDetails.Port,
 					},
 				},
 			},
@@ -277,8 +341,13 @@ func buildXdsQuicListener(name, address string, port uint32, ipFamily *egv1a1.IP
 //     A HCM filter is added to the new TCP filter chain.
 //     The newly created TCP filter chain is configured with a filter chain match to
 //     match the server names(SNI) based on the listener's hostnames.
-func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool, connection *ir.ClientConnection,
+func (t *Translator) addHCMToXDSListener(
+	xdsListener *listenerv3.Listener,
+	irListener *ir.HTTPListener,
+	accesslog *ir.AccessLog,
+	tracing *ir.Tracing,
+	http3Listener bool,
+	connection *ir.ClientConnection,
 ) error {
 	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
 	if err != nil {
@@ -291,23 +360,13 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	// HTTP filter configuration
-	var statPrefix string
-	if irListener.TLS != nil {
-		statPrefix = "https"
-	} else {
-		statPrefix = "http"
-	}
-
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(irListener.Port))}, "-")
-
 	// Client IP detection
 	useRemoteAddress := true
 	originalIPDetectionExtensions := originalIPDetectionExtensions(irListener.ClientIPDetection)
 	if originalIPDetectionExtensions != nil {
 		useRemoteAddress = false
 	}
-
+	statPrefix := hcmStatPrefix(irListener, t.xdsNameSchemeV2())
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -316,7 +375,7 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: irListener.Name,
+				RouteConfigName: routeConfigName(irListener, t.xdsNameSchemeV2()),
 			},
 		},
 		HttpProtocolOptions: http1ProtocolOptions(irListener.HTTP1),
@@ -337,8 +396,33 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		},
 		Tracing:                       hcmTracing,
 		ForwardClientCertDetails:      buildForwardClientCertDetailsAction(irListener.Headers),
-		PreserveExternalRequestId:     ptr.Deref(irListener.Headers, ir.HeaderSettings{}).PreserveXRequestID,
 		EarlyHeaderMutationExtensions: buildEarlyHeaderMutation(irListener.Headers),
+		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
+	}
+
+	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
+	// This ensures the correct scheme is sent to backends using TLS when enabled.
+	if irListener.MatchBackendScheme {
+		mgr.SchemeHeaderTransformation = &corev3.SchemeHeaderTransformation{
+			MatchUpstream: true,
+		}
+	}
+
+	if requestID := ptr.Deref(irListener.Headers, ir.HeaderSettings{}).RequestID; requestID != nil {
+		switch *requestID {
+		case ir.RequestIDActionPreserveOrGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionPreserve:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = true
+		case ir.RequestIDActionDisable:
+			mgr.GenerateRequestId = wrapperspb.Bool(false)
+			mgr.PreserveExternalRequestId = false
+		case ir.RequestIDActionGenerate:
+			mgr.GenerateRequestId = wrapperspb.Bool(true)
+			mgr.PreserveExternalRequestId = false
+		}
 	}
 
 	if mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_APPEND_FORWARD || mgr.ForwardClientCertDetails == hcmv3.HttpConnectionManager_SANITIZE_SET {
@@ -353,15 +437,23 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		if irListener.Timeout.HTTP.IdleTimeout != nil {
 			mgr.CommonHttpProtocolOptions.IdleTimeout = durationpb.New(irListener.Timeout.HTTP.IdleTimeout.Duration)
 		}
+
+		if irListener.Timeout.HTTP.StreamIdleTimeout != nil {
+			mgr.StreamIdleTimeout = durationpb.New(irListener.Timeout.HTTP.StreamIdleTimeout.Duration)
+		}
 	}
 
 	// Add the proxy protocol filter if needed
-	patchProxyProtocolFilter(xdsListener, irListener.EnableProxyProtocol)
+	patchProxyProtocolFilter(xdsListener, irListener.ProxyProtocol)
 
-	if irListener.IsHTTP2 {
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		// always enable grpc stats filter
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+	// Add gRPC specific filters if needed
+	if irListener.GRPC != nil {
+		if ptr.Deref(irListener.GRPC.EnableGRPCWeb, false) {
+			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
+		}
+		if ptr.Deref(irListener.GRPC.EnableGRPCStats, false) {
+			mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+		}
 	}
 
 	if http3Listener {
@@ -370,18 +462,32 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 	// Add HTTP filters to the HCM, the filters have already been sorted in the
 	// correct order in the patchHCMWithFilters function.
-	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
+	if err := t.patchHCMWithFilters(mgr, irListener, accesslog); err != nil {
 		return err
 	}
 
 	var filters []*listenerv3.Filter
 
 	if connection != nil && connection.ConnectionLimit != nil {
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
+		connLimit := connection.ConnectionLimit
+		if connLimit.MaxConnectionDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxConnectionDuration = durationpb.New(connLimit.MaxConnectionDuration.Duration)
+			mgr.Http1SafeMaxConnectionDuration = !ptr.Deref(irListener.HTTP1, ir.HTTP1Settings{}).DisableSafeMaxConnectionDuration
+		}
+		if connLimit.MaxRequestsPerConnection != nil {
+			mgr.CommonHttpProtocolOptions.MaxRequestsPerConnection = wrapperspb.UInt32(*connLimit.MaxRequestsPerConnection)
+		}
+		if connLimit.MaxStreamDuration != nil {
+			mgr.CommonHttpProtocolOptions.MaxStreamDuration = durationpb.New(connLimit.MaxStreamDuration.Duration)
+		}
+
+		if connLimit.Value != nil {
+			cl := buildConnectionLimitFilter(statPrefix, connection)
+			if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+				filters = append(filters, clf)
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -392,28 +498,33 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 	}
 
 	filterChain := &listenerv3.FilterChain{
+		Name:    httpsListenerFilterChainName(irListener),
 		Filters: filters,
-		Name:    irListener.Name,
 	}
 
 	if irListener.TLS != nil {
 		var tSocket *corev3.TransportSocket
+
 		if http3Listener {
 			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
-			if err != nil {
-				return err
-			}
 		} else {
-			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
-			if err != nil {
-				return err
+			config := irListener.TLS.DeepCopy()
+			// If the listener has overlapping TLS config with other listeners, we need to disable HTTP/2
+			// to avoid the HTTP/2 Connection Coalescing issue (see https://gateway-api.sigs.k8s.io/geps/gep-3567/)
+			// Note: if ALPN is explicitly set by the user using ClientTrafficPolicy, we keep it as is
+			if irListener.TLSOverlaps && config.ALPNProtocols == nil {
+				config.ALPNProtocols = []string{"http/1.1"}
 			}
+			tSocket, err = buildXdsDownstreamTLSSocket(config)
 		}
-		filterChain.TransportSocket = tSocket
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
+		if err != nil {
 			return err
 		}
+		filterChain.TransportSocket = tSocket
 
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames, irListener.TLS.Fingerprints); err != nil {
+			return err
+		}
 		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 	} else {
 		// Add the HTTP filter chain as the default filter chain
@@ -421,69 +532,61 @@ func (t *Translator) addHCMToXDSListener(xdsListener *listenerv3.Listener, irLis
 		if xdsListener.DefaultFilterChain != nil {
 			return errors.New("default filter chain already exists")
 		}
+		filterChain.Name = httpListenerDefaultFilterChainName(irListener, t.xdsNameSchemeV2())
 		xdsListener.DefaultFilterChain = filterChain
 	}
 
 	return nil
 }
 
+func hcmStatPrefix(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	statPrefix := "http"
+	if irListener.TLS != nil {
+		statPrefix = "https"
+	}
+
+	if nameSchemeV2 {
+		return fmt.Sprintf("%s-%d", statPrefix, irListener.ExternalPort)
+	}
+	return fmt.Sprintf("%s-%d", statPrefix, irListener.Port)
+}
+
+// use the same name for the route config as the filter chain name, as they're 1:1 mapping.
+func routeConfigName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if irListener.TLS != nil {
+		return httpsListenerFilterChainName(irListener)
+	}
+	return httpListenerDefaultFilterChainName(irListener, nameSchemeV2)
+}
+
+// port value is used for the default filter chain name for HTTP listeners, as multiple HTTP listeners are merged into
+// one filter chain.
+func httpListenerDefaultFilterChainName(irListener *ir.HTTPListener, nameSchemeV2 bool) string {
+	if nameSchemeV2 {
+		return fmt.Sprint("http-", irListener.ExternalPort)
+	}
+	// For backward compatibility, we use the listener name as the filter chain name.
+	return irListener.Name
+}
+
+// irListener name is used as the filter chain name for HTTPS listener, as HTTPS Listener is 1:1 mapping to the filter chain.
+// The Gateway API layer ensures that each listener has a unique combination of hostname and port.
+func httpsListenerFilterChainName(irListener *ir.HTTPListener) string {
+	return irListener.Name
+}
+
+// irRoute name is used as the filter chain name for TLS listener, as TLSRoute is 1:1 mapping to the filter chain.
+func tlsListenerFilterChainName(irRoute *ir.TCPRoute) string {
+	return irRoute.Name
+}
+
 func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensionConfig {
-	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0) {
+	if headers == nil || (len(headers.EarlyAddRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeaders) == 0 && len(headers.EarlyRemoveRequestHeadersOnMatch) == 0) {
 		return nil
 	}
 
-	var mutationRules []*mutation_rulesv3.HeaderMutation
-
-	for _, header := range headers.EarlyAddRequestHeaders {
-		var appendAction corev3.HeaderValueOption_HeaderAppendAction
-		if header.Append {
-			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
-			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
-		}
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if len(header.Value) == 0 {
-			mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-				Action: &mutation_rulesv3.HeaderMutation_Append{
-					Append: &corev3.HeaderValueOption{
-						Header: &corev3.HeaderValue{
-							Key: header.Name,
-						},
-						AppendAction:   appendAction,
-						KeepEmptyValue: true,
-					},
-				},
-			})
-		} else {
-			for _, val := range header.Value {
-				mutationRules = append(mutationRules, &mutation_rulesv3.HeaderMutation{
-					Action: &mutation_rulesv3.HeaderMutation_Append{
-						Append: &corev3.HeaderValueOption{
-							Header: &corev3.HeaderValue{
-								Key:   header.Name,
-								Value: val,
-							},
-							AppendAction:   appendAction,
-							KeepEmptyValue: val == "",
-						},
-					},
-				})
-			}
-		}
-	}
-
-	for _, header := range headers.EarlyRemoveRequestHeaders {
-		mr := &mutation_rulesv3.HeaderMutation{
-			Action: &mutation_rulesv3.HeaderMutation_Remove{
-				Remove: header,
-			},
-		}
-
-		mutationRules = append(mutationRules, mr)
-	}
-
-	earlyHeaderMutationAny, _ := protocov.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
-		Mutations: mutationRules,
+	earlyHeaderMutationAny, _ := proto.ToAnyWithValidation(&early_header_mutationv3.HeaderMutation{
+		Mutations: buildHeaderMutationRules(headers.EarlyAddRequestHeaders, headers.EarlyRemoveRequestHeaders, headers.EarlyRemoveRequestHeadersOnMatch),
 	})
 
 	return []*corev3.TypedExtensionConfig{
@@ -494,14 +597,27 @@ func buildEarlyHeaderMutation(headers *ir.HeaderSettings) []*corev3.TypedExtensi
 	}
 }
 
-func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
-	// Dont add a filter chain match if the hostname is a wildcard character.
-	if len(hostnames) > 0 && hostnames[0] != "*" {
+func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string, fingerprints []ir.TLSFingerprintType) error {
+	if xdsListener == nil {
+		return nil
+	}
+
+	// Add filter chain match only if SNI is not a pure wildcard
+	hasSNIs := len(hostnames) > 0 && hostnames[0] != "*"
+	if hasSNIs {
 		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
 			ServerNames: hostnames,
 		}
+	}
 
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+	isQUICListener := xdsListener.GetAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress() != nil &&
+		xdsListener.GetAddress().GetSocketAddress().GetProtocol() == corev3.SocketAddress_UDP
+
+	// Envoy’s QUIC stack parses SNI itself, so filter_chain_match.server_names works without TLS Inspector.
+	// TLS Inspector is only needed for TCP/TLS listeners.
+	if len(fingerprints) > 0 || (hasSNIs && !isQUICListener) {
+		if err := addXdsTLSInspectorFilter(xdsListener, fingerprints); err != nil {
 			return err
 		}
 	}
@@ -533,9 +649,22 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute,
-	clusterName string, accesslog *ir.AccessLog, timeout *ir.ClientTimeout,
-	connection *ir.ClientConnection,
+func hasHCMInDefaultFilterChain(xdsListener *listenerv3.Listener) bool {
+	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
+		return false
+	}
+	for _, filter := range xdsListener.DefaultFilterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *Translator) addXdsTCPFilterChain(
+	xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string,
+	accesslog *ir.AccessLog, timeout *ir.ClientTimeout, connection *ir.ClientConnection,
+	tlsConfig *ir.TLSConfig,
 ) error {
 	if irRoute == nil {
 		return errors.New("tcp listener is nil")
@@ -543,72 +672,48 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 
 	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil
 	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "tls-passthrough"
-	}
-
-	if isTLSTerminate {
-		statPrefix = "tls-terminate"
-	}
-
-	// Append port to the statPrefix.
-	statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
-	al, error := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
-	if error != nil {
-		return error
-	}
-	mgr := &tcpv3.TcpProxy{
-		AccessLog:  al,
-		StatPrefix: statPrefix,
-		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: clusterName,
-		},
-		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
-	}
-
-	if timeout != nil && timeout.TCP != nil {
-		if timeout.TCP.IdleTimeout != nil {
-			mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+	statPrefix := ptr.Deref(irRoute.StatName, "")
+	if statPrefix == "" {
+		statPrefix = "tcp"
+		if isTLSPassthrough {
+			statPrefix = "tls-passthrough"
 		}
-	}
 
-	var filters []*listenerv3.Filter
-
-	if connection != nil && connection.ConnectionLimit != nil {
-		cl := buildConnectionLimitFilter(statPrefix, connection)
-		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
-			filters = append(filters, clf)
-		} else {
-			return err
+		if isTLSTerminate {
+			statPrefix = "tls-terminate"
 		}
+
+		// Append port to the statPrefix.
+		statPrefix = strings.Join([]string{statPrefix, strconv.Itoa(int(xdsListener.Address.GetSocketAddress().GetPortValue()))}, "-")
 	}
 
-	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
-		filters = append(filters, mgrf)
-	} else {
+	filterChain, err := buildTCPFilterChain(
+		irRoute,
+		clusterName,
+		statPrefix,
+		accesslog,
+		timeout,
+		connection,
+	)
+	if err != nil {
 		return err
 	}
 
-	filterChain := &listenerv3.FilterChain{
-		Filters: filters,
-		Name:    irRoute.Name,
+	var snis []string
+	if irRoute.TLS != nil && irRoute.TLS.TLSInspectorConfig != nil {
+		snis = irRoute.TLS.TLSInspectorConfig.SNIs
 	}
 
-	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.TLSInspectorConfig.SNIs); err != nil {
-			return err
-		}
+	var fingerprints []ir.TLSFingerprintType
+	if tlsConfig != nil {
+		fingerprints = tlsConfig.Fingerprints
+	}
+
+	if err := addServerNamesMatch(xdsListener, filterChain, snis, fingerprints); err != nil {
+		return err
 	}
 
 	if isTLSTerminate {
-		var snis []string
-		if cfg := irRoute.TLS.TLSInspectorConfig; cfg != nil {
-			snis = cfg.SNIs
-		}
-		if err := addServerNamesMatch(xdsListener, filterChain, snis); err != nil {
-			return err
-		}
 		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
 			return err
@@ -619,6 +724,61 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
 
 	return nil
+}
+
+func buildTCPFilterChain(
+	irRoute *ir.TCPRoute,
+	clusterName string,
+	statPrefix string,
+	accesslog *ir.AccessLog,
+	timeout *ir.ClientTimeout,
+	connection *ir.ClientConnection,
+) (*listenerv3.FilterChain, error) {
+	var filters []*listenerv3.Filter
+
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute)
+	if err != nil {
+		return nil, err
+	}
+
+	if authzFilter, err := buildTCPRBACFilter(statPrefix, irRoute.Authorization); err != nil {
+		return nil, err
+	} else if authzFilter != nil {
+		filters = append(filters, authzFilter)
+	}
+
+	// Connection limit (if configured)
+	if connection != nil && connection.ConnectionLimit != nil && connection.ConnectionLimit.Value != nil {
+		cl := buildConnectionLimitFilter(statPrefix, connection)
+		if clf, err := toNetworkFilter(networkConnectionLimit, cl); err == nil {
+			filters = append(filters, clf)
+		} else {
+			return nil, err
+		}
+	}
+
+	// TCP proxy last
+	mgr := &tcpv3.TcpProxy{
+		AccessLog:  al,
+		StatPrefix: statPrefix,
+		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
+			Cluster: clusterName,
+		},
+		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
+	}
+	if timeout != nil && timeout.TCP != nil && timeout.TCP.IdleTimeout != nil {
+		mgr.IdleTimeout = durationpb.New(timeout.TCP.IdleTimeout.Duration)
+	}
+	if mgrf, err := toNetworkFilter(wellknown.TCPProxy, mgr); err == nil {
+		filters = append(filters, mgrf)
+	} else {
+		return nil, err
+	}
+
+	return &listenerv3.FilterChain{
+		Filters: filters,
+		Name:    tlsListenerFilterChainName(irRoute),
+	}, nil
 }
 
 func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnection) *connection_limitv3.ConnectionLimit {
@@ -634,7 +794,7 @@ func buildConnectionLimitFilter(statPrefix string, connection *ir.ClientConnecti
 }
 
 // addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
-func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
+func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener, fingerprints []ir.TLSFingerprintType) error {
 	// Return early if it exists
 	for _, filter := range xdsListener.ListenerFilters {
 		if filter.Name == wellknown.TlsInspector {
@@ -643,7 +803,17 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	}
 
 	tlsInspector := &tls_inspectorv3.TlsInspector{}
-	tlsInspectorAny, err := protocov.ToAnyWithValidation(tlsInspector)
+
+	for _, fingerprint := range fingerprints {
+		switch fingerprint {
+		case ir.TLSFingerprintTypeJA3:
+			tlsInspector.EnableJa3Fingerprinting = &wrapperspb.BoolValue{Value: true}
+		case ir.TLSFingerprintTypeJA4:
+			tlsInspector.EnableJa4Fingerprinting = &wrapperspb.BoolValue{Value: true}
+		}
+	}
+
+	tlsInspectorAny, err := proto.ToAnyWithValidation(tlsInspector)
 	if err != nil {
 		return err
 	}
@@ -679,19 +849,14 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
-		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: true}
-		tlsCtx.DownstreamTlsContext.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.CACertificate.Name,
-				SdsConfig: makeConfigSource(),
-			},
-		}
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
+		tlsCtx.DownstreamTlsContext.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
+		setTLSValidationContext(tlsConfig, tlsCtx.DownstreamTlsContext.CommonTlsContext)
 	}
 
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx.DownstreamTlsContext)
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -721,19 +886,13 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			})
 	}
 
-	if tlsConfig.CACertificate != nil {
+	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
 		tlsCtx.RequireClientCertificate = &wrapperspb.BoolValue{Value: tlsConfig.RequireClientCertificate}
-		tlsCtx.CommonTlsContext.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-			ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.CACertificate.Name,
-				SdsConfig: makeConfigSource(),
-			},
-		}
+		setTLSValidationContext(tlsConfig, tlsCtx.CommonTlsContext)
 	}
-
 	setDownstreamTLSSessionSettings(tlsConfig, tlsCtx)
 
-	tlsCtxAny, err := protocov.ToAnyWithValidation(tlsCtx)
+	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -744,6 +903,71 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsContext) {
+	needsDefaultValidationContext := tlsConfig.AcceptUntrusted ||
+		len(tlsConfig.VerifyCertificateSpki) > 0 ||
+		len(tlsConfig.VerifyCertificateHash) > 0 ||
+		len(tlsConfig.MatchTypedSubjectAltNames) > 0
+
+	validationContext := &tlsv3.CertificateValidationContext{}
+
+	if tlsConfig.AcceptUntrusted {
+		validationContext.TrustChainVerification = tlsv3.CertificateValidationContext_ACCEPT_UNTRUSTED
+	}
+
+	validationContext.VerifyCertificateSpki = append(validationContext.VerifyCertificateSpki, tlsConfig.VerifyCertificateSpki...)
+	validationContext.VerifyCertificateHash = append(validationContext.VerifyCertificateHash, tlsConfig.VerifyCertificateHash...)
+
+	for _, match := range tlsConfig.MatchTypedSubjectAltNames {
+		sanType := tlsv3.SubjectAltNameMatcher_OTHER_NAME
+		oid := ""
+		switch match.Name {
+		case "":
+			sanType = tlsv3.SubjectAltNameMatcher_SAN_TYPE_UNSPECIFIED
+		case "EMAIL":
+			sanType = tlsv3.SubjectAltNameMatcher_EMAIL
+		case "DNS":
+			sanType = tlsv3.SubjectAltNameMatcher_DNS
+		case "URI":
+			sanType = tlsv3.SubjectAltNameMatcher_URI
+		case "IP_ADDRESS":
+			sanType = tlsv3.SubjectAltNameMatcher_IP_ADDRESS
+		default:
+			oid = match.Name
+		}
+		validationContext.MatchTypedSubjectAltNames = append(validationContext.MatchTypedSubjectAltNames, &tlsv3.SubjectAltNameMatcher{
+			SanType: sanType,
+			Matcher: buildXdsStringMatcher(match),
+			Oid:     oid,
+		})
+	}
+
+	if tlsConfig.CACertificate == nil {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContext{
+			ValidationContext: validationContext,
+		}
+		return
+	}
+
+	sdsSecretConfig := &tlsv3.SdsSecretConfig{
+		Name:      tlsConfig.CACertificate.Name,
+		SdsConfig: makeConfigSource(),
+	}
+
+	if needsDefaultValidationContext {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
+			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
+				DefaultValidationContext:         validationContext,
+				ValidationContextSdsSecretConfig: sdsSecretConfig,
+			},
+		}
+	} else {
+		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+			ValidationContextSdsSecretConfig: sdsSecretConfig,
+		}
+	}
 }
 
 func setDownstreamTLSSessionSettings(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.DownstreamTlsContext) {
@@ -809,36 +1033,56 @@ func buildALPNProtocols(alpn []string) []string {
 	}
 }
 
-func buildXdsTLSCertSecret(tlsConfig ir.TLSCertificate) *tlsv3.Secret {
+func buildXdsTLSCertSecret(tlsConfig *ir.TLSCertificate) *tlsv3.Secret {
+	tlsCertificate := &tlsv3.TlsCertificate{
+		CertificateChain: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
+		},
+		PrivateKey: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+		},
+	}
+
+	if len(tlsConfig.OCSPStaple) > 0 {
+		tlsCertificate.OcspStaple = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.OCSPStaple},
+		}
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
-			TlsCertificate: &tlsv3.TlsCertificate{
-				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.Certificate},
-				},
-				PrivateKey: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
-				},
-			},
+			TlsCertificate: tlsCertificate,
 		},
 	}
 }
 
-func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate) *tlsv3.Secret {
+func buildXdsTLSCaCertSecret(caCertificate *ir.TLSCACertificate, crl *ir.TLSCrl) *tlsv3.Secret {
+	validationContext := &tlsv3.CertificateValidationContext{
+		TrustedCa: &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
+		},
+	}
+	if crl != nil {
+		validationContext.Crl = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineBytes{InlineBytes: crl.Data},
+		}
+		validationContext.OnlyVerifyLeafCertCrl = crl.OnlyVerifyLeafCertificate
+	}
 	return &tlsv3.Secret{
 		Name: caCertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
-			ValidationContext: &tlsv3.CertificateValidationContext{
-				TrustedCa: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: caCertificate.Certificate},
-				},
-			},
+			ValidationContext: validationContext,
 		},
 	}
 }
 
-func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
+func buildXdsUDPListener(
+	clusterName string,
+	udpListener *ir.UDPListener,
+	accesslog *ir.AccessLog,
+	xdsNameSchemeV2 bool,
+) (*listenerv3.Listener, error) {
 	if udpListener == nil {
 		return nil, errors.New("udp listener is nil")
 	}
@@ -848,7 +1092,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
-	routeAny, err := protocov.ToAnyWithValidation(route)
+	routeAny, err := proto.ToAnyWithValidation(route)
 	if err != nil {
 		return nil, err
 	}
@@ -873,7 +1117,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 			},
 		},
 	}
-	udpProxyAny, err := protocov.ToAnyWithValidation(udpProxy)
+	udpProxyAny, err := proto.ToAnyWithValidation(udpProxy)
 	if err != nil {
 		return nil, err
 	}
@@ -882,7 +1126,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, err
 	}
 	xdsListener := &listenerv3.Listener{
-		Name:      udpListener.Name,
+		Name:      xdsListenerName(udpListener.Name, udpListener.ExternalPort, corev3.SocketAddress_UDP, xdsNameSchemeV2),
 		AccessLog: al,
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
@@ -934,8 +1178,8 @@ func translateEscapePath(in ir.PathEscapedSlashAction) hcmv3.HttpConnectionManag
 	return hcmv3.HttpConnectionManager_IMPLEMENTATION_SPECIFIC_DEFAULT
 }
 
-func toNetworkFilter(filterName string, filterProto proto.Message) (*listenerv3.Filter, error) {
-	filterAny, err := protocov.ToAnyWithValidation(filterProto)
+func toNetworkFilter(filterName string, filterProto protobuf.Message) (*listenerv3.Filter, error) {
+	filterAny, err := proto.ToAnyWithValidation(filterProto)
 	if err != nil {
 		return nil, err
 	}
@@ -1031,4 +1275,30 @@ func buildSetCurrentClientCertDetails(in *ir.HeaderSettings) *hcmv3.HttpConnecti
 	}
 
 	return clientCertDetails
+}
+
+func buildRequestIDExtension(requestID *ir.RequestIDExtensionAction) *hcmv3.RequestIDExtension {
+	if requestID == nil || *requestID == ir.RequestIDExtensionActionPackAndSample {
+		return nil
+	}
+
+	packTraceReason := false
+	useRequestIDForSampling := false
+
+	switch *requestID {
+	case ir.RequestIDExtensionActionPack:
+		packTraceReason = true
+	case ir.RequestIDExtensionActionSample:
+		useRequestIDForSampling = true
+	}
+
+	cfg := &uuidv3.UuidRequestIdConfig{
+		PackTraceReason:              wrapperspb.Bool(packTraceReason),
+		UseRequestIdForTraceSampling: wrapperspb.Bool(useRequestIDForSampling),
+	}
+
+	requestIDConfig, _ := proto.ToAnyWithValidation(cfg)
+	return &hcmv3.RequestIDExtension{
+		TypedConfig: requestIDConfig,
+	}
 }

@@ -5,6 +5,10 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
 	// Optional determines whether a missing JWT is acceptable, defaulting to false if not specified.
@@ -17,12 +21,14 @@ type JWT struct {
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=4
+	// +kubebuilder:validation:MaxItems=16
 	Providers []JWTProvider `json:"providers"`
 }
 
 // JWTProvider defines how a JSON Web Token (JWT) can be verified.
-// +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled"
+// +kubebuilder:validation:XValidation:rule="(has(self.recomputeRoute) && self.recomputeRoute) ? size(self.claimToHeaders) > 0 : true", message="claimToHeaders must be specified if recomputeRoute is enabled."
+// +kubebuilder:validation:XValidation:rule="has(self.remoteJWKS) || has(self.localJWKS)", message="either remoteJWKS or localJWKS must be specified."
+// +kubebuilder:validation:XValidation:rule="!(has(self.remoteJWKS) && has(self.localJWKS))", message="remoteJWKS and localJWKS cannot both be specified."
 type JWTProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
@@ -50,7 +56,14 @@ type JWTProvider struct {
 
 	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
 	// HTTP/HTTPS endpoint.
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
+	//
+	// +optional
+	RemoteJWKS *RemoteJWKS `json:"remoteJWKS,omitempty"`
+
+	// LocalJWKS defines how to get the JSON Web Key Sets (JWKS) from a local source.
+	//
+	// +optional
+	LocalJWKS *LocalJWKS `json:"localJWKS,omitempty"`
 
 	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
 	// For examples, following config:
@@ -76,18 +89,18 @@ type JWTProvider struct {
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+//
+// BackendRefs is used to specify the address of the Remote JWKS.
+// If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+//
+// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+//
+// Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
+//
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type RemoteJWKS struct {
-	// BackendRefs is used to specify the address of the Remote JWKS. The BackendRefs are optional, if not specified,
-	// the backend service is extracted from the host and port of the URI field.
-	//
-	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
-	//
-	// Other settings for the connection to remote JWKS can be specified in the BackendSettings resource.
-	// Currently, only the retry policy is supported.
-	//
 	// +optional
 	BackendCluster `json:",inline"`
 
@@ -97,6 +110,48 @@ type RemoteJWKS struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URI string `json:"uri"`
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+
+	// +kubebuilder:default="300s"
+	// +optional
+	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
+}
+
+// LocalJWKSType defines the types of values for Local JWKS.
+type LocalJWKSType string
+
+const (
+	// LocalJWKSTypeInline defines the "Inline" LocalJWKS type.
+	LocalJWKSTypeInline LocalJWKSType = "Inline"
+
+	// LocalJWKSTypeValueRef defines the "ValueRef" LocalJWKS type.
+	LocalJWKSTypeValueRef LocalJWKSType = "ValueRef"
+)
+
+// LocalJWKS defines how to load a JSON Web Key Sets (JWKS) from a local source, either inline or from a reference to a ConfigMap.
+//
+// +kubebuilder:validation:XValidation:rule="(self.type == 'Inline' && has(self.inline) && !has(self.valueRef)) || (self.type == 'ValueRef' && !has(self.inline) && has(self.valueRef))",message="Exactly one of inline or valueRef must be set with correct type."
+type LocalJWKS struct {
+	// Type is the type of method to use to read the body value.
+	// Valid values are Inline and ValueRef, default is Inline.
+	//
+	// +kubebuilder:default=Inline
+	// +kubebuilder:validation:Enum=Inline;ValueRef
+	// +unionDiscriminator
+	Type *LocalJWKSType `json:"type"`
+
+	// Inline contains the value as an inline string.
+	//
+	// +optional
+	Inline *string `json:"inline,omitempty"`
+
+	// ValueRef is a reference to a local ConfigMap that contains the JSON Web Key Sets (JWKS).
+	//
+	// The value of key `jwks` in the ConfigMap will be used.
+	// If the key is not found, the first value in the ConfigMap will be used.
+	//
+	// +optional
+	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
 }
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers

@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
@@ -39,7 +40,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/hashicorp/go-multierror"
 
 	"github.com/envoyproxy/gateway/internal/logging"
 )
@@ -51,6 +51,7 @@ import (
 type ImageFetcherOption struct {
 	PullSecret []byte
 	Insecure   bool
+	CACert     []byte
 }
 
 func (o *ImageFetcherOption) useAnonymous() bool {
@@ -69,7 +70,7 @@ type ImageFetcher struct {
 	logger    logging.Logger
 }
 
-func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) *ImageFetcher {
+func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging.Logger) (*ImageFetcher, error) {
 	fetchOpts := make([]remote.Option, 0, 2)
 	if opt.useAnonymous() {
 		// Use anonymous auth if no pull secret is provided.
@@ -86,22 +87,33 @@ func NewImageFetcher(ctx context.Context, opt ImageFetcherOption, logger logging
 			InsecureSkipVerify: opt.Insecure,
 		}
 		fetchOpts = append(fetchOpts, remote.WithTransport(t))
+	} else if len(opt.CACert) > 0 {
+		t := remote.DefaultTransport.(*http.Transport).Clone()
+		caCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			caCertPool = x509.NewCertPool()
+		}
+		if !caCertPool.AppendCertsFromPEM(opt.CACert) {
+			return nil, fmt.Errorf("failed to append CA certificate to pool")
+		}
+		t.TLSClientConfig.RootCAs = caCertPool
+		fetchOpts = append(fetchOpts, remote.WithTransport(t))
 	}
 
 	return &ImageFetcher{
 		fetchOpts: append(fetchOpts, remote.WithContext(ctx)),
 		logger:    logger,
-	}
+	}, nil
 }
 
 // PrepareFetch is the entrypoint for fetching Wasm binary from Wasm Image Specification compatible images.
 // Wasm binary is not fetched immediately, but returned by `binaryFetcher` function, which is returned by PrepareFetch.
 // By this way, we can have another chance to check cache with `actualDigest` without downloading the OCI image.
-func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, error), actualDigest string, err error) {
+func (o *ImageFetcher) PrepareFetch(url string) (func() ([]byte, error), string, error) {
 	ref, err := name.ParseReference(url)
 	if err != nil {
 		err = fmt.Errorf("could not parse url in image reference: %w", err)
-		return
+		return nil, "", err
 	}
 	o.logger.Info("fetching image", "image", ref.Context().RepositoryStr(),
 		"registry", ref.Context().RegistryStr(), "tag", ref.Identifier())
@@ -119,20 +131,20 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 
 	if err != nil {
 		err = fmt.Errorf("could not fetch manifest: %w", err)
-		return
+		return nil, "", err
 	}
 
 	// Fetch image.
 	img, err := desc.Image()
 	if err != nil {
 		err = fmt.Errorf("could not fetch image: %w", err)
-		return
+		return nil, "", err
 	}
 
 	// Check Manifest's digest if expManifestDigest is not empty.
 	d, _ := img.Digest()
-	actualDigest = d.Hex
-	binaryFetcher = func() ([]byte, error) {
+	actualDigest := d.Hex
+	binaryFetcher := func() ([]byte, error) {
 		manifest, err := img.Manifest()
 		if err != nil {
 			return nil, fmt.Errorf("could not retrieve manifest: %w", err)
@@ -163,13 +175,13 @@ func (o *ImageFetcher) PrepareFetch(url string) (binaryFetcher func() ([]byte, e
 
 		// We failed to parse the image in any format, so wrap the errors and return.
 		return nil, fmt.Errorf("the given image is in invalid format as an OCI image: %w",
-			multierror.Append(err,
+			errors.Join(err,
 				fmt.Errorf("could not parse as compat variant: %w", errCompat),
 				fmt.Errorf("could not parse as oci variant: %w", errOCI),
 			),
 		)
 	}
-	return
+	return binaryFetcher, actualDigest, err
 }
 
 // extractDockerImage extracts the Wasm binary from the

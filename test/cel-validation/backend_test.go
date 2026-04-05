@@ -15,6 +15,8 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -123,7 +125,10 @@ func TestBackend(t *testing.T) {
 					Endpoints:    []egv1a1.BackendEndpoint{{}},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": one of fqdn, ip or unix must be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"one of fqdn, ip or unix must be specified",
+			},
 		},
 		{
 			desc: "Multiple addresses",
@@ -143,7 +148,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": only one of fqdn, ip or unix can be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"only one of fqdn, ip or unix can be specified",
+			},
 		},
 		{
 			desc: "Mixed types",
@@ -166,7 +174,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
+			wantErrors: []string{
+				"spec.endpoints: Invalid value:",
+				"FQDN addresses cannot be mixed with other address types",
+			},
 		},
 		{
 			desc: "Invalid hostname",
@@ -247,6 +258,73 @@ func TestBackend(t *testing.T) {
 				"spec.endpoints[2].ip.address: Invalid value: \"0.0.0.0/12\": spec.endpoints[2].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$'",
 				"spec.endpoints[3].ip.address: Invalid value: \"a.b.c.e\": spec.endpoints[3].ip.address in body should match '^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$|^(([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){0,5})?(:[0-9a-fA-F]{1,4}){1,2})$'",
 			},
+		},
+		{
+			desc: "invalid type",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
+			},
+			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
+		},
+		{
+			desc: "dynamic resolver ok",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "dynamic resolver invalid",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							FQDN: &egv1a1.FQDNEndpoint{
+								Hostname: "example.com",
+								Port:     443,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"DynamicResolver type cannot have endpoints specified"},
+		},
+		{
+			desc: "Invalid Unix socket path length",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         ptr.To(egv1a1.BackendTypeEndpoints),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/a/very/long/unix/socket/path/that/exceeds/the/maximum/allowed/length/of/108/characters/and/should/fail/validation.sock",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.endpoints[0].unix.path: Invalid value:",
+				"unix domain socket path must not exceed 108 characters",
+			},
+		},
+		{
+			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						InsecureSkipVerify:      ptr.To(true),
+						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				}
+			},
+			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
 		},
 	}
 

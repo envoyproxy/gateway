@@ -111,7 +111,7 @@ const (
 )
 
 // GetServiceURL returns the URL for the rate limit service.
-func GetServiceURL(namespace string, dnsDomain string) string {
+func GetServiceURL(namespace, dnsDomain string) string {
 	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
 }
 
@@ -147,6 +147,14 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 			ContainerPort: InfraGRPCPort,
 			Protocol:      corev1.ProtocolTCP,
 		},
+	}
+
+	if enablePrometheus(rateLimit) {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: PrometheusPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
 	}
 
 	containers := []corev1.Container{
@@ -189,6 +197,19 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 				PeriodSeconds:    5,
 				SuccessThreshold: 1,
 				FailureThreshold: 1,
+			},
+			LivenessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
 			},
 		},
 	}

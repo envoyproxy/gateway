@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/netip"
@@ -13,6 +14,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -24,25 +26,25 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
-func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, route RouteContext,
 	resources *resource.Resources, backendNamespace string, routeKind gwapiv1.Kind,
-) error {
-	backendRef := GetBackendRef(backendRefContext)
+) status.Error {
+	backendRef := backendRefContext.GetBackendRef()
 
-	if err := t.validateBackendRefFilters(backendRefContext, parentRef, route, routeKind); err != nil {
-		return fmt.Errorf("error validating backend filters: %w", err)
+	if err := t.validateBackendRefFilters(backendRefContext, routeKind); err != nil {
+		return err
 	}
-	if err := t.validateBackendRefGroup(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend group: %w", err)
+	if err := t.validateBackendRefGroup(backendRef); err != nil {
+		return err
 	}
-	if err := t.validateBackendRefKind(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend kind: %w", err)
+	if err := t.validateBackendRefKind(backendRef); err != nil {
+		return err
 	}
-	if err := t.validateBackendNamespace(backendRef, parentRef, route, resources, routeKind); err != nil {
-		return fmt.Errorf("error validating backend namespace: %w", err)
+	if err := t.validateBackendNamespace(backendRef, route, resources, routeKind); err != nil {
+		return err
 	}
-	if err := t.validateBackendPort(backendRef, parentRef, route); err != nil {
-		return fmt.Errorf("error validating backend port: %w", err)
+	if err := t.validateBackendPort(backendRef); err != nil {
+		return err
 	}
 
 	protocol := corev1.ProtocolTCP
@@ -53,76 +55,67 @@ func (t *Translator) validateBackendRef(backendRefContext BackendRefContext, par
 	backendRefKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	switch backendRefKind {
 	case resource.KindService:
-		if err := validateBackendService(backendRef.BackendObjectReference, resources, backendNamespace, protocol); err != nil {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.RouteReasonBackendNotFound,
-				err.Error(),
-			)
-			return fmt.Errorf("backend service validation failed: %w", err)
+		if err := t.validateBackendRefService(backendRef.BackendObjectReference, backendNamespace, protocol); err != nil {
+			return err
 		}
 	case resource.KindServiceImport:
-		if err := t.validateBackendServiceImport(backendRef, parentRef, resources, backendNamespace, route, protocol); err != nil {
-			return fmt.Errorf("backend service import validation failed: %w", err)
+		if err := t.validateBackendServiceImport(backendRef.BackendObjectReference, backendNamespace, protocol); err != nil {
+			return err
 		}
 	case egv1a1.KindBackend:
-		if err := t.validateBackendRefBackend(backendRef, parentRef, resources, backendNamespace, route); err != nil {
-			return fmt.Errorf("backend reference validation failed: %w", err)
+		if err := t.validateBackendRefBackend(backendRef.BackendObjectReference, resources, backendNamespace, false); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) error {
+func (t *Translator) validateBackendRefGroup(backendRef *gwapiv1a2.BackendRef) status.Error {
 	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService && *backendRef.Group != egv1a1.GroupName {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonInvalidKind,
-			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported", GroupMultiClusterService, egv1a1.GroupName),
-		)
-		return fmt.Errorf("unsupported backend reference group: %s", *backendRef.Group)
+		return status.NewRouteStatusError(
+			fmt.Errorf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), %s and %s are supported",
+				GroupMultiClusterService,
+				egv1a1.GroupName),
+			gwapiv1.RouteReasonInvalidKind)
 	}
 	return nil
 }
 
-func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) error {
+func (t *Translator) validateBackendRefKind(backendRef *gwapiv1a2.BackendRef) status.Error {
 	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != resource.KindServiceImport && *backendRef.Kind != egv1a1.KindBackend {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway Backend are supported",
-		)
-		return fmt.Errorf("unsupported backend reference kind: %s", *backendRef.Kind)
+		return status.NewRouteStatusError(
+			fmt.Errorf("Kind is invalid, only Service, MCS ServiceImport and Envoy Gateway Backend are supported"),
+			gwapiv1.RouteReasonInvalidKind)
 	}
 	return nil
 }
 
-func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, parentRef *RouteParentContext, route RouteContext, routeKind gwapiv1.Kind) error {
-	filters := GetFilters(backendRef)
+func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, routeKind gwapiv1.Kind) status.Error {
+	filters := backendRef.GetFilters()
+	if filters == nil {
+		return nil
+	}
 	var unsupportedFilters bool
 
 	switch routeKind {
 	case resource.KindHTTPRoute:
 		for _, filter := range filters.([]gwapiv1.HTTPRouteFilter) {
-			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier {
+			// Reuse the same validation logic as HTTPRoute to validate the ExtensionRef
+			if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
+				unsupportedFilters = true
+				continue
+			}
+			if filter.Type != gwapiv1.HTTPRouteFilterRequestHeaderModifier &&
+				filter.Type != gwapiv1.HTTPRouteFilterResponseHeaderModifier &&
+				filter.Type != gwapiv1.HTTPRouteFilterExtensionRef &&
+				filter.Type != gwapiv1.HTTPRouteFilterURLRewrite {
 				unsupportedFilters = true
 			}
 		}
 	case resource.KindGRPCRoute:
 		for _, filter := range filters.([]gwapiv1.GRPCRouteFilter) {
-			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier && filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
+			if filter.Type != gwapiv1.GRPCRouteFilterRequestHeaderModifier &&
+				filter.Type != gwapiv1.GRPCRouteFilterResponseHeaderModifier {
 				unsupportedFilters = true
 			}
 		}
@@ -131,24 +124,21 @@ func (t *Translator) validateBackendRefFilters(backendRef BackendRefContext, par
 	}
 
 	if unsupportedFilters {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"UnsupportedRefValue",
-			"Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported",
-		)
-		return errors.New("unsupported filter type in backend reference")
+		message := "Specific filter is not supported within BackendRef, only RequestHeaderModifier, ResponseHeaderModifier, URLRewrite and gateway.envoyproxy.io/HTTPRouteFilter are supported"
+		if routeKind == resource.KindGRPCRoute {
+			message = "Specific filter is not supported within BackendRef, only RequestHeaderModifier and ResponseHeaderModifier are supported"
+		}
+		return status.NewRouteStatusError(
+			errors.New(message),
+			status.RouteReasonUnsupportedRefValue)
 	}
 
 	return nil
 }
 
-func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, route RouteContext,
 	resources *resource.Resources, routeKind gwapiv1.Kind,
-) error {
+) status.Error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
 		if !t.validateCrossNamespaceRef(
 			crossNamespaceFrom{
@@ -164,194 +154,155 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 			},
 			resources.ReferenceGrants,
 		) {
-			routeStatus := GetRouteStatus(route)
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				gwapiv1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to %s %s/%s not permitted by any ReferenceGrant.", KindDerefOr(backendRef.Kind, resource.KindService), *backendRef.Namespace, backendRef.Name),
-			)
-			return fmt.Errorf("cross-namespace reference not permitted for backend: %s", backendRef.Name)
+			return status.NewRouteStatusError(
+				fmt.Errorf("Backend ref to %s %s/%s not permitted by any ReferenceGrant.",
+					KindDerefOr(backendRef.Kind, resource.KindService),
+					*backendRef.Namespace,
+					backendRef.Name),
+				gwapiv1.RouteReasonRefNotPermitted)
 		}
 	}
 	return nil
 }
 
-func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext) error {
-	if backendRef != nil && backendRef.Kind != nil && string(*backendRef.Kind) == egv1a1.KindBackend {
+func (t *Translator) validateBackendPort(backendRef *gwapiv1a2.BackendRef) status.Error {
+	if backendRef == nil {
 		return nil
 	}
+
+	if KindDerefOr(backendRef.Kind, resource.KindService) == egv1a1.KindBackend {
+		return nil
+	}
+
 	if backendRef.Port == nil {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotSpecified",
-			"A valid port number corresponding to a port on the Service must be specified",
-		)
-		return errors.New("port number not specified for backend reference")
+		return status.NewRouteStatusError(
+			errors.New("A valid port number corresponding to a port on the Service must be specified"),
+			status.RouteReasonPortNotSpecified)
 	}
 	return nil
 }
 
-func validateBackendService(backendRef gwapiv1a2.BackendObjectReference, resources *resource.Resources,
+func (t *Translator) validateBackendRefService(backendRef gwapiv1.BackendObjectReference,
 	serviceNamespace string, protocol corev1.Protocol,
-) error {
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+) status.Error {
+	service := t.GetService(serviceNamespace, string(backendRef.Name))
 	if service == nil {
-		// nolint: stylecheck
-		// The error message is used in the status.conditions, so it should be capitalized.
-		return fmt.Errorf("Service %s/%s not found", serviceNamespace, string(backendRef.Name))
+		return status.NewRouteStatusError(
+			fmt.Errorf("service %s/%s not found", serviceNamespace, string(backendRef.Name)),
+			gwapiv1.RouteReasonBackendNotFound)
 	}
 	var portFound bool
 	for _, port := range service.Spec.Ports {
-		portProtocol := port.Protocol
-		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = corev1.ProtocolTCP
-		}
-		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+		portProtocol := getServicePortProtocol(port.Protocol)
+		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
 		}
 	}
 
 	if !portFound {
-		return fmt.Errorf("%s Port %d not found on service %s/%s", string(protocol), *backendRef.Port, serviceNamespace, string(backendRef.Name))
+		return status.NewRouteStatusError(
+			fmt.Errorf("%s Port %d not found on Service %s/%s", string(protocol), *backendRef.Port, serviceNamespace, string(backendRef.Name)),
+			status.RouteReasonPortNotFound)
 	}
 	return nil
 }
 
-func (t *Translator) validateBackendServiceImport(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
-	serviceImportNamespace string, route RouteContext, protocol corev1.Protocol,
-) error {
-	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+func (t *Translator) validateBackendServiceImport(
+	backendRef gwapiv1.BackendObjectReference,
+	serviceImportNamespace string,
+	protocol corev1.Protocol,
+) status.Error {
+	serviceImport := t.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
 	if serviceImport == nil {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			gwapiv1.RouteReasonBackendNotFound,
-			fmt.Sprintf("ServiceImport %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
-				string(backendRef.Name)),
-		)
-		return fmt.Errorf("service import %s/%s not found", serviceImportNamespace, backendRef.Name)
+		return status.NewRouteStatusError(
+			fmt.Errorf("service import %s/%s not found", serviceImportNamespace, backendRef.Name),
+			gwapiv1.RouteReasonBackendNotFound)
 	}
 
 	var portFound bool
 	for _, port := range serviceImport.Spec.Ports {
-		portProtocol := port.Protocol
-		if port.Protocol == "" { // Default protocol is TCP
-			portProtocol = corev1.ProtocolTCP
-		}
-		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+		portProtocol := getServicePortProtocol(port.Protocol)
+		if port.Port == *backendRef.Port && portProtocol == protocol {
 			portFound = true
 			break
 		}
 	}
 
 	if !portFound {
-		routeStatus := GetRouteStatus(route)
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotFound",
-			fmt.Sprintf(string(protocol)+" Port %d not found on ServiceImport %s/%s", *backendRef.Port, serviceImportNamespace,
-				string(backendRef.Name)),
-		)
-		return fmt.Errorf("%s port %d not found on service import %s/%s", string(protocol), *backendRef.Port, serviceImportNamespace, backendRef.Name)
+		return status.NewRouteStatusError(
+			fmt.Errorf("%s port %d not found on service import %s/%s", string(protocol), *backendRef.Port, serviceImportNamespace, backendRef.Name),
+			status.RouteReasonPortNotFound)
 	}
 
 	return nil
 }
 
-func (t *Translator) validateBackendRefBackend(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, resources *resource.Resources,
-	backendNamespace string, route RouteContext,
-) error {
-	routeStatus := GetRouteStatus(route)
-
+func (t *Translator) validateBackendRefBackend(
+	backendRef gwapiv1.BackendObjectReference,
+	resources *resource.Resources,
+	backendNamespace string, allowUDS bool,
+) status.Error {
 	if !t.BackendEnabled {
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
+		return status.NewRouteStatusError(
+			errors.New("Backend is disabled in Envoy Gateway configuration"),
 			gwapiv1.RouteReasonUnsupportedValue,
-			fmt.Sprintf("Resource %s/%s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration",
-				NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()), string(backendRef.Name)),
 		)
-		return errors.New("backend is disabled in Envoy Gateway configuration")
 	}
 
-	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	if backend == nil {
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
+		return status.NewRouteStatusError(
+			fmt.Errorf("Backend %s/%s not found", backendNamespace, backendRef.Name),
 			gwapiv1.RouteReasonBackendNotFound,
-			fmt.Sprintf("Backend %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
-				string(backendRef.Name)),
 		)
-		return fmt.Errorf("backend %s/%s not found", backendNamespace, backendRef.Name)
 	}
 
-	if err := validateBackend(backend); err != nil {
-		status.SetRouteStatusCondition(routeStatus,
-			parentRef.routeParentStatusIdx,
-			route.GetGeneration(),
-			gwapiv1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"UnsupportedRefAddressFound",
-			fmt.Sprintf("Invalid Backend reference to Backend %s/%s found", backendNamespace,
-				string(backendRef.Name)),
-		)
-		return fmt.Errorf("invalid backend reference: %w", err)
+	if err := validateBackend(backend, resources.BackendTLSPolicies, t.RunningOnHost); err != nil {
+		return err
 	}
 
 	for _, bep := range backend.Spec.Endpoints {
-		if bep.Unix != nil {
-			status.SetRouteStatusCondition(routeStatus,
-				parentRef.routeParentStatusIdx,
-				route.GetGeneration(),
-				gwapiv1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				"UnsupportedRefAddressFound",
-				fmt.Sprintf("Unix domain socket found in Backend %s/%s is not supported for xRoute backendRefs", backendNamespace,
-					string(backendRef.Name)),
+		if bep.Unix != nil && !allowUDS {
+			return status.NewRouteStatusError(
+				errors.New("unix domain sockets are not supported in backend references"),
+				status.RouteReasonUnsupportedAddressType,
 			)
-			return errors.New("unix domain sockets are not supported in backend references")
 		}
 	}
 
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway, listener.listenerStatusIdx,
-			gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
+		listener.SetCondition(gwapiv1.ListenerConditionResolvedRefs, metav1.ConditionTrue, gwapiv1.ListenerReasonResolvedRefs,
 			"Listener references have been resolved")
-		return true
+		if listener.isFromListenerSet() {
+			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
+				"No conflicts detected")
+		}
+		return
+	}
+
+	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
+	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
+	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
+		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
+		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+			"Listener has been successfully translated")
+		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+			"Sending translated listener configuration to the data plane")
+		return
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
-	if !(lConditions[0].Type == string(gwapiv1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
+	if lConditions[0].Type != string(gwapiv1.ListenerConditionProgrammed) || lConditions[0].Status != metav1.ConditionTrue {
 		hasProgrammedCond := false
 		hasRefsCond := false
 		for _, existing := range lConditions {
@@ -363,9 +314,10 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			}
 		}
 		// set "Programmed: false" if it's not set already.
+		// xref: https://github.com/kubernetes-sigs/gateway-api/issues/4425
+		// Invalid Listener shouldn't block IR
 		if !hasProgrammedCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -374,8 +326,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 		}
 		// set "ResolvedRefs: true" if it's not set already.
 		if !hasRefsCond {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionTrue,
 				gwapiv1.ListenerReasonResolvedRefs,
@@ -383,9 +334,8 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			)
 		}
 		// skip computing IR
-		return false
+		return
 	}
-	return true
 }
 
 func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
@@ -394,8 +344,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 		listener.AllowedRoutes.Namespaces.From != nil &&
 		*listener.AllowedRoutes.Namespaces.From == gwapiv1.NamespacesFromSelector {
 		if listener.AllowedRoutes.Namespaces.Selector == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -404,8 +353,7 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 		} else {
 			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 			if err != nil {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -418,51 +366,56 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 	}
 }
 
-func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerContext, resources *resource.Resources) []*corev1.Secret {
+func (t *Translator) validateTerminateModeAndGetTLSSecrets(
+	listener *ListenerContext,
+	resources *resource.Resources,
+) ([]*corev1.Secret, []*x509.Certificate) {
 	if len(listener.TLS.CertificateRefs) == 0 {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
 			metav1.ConditionFalse,
 			gwapiv1.ListenerReasonInvalid,
 			"Listener must have at least 1 TLS certificate ref",
 		)
-		return nil
+		return nil, nil
 	}
 
-	secrets := make([]*corev1.Secret, 0)
-	for _, certificateRef := range listener.TLS.CertificateRefs {
-		// TODO zhaohuabing: reuse validateSecretRef
+	var errs []status.ListenerError
+	secrets := make([]*corev1.Secret, 0, len(listener.TLS.CertificateRefs))
+	for idx, certificateRef := range listener.TLS.CertificateRefs {
 		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Listener's TLS certificate ref group must be unspecified/empty.", idx),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				"Listener's TLS certificate ref group must be unspecified/empty.",
-			)
-			break
+			))
+			continue
 		}
 
 		if certificateRef.Kind != nil && string(*certificateRef.Kind) != resource.KindSecret {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Listener's TLS certificate ref kind must be %s.", idx, resource.KindSecret),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", resource.KindSecret),
-			)
-			break
+			))
+			continue
 		}
 
-		secretNamespace := listener.gateway.Namespace
+		listenerNamespace := listener.GetNamespace()
+		secretNamespace := listenerNamespace
 
-		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listenerNamespace {
+			fromGroup := gwapiv1.GroupName
+			fromKind := resource.KindGateway
+
+			if listener.isFromListenerSet() {
+				fromGroup = gwapiv1.GroupVersion.Group
+				fromKind = resource.KindListenerSet
+			}
+
 			if !t.validateCrossNamespaceRef(
 				crossNamespaceFrom{
-					group:     gwapiv1.GroupName,
-					kind:      resource.KindGateway,
-					namespace: listener.gateway.Namespace,
+					group:     fromGroup,
+					kind:      fromKind,
+					namespace: listenerNamespace,
 				},
 				crossNamespaceTo{
 					group:     "",
@@ -472,77 +425,110 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 				},
 				resources.ReferenceGrants,
 			) {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
-					gwapiv1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
+				errs = append(errs, status.NewListenerStatusError(
+					fmt.Errorf("certificate refs %d: Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", idx, *certificateRef.Namespace, certificateRef.Name),
 					gwapiv1.ListenerReasonRefNotPermitted,
-					fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", *certificateRef.Namespace, certificateRef.Name),
-				)
-				break
+				))
+				continue
 			}
 
 			secretNamespace = string(*certificateRef.Namespace)
 		}
 
-		secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
+		secret := t.GetSecret(secretNamespace, string(certificateRef.Name))
 
 		if secret == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s does not exist.", idx, secretNamespace, certificateRef.Name),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
-			)
-			break
+			))
+			continue
 		}
 
 		if secret.Type != corev1.SecretTypeTLS {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s must be of type %s.", idx, secretNamespace, certificateRef.Name, corev1.SecretTypeTLS),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, corev1.SecretTypeTLS),
-			)
-			break
+			))
+			continue
 		}
 
 		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
-				gwapiv1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
+			errs = append(errs, status.NewListenerStatusError(
+				fmt.Errorf("certificate refs %d: Secret %s/%s must contain %s and %s.", idx, secretNamespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
 				gwapiv1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey),
-			)
-			break
+			))
+			continue
 		}
 
 		secrets = append(secrets, secret)
 	}
 
-	err := validateTLSSecretsData(secrets, listener.Hostname)
-	if err != nil {
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+	if len(secrets) == 0 {
+		// Use RefNotPermitted only if ALL errors are RefNotPermitted
+		// Otherwise use InvalidCertificateRef as the general catch-all
+		reason := gwapiv1.ListenerReasonRefNotPermitted
+		for _, err := range errs {
+			if err.Reason() != gwapiv1.ListenerReasonRefNotPermitted {
+				reason = gwapiv1.ListenerReasonInvalidCertificateRef
+				break
+			}
+		}
+
+		errList := make([]error, len(errs))
+		for i, e := range errs {
+			errList[i] = e
+		}
+
+		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
-			gwapiv1.ListenerReasonInvalidCertificateRef,
-			fmt.Sprintf("Secret %s.", err.Error()),
+			reason,
+			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
 		)
+
+		return nil, nil
 	}
 
-	return secrets
+	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
+	if err != nil {
+		if err.Reason() != status.ListenerReasonPartiallyInvalidCertificateRef {
+			listener.SetCondition(
+				gwapiv1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				err.Reason(),
+				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
+			)
+			return nil, nil
+		} else {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		errList := make([]error, len(errs))
+		for i, e := range errs {
+			errList[i] = e
+		}
+
+		listener.SetCondition(
+			gwapiv1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			status.ListenerReasonPartiallyInvalidCertificateRef,
+			fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
+		)
+	}
+	return validSecrets, certs
 }
 
-func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resources *resource.Resources) {
+func (t *Translator) validateTLSConfiguration(
+	listener *ListenerContext,
+	resources *resource.Resources,
+) {
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
 		if listener.TLS != nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -551,8 +537,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		}
 	case gwapiv1.HTTPSProtocolType:
 		if listener.TLS == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -562,8 +547,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		}
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				"UnsupportedTLSMode",
@@ -572,13 +556,16 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
-		secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+		secrets, certs := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 		listener.SetTLSSecrets(secrets)
 
+		listener.tls.certDNSNames = make([]string, 0)
+		for _, cert := range certs {
+			listener.tls.certDNSNames = append(listener.tls.certDNSNames, cert.DNSNames...)
+		}
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -589,8 +576,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough {
 			if len(listener.TLS.CertificateRefs) > 0 {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -602,8 +588,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 
 		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModeTerminate {
 			if len(listener.TLS.CertificateRefs) == 0 {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionProgrammed,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonInvalid,
@@ -611,17 +596,47 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
-			secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+			secrets, _ := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
 			listener.SetTLSSecrets(secrets)
 		}
+	}
+
+	if listener.tls.frontendTLSValidation != nil &&
+		listener.tls.frontendTLSValidation.ValidateError != nil {
+		reason := gwapiv1.ListenerReasonInvalidCACertificateRef
+		switch {
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrInvalidCACertificateKind):
+			reason = gwapiv1.ListenerReasonInvalidCACertificateKind
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrNoValidCACertificate):
+			reason = gwapiv1.ListenerReasonNoValidCACertificate
+		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrRefNotPermitted):
+			reason = gwapiv1.ListenerReasonRefNotPermitted
+		}
+		listener.SetCondition(
+			gwapiv1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			reason,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
+		listener.SetCondition(
+			gwapiv1.ListenerConditionProgrammed,
+			metav1.ConditionFalse,
+			reason,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
+		listener.SetCondition(
+			gwapiv1.ListenerConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.ListenerReasonNoValidCACertificate,
+			"Listener has invalid CA certificate for frontend TLS validation.",
+		)
 	}
 }
 
 func (t *Translator) validateHostName(listener *ListenerContext) {
 	if listener.Protocol == gwapiv1.UDPProtocolType || listener.Protocol == gwapiv1.TCPProtocolType {
 		if listener.Hostname != nil {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalid,
@@ -649,8 +664,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 
 		// if there is a group it must match `gateway.networking.k8s.io`
 		if kind.Group != nil && string(*kind.Group) != gwapiv1.GroupName {
-			status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-				listener.listenerStatusIdx,
+			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
 				metav1.ConditionFalse,
 				gwapiv1.ListenerReasonInvalidRouteKinds,
@@ -681,8 +695,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 		} else {
 			printRouteKinds = supportedRouteKinds
 		}
-		status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-			listener.listenerStatusIdx,
+		listener.SetCondition(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
 			gwapiv1.ListenerReasonInvalidRouteKinds,
@@ -710,8 +723,7 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 			}
 			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionConflicted,
 					metav1.ConditionTrue,
 					gwapiv1.ListenerReasonHostnameConflict,
@@ -763,8 +775,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 		for _, info := range portListenerInfo {
 			for _, listener := range info.listeners {
 				if len(info.protocols) > 1 {
-					status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-						listener.listenerStatusIdx,
+					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonProtocolConflict,
@@ -778,8 +789,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 				}
 
 				if info.hostnames[hostname] > 1 {
-					status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-						listener.listenerStatusIdx,
+					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonHostnameConflict,
@@ -810,8 +820,7 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 		for _, info := range portListenerInfo {
 			if len(info.listeners) > 1 {
 				for i := 1; i < len(info.listeners); i++ {
-					status.SetGatewayListenerStatusCondition(info.listeners[i].gateway.Gateway,
-						info.listeners[i].listenerStatusIdx,
+					info.listeners[i].SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
 						gwapiv1.ListenerReasonProtocolConflict,
@@ -914,7 +923,7 @@ func (t *Translator) validateSecretRef(
 	if secretObjRef.Namespace != nil {
 		secretNamespace = string(*secretObjRef.Namespace)
 	}
-	secret := resources.GetSecret(secretNamespace, string(secretObjRef.Name))
+	secret := t.GetSecret(secretNamespace, string(secretObjRef.Name))
 
 	if secret == nil {
 		return nil, fmt.Errorf(
@@ -938,7 +947,7 @@ func (t *Translator) validateConfigMapRef(
 	if secretObjRef.Namespace != nil {
 		configMapNamespace = string(*secretObjRef.Namespace)
 	}
-	configMap := resources.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
+	configMap := t.GetConfigMap(configMapNamespace, string(secretObjRef.Name))
 
 	if configMap == nil {
 		return nil, fmt.Errorf(
@@ -989,7 +998,8 @@ func (t *Translator) validateSecretObjectRef(
 			resources.ReferenceGrants,
 		) {
 			return fmt.Errorf(
-				"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+				"ref to %s %s/%s not permitted by any ReferenceGrant",
+				kind,
 				*secretRef.Namespace, secretRef.Name)
 		}
 
@@ -1018,17 +1028,14 @@ func (t *Translator) validateExtServiceBackendReference(
 ) error {
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
-	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != egv1a1.GroupName {
-		return errors.New(
-			"group is invalid, only the core API group (specified by omitting" +
-				" the group field or setting it to an empty string) and the" +
-				" gateway.envoyproxy.io API group are supported")
+	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService && *backendRef.Group != egv1a1.GroupName {
+		return fmt.Errorf("group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string), the %s API group, and the %s API group are supported", GroupMultiClusterService, egv1a1.GroupName)
 	}
-	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != egv1a1.KindBackend {
+	if backendRef.Kind != nil && *backendRef.Kind != resource.KindService && *backendRef.Kind != resource.KindServiceImport && *backendRef.Kind != egv1a1.KindBackend {
 		return errors.New("kind is invalid, only Service (specified by omitting " +
-			"the kind field or setting it to 'Service') and Backend are supported")
+			"the kind field or setting it to 'Service'), ServiceImport, and Backend are supported")
 	}
-	if backendRef.Port == nil && !(backendRef.Kind != nil && *backendRef.Kind == egv1a1.KindBackend) {
+	if backendRef.Port == nil && (backendRef.Kind == nil || *backendRef.Kind != egv1a1.KindBackend) {
 		return errors.New("a valid port number corresponding to a port on the Service must be specified")
 	}
 
@@ -1037,18 +1044,15 @@ func (t *Translator) validateExtServiceBackendReference(
 	case resource.KindService:
 		// check if the service is valid
 		serviceNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		service := resources.GetService(serviceNamespace, string(backendRef.Name))
+		service := t.GetService(serviceNamespace, string(backendRef.Name))
 		if service == nil {
 			return fmt.Errorf("service %s/%s not found", serviceNamespace, backendRef.Name)
 		}
 		var portFound bool
 		for _, port := range service.Spec.Ports {
-			portProtocol := port.Protocol
-			if port.Protocol == "" { // Default protocol is TCP
-				portProtocol = corev1.ProtocolTCP
-			}
+			portProtocol := getServicePortProtocol(port.Protocol)
 			// currently only HTTP and GRPC are supported, both of which are TCP
-			if port.Port == int32(*backendRef.Port) && portProtocol == corev1.ProtocolTCP {
+			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
 				portFound = true
 				break
 			}
@@ -1060,11 +1064,38 @@ func (t *Translator) validateExtServiceBackendReference(
 				*backendRef.Port, serviceNamespace, string(backendRef.Name),
 			)
 		}
+	case resource.KindServiceImport:
+		// check if the service import is valid
+		serviceImportNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
+		serviceImport := t.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+		if serviceImport == nil {
+			return fmt.Errorf("serviceimport %s/%s not found", serviceImportNamespace, backendRef.Name)
+		}
+		var portFound bool
+		for _, port := range serviceImport.Spec.Ports {
+			portProtocol := getServicePortProtocol(port.Protocol)
+			// currently only HTTP and GRPC are supported, both of which are TCP
+			if port.Port == *backendRef.Port && portProtocol == corev1.ProtocolTCP {
+				portFound = true
+				break
+			}
+		}
+
+		if !portFound {
+			return fmt.Errorf(
+				"TCP Port %d not found on service %s/%s",
+				*backendRef.Port, serviceImportNamespace, string(backendRef.Name),
+			)
+		}
 	case egv1a1.KindBackend:
 		backendNamespace := NamespaceDerefOr(backendRef.Namespace, ownerNamespace)
-		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend == nil {
 			return fmt.Errorf("backend %s/%s not found", backendNamespace, backendRef.Name)
+		}
+		// Dynamic resolver backend is not supported for EG policies
+		if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
+			return fmt.Errorf("dynamic resolver backend %s/%s is not supported", backendNamespace, backendRef.Name)
 		}
 	}
 
@@ -1088,6 +1119,51 @@ func (t *Translator) validateExtServiceBackendReference(
 			return fmt.Errorf(
 				"backend ref to %s %s/%s not permitted by any ReferenceGrant",
 				backendRefKind, *backendRef.Namespace, backendRef.Name)
+		}
+	}
+	return nil
+}
+
+// validateGatewayListenerSectionName check:
+// if the section name exists in the target Gateway listeners.
+func validateGatewayListenerSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey types.NamespacedName,
+	listeners []*ListenerContext,
+) *status.PolicyResolveError {
+	found := false
+	for _, l := range listeners {
+		if l.Name == sectionName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		message := fmt.Sprintf("No section name %s found for Gateway %s",
+			string(sectionName), targetKey.String())
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonTargetNotFound,
+			Message: message,
+		}
+	}
+	return nil
+}
+
+// validateRouteRuleSectionName check:
+// if the section name exists in the target Route rules.
+func validateRouteRuleSectionName(
+	sectionName gwapiv1.SectionName,
+	targetKey policyTargetRouteKey,
+	route *policyRouteTargetContext,
+) *status.PolicyResolveError {
+	if !route.HasRuleNames(sectionName) {
+		message := fmt.Sprintf("No section name %s found for %s %s/%s",
+			string(sectionName), targetKey.Kind, targetKey.Namespace, targetKey.Name)
+
+		return &status.PolicyResolveError{
+			Reason:  gwapiv1.PolicyReasonTargetNotFound,
+			Message: message,
 		}
 	}
 	return nil

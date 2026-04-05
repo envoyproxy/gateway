@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway
@@ -25,7 +24,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway
@@ -78,6 +76,15 @@ spec:
           value: redis.redis.svc:6379
         image: docker.io/envoyproxy/ratelimit:master
         imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
         name: envoy-ratelimit
         ports:
         - containerPort: 8081

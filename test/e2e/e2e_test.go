@@ -39,16 +39,47 @@ func TestE2E(t *testing.T) {
 			*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug)
 	}
 
-	skipTests := []string{
-		tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-	}
-
+	var skipTests []string
 	// Skip test only work on DualStack cluster
 	if tests.IPFamily != "dual" {
 		skipTests = append(skipTests,
 			tests.BackendDualStackTest.ShortName,
 			tests.HTTPRouteDualStackTest.ShortName,
 		)
+	}
+
+	// Skip Dynamic Resolver test because DNS resolver doesn't work properly in IPV6 Github worker
+	if tests.IPFamily == "ipv6" {
+		skipTests = append(skipTests,
+			tests.DynamicResolverBackendTest.ShortName,
+			tests.DynamicResolverBackendWithTLSTest.ShortName,
+			tests.RateLimitCIDRMatchTest.ShortName,
+			tests.RateLimitCIDRInvertMatchAlwaysEnforceTest.ShortName,
+			tests.RateLimitCIDRInvertAlwaysExemptTest.ShortName,
+			tests.RateLimitMultipleListenersTest.ShortName,
+			tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
+			tests.AuthorizationGeoIPCountryTest.ShortName,
+		)
+	}
+
+	if tests.XDSNameSchemeV2() {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyTest.ShortName,
+		)
+	} else {
+		skipTests = append(skipTests,
+			tests.EnvoyPatchPolicyXDSNameSchemeV2Test.ShortName,
+		)
+	}
+
+	enabledFeatures := sets.New(features.SupportGateway)
+	if tests.EnabledClusterTrustBundle() {
+		tlog.Logf(t, "ClusterTrustBundle feature is enabled")
+		enabledFeatures.Insert(tests.ClusterTrustBundleFeature)
+	}
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if *flags.RunTest != "" {
+		skipTests = nil
 	}
 
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
@@ -59,23 +90,31 @@ func TestE2E(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		ManifestFS:           []fs.FS{Manifests},
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures: enabledFeatures,
 		SkipTests:         skipTests,
 		AllowCRDsMismatch: *flags.AllowCRDsMismatch,
+		Hook:              Hook,
+		FailFast:          true,
 	})
 	if err != nil {
 		t.Fatalf("Failed to create ConformanceTestSuite: %v", err)
 	}
 
-	cSuite.Setup(t, tests.ConformanceTests)
+	recorder := NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
+	timedTests := WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder)
+	cSuite.Setup(t, timedTests)
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
 	} else {
 		tlog.Logf(t, "Running %d E2E tests", len(tests.ConformanceTests))
 	}
-	err = cSuite.Run(t, tests.ConformanceTests)
+	err = cSuite.Run(t, timedTests)
 	if err != nil {
 		tlog.Fatalf(t, "Failed to run E2E tests: %v", err)
 	}

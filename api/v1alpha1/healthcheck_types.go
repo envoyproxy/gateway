@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // HealthCheck configuration to decide which endpoints
 // are healthy and can be used for routing.
@@ -39,10 +39,9 @@ type PassiveHealthCheck struct {
 
 	// Interval defines the time between passive health checks.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="3s"
 	// +optional
-	Interval *metav1.Duration `json:"interval,omitempty"`
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 
 	// ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.
 	// Parameter takes effect only when split_external_local_origin_errors is set to true.
@@ -53,7 +52,6 @@ type PassiveHealthCheck struct {
 
 	// ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection.
 	//
-	// +kubebuilder:default=0
 	// +optional
 	ConsecutiveGatewayErrors *uint32 `json:"consecutiveGatewayErrors,omitempty"`
 
@@ -65,16 +63,31 @@ type PassiveHealthCheck struct {
 
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="30s"
 	// +optional
-	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty"`
+	BaseEjectionTime *gwapiv1.Duration `json:"baseEjectionTime,omitempty"`
 
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	//
 	// +kubebuilder:default=10
 	// +optional
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
+
+	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
+	// If the failure percentage of a given host is greater than or equal to this value, it will be ejected.
+	// Defaults to 85.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty"`
+
+	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected,
+	// regardless of MaxEjectionPercent.
+	//
+	// +kubebuilder:default=false
+	// +optional
+	AlwaysEjectOneEndpoint *bool `json:"alwaysEjectOneEndpoint,omitempty"`
 }
 
 // ActiveHealthCheck defines the active health check configuration.
@@ -87,19 +100,26 @@ type PassiveHealthCheck struct {
 type ActiveHealthCheck struct {
 	// Timeout defines the time to wait for a health check response.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="1s"
 	// +optional
-	Timeout *metav1.Duration `json:"timeout"`
+	Timeout *gwapiv1.Duration `json:"timeout"`
 
 	// Interval defines the time between active health checks.
 	//
-	// +kubebuilder:validation:Format=duration
 	// +kubebuilder:default="3s"
 	// +optional
-	Interval *metav1.Duration `json:"interval"`
+	Interval *gwapiv1.Duration `json:"interval"`
+
+	// InitialJitter defines the maximum time Envoy will wait before the first health check.
+	// Envoy will randomly select a value between 0 and the initial jitter value.
+	//
+	// +optional
+	InitialJitter *gwapiv1.Duration `json:"initialJitter,omitempty"`
 
 	// UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.
+	// Without RetriableStatuses configured, any health check failure results in the host being immediately
+	// considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried
+	// up to this threshold before the host is marked unhealthy.
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default=3
@@ -132,6 +152,12 @@ type ActiveHealthCheck struct {
 	// It's optional, and can only be used if the specified type is GRPC.
 	// +optional
 	GRPC *GRPCActiveHealthChecker `json:"grpc,omitempty" yaml:"grpc,omitempty"`
+
+	// Overrides defines the configuration of the overriding health check settings for all endpoints
+	// in the backend cluster. This allows customization of port and other settings that may differ
+	// from the main service configuration.
+	// +optional
+	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
 // ActiveHealthCheckerType is the type of health checker.
@@ -149,6 +175,14 @@ const (
 
 // HTTPActiveHealthChecker defines the settings of http health check.
 type HTTPActiveHealthChecker struct {
+	// Hostname defines the HTTP host that will be requested during health checking.
+	// Default: HTTPRoute or GRPCRoute hostname.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +optional
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 	// Path defines the HTTP path that will be requested during health checking.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
@@ -161,6 +195,12 @@ type HTTPActiveHealthChecker struct {
 	// Defaults to 200 only
 	// +optional
 	ExpectedStatuses []HTTPStatus `json:"expectedStatuses,omitempty" yaml:"expectedStatuses,omitempty"`
+	// RetriableStatuses defines a list of HTTP response statuses considered retriable.
+	// Responses matching these statuses count towards the unhealthy threshold but
+	// do not result in the host being considered immediately unhealthy.
+	// The expected statuses take precedence for any range overlaps with this field.
+	// +optional
+	RetriableStatuses []HTTPStatus `json:"retriableStatuses,omitempty" yaml:"retriableStatuses,omitempty"`
 	// ExpectedResponse defines a list of HTTP expected responses to match.
 	// +optional
 	ExpectedResponse *ActiveHealthCheckPayload `json:"expectedResponse,omitempty" yaml:"expectedResponse,omitempty"`
@@ -183,6 +223,19 @@ type GRPCActiveHealthChecker struct {
 	// server and not to a specific service.
 	// +optional
 	Service *string `json:"service,omitempty" yaml:"service,omitempty"`
+}
+
+// HealthCheckOverrides allows overriding default health check behavior for specific use cases.
+type HealthCheckOverrides struct {
+	// Port overrides the health check port.
+	// If not set, the endpoint's serving port is used for health checks.
+	// This is useful when health checks are served on a different port than
+	// the main service port (e.g., port 443 for service, port 9090 for health checks).
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port,omitempty"`
 }
 
 // ActiveHealthCheckPayloadType is the type of the payload.

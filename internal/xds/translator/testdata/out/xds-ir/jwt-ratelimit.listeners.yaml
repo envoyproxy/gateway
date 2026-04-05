@@ -26,6 +26,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -40,6 +41,7 @@
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            disableXEnvoyRatelimitedHeader: true
             domain: first-listener
             enableXRatelimitHeaders: DRAFT_VERSION_03
             rateLimitService:
@@ -63,5 +65,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

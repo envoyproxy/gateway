@@ -18,6 +18,7 @@ import (
 	respv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/custom_response/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	policyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/local_response_policy/v3"
+	redirectpolicyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/custom_response/redirect_policy/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	expr "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -25,7 +26,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -57,9 +58,9 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 			continue
 		}
 
-		// Only generates one CustomResponse Envoy filter for each unique name.
+		// Only generates one CustomResponse/CustomRedirect Envoy filter for each unique name.
 		// For example, if there are two routes under the same gateway with the
-		// same CustomResponse config, only one CustomResponse filter will be generated.
+		// same CustomResponse/CustomRedirect config, only one CustomResponse/CustomRedirect filter will be generated.
 		if hcmContainsFilter(mgr, c.customResponseFilterName(route.Traffic.ResponseOverride)) {
 			continue
 		}
@@ -78,16 +79,11 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 
 // buildHCMCustomResponseFilter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
 func (c *customResponse) buildHCMCustomResponseFilter(ro *ir.ResponseOverride) (*hcmv3.HttpFilter, error) {
-	proto, err := c.customResponseConfig(ro)
+	config, err := c.customResponseConfig(ro)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := proto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	any, err := protocov.ToAnyWithValidation(proto)
+	any, err := proto.ToAnyWithValidation(config)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +235,7 @@ func (c *customResponse) buildHTTPAttributeCELInput() (*cncfv3.TypedExtensionCon
 		err error
 	)
 
-	if pb, err = protocov.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{}); err != nil {
+	if pb, err = proto.ToAnyWithValidation(&matcherv3.HttpAttributesCelMatchInput{}); err != nil {
 		return nil, err
 	}
 
@@ -255,7 +251,7 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 		err error
 	)
 
-	if pb, err = protocov.ToAnyWithValidation(&envoymatcherv3.HttpResponseStatusCodeMatchInput{}); err != nil {
+	if pb, err = proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseStatusCodeMatchInput{}); err != nil {
 		return nil, err
 	}
 
@@ -362,11 +358,7 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 			},
 		},
 	}
-	if err := matcher.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	if pb, err = protocov.ToAnyWithValidation(matcher); err != nil {
+	if pb, err = proto.ToAnyWithValidation(matcher); err != nil {
 		return nil, err
 	}
 
@@ -377,11 +369,63 @@ func (c *customResponse) buildStatusCodeCELMatcher(codeRange ir.StatusCodeRange)
 }
 
 func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matcher_OnMatch_Action, error) {
+	var (
+		pb  *anypb.Any
+		err error
+	)
+
+	if r.Redirect != nil {
+		pb, err = c.buildRedirectAction(r)
+	} else {
+		pb, err = c.buildResponseAction(r)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return &matcherv3.Matcher_OnMatch_Action{
+		Action: &cncfv3.TypedExtensionConfig{
+			Name:        r.Name,
+			TypedConfig: pb,
+		},
+	}, nil
+}
+
+func (c *customResponse) buildRedirectAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
+	redirectAction := &routev3.RedirectAction{}
+	if r.Redirect.Scheme != nil {
+		redirectAction.SchemeRewriteSpecifier = &routev3.RedirectAction_SchemeRedirect{
+			SchemeRedirect: *r.Redirect.Scheme,
+		}
+	}
+	if r.Redirect.Hostname != nil {
+		redirectAction.HostRedirect = *r.Redirect.Hostname
+	}
+	if r.Redirect.Port != nil {
+		redirectAction.PortRedirect = *r.Redirect.Port
+	}
+	if r.Redirect.Path != nil && r.Redirect.Path.FullReplace != nil {
+		redirectAction.PathRewriteSpecifier = &routev3.RedirectAction_PathRedirect{
+			PathRedirect: *r.Redirect.Path.FullReplace,
+		}
+	}
+	redirect := &redirectpolicyv3.RedirectPolicy{
+		RedirectActionSpecifier: &redirectpolicyv3.RedirectPolicy_RedirectAction{
+			RedirectAction: redirectAction,
+		},
+		StatusCode: wrapperspb.UInt32(uint32(*r.Redirect.StatusCode)),
+	}
+
+	return proto.ToAnyWithValidation(redirect)
+}
+
+func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.Any, error) {
 	response := &policyv3.LocalResponsePolicy{}
-	if r.Response.Body != nil && *r.Response.Body != "" {
-		response.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *r.Response.Body,
+
+	if len(r.Response.Body) > 0 {
+		response.BodyFormat = &corev3.SubstitutionFormatString{
+			Format: &corev3.SubstitutionFormatString_TextFormat{
+				TextFormat: string(r.Response.Body),
 			},
 		}
 	}
@@ -400,25 +444,11 @@ func (c *customResponse) buildAction(r ir.ResponseOverrideRule) (*matcherv3.Matc
 		response.StatusCode = &wrapperspb.UInt32Value{Value: *r.Response.StatusCode}
 	}
 
-	var (
-		pb  *anypb.Any
-		err error
-	)
-
-	if err := response.ValidateAll(); err != nil {
-		return nil, err
+	if r.Response.AddResponseHeaders != nil {
+		response.ResponseHeadersToAdd = append(response.ResponseHeadersToAdd, buildXdsAddedHeaders(r.Response.AddResponseHeaders)...)
 	}
 
-	if pb, err = protocov.ToAnyWithValidation(response); err != nil {
-		return nil, err
-	}
-
-	return &matcherv3.Matcher_OnMatch_Action{
-		Action: &cncfv3.TypedExtensionConfig{
-			Name:        r.Name,
-			TypedConfig: pb,
-		},
-	}, nil
+	return proto.ToAnyWithValidation(response)
 }
 
 // routeContainsResponseOverride returns true if ResponseOverride exists for the provided route.
@@ -431,15 +461,13 @@ func (c *customResponse) routeContainsResponseOverride(irRoute *ir.HTTPRoute) bo
 	return false
 }
 
-func (c *customResponse) patchResources(tCtx *types.ResourceVersionTable,
-	routes []*ir.HTTPRoute,
-) error {
+func (c *customResponse) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
 	return nil
 }
 
 // patchRoute patches the provided route with the customResponse config if applicable.
 // Note: this method enables the corresponding customResponse filter for the provided route.
-func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -450,7 +478,9 @@ func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute)
 		return nil
 	}
 	filterName := c.customResponseFilterName(irRoute.Traffic.ResponseOverride)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

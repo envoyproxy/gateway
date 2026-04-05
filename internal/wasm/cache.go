@@ -48,7 +48,7 @@ const (
 
 // Cache models a Wasm module cache.
 type Cache interface {
-	Get(downloadURL string, opts GetOptions) (url string, checksum string, err error)
+	Get(downloadURL string, opts *GetOptions) (url, checksum string, err error)
 	Start(ctx context.Context)
 }
 
@@ -67,11 +67,16 @@ type localFileCache struct {
 	// option sets for configuring the cache.
 	CacheOptions
 
+	// permissionCheckCache is the cache for permission check for private OCI images.
+	// The permission check is run periodically by a background goroutine and the result is cached.
+	permissionCheckCache *permissionCache
+
 	// logger
 	logger logging.Logger
 }
 
 func (c *localFileCache) Start(ctx context.Context) {
+	c.permissionCheckCache.Start(ctx)
 	go c.purge(ctx)
 }
 
@@ -131,9 +136,12 @@ type cacheEntry struct {
 func newLocalFileCache(options CacheOptions, logger logging.Logger) *localFileCache {
 	options = options.sanitize()
 	cache := &localFileCache{
-		httpFetcher:  NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
-		modules:      make(map[moduleKey]*cacheEntry),
-		checksums:    make(map[string]*checksumEntry),
+		httpFetcher: NewHTTPFetcher(options.HTTPRequestTimeout, options.HTTPRequestMaxRetries, logger),
+		modules:     make(map[moduleKey]*cacheEntry),
+		checksums:   make(map[string]*checksumEntry),
+		permissionCheckCache: newPermissionCache(
+			permissionCacheOptions{},
+			logger),
 		CacheOptions: options,
 		logger:       logger,
 	}
@@ -163,7 +171,7 @@ func getModulePath(baseDir string, mkey moduleKey) (string, error) {
 }
 
 // Get returns path the local Wasm module file and its checksum.
-func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile string, checksum string, err error) {
+func (c *localFileCache) Get(downloadURL string, opts *GetOptions) (localFile, checksum string, err error) {
 	// If the checksum is not provided, try to extract it from the OCI image URL.
 	originalChecksum := opts.Checksum
 	if len(opts.Checksum) == 0 && strings.HasPrefix(downloadURL, ociURLPrefix) {
@@ -187,7 +195,7 @@ func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile str
 		resourceVersion: opts.ResourceVersion,
 	}
 
-	entry, err := c.getOrFetch(key, opts)
+	entry, err := c.getOrFetch(&key, opts)
 	if err != nil {
 		return "", "", err
 	}
@@ -195,7 +203,7 @@ func (c *localFileCache) Get(downloadURL string, opts GetOptions) (localFile str
 	return entry.modulePath, entry.checksum, err
 }
 
-func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry, error) {
+func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntry, error) {
 	var (
 		u         *url.URL
 		insecure  bool
@@ -220,7 +228,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	if ce != nil {
 		// We still need to check if the pull secret is correct if it is a private OCI image.
 		if u.Scheme == "oci" && ce.isPrivate {
-			if err = c.checkPermission(ctx, u, insecure, opts); err != nil {
+			if _, err := c.permissionCheckCache.IsAllowed(ctx, u, opts.PullSecret, insecure); err != nil {
 				return nil, err
 			}
 		}
@@ -237,7 +245,7 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	switch u.Scheme {
 	case "http", "https":
 		// Download the Wasm module with http fetcher.
-		b, err = c.httpFetcher.Fetch(ctx, key.downloadURL, insecure)
+		b, err = c.httpFetcher.Fetch(ctx, key.downloadURL, insecure, opts.CACert)
 		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonDownloadError).Increment()
 			return nil, err
@@ -250,7 +258,25 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 		if len(opts.PullSecret) > 0 {
 			isPrivate = true
 		}
-		if imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts); err != nil {
+
+		imageBinaryFetcher, dChecksum, err = c.prepareFetch(ctx, u, insecure, opts.PullSecret, opts.CACert)
+
+		if isPrivate {
+			e := &permissionCacheEntry{
+				image: u,
+				fetcherOption: &ImageFetcherOption{
+					Insecure:   insecure,
+					PullSecret: opts.PullSecret,
+					CACert:     opts.CACert,
+				},
+				lastCheck:  time.Now(),
+				lastAccess: time.Now(),
+				checkError: err,
+			}
+			c.permissionCheckCache.Put(e)
+		}
+
+		if err != nil {
 			wasmRemoteFetchTotal.WithFailure(reasonManifestError).Increment()
 			return nil, fmt.Errorf("could not fetch Wasm OCI image: %w", err)
 		}
@@ -287,33 +313,32 @@ func (c *localFileCache) getOrFetch(key cacheKey, opts GetOptions) (*cacheEntry,
 	return c.addEntry(key, b, isPrivate)
 }
 
-func (c *localFileCache) checkPermission(ctx context.Context, u *url.URL, insecure bool, opts GetOptions) error {
-	// Try to get the image metadata to check if the pull secret is correct.
-	if _, _, err := c.prepareFetch(ctx, u, insecure, opts); err != nil {
-		return fmt.Errorf("failed to login to private registry: %w", err)
-	}
-	return nil
-}
-
 // prepareFetch won't fetch the binary, but it will prepare the binaryFetcher and actualDigest.
 func (c *localFileCache) prepareFetch(
-	ctx context.Context, url *url.URL, insecure bool, opts GetOptions) (
-	binaryFetcher func() ([]byte, error), actualDigest string, err error,
-) {
+	ctx context.Context,
+	url *url.URL,
+	insecure bool,
+	pullSecret []byte,
+	caCert []byte,
+) (binaryFetcher func() ([]byte, error), actualDigest string, err error) {
 	imgFetcherOps := ImageFetcherOption{
 		Insecure: insecure,
+		CACert:   caCert,
 	}
-	if len(opts.PullSecret) > 0 {
-		imgFetcherOps.PullSecret = opts.PullSecret
+	if len(pullSecret) > 0 {
+		imgFetcherOps.PullSecret = pullSecret
 	}
-	fetcher := NewImageFetcher(ctx, imgFetcherOps, c.logger)
+	fetcher, err := NewImageFetcher(ctx, imgFetcherOps, c.logger)
+	if err != nil {
+		return nil, "", err
+	}
 	if binaryFetcher, actualDigest, err = fetcher.PrepareFetch(url.Host + url.Path); err != nil {
 		return nil, "", err
 	}
 	return binaryFetcher, actualDigest, nil
 }
 
-func (c *localFileCache) updateChecksum(key cacheKey) {
+func (c *localFileCache) updateChecksum(key *cacheKey) {
 	ce := c.checksums[key.downloadURL]
 	if ce == nil {
 		ce = new(checksumEntry)
@@ -326,7 +351,7 @@ func (c *localFileCache) updateChecksum(key cacheKey) {
 
 // addEntry adds a wasmModule to cache with cacheKey, writes the module to the local file system,
 // and returns the created entry.
-func (c *localFileCache) addEntry(key cacheKey, wasmModule []byte, isPrivate bool) (*cacheEntry, error) {
+func (c *localFileCache) addEntry(key *cacheKey, wasmModule []byte, isPrivate bool) (*cacheEntry, error) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
@@ -375,7 +400,7 @@ func (c *localFileCache) addEntry(key cacheKey, wasmModule []byte, isPrivate boo
 // getEntry finds a cached module, and returns the found cache entry and its checksum.
 // If the module is not found in the cache, it returns nil.
 // If the module is found in the cache, but the module needs to be re-pulled, it returns nil.
-func (c *localFileCache) getEntry(key cacheKey, pullPolicy PullPolicy, u *url.URL) *cacheEntry {
+func (c *localFileCache) getEntry(key *cacheKey, pullPolicy PullPolicy, u *url.URL) *cacheEntry {
 	cacheHit := false
 
 	c.mux.Lock()

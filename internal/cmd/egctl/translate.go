@@ -23,11 +23,13 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -38,6 +40,13 @@ const (
 	xdsType        = "xds"
 	irType         = "ir"
 )
+
+type TranslationOptions struct {
+	GlobalRateLimitEnabled  bool
+	EndpointRoutingDisabled bool
+	EnvoyPatchPolicyEnabled bool
+	BackendEnabled          bool
+}
 
 type TranslationResult struct {
 	resource.Resources
@@ -92,7 +101,7 @@ func newTranslateCommand() *cobra.Command {
   # Translate Gateway API Resources into IR in YAML output,
   egctl experimental translate --from gateway-api --to ir --output yaml --file <input file>
 	`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, namespace, dnsDomain)
 		},
 	}
@@ -224,7 +233,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 
 	if inType == gatewayAPIType {
 		// Unmarshal input
-		resources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources)
+		resources, err := resource.LoadResourcesFromYAMLBytes(inBytes, addMissingResources, nil)
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
@@ -239,7 +248,13 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				}
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources)
+				opts := &TranslationOptions{
+					GlobalRateLimitEnabled:  true,
+					EndpointRoutingDisabled: true,
+					EnvoyPatchPolicyEnabled: true,
+					BackendEnabled:          true,
+				}
+				res, err := TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType, resources, opts)
 				if err != nil {
 					return err
 				}
@@ -256,7 +271,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 			}
 		}
 		// Print
-		if err = printOutput(w, result, output); err != nil {
+		if err = printOutput(w, &result, output); err != nil {
 			return fmt.Errorf("failed to print result, error:%w", err)
 		}
 
@@ -277,6 +292,8 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		// Discard logs during translation for egctl command to avoid polluting output
+		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 
 	// Fix the services in the resources section so that they have an IP address - this prevents nasty
@@ -305,6 +322,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -331,7 +349,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 	return gRes.Resources, nil
 }
 
-func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, resources *resource.Resources) (map[string]any, error) {
+func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resources *resource.Resources, opts *TranslationOptions) (map[string]any, error) {
 	if resources.GatewayClass == nil {
 		return nil, fmt.Errorf("the GatewayClass resource is required")
 	}
@@ -340,10 +358,11 @@ func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, 
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:   string(resources.GatewayClass.Spec.ControllerName),
 		GatewayClassName:        gwapiv1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled:  true,
-		EndpointRoutingDisabled: true,
-		EnvoyPatchPolicyEnabled: true,
-		BackendEnabled:          true,
+		GlobalRateLimitEnabled:  opts.GlobalRateLimitEnabled,
+		EndpointRoutingDisabled: opts.EndpointRoutingDisabled,
+		EnvoyPatchPolicyEnabled: opts.EnvoyPatchPolicyEnabled,
+		BackendEnabled:          opts.BackendEnabled,
+		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
 
@@ -363,6 +382,7 @@ func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, 
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: ratelimit.GetServiceURL(namespace, dnsDomain),
 			},
+			Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 		}
 		if resources.EnvoyProxyForGatewayClass != nil {
 			xTranslator.FilterOrder = resources.EnvoyProxyForGatewayClass.Spec.FilterOrder
@@ -406,7 +426,7 @@ func translateGatewayAPIToXds(namespace, dnsDomain string, resourceType string, 
 }
 
 // printOutput prints the echo-backed gateway API and xDS output
-func printOutput(w io.Writer, result TranslationResult, output string) error {
+func printOutput(w io.Writer, result *TranslationResult, output string) error {
 	var (
 		out []byte
 		err error

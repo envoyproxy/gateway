@@ -5,8 +5,10 @@
     - '*'
     name: extension-post-xdsvirtualhost-hook-error/*
     routes:
-    - directResponse:
-        status: 500
-      match:
+    - match:
         prefix: /
-      name: error_route
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

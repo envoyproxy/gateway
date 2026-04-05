@@ -4,30 +4,10 @@ tools.srcdir = tools/src
 # Shell scripts
 # =============
 #
-tools/whitenoise = $(tools.bindir)/whitenoise
+tools/sync-docs-codeowners = $(tools.bindir)/sync-docs-codeowners
 $(tools.bindir)/%: $(tools.srcdir)/%.sh
 	mkdir -p $(@D)
 	install $< $@
-
-# `go get`-able things
-# ====================
-#
-tools/controller-gen     = $(tools.bindir)/controller-gen
-tools/golangci-lint      = $(tools.bindir)/golangci-lint
-tools/gci                = $(tools.bindir)/gci
-tools/kustomize          = $(tools.bindir)/kustomize
-tools/kind               = $(tools.bindir)/kind
-tools/setup-envtest      = $(tools.bindir)/setup-envtest
-tools/crd-ref-docs       = $(tools.bindir)/crd-ref-docs
-tools/buf                = $(tools.bindir)/buf
-tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
-tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
-tools/helm-docs          = $(tools.bindir)/helm-docs
-tools/jsonnet            = $(tools.bindir)/jsonnet
-tools/jb                 = $(tools.bindir)/jb
-$(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
-	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import _ "(.*)".*,\1,p' pin.go)
-
 
 # `pip install`-able things
 # =========================
@@ -39,13 +19,21 @@ tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@
-	$@/bin/pip3 install -r $< || (rm -rf $@; exit 1)
+	$@/bin/pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org --disable-pip-version-check -r $< || (rm -rf $@; exit 1)
 $(tools.bindir)/%: $(tools.bindir)/%.d/venv	
 	@if [ -e $(tools.srcdir)/$*/$*.sh ]; then \
 		ln -sf ../../$(tools.srcdir)/$*/$*.sh $@; \
 	else \
 		ln -sf $*.d/venv/bin/$* $@; \
 	fi
+
+# kube-api-linter
+# ===============
+#
+tools/kube-api-linter = $(tools.bindir)/kube-api-linter
+$(tools/kube-api-linter):
+	cd $(CURDIR)/tools && \
+	go build -buildmode=plugin -o bin/kube-api-linter.so sigs.k8s.io/kube-api-linter/pkg/plugin
 
 ifneq ($(GOOS),windows)
 # Shellcheck
@@ -74,3 +62,7 @@ tools.clean: # Remove all tools
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: tools.clean
+
+.PHONY: reclaim-storage
+reclaim-storage: ## Removes unnecessary packages and artifacts from GitHub Actions Runner
+	bash ./tools/hack/reclaim-storage.sh

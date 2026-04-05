@@ -653,10 +653,8 @@ func TestWasmCache(t *testing.T) {
 			},
 			wantCachedModules:   map[moduleKey]*cacheEntry{},
 			wantCachedChecksums: map[string]*checksumEntry{},
-			wantErrorMsgPrefix: `could not fetch Wasm binary: the given image is in invalid format as an OCI image: 2 errors occurred:
-	* could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)
-	* could not parse as oci variant: number of layers must be 2 but got 1`,
-			wantVisitServer: true,
+			wantErrorMsgPrefix:  `could not fetch Wasm binary: the given image is in invalid format as an OCI image: could not parse as compat variant: invalid media type application/vnd.oci.image.layer.v1.tar (expect application/vnd.oci.image.layer.v1.tar+gzip)`,
+			wantVisitServer:     true,
 		},
 		{
 			name: "cache size limit",
@@ -691,7 +689,7 @@ func TestWasmCache(t *testing.T) {
 			if c.wasmModuleExpiry != 0 {
 				options.ModuleExpiry = c.wasmModuleExpiry
 			}
-			cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+			cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 			cache.httpFetcher.initialBackoff = time.Microsecond
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 			cache.Start(ctx)
@@ -734,7 +732,7 @@ func TestWasmCache(t *testing.T) {
 			if c.getOptions.PullSecret == nil {
 				c.getOptions.PullSecret = []byte{}
 			}
-			gotFilePath, _, gotErr := cache.Get(c.fetchURL, c.getOptions)
+			gotFilePath, _, gotErr := cache.Get(c.fetchURL, &c.getOptions)
 			serverVisited := atomic.LoadInt32(&tsNumRequest) > 0
 
 			if c.checkPurgeTimeout > 0 {
@@ -742,7 +740,7 @@ func TestWasmCache(t *testing.T) {
 				for start := time.Now(); time.Since(start) < c.checkPurgeTimeout; {
 					fileCount := 0
 					err = filepath.Walk(tmpDir,
-						func(path string, info os.FileInfo, err error) error {
+						func(_ string, info os.FileInfo, err error) error {
 							if err != nil {
 								return err
 							}
@@ -765,7 +763,7 @@ func TestWasmCache(t *testing.T) {
 
 			cache.mux.Lock()
 			if cacheHitKey != nil {
-				if entry, ok := cache.modules[*cacheHitKey]; ok && entry.last == initTime {
+				if entry, ok := cache.modules[*cacheHitKey]; ok && initTime.Equal(entry.last) {
 					t.Errorf("Wasm module cache entry's last access time not updated after get operation, key: %v", *cacheHitKey)
 				}
 			}
@@ -805,7 +803,7 @@ func TestWasmCache(t *testing.T) {
 	}
 }
 
-func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCIImageDigest string) {
+func setupOCIRegistry(t *testing.T, host string) (string, string) {
 	// Push *compat* variant docker image (others are well tested in imagefetcher's test and the behavior is consistent).
 	ref := fmt.Sprintf("%s/test/valid/docker:v0.1.0", host)
 	binary := wasmHeader
@@ -847,7 +845,7 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 
 	// Calculate sum
 	d, _ := img.Digest()
-	dockerImageDigest = d.Hex
+	dockerImageDigest := d.Hex
 
 	// Finally push the invalid image.
 	ref = fmt.Sprintf("%s/test/invalid", host)
@@ -864,21 +862,21 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 	img2 = mutate.MediaType(img2, types.OCIManifestSchema1)
 
 	d, _ = img2.Digest()
-	invalidOCIImageDigest = d.Hex
+	invalidOCIImageDigest := d.Hex
 
 	// Push image to the registry.
 	err = crane.Push(img2, ref, fetchOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return
+	return dockerImageDigest, invalidOCIImageDigest
 }
 
 func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	tmpDir := t.TempDir()
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
-	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()
@@ -890,7 +888,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	binary2 = append(binary2, 2)
 
 	// Create a test server which returns 0 for the first two calls, and returns 1 for the following calls.
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if gotNumRequest <= 1 {
 			_, _ = w.Write(binary1)
 		} else {
@@ -905,9 +903,9 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	wantFilePath2 := generateModulePath(t, tmpDir, url2, fmt.Sprintf("%x.wasm", sha256.Sum256(binary2)))
 	var defaultPullPolicy PullPolicy
 
-	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion string, wantFilePath string, wantNumRequest int) {
+	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion, wantFilePath string, wantNumRequest int) {
 		t.Helper()
-		gotFilePath, _, err := cache.Get(downloadURL, GetOptions{
+		gotFilePath, _, err := cache.Get(downloadURL, &GetOptions{
 			ResourceName:    "namespace.resource",
 			ResourceVersion: resourceVersion,
 			RequestTimeout:  time.Second * 10,
@@ -944,7 +942,7 @@ func TestAllInsecureServer(t *testing.T) {
 	options := defaultCacheOptions()
 	options.CacheDir = tmpDir
 	options.InsecureRegistries = sets.New[string]("*")
-	cache := newLocalFileCache(options, logging.DefaultLogger(egv1a1.LogLevelInfo))
+	cache := newLocalFileCache(options, logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo))
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	cache.Start(ctx)
 	defer cancel()
@@ -962,7 +960,7 @@ func TestAllInsecureServer(t *testing.T) {
 	ociURLWithTag := fmt.Sprintf("oci://%s/test/valid/docker:v0.1.0", ou.Host)
 	var defaultPullPolicy PullPolicy
 
-	gotFilePath, _, err := cache.Get(ociURLWithTag, GetOptions{
+	gotFilePath, _, err := cache.Get(ociURLWithTag, &GetOptions{
 		ResourceName:    "namespace.resource",
 		ResourceVersion: "123456",
 		RequestTimeout:  time.Second * 10,

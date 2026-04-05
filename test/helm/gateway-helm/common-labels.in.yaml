@@ -1,0 +1,16 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+commonLabels:
+  # These will be added as new labels
+  my-commonlabel-1: example-1
+  my-commonlabel-2: example-2
+
+  # These values will override the selectorLabels
+  # Note: If a commonLabel key matches an existing selectorLabel, both will appear in the rendered YAML,
+  # but the YAML parser will use the last occurrence (commonLabels take precedence).
+  app.kubernetes.io/name: custom-gateway-name
+  app.kubernetes.io/instance: custom-instance-name

@@ -1,23 +1,19 @@
 filterOrder:
 - before: envoy.filters.http.jwt_authn
   name: envoy.filters.http.wasm
-- after: envoy.filters.http.basic_authn
+- after: envoy.filters.http.basic_auth
   name: envoy.filters.http.cors
 http:
 - address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   name: envoy-gateway/gateway-1/http
   path:
     escapedSlashesAction: UnescapeAndRedirect
     mergeSlashes: true
   port: 10080
   routes:
-  - backendWeights:
-      invalid: 1
-      valid: 0
-    directResponse:
+  - directResponse:
       statusCode: 500
     hostname: www.example.com
     isHTTP2: false
@@ -52,6 +48,7 @@ http:
           name: example1
           remoteJWKS:
             uri: https://one.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
         - audiences:
           - two.foo.com
           claimToHeaders:
@@ -61,6 +58,7 @@ http:
           name: example2
           remoteJWKS:
             uri: http://two.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
     envoyExtensions:
       wasms:
       - config:

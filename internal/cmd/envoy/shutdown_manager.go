@@ -10,20 +10,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
+	"strconv"
 	"syscall"
 	"time"
-
-	"golang.org/x/sys/unix"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
-var logger = logging.DefaultLogger(egv1a1.LogLevelInfo).WithName("shutdown-manager")
+// TODO: Remove the global logger and localize the scope of the logger.
+var logger = logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo).WithName("shutdown-manager")
 
 const (
 	// ShutdownManagerPort is the port Envoy shutdown manager will listen on.
@@ -62,7 +64,7 @@ func ShutdownManager(readyTimeout time.Duration) error {
 		signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 
 		r := <-s
-		logger.Info(fmt.Sprintf("received %s", unix.SignalName(r.(syscall.Signal))))
+		logger.Info(fmt.Sprintf("received %s", (r.(syscall.Signal)).String()))
 
 		// Shutdown HTTP server without interrupting active connections
 		if err := srv.Shutdown(context.Background()); err != nil {
@@ -116,7 +118,7 @@ func shutdownReadyHandler(w http.ResponseWriter, readyTimeout time.Duration, rea
 // Shutdown is called from a preStop hook on the shutdown-manager container where
 // it will initiate a drain sequence on the Envoy proxy and block until
 // connections are drained or a timeout is exceeded.
-func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAtConnections int) error {
+func Shutdown(drainTimeout, minDrainDuration time.Duration, exitAtConnections int) error {
 	startTime := time.Now()
 	allowedToExit := false
 
@@ -138,7 +140,7 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 	for {
 		elapsedTime := time.Since(startTime)
 
-		conn, err := getTotalConnections()
+		conn, err := getTotalConnections(bootstrap.EnvoyAdminPort)
 		if err != nil {
 			logger.Error(err, "error getting total connections")
 		}
@@ -170,54 +172,90 @@ func Shutdown(drainTimeout time.Duration, minDrainDuration time.Duration, exitAt
 
 // postEnvoyAdminAPI sends a POST request to the Envoy admin API
 func postEnvoyAdminAPI(path string) error {
-	if resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
-		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil); err != nil {
+	resp, err := http.Post(fmt.Sprintf("http://%s:%d/%s",
+		"localhost", bootstrap.EnvoyAdminPort, path), "application/json", nil)
+	if err != nil {
 		return err
-	} else {
-		defer resp.Body.Close()
+	}
+	if resp == nil {
+		return errors.New("unexcepted nil response from Envoy admin API")
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
-		if resp.StatusCode != http.StatusOK {
-			return fmt.Errorf("unexpected response status: %s", resp.Status)
-		}
-		return nil
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
+	return nil
+}
+
+func getTotalConnections(port int) (*int, error) {
+	return getDownstreamCXActive(port)
+}
+
+// Define struct to decode JSON response into; expecting a single stat in the response in the format:
+// {"stats":[{"name":"server.total_connections","value":123}]}
+type envoyStatsResponse struct {
+	Stats []struct {
+		Name  string
+		Value int
 	}
 }
 
-// getTotalConnections retrieves the total number of open connections from Envoy's server.total_connections stat
-func getTotalConnections() (*int, error) {
-	// Send request to Envoy admin API to retrieve server.total_connections stat
-	if resp, err := http.Get(fmt.Sprintf("http://%s:%d//stats?filter=^server\\.total_connections$&format=json",
-		"localhost", bootstrap.EnvoyAdminPort)); err != nil {
+func getStatsFromEnvoyStatsEndpoint(port int, statFilter string) (*envoyStatsResponse, error) {
+	resp, err := http.Get(fmt.Sprintf("http://%s//stats?filter=%s&format=json",
+		net.JoinHostPort("localhost", strconv.Itoa(port)), statFilter))
+	if err != nil {
 		return nil, err
-	} else {
-		defer resp.Body.Close()
+	}
 
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
-		} else {
-			// Define struct to decode JSON response into; expecting a single stat in the response in the format:
-			// {"stats":[{"name":"server.total_connections","value":123}]}
-			var r *struct {
-				Stats []struct {
-					Name  string
-					Value int
-				}
-			}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected response status: %s", resp.Status)
+	}
 
-			// Decode JSON response into struct
-			if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-				return nil, err
-			}
+	r := &envoyStatsResponse{}
+	// Decode JSON response into struct
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return nil, err
+	}
 
-			// Defensive check for empty stats
-			if len(r.Stats) == 0 {
-				return nil, fmt.Errorf("no stats found")
-			}
+	// Defensive check for empty stats
+	if len(r.Stats) == 0 {
+		return nil, fmt.Errorf("no stats found")
+	}
 
-			// Log and return total connections
-			c := r.Stats[0].Value
-			logger.Info(fmt.Sprintf("total connections: %d", c))
-			return &c, nil
+	return r, nil
+}
+
+// getDownstreamCXActive retrieves the total number of open connections from Envoy's listener downstream_cx_active stat
+func getDownstreamCXActive(port int) (*int, error) {
+	// Send request to Envoy admin API to retrieve listener.\.$.downstream_cx_active stat
+	statFilter := "^listener\\..*\\.downstream_cx_active$"
+	r, err := getStatsFromEnvoyStatsEndpoint(port, statFilter)
+	if err != nil {
+		return nil, fmt.Errorf("error getting listener downstream_cx_active stat: %w", err)
+	}
+
+	totalConnection := filterDownstreamCXActive(r)
+	logger.Info(fmt.Sprintf("total downstream connections: %d", *totalConnection))
+	return totalConnection, nil
+}
+
+// skipConnectionRE is a regex to match connection stats to be excluded from total connections count
+// e.g. admin, ready and stat listener and stats from worker thread
+var skipConnectionRE = regexp.MustCompile(`admin|19001|19003|worker`)
+
+func filterDownstreamCXActive(r *envoyStatsResponse) *int {
+	totalConnection := 0
+	for _, stat := range r.Stats {
+		if excluded := skipConnectionRE.MatchString(stat.Name); !excluded {
+			totalConnection += stat.Value
 		}
 	}
+
+	return &totalConnection
 }

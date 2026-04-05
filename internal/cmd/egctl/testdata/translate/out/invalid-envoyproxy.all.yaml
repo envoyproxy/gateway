@@ -1,7 +1,7 @@
 envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyProxy
   metadata:
-    creationTimestamp: null
     name: example
     namespace: default
   spec:
@@ -18,14 +18,15 @@ envoyProxyForGatewayClass:
             socket_address:
               address: 127.0.0.1
               port_value: 19000
-    logging: {}
+    logging:
+      level:
+        default: warn
   status: {}
 gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
-    namespace: envoy-gateway-system
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
     parametersRef:
@@ -41,21 +42,30 @@ gatewayClass:
       status: "False"
       type: Accepted
 gateways:
-- kind: Gateway
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: default
   spec:
     gatewayClassName: eg
     listeners:
-    - name: tcp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: tcp
       port: 1234
       protocol: TCP
-    - name: udp
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: udp
       port: 1234
       protocol: UDP
-    - hostname: foo.com
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      hostname: foo.com
       name: tls-passthrough
       port: 8443
       protocol: TLS
@@ -65,6 +75,8 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: HTTPRoute
+        namespaces:
+          from: Same
       name: http
       port: 80
       protocol: HTTP
@@ -72,293 +84,15 @@ gateways:
         kinds:
         - group: gateway.networking.k8s.io
           kind: GRPCRoute
+        namespaces:
+          from: Same
       name: grpc
       port: 8080
       protocol: HTTP
   status:
-    listeners:
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: tcp
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TCPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: udp
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: UDPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: tls-passthrough
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TLSRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: http
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: HTTPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Listener references have been resolved
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      name: grpc
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
-grpcRoutes:
-- kind: GRPCRoute
-  metadata:
-    creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    hostnames:
-    - www.grpc-example.com
-    parentRefs:
-    - name: eg
-      sectionName: grpc
-    rules:
-    - backendRefs:
-      - group: ""
-        kind: Service
-        name: backend
-        port: 9000
-        weight: 1
-      matches:
-      - method:
-          method: DoThing
-          service: com.example.Things
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: eg
-        sectionName: grpc
-httpRoutes:
-- kind: HTTPRoute
-  metadata:
-    creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    hostnames:
-    - www.example.com
-    parentRefs:
-    - name: eg
-    rules:
-    - backendRefs:
-      - group: ""
-        kind: Service
-        name: backend
-        port: 3000
-        weight: 1
-      matches:
-      - path:
-          type: PathPrefix
-          value: /
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: eg
-tcpRoutes:
-- kind: TCPRoute
-  metadata:
-    creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    parentRefs:
-    - name: eg
-      sectionName: tcp
-    rules:
-    - backendRefs:
-      - group: ""
-        kind: Service
-        name: backend
-        port: 3000
-        weight: 1
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: eg
-        sectionName: tcp
-tlsRoutes:
-- kind: TLSRoute
-  metadata:
-    creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    parentRefs:
-    - name: eg
-      sectionName: tls-passthrough
-    rules:
-    - backendRefs:
-      - group: ""
-        kind: Service
-        name: backend
-        port: 3000
-        weight: 1
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: eg
-        sectionName: tls-passthrough
-udpRoutes:
-- kind: UDPRoute
-  metadata:
-    creationTimestamp: null
-    name: backend
-    namespace: default
-  spec:
-    parentRefs:
-    - name: eg
-      sectionName: udp
-    rules:
-    - backendRefs:
-      - group: ""
-        kind: Service
-        name: backend
-        port: 3000
-        weight: 1
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: eg
-        sectionName: udp
+    conditions:
+    - lastTransitionTime: null
+      message: 'Invalid parametersRef:: dynamic_resources cannot be modified'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted

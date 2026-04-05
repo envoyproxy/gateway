@@ -6,6 +6,7 @@
 package resource
 
 import (
+	"context"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -121,9 +122,45 @@ func TestEqualXds(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
-			require.Equal(t, tc.equal, cmp.Equal(tc.a, tc.b))
+			tc.a.Sort()
+			tc.b.Sort()
+			diff := cmp.Diff(tc.a, tc.b)
+			got := diff == ""
+			require.Equal(t, tc.equal, got)
 		})
 	}
+}
+
+func TestEqualControllerResourcesContext(t *testing.T) {
+	c1 := context.Background()
+	c2 := context.TODO()
+	r1 := &ControllerResourcesContext{
+		Resources: &ControllerResources{
+			{
+				GatewayClass: &gwapiv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				},
+			},
+		},
+		Context: c1,
+	}
+	r2 := &ControllerResourcesContext{
+		Resources: &ControllerResources{
+			{
+				GatewayClass: &gwapiv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "foo",
+					},
+				},
+			},
+		},
+		Context: c2,
+	}
+
+	assert.True(t, r1.Equal(r2))
+	assert.True(t, r2.Equal(r1))
 }
 
 func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
@@ -177,9 +214,10 @@ func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 
 		var ipv4Slice, ipv6Slice *discoveryv1.EndpointSlice
 		for _, slice := range result {
-			if slice.AddressType == discoveryv1.AddressTypeIPv4 {
+			switch slice.AddressType {
+			case discoveryv1.AddressTypeIPv4:
 				ipv4Slice = slice
-			} else if slice.AddressType == discoveryv1.AddressTypeIPv6 {
+			case discoveryv1.AddressTypeIPv6:
 				ipv6Slice = slice
 			}
 		}
@@ -199,4 +237,142 @@ func TestGetEndpointSlicesForBackendDualStack(t *testing.T) {
 			assert.Equal(t, "2001:db8::2", ipv6Slice.Endpoints[1].Addresses[0], "Unexpected IPv6 address")
 		}
 	})
+}
+
+func TestControllerResourcesContextDeepCopy(t *testing.T) {
+	tests := []struct {
+		name string
+		ctx  *ControllerResourcesContext
+	}{
+		{
+			name: "nil context",
+			ctx:  nil,
+		},
+		{
+			name: "empty context",
+			ctx: &ControllerResourcesContext{
+				Resources: &ControllerResources{},
+				Context:   context.Background(),
+			},
+		},
+		{
+			name: "context with resources",
+			ctx: &ControllerResourcesContext{
+				Resources: &ControllerResources{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "test-gateway-class",
+							},
+						},
+					},
+				},
+				Context: context.Background(),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			copied := tc.ctx.DeepCopy()
+
+			if tc.ctx == nil {
+				assert.Nil(t, copied)
+				return
+			}
+
+			// Verify the copy is not nil
+			require.NotNil(t, copied)
+
+			// Verify the copy is a different object
+			assert.NotSame(t, tc.ctx, copied)
+
+			// Verify Resources are deep copied
+			if tc.ctx.Resources != nil {
+				require.NotNil(t, copied.Resources)
+				assert.NotSame(t, tc.ctx.Resources, copied.Resources)
+
+				// Verify the contents are equal
+				assert.Len(t, *copied.Resources, len(*tc.ctx.Resources))
+			}
+
+			// Verify Context is preserved (not deep copied, same reference)
+			assert.Equal(t, tc.ctx.Context, copied.Context)
+		})
+	}
+}
+
+func TestControllerResourcesDeepCopy(t *testing.T) {
+	tests := []struct {
+		name      string
+		resources *ControllerResources
+	}{
+		{
+			name:      "nil resources",
+			resources: nil,
+		},
+		{
+			name:      "empty resources",
+			resources: &ControllerResources{},
+		},
+		{
+			name: "resources with gateway class",
+			resources: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "test-gateway-class",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple resources",
+			resources: &ControllerResources{
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gateway-class-1",
+						},
+					},
+				},
+				{
+					GatewayClass: &gwapiv1.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gateway-class-2",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			copied := tc.resources.DeepCopy()
+
+			if tc.resources == nil {
+				assert.Nil(t, copied)
+				return
+			}
+
+			// Verify the copy is not nil
+			require.NotNil(t, copied)
+
+			// Verify the copy is a different object
+			assert.NotSame(t, tc.resources, copied)
+
+			// Verify the length is the same
+			assert.Len(t, *copied, len(*tc.resources))
+
+			// Verify each resource is deep copied
+			for i := range *tc.resources {
+				if (*tc.resources)[i] != nil {
+					require.NotNil(t, (*copied)[i])
+					assert.NotSame(t, (*tc.resources)[i], (*copied)[i])
+				}
+			}
+		})
+	}
 }

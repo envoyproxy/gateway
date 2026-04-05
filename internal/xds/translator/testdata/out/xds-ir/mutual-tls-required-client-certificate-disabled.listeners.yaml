@@ -55,6 +55,7 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
         requireClientCertificate: false
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -87,5 +88,6 @@
         disableStatefulSessionResumption: true
         disableStatelessSessionResumption: true
         requireClientCertificate: false
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768

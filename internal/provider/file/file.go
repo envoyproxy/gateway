@@ -7,11 +7,13 @@ package file
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,31 +26,51 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/filewatcher"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/path"
 )
 
 type Provider struct {
-	paths          []string
-	logger         logr.Logger
-	watcher        filewatcher.FileWatcher
-	resourcesStore *resourcesStore
+	paths        []string
+	logger       logr.Logger
+	watcher      filewatcher.FileWatcher
+	resources    *message.ProviderResources
+	reconciler   *kubernetes.OfflineGatewayAPIReconciler
+	store        *resourcesStore
+	status       *StatusHandler
+	envoyGateway *egv1a1.EnvoyGateway
 
 	// ready indicates whether the provider can start watching filesystem events.
 	ready atomic.Bool
+
+	// errors is the notifier used to send async errors to the main control loop.
+	errors message.RunnerErrorNotifier
 }
 
-func New(svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
+func New(ctx context.Context, svr *config.Server, resources *message.ProviderResources, errors message.RunnerErrorNotifier) (*Provider, error) {
 	logger := svr.Logger.Logger
 	paths := sets.New[string]()
 	if svr.EnvoyGateway.Provider.Custom.Resource.File != nil {
 		paths.Insert(svr.EnvoyGateway.Provider.Custom.Resource.File.Paths...)
 	}
 
+	// Create gateway-api offline reconciler.
+	statusHandler := NewStatusHandler(logger)
+	reconciler, err := kubernetes.NewOfflineGatewayAPIController(ctx, svr, statusHandler.Writer(), resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create offline gateway-api controller")
+	}
+
 	return &Provider{
-		paths:          paths.UnsortedList(),
-		logger:         logger,
-		watcher:        filewatcher.NewWatcher(),
-		resourcesStore: newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, resources, logger),
+		paths:        paths.UnsortedList(),
+		logger:       logger,
+		watcher:      filewatcher.NewWatcher(),
+		resources:    resources,
+		reconciler:   reconciler,
+		store:        newResourcesStore(svr.EnvoyGateway.Gateway.ControllerName, reconciler.Client, resources, logger),
+		status:       statusHandler,
+		envoyGateway: svr.EnvoyGateway,
+		errors:       errors,
 	}, nil
 }
 
@@ -62,7 +84,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	}()
 
 	// Start runnable servers.
-	var readyzChecker healthz.Checker = func(req *http.Request) error {
+	var readyzChecker healthz.Checker = func(_ *http.Request) error {
 		if !p.ready.Load() {
 			return fmt.Errorf("file provider not ready yet")
 		}
@@ -70,10 +92,23 @@ func (p *Provider) Start(ctx context.Context) error {
 	}
 	go p.startHealthProbeServer(ctx, readyzChecker)
 
+	// Offline controller should be started before initial resources load.
+	// Nor we may lose some messages from controller.
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
+	go p.startReconciling(ctx, wg)
+	go p.status.Start(ctx, wg)
+	wg.Wait()
+
 	initDirs, initFiles := path.ListDirsAndFiles(p.paths)
-	// Initially load resources from paths on host.
-	if err := p.resourcesStore.LoadAndStore(initFiles.UnsortedList(), initDirs.UnsortedList()); err != nil {
-		return fmt.Errorf("failed to load resources into store: %w", err)
+	// Initially load resources.
+	if err := p.store.ReloadAll(ctx, initFiles.UnsortedList(), initDirs.UnsortedList(), p.envoyGateway); err != nil {
+		p.logger.Error(err, "failed to reload resources initially")
+		// Notify the error so that the main control loop can properly handle it.
+		// This may be an unrecoverable error in some cases if configs are wrong in standalone mode, so let's
+		// notify it and let the main control loop decide what to do about it.
+		p.errors.Store(err)
+
 	}
 
 	// Add paths to the watcher, and aggregate all path channels into one.
@@ -144,18 +179,39 @@ func (p *Provider) Start(ctx context.Context) error {
 			}
 			p.logger.Info("file changed", "op", event.Op, "name", event.Name, "dir", filepath.Dir(event.Name))
 
-			switch event.Op {
-			case fsnotify.Create, fsnotify.Write, fsnotify.Remove:
-				// Since we do not watch any events in the subdirectories, any events involving files
-				// modifications in current directory will trigger the event handling.
-				goto handle
-			default:
-				// do nothing
-				continue
-			}
-
 		handle:
-			p.resourcesStore.HandleEvent(curFiles.UnsortedList(), curDirs.UnsortedList())
+			if err := p.store.ReloadAll(ctx, curFiles.UnsortedList(), curDirs.UnsortedList(), p.envoyGateway); err != nil {
+				p.logger.Error(err, "error when reload resources", "op", event.Op, "name", event.Name)
+				// Notify the error so that the main control loop can properly handle it.
+				// This may be an unrecoverable error in some cases if configs are wrong in standalone mode, so let's
+				// notify it and let the main control loop decide what to do about it.
+				p.errors.Store(err)
+			}
+		}
+	}
+}
+
+// startReconciling starts reconcile on offline controller when receiving signal from resources store.
+func (p *Provider) startReconciling(ctx context.Context, ready *sync.WaitGroup) {
+	p.logger.Info("start reconciling")
+	defer p.logger.Info("stop reconciling")
+	ready.Done()
+
+	for {
+		select {
+		case rid := <-p.store.reconcile:
+			p.logger.Info("start reconcile", "id", rid, "time", time.Now())
+			if err := p.reconciler.Reconcile(ctx); err != nil {
+				p.logger.Error(err, "failed to reconcile", "id", rid)
+				// If the reconciliation fails, notify the error so that the main control loop can properly handle it.
+				// This may be an unrecoverable error in some cases if configs are wrong in standalone mode, so let's
+				// notify it and let the main control loop decide what to do about it.
+				p.errors.Store(err)
+			}
+			p.logger.Info("reconcile finished", "id", rid, "time", time.Now())
+
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -201,7 +257,7 @@ func (p *Provider) startHealthProbeServer(ctx context.Context, readyzChecker hea
 	}()
 
 	p.logger.Info("starting health probe server", "address", srv.Addr)
-	if err := srv.ListenAndServe(); err != nil {
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		p.logger.Error(err, "failed to start health probe server")
 	}
 }

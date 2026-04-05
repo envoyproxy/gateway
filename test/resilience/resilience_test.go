@@ -11,10 +11,11 @@ import (
 	"flag"
 	"io/fs"
 	"os"
+	"testing"
+
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
-	"testing"
 
 	"github.com/envoyproxy/gateway/test/resilience/suite"
 	"github.com/envoyproxy/gateway/test/resilience/tests"
@@ -33,7 +34,7 @@ func TestResilience(t *testing.T) {
 		*flags.GatewayClassName,
 	)
 	if err != nil {
-		t.Fatalf("Failed to create the resillience test suit: %v", err)
+		t.Fatalf("Failed to create the resilience test suite: %v", err)
 	}
 	t.Logf("Running %d resilience tests", len(tests.ResilienceTests))
 	bSuite.Run(t, tests.ResilienceTests)

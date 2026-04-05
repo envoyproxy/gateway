@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest)
+	ConformanceTests = append(ConformanceTests, JWTTest, OptionalJWTTest, LocalJWKSInlineTest, LocalJWKSValueRefTest)
 }
 
 const (
@@ -48,7 +49,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "jwt-claim-routing", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 	testCases := []http.ExpectedResponse{
 		{
@@ -60,7 +61,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		},
@@ -73,7 +74,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v2",
 			Response: http.Response{
-				StatusCode: 200,
+				StatusCodes: []int{200},
 			},
 			Namespace: ns,
 		},
@@ -86,7 +87,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v1",
 			Response: http.Response{
-				StatusCode: 500,
+				StatusCodes: []int{500},
 			},
 			Namespace: ns,
 		},
@@ -99,7 +100,7 @@ func testClaimBasedRouting(t *testing.T, suite *suite.ConformanceTestSuite) {
 			},
 			Backend: "infra-backend-v2",
 			Response: http.Response{
-				StatusCode: 401,
+				StatusCodes: []int{401},
 			},
 			Namespace: ns,
 		},
@@ -122,7 +123,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "jwt-optional", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		testCases := []http.ExpectedResponse{
 			{
@@ -135,7 +136,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			},
@@ -149,7 +150,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 401,
+					StatusCodes: []int{401},
 				},
 				Namespace: ns,
 			},
@@ -160,7 +161,7 @@ var OptionalJWTTest = suite.ConformanceTest{
 				},
 				Backend: "infra-backend-v1",
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			},
@@ -174,4 +175,79 @@ var OptionalJWTTest = suite.ConformanceTest{
 			})
 		}
 	},
+}
+
+var LocalJWKSInlineTest = suite.ConformanceTest{
+	ShortName:   "LocalJWKSInline",
+	Description: "Test local JWKS inline",
+	Manifests:   []string{"testdata/jwt-local-jwks-inline.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		testLocalJWKS(t, suite)
+	},
+}
+
+var LocalJWKSValueRefTest = suite.ConformanceTest{
+	ShortName:   "LocalJWKSValueRef",
+	Description: "Test local JWKS valueRef",
+	Manifests:   []string{"testdata/jwt-local-jwks-valueRef.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		testLocalJWKS(t, suite)
+	},
+}
+
+func testLocalJWKS(t *testing.T, suite *suite.ConformanceTestSuite) {
+	ns := "gateway-conformance-infra"
+	routeNN := types.NamespacedName{Name: "jwt-local-jwks", Namespace: ns}
+	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+	testCases := []http.ExpectedResponse{
+		{
+			TestCaseName: "with a valid JWT",
+			Request: http.Request{
+				Path: "/public",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + v1Token,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		},
+		{
+			TestCaseName: "with an invalid JWT",
+			Request: http.Request{
+				Path: "/public",
+				Headers: map[string]string{
+					"Authorization": "Bearer " + invalidToken,
+				},
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCodes: []int{401},
+			},
+			Namespace: ns,
+		},
+		{
+			TestCaseName: "omitting JWT",
+			Request: http.Request{
+				Path: "/public",
+			},
+			Backend: "infra-backend-v1",
+			Response: http.Response{
+				StatusCodes: []int{401},
+			},
+			Namespace: ns,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+			t.Parallel()
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+		})
+	}
 }

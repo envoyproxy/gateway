@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"slices"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -36,8 +37,16 @@ const (
 	L4Protocol = "L4"
 	L7Protocol = "L7"
 
-	caCertKey = "ca.crt"
+	// CACertKey is the key used in ConfigMaps and Secrets to store CA certificate data
+	CACertKey = "ca.crt"
+	// CRLKey is the key used in ConfigMaps and Secrets to store certificate revocation list data
+	CRLKey = "ca.crl"
 )
+
+type NamespacedNameWithSection struct {
+	types.NamespacedName
+	gwapiv1.SectionName
+}
 
 type protocolPort struct {
 	protocol gwapiv1.ProtocolType
@@ -69,12 +78,12 @@ func SectionNamePtr(name string) *gwapiv1.SectionName {
 }
 
 func PortNumPtr(val int32) *gwapiv1.PortNumber {
-	portNum := gwapiv1.PortNumber(val)
+	portNum := val
 	return &portNum
 }
 
-func ObjectNamePtr(val string) *gwapiv1a2.ObjectName {
-	objectName := gwapiv1a2.ObjectName(val)
+func ObjectNamePtr(val string) *gwapiv1.ObjectName {
+	objectName := gwapiv1.ObjectName(val)
 	return &objectName
 }
 
@@ -86,7 +95,7 @@ var (
 	QueryParamMatchTypeDerefOr = ptr.Deref[gwapiv1.QueryParamMatchType]
 )
 
-// Deprecated: use k8s.io/utils/ptr ptr.Deref instead
+// NamespaceDerefOr returns the dereferenced value of the provided Namespace in string
 func NamespaceDerefOr(namespace *gwapiv1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
@@ -133,17 +142,47 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway
-// in the given list, and if so, a list of the Listeners within that Gateway that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or ListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or ListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway, depending on whether section name is specified or not).
+// in the Gateway or ListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
+	// The parentRef is an ListenerSet
+	if isRefToListenerSet(parentRef) {
+		ns := routeNamespace
+		if parentRef.Namespace != nil {
+			ns = *parentRef.Namespace
+		}
+		var matchedListenerSet bool
+		for _, gateway := range gateways {
+			for _, listener := range gateway.listeners {
+				if !listener.isFromListenerSet() {
+					continue
+				}
+				if listener.listenerSet.Namespace != string(ns) ||
+					listener.listenerSet.Name != string(parentRef.Name) {
+					continue
+				}
+				matchedListenerSet = true
+				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) &&
+					(parentRef.Port == nil || *parentRef.Port == listener.Port) {
+					referencedListeners = append(referencedListeners, listener)
+				}
+			}
+		}
+		return matchedListenerSet, referencedListeners
+	}
+
+	// The parentRef is a Gateway
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
-			// The parentRef may be to the entire Gateway, or to a specific listener.
 			for _, listener := range gateway.listeners {
+				if listener.isFromListenerSet() {
+					continue
+				}
+				// The parentRef may be to the entire Gateway, or to a specific listener.
 				if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
 					referencedListeners = append(referencedListeners, listener)
 				}
@@ -153,6 +192,14 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	}
 
 	return false, referencedListeners
+}
+
+func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapiv1.GroupVersion.Group {
+		return true
+	}
+	return false
 }
 
 // HasReadyListener returns true if at least one Listener in the
@@ -175,7 +222,8 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		filter.Type == gwapiv1.HTTPRouteFilterURLRewrite ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect ||
 		filter.Type == gwapiv1.HTTPRouteFilterRequestHeaderModifier ||
-		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier:
+		filter.Type == gwapiv1.HTTPRouteFilterResponseHeaderModifier ||
+		filter.Type == gwapiv1.HTTPRouteFilterCORS:
 		return nil
 	case filter.Type == gwapiv1.HTTPRouteFilterExtensionRef:
 		switch {
@@ -208,8 +256,8 @@ func ValidateGRPCRouteFilter(filter *gwapiv1.GRPCRouteFilter, extGKs ...schema.G
 		filter.Type == gwapiv1.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == gwapiv1.GRPCRouteFilterExtensionRef:
-		switch {
-		case filter.ExtensionRef == nil:
+		switch filter.ExtensionRef {
+		case nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
 		default:
 			for _, gk := range extGKs {
@@ -284,18 +332,35 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		case listenerHostnameVal == routeHostname:
 			hostnamesSet.Insert(routeHostname)
 
+		// Both listener and route hostnames are wildcards. If one pattern contains
+		// the other, their intersection is the more specific hostname.
+		// Examples:
+		// - listener "*.example.com" and route "*.com" intersect as "*.example.com"
+		// - listener "*.com" and route "*.example.com" intersect as "*.example.com"
+
+		case strings.HasPrefix(listenerHostnameVal, "*") && strings.HasPrefix(routeHostname, "*"):
+			// the route hostname must be more wildcard than the listener hostname to match
+			// e.g. listener hostname *.example.com would match route hostname *.com.
+			// use regex to check this
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
+				hostnamesSet.Insert(listenerHostnameVal)
+			}
+
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
+				hostnamesSet.Insert(routeHostname)
+			}
+
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
-			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
 				hostnamesSet.Insert(routeHostname)
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
-			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
 				hostnamesSet.Insert(listenerHostnameVal)
 			}
-
 		}
 	}
 
@@ -321,16 +386,39 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 	return hostnamesSet.List()
 }
 
-// hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
-// portion of wildcardHostname as a suffix, plus at least one DNS label matching the
-// wildcard.
-func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
-	if !strings.HasSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*")) {
+// wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
+// ref: https://github.com/kubernetes-sigs/gateway-api/pull/1173, this's different with RFC-2818
+// e.g. *.com matches *.example.com, *.example.com matches foo.example.com
+func wildcardHostnameMatchesHostname(wildcardHostname, hostname string) bool {
+	// Strip the leading "*" from wildcardHostname
+	wildcardSuffix := strings.TrimPrefix(wildcardHostname, "*")
+
+	// If hostname is not a wildcard, check if it matches the pattern
+	if !strings.HasPrefix(hostname, "*") {
+		// hostname must end with the wildcard suffix
+		if !strings.HasSuffix(hostname, wildcardSuffix) {
+			return false
+		}
+		// The part before the suffix should be non-empty (there's a label matching the wildcard)
+		wildcardMatch := strings.TrimSuffix(hostname, wildcardSuffix)
+		return len(wildcardMatch) > 0
+	}
+
+	// Both are wildcards - strip the leading "*" from hostname too
+	hostnameSuffix := strings.TrimPrefix(hostname, "*")
+
+	// Check if the hostname suffix ends with the wildcard suffix
+	// This means wildcardHostname is a broader pattern
+	if !strings.HasSuffix(hostnameSuffix, wildcardSuffix) {
 		return false
 	}
 
-	wildcardMatch := strings.TrimSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*"))
-	return len(wildcardMatch) > 0
+	// Get the remaining part after removing the wildcard suffix from hostname
+	remaining := strings.TrimSuffix(hostnameSuffix, wildcardSuffix)
+
+	// The remaining part should have content (can't be identical patterns)
+	// and should start with "." to be a valid subdomain
+	return len(remaining) > 0 && strings.HasPrefix(remaining, ".")
 }
 
 func containsPort(ports []*protocolPort, port *protocolPort) bool {
@@ -373,7 +461,24 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
+// extractGatewayNameFromListener extracts the gateway name from an IR listener name.
+// The listener name format can be:
+// - Gateway: "namespace/gateway/listener"
+// - XListenerSet: "namespace/gateway/xls-ns/xls-name/listener"
+// Returns "namespace/gateway" in both cases.
+func extractGatewayNameFromListener(listenerName string) string {
+	parts := strings.Split(listenerName, "/")
+	if len(parts) >= 2 {
+		return fmt.Sprintf("%s/%s", parts[0], parts[1])
+	}
+	// should never happen
+	return listenerName
+}
+
 func irListenerName(listener *ListenerContext) string {
+	if listener.isFromListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
+	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
@@ -384,7 +489,7 @@ func irListenerPortName(proto ir.ProtocolType, port int32) string {
 func irRoutePrefix(route RouteContext) string {
 	// add a "/" at the end of the prefix to prevent mismatching routes with the
 	// same prefix. For example, route prefix "/foo/" should not match a route "/foobar".
-	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s/", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
@@ -392,7 +497,7 @@ func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 }
 
 func irTCPRouteName(route RouteContext) string {
-	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(GetRouteType(route))), route.GetNamespace(), route.GetName())
+	return fmt.Sprintf("%s/%s/%s", strings.ToLower(string(route.GetRouteType())), route.GetNamespace(), route.GetName())
 }
 
 func irUDPRouteName(route RouteContext) string {
@@ -403,30 +508,80 @@ func irRouteDestinationName(route RouteContext, ruleIdx int) string {
 	return fmt.Sprintf("%srule/%d", irRoutePrefix(route), ruleIdx)
 }
 
+func irDestinationSettingName(destName string, backendIdx int) string {
+	return fmt.Sprintf("%s/backend/%d", destName, backendIdx)
+}
+
+func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
+	return fmt.Sprintf("%s/%s/rule/%d", policyNamespace, policyName, ruleIndex)
+}
+
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	if len(tlsSecrets) == 0 {
+func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range tlsSecrets {
-		tlsListenerConfigs.Certificates[i] = ir.TLSCertificate{
-			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[corev1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
-		}
+	for i, tlsSecret := range config.secrets {
+		cert := getTLSCertificateFromSecret(tlsSecret)
+		tlsListenerConfigs.Certificates[i] = cert
+	}
+
+	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
+		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
+		tlsListenerConfigs.ClientValidationEnabled = true
+		convertClientValidationModeType(config.frontendTLSValidation.Mode, tlsListenerConfigs)
+		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
 }
 
+func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
+	switch mode {
+	case egv1a1.ClientValidationRequest:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationRequireAny:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationVerifyIfGiven:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = false
+	case egv1a1.ClientValidationRequireAndVerify:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	default:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	}
+}
+
+func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
+	return tlsSecret.Data[corev1.TLSCertKey] != nil && tlsSecret.Data[corev1.TLSPrivateKeyKey] != nil
+}
+
+func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
+	cert := ir.TLSCertificate{
+		Name:        irTLSListenerConfigName(tlsSecret),
+		Certificate: tlsSecret.Data[corev1.TLSCertKey],
+		PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
+	}
+
+	ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+	if ok && len(ocspStaple) > 0 {
+		cert.OCSPStaple = ocspStaple
+	}
+	return cert
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(config)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -441,16 +596,47 @@ func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
 }
 
+func irGatewayTLSCACertName(gtw *gwapiv1.Gateway, suffix string) string {
+	return fmt.Sprintf("gateway/%s/%s/%s/%s", gtw.Namespace, gtw.Name, suffix, CACertKey)
+}
+
+func frontendValidationMode(mode gwapiv1.FrontendValidationModeType) egv1a1.ClientValidationModeType {
+	switch mode {
+	case gwapiv1.AllowValidOnly:
+		return egv1a1.ClientValidationRequireAndVerify
+	case gwapiv1.AllowInsecureFallback:
+		return egv1a1.ClientValidationRequest
+	default:
+		return egv1a1.ClientValidationRequireAndVerify
+	}
+}
+
 func irTLSCACertName(namespace, name string) string {
-	return fmt.Sprintf("%s/%s/%s", namespace, name, caCertKey)
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CACertKey)
+}
+
+func irTLSCrlName(namespace, name string) string {
+	return fmt.Sprintf("%s/%s/%s", namespace, name, CRLKey)
 }
 
 func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
-	return resources.EnvoyProxyForGatewayClass != nil && resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil && *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	// Check GatewayClass-level EnvoyProxy first (higher priority)
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeGateways != nil {
+		return *resources.EnvoyProxyForGatewayClass.Spec.MergeGateways
+	}
+
+	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeGateways != nil {
+		return *resources.EnvoyProxyDefaultSpec.MergeGateways
+	}
+
+	return false
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
-	var protocolStrings []string
+	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {
 		protocolStrings = append(protocolStrings, string(protocol))
 	}
@@ -458,8 +644,8 @@ func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 }
 
 // getAncestorRefForPolicy returns Gateway as an ancestor reference for policy.
-func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1a2.ParentReference {
-	return gwapiv1a2.ParentReference{
+func getAncestorRefForPolicy(gatewayNN types.NamespacedName, sectionName *gwapiv1a2.SectionName) gwapiv1.ParentReference {
+	return gwapiv1.ParentReference{
 		Group:       GroupPtr(gwapiv1.GroupName),
 		Kind:        KindPtr(resource.KindGateway),
 		Namespace:   NamespacePtr(gatewayNN.Namespace),
@@ -476,12 +662,25 @@ type policyTargetRouteKey struct {
 
 type policyRouteTargetContext struct {
 	RouteContext
-	attached bool
+	attached             bool
+	attachedToRouteRules sets.Set[string]
 }
 
 type policyGatewayTargetContext struct {
 	*GatewayContext
-	attached bool
+	attached            bool
+	attachedToListeners sets.Set[string]
+}
+
+// GatewayPolicyRouteMap tracks routes attached to Gateway Listener with an index for efficient lookups
+type GatewayPolicyRouteMap struct {
+	// Routes maps Gateway Listener to attached route names
+	Routes map[NamespacedNameWithSection]sets.Set[string]
+
+	// SectionIndex: Gateway -> SectionNames index
+	// Maintains a list of all section names (listeners) per Gateway including "" (empty string) for Gateway-level entries
+	// for efficient lookup without full Routes map iteration
+	SectionIndex map[types.NamespacedName]sets.Set[string]
 }
 
 // listenersWithSameHTTPPort returns a list of the names of all other HTTP listeners
@@ -515,7 +714,6 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	mask, _ := ipn.Mask.Size()
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
-		IP:      ip.String(),
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
@@ -529,29 +727,46 @@ func irConfigName(policy client.Object) string {
 }
 
 type targetRefWithTimestamp struct {
-	gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	CreationTimestamp metav1.Time
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T) []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
+	l, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels:      selector.MatchLabels,
+		MatchExpressions: selector.MatchExpressions,
+	})
+	if err != nil {
+		// TODO - how do we we bubble this up
+		return labels.Nothing()
+	}
+	return l
+}
+
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	dedup := sets.New[targetRefWithTimestamp]()
 	for _, currSelector := range policy.TargetSelectors {
-		labelSelector := labels.SelectorFromSet(currSelector.MatchLabels)
+		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
 			if gvk.Kind != string(currSelector.Kind) ||
-				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1a2.GroupName)) {
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) {
+				continue
+			}
+
+			// Skip objects not in the same namespace as the policy
+			if obj.GetNamespace() != policyNamespace {
 				continue
 			}
 
 			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
 				dedup.Insert(targetRefWithTimestamp{
 					CreationTimestamp: obj.GetCreationTimestamp(),
-					LocalPolicyTargetReferenceWithSectionName: gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
-							Group: gwapiv1a2.Group(gvk.Group),
-							Kind:  gwapiv1a2.Kind(gvk.Kind),
-							Name:  gwapiv1a2.ObjectName(obj.GetName()),
+					LocalPolicyTargetReferenceWithSectionName: gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: gwapiv1.Group(gvk.Group),
+							Kind:  gwapiv1.Kind(gvk.Kind),
+							Name:  gwapiv1.ObjectName(obj.GetName()),
 						},
 					},
 				})
@@ -562,15 +777,15 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{}
-	for _, v := range selectorsList {
-		ret = append(ret, v.LocalPolicyTargetReferenceWithSectionName)
+	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	for i, v := range selectorsList {
+		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
 	// they are not yet there. Always add them at the end.
 	fastLookup := sets.New(ret...)
-	var emptyTargetRef gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	for _, v := range policy.GetTargetRefs() {
 		if v == emptyTargetRef {
 			// This can happen when the targetRef structure is read from extension server policies
@@ -589,6 +804,14 @@ func setIfNil[T any](target **T, value *T) {
 	if *target == nil {
 		*target = value
 	}
+}
+
+// getServicePortProtocol returns the service port protocol. If the protocol is not specified, it defaults to TCP.
+func getServicePortProtocol(protocol corev1.Protocol) corev1.Protocol {
+	if protocol == "" {
+		return corev1.ProtocolTCP
+	}
+	return protocol
 }
 
 // getServiceIPFamily returns the IP family configuration from a Kubernetes Service
@@ -651,4 +874,201 @@ func getPreserveRouteOrder(envoyProxy *egv1a1.EnvoyProxy) bool {
 		return true
 	}
 	return false
+}
+
+// getRequestIDExtensionAction returns the RequestIDExtensionAction configuration from EnvoyProxy
+func getRequestIDExtensionAction(envoyProxy *egv1a1.EnvoyProxy) *ir.RequestIDExtensionAction {
+	if envoyProxy == nil || envoyProxy.Spec.Telemetry == nil || envoyProxy.Spec.Telemetry.RequestID == nil {
+		return nil
+	}
+	return (*ir.RequestIDExtensionAction)(envoyProxy.Spec.Telemetry.RequestID.Tracing)
+}
+
+// getOrFirstFromData returns the value of the key in the data map
+// or the first value if the key is not found only if data map has exactly one entry
+func getOrFirstFromData[T any](data map[string]T, key string) (T, bool) {
+	if val, exists := data[key]; exists {
+		return val, true
+	} else if len(data) == 1 {
+		for _, value := range data {
+			return value, true
+		}
+	}
+	return *new(T), false
+}
+
+func irStringMatch(name string, match egv1a1.StringMatch) *ir.StringMatch {
+	matchType := egv1a1.StringMatchExact
+	if match.Type != nil {
+		matchType = *match.Type
+	}
+	switch matchType {
+	case egv1a1.StringMatchExact:
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
+	case egv1a1.StringMatchPrefix:
+		return &ir.StringMatch{Name: name, Prefix: &match.Value}
+	case egv1a1.StringMatchSuffix:
+		return &ir.StringMatch{Name: name, Suffix: &match.Value}
+	case egv1a1.StringMatchRegularExpression:
+		return &ir.StringMatch{Name: name, SafeRegex: &match.Value}
+	default:
+		return &ir.StringMatch{Name: name, Exact: &match.Value}
+	}
+}
+
+func getOverriddenTargetsMessageForRoute(
+	targetContext *policyRouteTargetContext,
+	sectionName *gwapiv1.SectionName,
+) string {
+	var routes []string
+	if sectionName == nil {
+		if targetContext != nil {
+			routes = targetContext.attachedToRouteRules.UnsortedList()
+		}
+	}
+	if len(routes) > 0 {
+		sort.Strings(routes)
+		return fmt.Sprintf("these route rules: %v", routes)
+	}
+	return ""
+}
+
+func getOverriddenTargetsMessageForGateway(
+	targetContext *policyGatewayTargetContext,
+	listenerRouteMap map[string]sets.Set[string],
+	sectionName *gwapiv1.SectionName,
+) string {
+	var listeners, routes []string
+	if sectionName == nil {
+		if targetContext != nil {
+			listeners = targetContext.attachedToListeners.UnsortedList()
+		}
+		for _, routeSet := range listenerRouteMap {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	} else if listenerRouteMap != nil {
+		if routeSet, ok := listenerRouteMap[string(*sectionName)]; ok {
+			routes = routeSet.UnsortedList()
+		}
+		if routeSet, ok := listenerRouteMap[""]; ok {
+			routes = append(routes, routeSet.UnsortedList()...)
+		}
+	}
+	if len(listeners) > 0 {
+		sort.Strings(listeners)
+		if len(routes) > 0 {
+			sort.Strings(routes)
+			return fmt.Sprintf("these listeners: %v and these routes: %v", listeners, routes)
+		} else {
+			return fmt.Sprintf("these listeners: %v", listeners)
+		}
+	} else if len(routes) > 0 {
+		sort.Strings(routes)
+		return fmt.Sprintf("these routes: %v", routes)
+	}
+	return ""
+}
+
+// getOverriddenAndMergedTargetsMessageForGateway generates status messages for policies
+// indicating which listeners and routes are being overridden or merged.
+func getOverriddenAndMergedTargetsMessageForGateway(
+	targetContext *policyGatewayTargetContext,
+	gatewayRouteMap *GatewayPolicyRouteMap,
+	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
+	sectionName *gwapiv1.SectionName,
+) (string, string) {
+	var overrideListeners, overrideRoutes, mergedRoutes []string
+	var overrideMessage, mergedMessage string
+
+	gwNN := utils.NamespacedName(targetContext.GatewayContext)
+	// Initialize sets
+	overrideRouteSet := sets.New[string]()
+	mergedRouteSet := sets.New[string]()
+
+	// Get merged targets
+	if gatewayPolicyMergedMap.Routes != nil {
+		if sectionName == nil {
+			// When sectionName is nil, retrieve routes from all listeners
+			if gatewayPolicyMergedMap.SectionIndex != nil && gatewayPolicyMergedMap.SectionIndex[gwNN] != nil {
+				for _, listener := range gatewayPolicyMergedMap.SectionIndex[gwNN].UnsortedList() {
+					listenerKey := NamespacedNameWithSection{
+						NamespacedName: gwNN,
+						SectionName:    gwapiv1.SectionName(listener),
+					}
+					if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
+						mergedRouteSet.Insert(routeSet.UnsortedList()...)
+					}
+				}
+			}
+		} else {
+			// When sectionName is specified, retrieve routes for that specific listener
+			listenerKey := NamespacedNameWithSection{
+				NamespacedName: gwNN,
+				SectionName:    *sectionName,
+			}
+			if routeSet, ok := gatewayPolicyMergedMap.Routes[listenerKey]; ok {
+				mergedRouteSet.Insert(routeSet.UnsortedList()...)
+			}
+		}
+	}
+
+	// Get overridden targets
+	if gatewayRouteMap.Routes != nil {
+		if sectionName == nil {
+			if targetContext != nil {
+				overrideListeners = targetContext.attachedToListeners.UnsortedList()
+			}
+			// When sectionName is nil, retrieve routes from all listeners including Gateway-level ("")
+			if gatewayRouteMap.SectionIndex != nil && gatewayRouteMap.SectionIndex[gwNN] != nil {
+				for _, listener := range gatewayRouteMap.SectionIndex[gwNN].UnsortedList() {
+					listenerKey := NamespacedNameWithSection{
+						NamespacedName: gwNN,
+						SectionName:    gwapiv1.SectionName(listener),
+					}
+					if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
+						overrideRouteSet.Insert(routeSet.UnsortedList()...)
+					}
+				}
+			}
+		} else {
+			// When sectionName is specified, retrieve routes for that specific listener
+			listenerKey := NamespacedNameWithSection{
+				NamespacedName: gwNN,
+				SectionName:    *sectionName,
+			}
+			if routeSet, ok := gatewayRouteMap.Routes[listenerKey]; ok {
+				overrideRouteSet.Insert(routeSet.UnsortedList()...)
+			}
+			gwKey := NamespacedNameWithSection{
+				NamespacedName: gwNN,
+				SectionName:    "",
+			}
+			if routeSet, ok := gatewayRouteMap.Routes[gwKey]; ok {
+				overrideRouteSet.Insert(routeSet.UnsortedList()...)
+			}
+		}
+	}
+
+	mergedRoutes = mergedRouteSet.UnsortedList()
+	// Exclude merged routes from overridden routes
+	overrideRoutes = overrideRouteSet.Difference(mergedRouteSet).UnsortedList()
+
+	if len(overrideListeners) > 0 {
+		sort.Strings(overrideListeners)
+		if len(overrideRoutes) > 0 {
+			sort.Strings(overrideRoutes)
+			overrideMessage = fmt.Sprintf("these listeners: %v and these routes: %v", overrideListeners, overrideRoutes)
+		} else {
+			overrideMessage = fmt.Sprintf("these listeners: %v", overrideListeners)
+		}
+	} else if len(overrideRoutes) > 0 {
+		sort.Strings(overrideRoutes)
+		overrideMessage = fmt.Sprintf("these routes: %v", overrideRoutes)
+	}
+
+	if len(mergedRoutes) > 0 {
+		sort.Strings(mergedRoutes)
+		mergedMessage = fmt.Sprintf("these routes: %v", mergedRoutes)
+	}
+	return overrideMessage, mergedMessage
 }

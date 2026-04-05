@@ -2,15 +2,15 @@
 # Source: gateway-addons-helm/charts/alloy/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
+automountServiceAccountToken: true
 metadata:
   name: alloy
   namespace: monitoring
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -20,12 +20,12 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: loki
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
 automountServiceAccountToken: true
 ---
 # Source: gateway-addons-helm/charts/opentelemetry-collector/templates/serviceaccount.yaml
@@ -35,11 +35,13 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.147.0"
     app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/serviceaccount.yaml
 apiVersion: v1
@@ -49,9 +51,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -77,12 +78,12 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: alloy
+  namespace: monitoring
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: config
@@ -184,79 +185,119 @@ data:
       forward_to = [loki.write.alloy.receiver]
     }
 ---
-# Source: gateway-addons-helm/charts/loki/templates/configmap.yaml
+# Source: gateway-addons-helm/charts/loki/templates/config.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: loki
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
 data:
   config.yaml: |
+    
     auth_enabled: false
+    bloom_build:
+      builder:
+        planner_address: ""
+      enabled: false
+    bloom_gateway:
+      client:
+        addresses: ""
+      enabled: false
     common:
-      compactor_address: 'loki'
+      compactor_grpc_address: 'loki.monitoring.svc.cluster.local:9095'
+      instance_addr: ${INSTANCE_ADDR}
       path_prefix: /var/loki
       replication_factor: 1
+      ring:
+        kvstore:
+          store: memberlist
       storage:
         filesystem:
           chunks_directory: /var/loki/chunks
           rules_directory: /var/loki/rules
+    frontend:
+      scheduler_address: ""
+      tail_proxy_url: ""
+    frontend_worker:
+      scheduler_address: ""
+    index_gateway:
+      mode: simple
     limits_config:
-      enforce_metric_name: false
       max_cache_freshness_per_query: 10m
+      otlp_config:
+        resource_attributes:
+          attributes_config:
+          - action: index_label
+            attributes:
+            - exporter
+      query_timeout: 300s
       reject_old_samples: true
       reject_old_samples_max_age: 168h
       split_queries_by_interval: 15m
+      volume_enabled: true
     memberlist:
       join_members:
-      - loki-memberlist
+      - loki-memberlist.monitoring.svc.cluster.local
+    pattern_ingester:
+      enabled: false
     query_range:
       align_queries_with_step: true
     ruler:
       storage:
         type: local
+      wal:
+        dir: /var/loki/ruler-wal
     runtime_config:
       file: /etc/loki/runtime-config/runtime-config.yaml
     schema_config:
       configs:
-      - from: "2022-01-11"
+      - from: "2024-04-01"
         index:
           period: 24h
-          prefix: loki_index_
-        object_store: filesystem
-        schema: v12
-        store: boltdb-shipper
+          prefix: index_
+        object_store: 'filesystem'
+        schema: v13
+        store: tsdb
     server:
       grpc_listen_port: 9095
       http_listen_port: 3100
+      http_server_read_timeout: 600s
+      http_server_write_timeout: 600s
     storage_config:
+      bloom_shipper:
+        working_directory: /var/loki/data/bloomshipper
+      boltdb_shipper:
+        index_gateway_client:
+          server_address: ""
       hedging:
         at: 250ms
         max_per_second: 20
         up_to: 3
-    table_manager:
-      retention_deletes_enabled: false
-      retention_period: 0
+      tsdb_shipper:
+        index_gateway_client:
+          server_address: ""
+      use_thanos_objstore: false
+    tracing:
+      enabled: false
 ---
 # Source: gateway-addons-helm/charts/loki/templates/runtime-configmap.yaml
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: loki-runtime
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
 data:
   runtime-config.yaml: |
-    
     {}
 ---
 # Source: gateway-addons-helm/charts/opentelemetry-collector/templates/configmap.yaml
@@ -266,42 +307,84 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.147.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
 data:
   relay: |
     exporters:
       debug:
         verbosity: detailed
-      loki:
-        endpoint: http://loki.monitoring.svc:3100/loki/api/v1/push
       otlp:
         endpoint: tempo.monitoring.svc:4317
         tls:
           insecure: true
+      otlphttp/loki:
+        endpoint: http://loki.monitoring.svc:3100/otlp
       prometheus:
-        endpoint: '[${env:MY_POD_IP}]:19001'
+        endpoint: :19001
     extensions:
       health_check:
         endpoint: '[${env:MY_POD_IP}]:13133'
     processors:
-      attributes:
-        actions:
-        - action: insert
-          key: loki.attribute.labels
-          value: k8s.pod.name, k8s.namespace.name
       batch: {}
+      k8sattributes:
+        extract:
+          metadata:
+          - k8s.namespace.name
+          - k8s.pod.name
+          - k8s.pod.uid
+          - k8s.node.name
+          - k8s.pod.start_time
+          - k8s.deployment.name
+          - k8s.replicaset.name
+          - k8s.replicaset.uid
+          - k8s.daemonset.name
+          - k8s.daemonset.uid
+          - k8s.job.name
+          - k8s.job.uid
+          - k8s.container.name
+          - k8s.cronjob.name
+          - k8s.statefulset.name
+          - k8s.statefulset.uid
+          - container.image.tag
+          - container.image.name
+          - k8s.cluster.uid
+          - service.namespace
+          - service.name
+          - service.version
+          - service.instance.id
+          otel_annotations: true
+        passthrough: false
+        pod_association:
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.ip
+        - sources:
+          - from: resource_attribute
+            name: k8s.pod.uid
+        - sources:
+          - from: connection
       memory_limiter:
         check_interval: 5s
         limit_percentage: 80
         spike_limit_percentage: 25
+      transform/loki:
+        log_statements:
+        - context: log
+          statements:
+          - set(resource.attributes["exporter"], "OTLP")
+          - set(resource.attributes["k8s.namespace.name"], log.attributes["k8s.namespace.name"])
+          - delete_key(log.attributes, "k8s.namespace.name")
     receivers:
       datadog:
         endpoint: '[${env:MY_POD_IP}]:8126'
+      envoyals:
+        endpoint: '[${env:MY_POD_IP}]:9000'
       jaeger:
         protocols:
           grpc:
@@ -332,15 +415,18 @@ data:
       pipelines:
         logs:
           exporters:
-          - loki
+          - otlphttp/loki
           processors:
-          - attributes
+          - k8sattributes
+          - transform/loki
           receivers:
           - otlp
+          - envoyals
         metrics:
           exporters:
           - prometheus
           processors:
+          - k8sattributes
           - memory_limiter
           - batch
           receivers:
@@ -350,6 +436,7 @@ data:
           exporters:
           - otlp
           processors:
+          - k8sattributes
           - memory_limiter
           - batch
           receivers:
@@ -358,7 +445,20 @@ data:
           - zipkin
       telemetry:
         metrics:
-          address: '[${env:MY_POD_IP}]:8888'
+          level: none
+          readers:
+          - pull:
+              exporter:
+                prometheus:
+                  host: localhost
+                  port: 8888
+        resource:
+          host.name: ${env:OTEL_K8S_NODE_NAME}
+          k8s.namespace.name: ${env:OTEL_K8S_NAMESPACE}
+          k8s.node.ip: ${env:OTEL_K8S_NODE_IP}
+          k8s.node.name: ${env:OTEL_K8S_NODE_NAME}
+          k8s.pod.ip: ${env:OTEL_K8S_POD_IP}
+          k8s.pod.name: ${env:OTEL_K8S_POD_NAME}
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/cm.yaml
 apiVersion: v1
@@ -368,9 +468,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -383,20 +482,11 @@ data:
   prometheus.yml: |
     global:
       evaluation_interval: 1m
-      scrape_interval: 15s
+      scrape_interval: 10s
       scrape_timeout: 10s
-    rule_files:
-    - /etc/config/recording_rules.yml
-    - /etc/config/alerting_rules.yml
-    - /etc/config/rules
-    - /etc/config/alerts
     scrape_configs:
-    - job_name: prometheus
-      static_configs:
-      - targets:
-        - localhost:9090
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-apiservers
+    - job_name: kubernetes-api-servers
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: endpoints
       relabel_configs:
@@ -409,175 +499,34 @@ data:
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-        insecure_skip_verify: true
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-nodes
+    - job_name: kubernetes-nodes
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         insecure_skip_verify: true
-    - bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-      job_name: kubernetes-nodes-cadvisor
+    - job_name: kubernetes-nodes-cadvisor
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
       - role: node
+      metrics_path: /metrics/cadvisor
       relabel_configs:
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
-      - replacement: kubernetes.default.svc:443
-        target_label: __address__
-      - regex: (.+)
-        replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
-        source_labels:
-        - __meta_kubernetes_node_name
-        target_label: __metrics_path__
+      - source_labels:
+        - __metrics_path__
+        target_label: metrics_path
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         insecure_skip_verify: true
-    - honor_labels: true
-      job_name: kubernetes-service-endpoints
-      kubernetes_sd_configs:
-      - role: endpoints
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape
-      - action: drop
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
-      - action: replace
-        regex: (https?)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scheme
-        target_label: __scheme__
-      - action: replace
-        regex: (.+)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_path
-        target_label: __metrics_path__
-      - action: replace
-        regex: (.+?)(?::\d+)?;(\d+)
-        replacement: $1:$2
-        source_labels:
-        - __address__
-        - __meta_kubernetes_service_annotation_prometheus_io_port
-        target_label: __address__
-      - action: labelmap
-        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-        replacement: __param_$1
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_pod_node_name
-        target_label: node
-    - honor_labels: true
-      job_name: kubernetes-service-endpoints-slow
-      kubernetes_sd_configs:
-      - role: endpoints
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
-      - action: replace
-        regex: (https?)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_scheme
-        target_label: __scheme__
-      - action: replace
-        regex: (.+)
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_path
-        target_label: __metrics_path__
-      - action: replace
-        regex: (.+?)(?::\d+)?;(\d+)
-        replacement: $1:$2
-        source_labels:
-        - __address__
-        - __meta_kubernetes_service_annotation_prometheus_io_port
-        target_label: __address__
-      - action: labelmap
-        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
-        replacement: __param_$1
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-      - action: replace
-        source_labels:
-        - __meta_kubernetes_pod_node_name
-        target_label: node
-      scrape_interval: 5m
-      scrape_timeout: 30s
-    - honor_labels: true
-      job_name: prometheus-pushgateway
-      kubernetes_sd_configs:
-      - role: service
-      relabel_configs:
-      - action: keep
-        regex: pushgateway
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_probe
-    - honor_labels: true
-      job_name: kubernetes-services
-      kubernetes_sd_configs:
-      - role: service
-      metrics_path: /probe
-      params:
-        module:
-        - http_2xx
-      relabel_configs:
-      - action: keep
-        regex: true
-        source_labels:
-        - __meta_kubernetes_service_annotation_prometheus_io_probe
-      - source_labels:
-        - __address__
-        target_label: __param_target
-      - replacement: blackbox
-        target_label: __address__
-      - source_labels:
-        - __param_target
-        target_label: instance
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels:
-        - __meta_kubernetes_namespace
-        target_label: namespace
-      - source_labels:
-        - __meta_kubernetes_service_name
-        target_label: service
-    - honor_labels: true
-      job_name: kubernetes-pods
+    - job_name: kubernetes-pods
+      honor_labels: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
@@ -634,8 +583,8 @@ data:
         source_labels:
         - __meta_kubernetes_pod_node_name
         target_label: node
-    - honor_labels: true
-      job_name: kubernetes-pods-slow
+    - job_name: kubernetes-pods-slow
+      honor_labels: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
@@ -690,6 +639,145 @@ data:
         target_label: node
       scrape_interval: 5m
       scrape_timeout: 30s
+    - job_name: kubernetes-service-endpoints
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape
+      - action: drop
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: (.+?)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+    - job_name: kubernetes-service-endpoints-slow
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scrape_slow
+      - action: replace
+        regex: (https?)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_scheme
+        target_label: __scheme__
+      - action: replace
+        regex: (.+)
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_path
+        target_label: __metrics_path__
+      - action: replace
+        regex: (.+?)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        source_labels:
+        - __address__
+        - __meta_kubernetes_service_annotation_prometheus_io_port
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_service_annotation_prometheus_io_param_(.+)
+        replacement: __param_$1
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+      - action: replace
+        source_labels:
+        - __meta_kubernetes_pod_node_name
+        target_label: node
+      scrape_interval: 5m
+      scrape_timeout: 30s
+    - job_name: kubernetes-services
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: service
+      metrics_path: /probe
+      params:
+        module:
+        - http_2xx
+      relabel_configs:
+      - action: keep
+        regex: true
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+      - source_labels:
+        - __address__
+        target_label: __param_target
+      - replacement: blackbox
+        target_label: __address__
+      - source_labels:
+        - __param_target
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels:
+        - __meta_kubernetes_namespace
+        target_label: namespace
+      - source_labels:
+        - __meta_kubernetes_service_name
+        target_label: service
+    - job_name: prometheus
+      static_configs:
+      - targets:
+        - localhost:9090
+    - job_name: prometheus-pushgateway
+      honor_labels: true
+      kubernetes_sd_configs:
+      - role: service
+      relabel_configs:
+      - action: keep
+        regex: pushgateway
+        source_labels:
+        - __meta_kubernetes_service_annotation_prometheus_io_probe
+    rule_files:
+    - /etc/config/recording_rules.yml
+    - /etc/config/alerting_rules.yml
+    - /etc/config/rules
+    - /etc/config/alerts
   recording_rules.yml: |
     {}
   rules: |
@@ -737,7 +825,8 @@ data:
                 http:
                   endpoint: 0.0.0.0:4318
     ingester:
-          {}
+          flush_check_period: 1s
+          max_block_duration: 15s
     server:
           http_listen_port: 3100
     storage:
@@ -786,8 +875,20 @@ data:
         "graphTooltip": 0,
         "id": 2,
         "links": [],
-        "liveNow": false,
         "panels": [
+          {
+            "collapsed": false,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 0
+            },
+            "id": 32,
+            "panels": [],
+            "title": "General",
+            "type": "row"
+          },
           {
             "datasource": {
               "type": "prometheus",
@@ -816,7 +917,7 @@ data:
                   "steps": [
                     {
                       "color": "#d44a3a",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "rgba(237, 129, 40, 0.89)",
@@ -836,7 +937,7 @@ data:
               "h": 5,
               "w": 5,
               "x": 0,
-              "y": 0
+              "y": 1
             },
             "id": 9,
             "maxDataPoints": 100,
@@ -846,7 +947,7 @@ data:
               "orientation": "horizontal",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -855,7 +956,7 @@ data:
               "showThresholdMarkers": true,
               "sizing": "auto"
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -900,11 +1001,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "red",
-                      "value": 80
+                      "value": 0
                     }
                   ]
                 },
@@ -916,7 +1013,7 @@ data:
               "h": 5,
               "w": 4,
               "x": 5,
-              "y": 0
+              "y": 1
             },
             "id": 12,
             "maxDataPoints": 100,
@@ -925,9 +1022,10 @@ data:
               "graphMode": "none",
               "justifyMode": "auto",
               "orientation": "horizontal",
+              "percentChangeColorMode": "standard",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -936,7 +1034,7 @@ data:
               "textMode": "auto",
               "wideLayout": true
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -976,15 +1074,23 @@ data:
                   }
                 ],
                 "thresholds": {
-                  "mode": "absolute",
+                  "mode": "percentage",
                   "steps": [
                     {
+                      "color": "blue",
+                      "value": 0
+                    },
+                    {
                       "color": "green",
-                      "value": null
+                      "value": 25
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 75
                     },
                     {
                       "color": "red",
-                      "value": 80
+                      "value": 90
                     }
                   ]
                 },
@@ -996,18 +1102,19 @@ data:
               "h": 5,
               "w": 5,
               "x": 9,
-              "y": 0
+              "y": 1
             },
             "id": 11,
             "maxDataPoints": 100,
             "options": {
-              "colorMode": "none",
-              "graphMode": "none",
+              "colorMode": "value",
+              "graphMode": "area",
               "justifyMode": "auto",
               "orientation": "horizontal",
+              "percentChangeColorMode": "standard",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -1016,22 +1123,58 @@ data:
               "textMode": "auto",
               "wideLayout": true
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
-                "editorMode": "builder",
+                "editorMode": "code",
                 "expr": "sum(envoy_server_memory_allocated{})",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
                 "range": true,
                 "refId": "A"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "editorMode": "code",
+                "exemplar": false,
+                "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\",container=\"envoy\"})",
+                "hide": false,
+                "instant": true,
+                "legendFormat": "__auto",
+                "range": false,
+                "refId": "B"
               }
             ],
             "title": "Allocated Memory",
+            "transformations": [
+              {
+                "id": "configFromData",
+                "options": {
+                  "configRefId": "B",
+                  "mappings": [
+                    {
+                      "fieldName": "min(kube_pod_container_resource_limits{resource=\"memory\",container=\"envoy\"})",
+                      "handlerKey": "max"
+                    },
+                    {
+                      "fieldName": "Time",
+                      "handlerKey": "__ignore"
+                    },
+                    {
+                      "fieldName": "sum(kube_pod_container_resource_limits{resource=\"memory\",container=\"envoy\"})",
+                      "handlerKey": "max"
+                    }
+                  ]
+                }
+              }
+            ],
             "type": "stat"
           },
           {
@@ -1056,15 +1199,23 @@ data:
                   }
                 ],
                 "thresholds": {
-                  "mode": "absolute",
+                  "mode": "percentage",
                   "steps": [
                     {
+                      "color": "blue",
+                      "value": 0
+                    },
+                    {
                       "color": "green",
-                      "value": null
+                      "value": 25
+                    },
+                    {
+                      "color": "#EAB839",
+                      "value": 85
                     },
                     {
                       "color": "red",
-                      "value": 80
+                      "value": 90
                     }
                   ]
                 },
@@ -1076,18 +1227,19 @@ data:
               "h": 5,
               "w": 4,
               "x": 14,
-              "y": 0
+              "y": 1
             },
             "id": 13,
             "maxDataPoints": 100,
             "options": {
-              "colorMode": "none",
-              "graphMode": "none",
+              "colorMode": "value",
+              "graphMode": "area",
               "justifyMode": "auto",
               "orientation": "horizontal",
+              "percentChangeColorMode": "standard",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -1096,7 +1248,7 @@ data:
               "textMode": "auto",
               "wideLayout": true
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -1109,9 +1261,37 @@ data:
                 "legendFormat": "",
                 "range": true,
                 "refId": "A"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "editorMode": "code",
+                "exemplar": false,
+                "expr": "sum(kube_pod_container_resource_limits{resource=\"memory\",container=\"envoy\"})",
+                "hide": false,
+                "instant": true,
+                "legendFormat": "__auto",
+                "range": false,
+                "refId": "B"
               }
             ],
             "title": "Heap Size",
+            "transformations": [
+              {
+                "id": "configFromData",
+                "options": {
+                  "configRefId": "B",
+                  "mappings": [
+                    {
+                      "fieldName": "sum(kube_pod_container_resource_limits{resource=\"memory\",container=\"envoy\"})",
+                      "handlerKey": "max"
+                    }
+                  ]
+                }
+              }
+            ],
             "type": "stat"
           },
           {
@@ -1140,7 +1320,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1156,18 +1336,19 @@ data:
               "h": 5,
               "w": 3,
               "x": 18,
-              "y": 0
+              "y": 1
             },
             "id": 19,
             "maxDataPoints": 100,
             "options": {
               "colorMode": "none",
-              "graphMode": "none",
+              "graphMode": "area",
               "justifyMode": "auto",
               "orientation": "horizontal",
+              "percentChangeColorMode": "standard",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -1176,14 +1357,14 @@ data:
               "textMode": "auto",
               "wideLayout": true
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "(sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\"})  - sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\"}))",
+                "expr": "(sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) - sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -1231,7 +1412,7 @@ data:
                   "steps": [
                     {
                       "color": "#d44a3a",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "rgba(237, 129, 40, 0.89)",
@@ -1251,18 +1432,19 @@ data:
               "h": 5,
               "w": 3,
               "x": 21,
-              "y": 0
+              "y": 1
             },
             "id": 20,
             "maxDataPoints": 100,
             "options": {
               "colorMode": "value",
-              "graphMode": "none",
+              "graphMode": "area",
               "justifyMode": "auto",
               "orientation": "horizontal",
+              "percentChangeColorMode": "standard",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -1271,14 +1453,14 @@ data:
               "textMode": "auto",
               "wideLayout": true
             },
-            "pluginVersion": "11.0.0",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "(sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\"})-sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\"})) == bool 0",
+                "expr": "(sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})-sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})) == bool 0",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "",
@@ -1306,6 +1488,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 10,
                   "gradientMode": "none",
@@ -1338,7 +1521,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1354,7 +1537,7 @@ data:
               "h": 7,
               "w": 12,
               "x": 0,
-              "y": 5
+              "y": 6
             },
             "id": 2,
             "options": {
@@ -1365,19 +1548,20 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "multi",
-                "sort": "none"
+                "sort": "desc"
               }
             },
-            "pluginVersion": "10.0.2",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(envoy_cluster_upstream_cx_active{envoy_cluster_name=~\"$cluster\"}) by (envoy_cluster_name)",
+                "expr": "sum(envoy_cluster_upstream_cx_active{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) by (envoy_cluster_name)",
                 "format": "time_series",
                 "intervalFactor": 2,
                 "legendFormat": "{{envoy_cluster_name}}",
@@ -1405,6 +1589,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 10,
                   "gradientMode": "none",
@@ -1437,7 +1622,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1447,38 +1632,13 @@ data:
                 },
                 "unit": "short"
               },
-              "overrides": [
-                {
-                  "__systemRef": "hideSeriesFrom",
-                  "matcher": {
-                    "id": "byNames",
-                    "options": {
-                      "mode": "exclude",
-                      "names": [
-                        "httproute/default/backend/rule/0"
-                      ],
-                      "prefix": "All except:",
-                      "readOnly": true
-                    }
-                  },
-                  "properties": [
-                    {
-                      "id": "custom.hideFrom",
-                      "value": {
-                        "legend": false,
-                        "tooltip": false,
-                        "viz": true
-                      }
-                    }
-                  ]
-                }
-              ]
+              "overrides": []
             },
             "gridPos": {
               "h": 7,
               "w": 12,
               "x": 12,
-              "y": 5
+              "y": 6
             },
             "id": 4,
             "options": {
@@ -1489,20 +1649,21 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "multi",
-                "sort": "none"
+                "sort": "desc"
               }
             },
-            "pluginVersion": "10.0.2",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "type": "prometheus",
-                  "uid": "PBFA97CFB590B2093"
+                  "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"$cluster\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "format": "time_series",
                 "intervalFactor": 2,
                 "legendFormat": "{{envoy_cluster_name}}",
@@ -1530,6 +1691,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 10,
                   "gradientMode": "none",
@@ -1562,7 +1724,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1578,7 +1740,7 @@ data:
               "h": 7,
               "w": 12,
               "x": 0,
-              "y": 12
+              "y": 13
             },
             "id": 15,
             "options": {
@@ -1589,19 +1751,20 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "multi",
-                "sort": "none"
+                "sort": "desc"
               }
             },
-            "pluginVersion": "10.0.2",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=~\"$cluster\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{envoy_cluster_name}} - in",
@@ -1613,7 +1776,7 @@ data:
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(irate(envoy_cluster_upstream_cx_tx_bytes_total{envoy_cluster_name=~\"$cluster\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_cx_tx_bytes_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{envoy_cluster_name}} - out",
@@ -1641,6 +1804,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 10,
                   "gradientMode": "none",
@@ -1666,6 +1830,7 @@ data:
                     "mode": "off"
                   }
                 },
+                "decimals": 1,
                 "links": [],
                 "mappings": [],
                 "thresholds": {
@@ -1673,7 +1838,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1681,38 +1846,55 @@ data:
                     }
                   ]
                 },
-                "unit": "decbytes"
+                "unit": "Bps"
               },
-              "overrides": []
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byRegexp",
+                    "options": "/.* - out/"
+                  },
+                  "properties": [
+                    {
+                      "id": "custom.transform",
+                      "value": "negative-Y"
+                    }
+                  ]
+                }
+              ]
             },
             "gridPos": {
               "h": 7,
               "w": 12,
               "x": 12,
-              "y": 12
+              "y": 13
             },
             "id": 17,
             "options": {
               "legend": {
-                "calcs": [],
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "displayMode": "table",
+                "placement": "right",
+                "showLegend": true,
+                "sortBy": "Last *",
+                "sortDesc": true
               },
               "tooltip": {
-                "maxHeight": 600,
+                "hideZeros": false,
                 "mode": "multi",
                 "sort": "none"
               }
             },
-            "pluginVersion": "10.0.2",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
-                "editorMode": "builder",
-                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http\"}[5m]))",
+                "editorMode": "code",
+                "expr": "sum(irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - in",
@@ -1723,8 +1905,8 @@ data:
                 "datasource": {
                   "uid": "$datasource"
                 },
-                "editorMode": "builder",
-                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http\"}[5m]))",
+                "editorMode": "code",
+                "expr": "sum(irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"http-.*\"}[$__rate_interval]))",
                 "format": "time_series",
                 "intervalFactor": 1,
                 "legendFormat": "{{service}} - out",
@@ -1752,6 +1934,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 0,
                   "gradientMode": "none",
@@ -1783,7 +1966,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -1799,7 +1982,7 @@ data:
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 19
+              "y": 20
             },
             "id": 22,
             "options": {
@@ -1810,11 +1993,13 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "single",
                 "sort": "none"
               }
             },
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -1822,7 +2007,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "histogram_quantile(0.99, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\"}[5m])) by (le, envoy_cluster_name))",
+                "expr": "histogram_quantile(0.99, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (le, envoy_cluster_name))",
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}} 99%",
                 "range": true,
@@ -1834,7 +2019,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "histogram_quantile(0.9, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\"}[5m])) by (le, envoy_cluster_name))",
+                "expr": "histogram_quantile(0.9, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (le, envoy_cluster_name))",
                 "hide": false,
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}} 90%",
@@ -1847,7 +2032,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "histogram_quantile(0.5, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\"}[5m])) by (le, envoy_cluster_name))",
+                "expr": "histogram_quantile(0.5, sum(rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (le, envoy_cluster_name))",
                 "hide": false,
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}} 50%",
@@ -1875,6 +2060,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 0,
                   "gradientMode": "none",
@@ -1906,14 +2092,15 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
                       "value": 80
                     }
                   ]
-                }
+                },
+                "unit": "reqps"
               },
               "overrides": []
             },
@@ -1921,7 +2108,7 @@ data:
               "h": 8,
               "w": 6,
               "x": 12,
-              "y": 19
+              "y": 20
             },
             "id": 24,
             "options": {
@@ -1932,11 +2119,13 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "single",
                 "sort": "none"
               }
             },
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -1944,7 +2133,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "sum(rate(envoy_cluster_upstream_rq_xx{envoy_response_code_class=~\"2\", envoy_cluster_name=~\"$cluster\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_response_code_class=~\"2\", envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}}",
                 "range": true,
@@ -1971,6 +2160,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 0,
                   "gradientMode": "none",
@@ -2002,14 +2192,15 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
                       "value": 80
                     }
                   ]
-                }
+                },
+                "unit": "reqps"
               },
               "overrides": []
             },
@@ -2017,7 +2208,7 @@ data:
               "h": 8,
               "w": 6,
               "x": 18,
-              "y": 19
+              "y": 20
             },
             "id": 28,
             "options": {
@@ -2028,11 +2219,13 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "single",
                 "sort": "none"
               }
             },
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -2040,7 +2233,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "sum(rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_response_code_class=~\"4\"}[1m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\",envoy_response_code_class=~\"4\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}}",
                 "range": true,
@@ -2067,6 +2260,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 10,
                   "gradientMode": "none",
@@ -2099,7 +2293,7 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
@@ -2115,7 +2309,7 @@ data:
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 27
+              "y": 28
             },
             "id": 7,
             "options": {
@@ -2123,22 +2317,25 @@ data:
                 "calcs": [],
                 "displayMode": "list",
                 "placement": "bottom",
-                "showLegend": true
+                "showLegend": true,
+                "sortBy": "Last *",
+                "sortDesc": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "multi",
-                "sort": "none"
+                "sort": "desc"
               }
             },
-            "pluginVersion": "10.0.2",
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
                   "uid": "$datasource"
                 },
                 "editorMode": "code",
-                "expr": "sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\"})",
+                "expr": "sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
                 "format": "time_series",
                 "intervalFactor": 2,
                 "legendFormat": "healthy",
@@ -2147,12 +2344,15 @@ data:
               },
               {
                 "datasource": {
+                  "type": "prometheus",
                   "uid": "$datasource"
                 },
-                "expr": "sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",service=~\"$service\"})",
-                "format": "time_series",
-                "intervalFactor": 2,
-                "legendFormat": "total",
+                "editorMode": "code",
+                "expr": "avg by (envoy_cluster_name) (envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                "hide": false,
+                "instant": false,
+                "legendFormat": "__auto",
+                "range": true,
                 "refId": "B"
               }
             ],
@@ -2176,6 +2376,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 0,
                   "gradientMode": "none",
@@ -2207,14 +2408,15 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
                       "value": 80
                     }
                   ]
-                }
+                },
+                "unit": "reqps"
               },
               "overrides": []
             },
@@ -2222,7 +2424,7 @@ data:
               "h": 8,
               "w": 6,
               "x": 12,
-              "y": 27
+              "y": 28
             },
             "id": 30,
             "options": {
@@ -2233,11 +2435,13 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "single",
                 "sort": "none"
               }
             },
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -2245,7 +2449,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "sum(rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_response_code_class=~\"5\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\",envoy_response_code_class=~\"5\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}}",
                 "range": true,
@@ -2272,6 +2476,7 @@ data:
                   "axisLabel": "",
                   "axisPlacement": "auto",
                   "barAlignment": 0,
+                  "barWidthFactor": 0.6,
                   "drawStyle": "line",
                   "fillOpacity": 0,
                   "gradientMode": "none",
@@ -2303,14 +2508,15 @@ data:
                   "steps": [
                     {
                       "color": "green",
-                      "value": null
+                      "value": 0
                     },
                     {
                       "color": "red",
                       "value": 80
                     }
                   ]
-                }
+                },
+                "unit": "reqps"
               },
               "overrides": []
             },
@@ -2318,7 +2524,7 @@ data:
               "h": 8,
               "w": 6,
               "x": 18,
-              "y": 27
+              "y": 28
             },
             "id": 26,
             "options": {
@@ -2329,11 +2535,13 @@ data:
                 "showLegend": true
               },
               "tooltip": {
+                "hideZeros": false,
                 "maxHeight": 600,
                 "mode": "single",
                 "sort": "none"
               }
             },
+            "pluginVersion": "12.1.0",
             "targets": [
               {
                 "datasource": {
@@ -2341,7 +2549,7 @@ data:
                   "uid": "${datasource}"
                 },
                 "editorMode": "code",
-                "expr": "sum(rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_response_code_class=~\"3\"}[5m])) by (envoy_cluster_name)",
+                "expr": "sum(irate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\",envoy_response_code_class=~\"3\"}[$__rate_interval])) by (envoy_cluster_name)",
                 "instant": false,
                 "legendFormat": "{{envoy_cluster_name}}",
                 "range": true,
@@ -2350,46 +2558,478 @@ data:
             ],
             "title": "Upstream 3xx Responses",
             "type": "timeseries"
+          },
+          {
+            "collapsed": true,
+            "gridPos": {
+              "h": 1,
+              "w": 24,
+              "x": 0,
+              "y": 36
+            },
+            "id": 33,
+            "panels": [
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 10,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "never",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "links": [],
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": 0
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    },
+                    "unit": "short"
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 12,
+                  "w": 24,
+                  "x": 0,
+                  "y": 37
+                },
+                "id": 36,
+                "options": {
+                  "legend": {
+                    "calcs": [
+                      "lastNotNull"
+                    ],
+                    "displayMode": "table",
+                    "placement": "right",
+                    "showLegend": true,
+                    "sortBy": "Last *",
+                    "sortDesc": true
+                  },
+                  "tooltip": {
+                    "hideZeros": false,
+                    "maxHeight": 600,
+                    "mode": "multi",
+                    "sort": "desc"
+                  }
+                },
+                "pluginVersion": "12.1.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "uid": "$datasource"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                    "format": "time_series",
+                    "intervalFactor": 2,
+                    "legendFormat": "healthy",
+                    "range": true,
+                    "refId": "A"
+                  },
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                    },
+                    "editorMode": "code",
+                    "expr": "sum(envoy_cluster_membership_total{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"}) - sum(envoy_cluster_membership_healthy{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "unhealthy",
+                    "range": true,
+                    "refId": "C"
+                  }
+                ],
+                "title": "Downstream members",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 10,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "never",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "links": [],
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": 0
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    },
+                    "unit": "short"
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 12,
+                  "w": 8,
+                  "x": 0,
+                  "y": 49
+                },
+                "id": 31,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true,
+                    "sortBy": "Last *",
+                    "sortDesc": true
+                  },
+                  "tooltip": {
+                    "hideZeros": false,
+                    "maxHeight": 600,
+                    "mode": "multi",
+                    "sort": "desc"
+                  }
+                },
+                "pluginVersion": "12.1.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                    },
+                    "editorMode": "code",
+                    "expr": "avg by (envoy_cluster_name) (envoy_cluster_outlier_detection_ejections_active{envoy_cluster_name=~\"$cluster\", envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "ejected {{envoy_cluster_name}}",
+                    "range": true,
+                    "refId": "C"
+                  }
+                ],
+                "title": "Outlier ejected",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 10,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "never",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "links": [],
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": 0
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    },
+                    "unit": "short"
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 12,
+                  "w": 8,
+                  "x": 8,
+                  "y": 49
+                },
+                "id": 35,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true,
+                    "sortBy": "Last *",
+                    "sortDesc": true
+                  },
+                  "tooltip": {
+                    "hideZeros": false,
+                    "maxHeight": 600,
+                    "mode": "multi",
+                    "sort": "desc"
+                  }
+                },
+                "pluginVersion": "12.1.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                    },
+                    "editorMode": "code",
+                    "expr": "avg by (envoy_cluster_name) (envoy_cluster_membership_degraded{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "{{envoy_cluster_name}}",
+                    "range": true,
+                    "refId": "D"
+                  }
+                ],
+                "title": "Degraded",
+                "type": "timeseries"
+              },
+              {
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "$datasource"
+                },
+                "fieldConfig": {
+                  "defaults": {
+                    "color": {
+                      "mode": "palette-classic"
+                    },
+                    "custom": {
+                      "axisBorderShow": false,
+                      "axisCenteredZero": false,
+                      "axisColorMode": "text",
+                      "axisLabel": "",
+                      "axisPlacement": "auto",
+                      "barAlignment": 0,
+                      "barWidthFactor": 0.6,
+                      "drawStyle": "line",
+                      "fillOpacity": 10,
+                      "gradientMode": "none",
+                      "hideFrom": {
+                        "legend": false,
+                        "tooltip": false,
+                        "viz": false
+                      },
+                      "insertNulls": false,
+                      "lineInterpolation": "linear",
+                      "lineWidth": 1,
+                      "pointSize": 5,
+                      "scaleDistribution": {
+                        "type": "linear"
+                      },
+                      "showPoints": "never",
+                      "spanNulls": false,
+                      "stacking": {
+                        "group": "A",
+                        "mode": "none"
+                      },
+                      "thresholdsStyle": {
+                        "mode": "off"
+                      }
+                    },
+                    "links": [],
+                    "mappings": [],
+                    "thresholds": {
+                      "mode": "absolute",
+                      "steps": [
+                        {
+                          "color": "green",
+                          "value": 0
+                        },
+                        {
+                          "color": "red",
+                          "value": 80
+                        }
+                      ]
+                    },
+                    "unit": "short"
+                  },
+                  "overrides": []
+                },
+                "gridPos": {
+                  "h": 12,
+                  "w": 8,
+                  "x": 16,
+                  "y": 49
+                },
+                "id": 34,
+                "options": {
+                  "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true,
+                    "sortBy": "Last *",
+                    "sortDesc": true
+                  },
+                  "tooltip": {
+                    "hideZeros": false,
+                    "maxHeight": 600,
+                    "mode": "multi",
+                    "sort": "desc"
+                  }
+                },
+                "pluginVersion": "12.1.0",
+                "targets": [
+                  {
+                    "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                    },
+                    "editorMode": "code",
+                    "expr": "avg by (envoy_cluster_name) (envoy_cluster_membership_excluded{envoy_cluster_name=~\"$cluster\",envoy_cluster_name=~\".+?route/${namespace}/${resource}/rule/${rule}\"})",
+                    "hide": false,
+                    "instant": false,
+                    "legendFormat": "{{envoy_cluster_name}}",
+                    "range": true,
+                    "refId": "E"
+                  }
+                ],
+                "title": "Excluded",
+                "type": "timeseries"
+              }
+            ],
+            "title": "Cluster membership",
+            "type": "row"
           }
         ],
+        "preload": false,
         "refresh": "30s",
-        "schemaVersion": 39,
+        "schemaVersion": 41,
         "tags": [
           "Data Plane"
         ],
         "templating": {
           "list": [
             {
-              "current": {
-                "selected": false,
-                "text": "Prometheus",
-                "value": "Prometheus"
-              },
-              "hide": 0,
+              "current": {},
               "includeAll": false,
-              "multi": false,
               "name": "datasource",
               "options": [],
               "query": "prometheus",
               "refresh": 1,
               "regex": "",
-              "skipUrlSync": false,
               "type": "datasource"
             },
             {
-              "current": {
-                "selected": false,
-                "text": "httproute/default/backend/rule/0",
-                "value": "httproute/default/backend/rule/0"
-              },
+              "current": {},
               "datasource": {
                 "uid": "$datasource"
               },
               "definition": "label_values(envoy_cluster_name)",
-              "hide": 0,
               "includeAll": true,
               "label": "Cluster",
-              "multi": false,
               "name": "cluster",
               "options": [],
               "query": {
@@ -2398,12 +3038,77 @@ data:
               },
               "refresh": 1,
               "regex": "",
-              "skipUrlSync": false,
               "sort": 1,
-              "tagValuesQuery": "",
-              "tagsQuery": "",
-              "type": "query",
-              "useTags": false
+              "type": "query"
+            },
+            {
+              "allValue": ".*",
+              "current": {},
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "definition": "label_values(envoy_cluster_membership_total,envoy_cluster_name)",
+              "includeAll": true,
+              "label": "Namespace",
+              "multi": true,
+              "name": "namespace",
+              "options": [],
+              "query": {
+                "qryType": 1,
+                "query": "label_values(envoy_cluster_membership_total,envoy_cluster_name)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+              },
+              "refresh": 2,
+              "regex": "/\\w+?route/(.*?)\\/.*/",
+              "sort": 2,
+              "type": "query"
+            },
+            {
+              "allValue": ".*",
+              "current": {},
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "definition": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/.*\"},envoy_cluster_name)",
+              "includeAll": true,
+              "label": "Resource",
+              "multi": true,
+              "name": "resource",
+              "options": [],
+              "query": {
+                "qryType": 1,
+                "query": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/.*\"},envoy_cluster_name)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+              },
+              "refresh": 2,
+              "regex": "/\\w+?route\\/.*?\\/(.*?)\\/.*/",
+              "sort": 2,
+              "type": "query"
+            },
+            {
+              "allValue": ".*",
+              "current": {},
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$datasource"
+              },
+              "definition": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/$resource/rule/.*\"},envoy_cluster_name)",
+              "includeAll": true,
+              "label": "Rule",
+              "multi": true,
+              "name": "rule",
+              "options": [],
+              "query": {
+                "qryType": 1,
+                "query": "label_values(envoy_cluster_membership_total{envoy_cluster_name=~\".*?route/$namespace/$resource/rule/.*\"},envoy_cluster_name)",
+                "refId": "PrometheusVariableQueryEditor-VariableQuery"
+              },
+              "refresh": 2,
+              "regex": "/\\w+?route\\/.*?\\/.*?\\/rule\\/(.*)/",
+              "sort": 2,
+              "type": "query"
             }
           ]
         },
@@ -2411,37 +3116,11 @@ data:
           "from": "now-15m",
           "to": "now"
         },
-        "timeRangeUpdatedDuringEditOrView": false,
-        "timepicker": {
-          "refresh_intervals": [
-            "5s",
-            "10s",
-            "30s",
-            "1m",
-            "5m",
-            "15m",
-            "30m",
-            "1h",
-            "2h",
-            "1d"
-          ],
-          "time_options": [
-            "5m",
-            "15m",
-            "1h",
-            "6h",
-            "12h",
-            "24h",
-            "2d",
-            "7d",
-            "30d"
-          ]
-        },
+        "timepicker": {},
         "timezone": "",
         "title": "Envoy Clusters",
         "uid": "8WkEOMnANKE6PW5hhpVv",
-        "version": 1,
-        "weekStart": ""
+        "version": 40
       }
   envoy-gateway-global.json: |-
       {
@@ -8576,7 +9255,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "The fraction of this program's available CPU time used by the GC since the program started.",
                   "fieldConfig": {
@@ -8660,7 +9339,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8683,7 +9362,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Resident memory size",
                   "fieldConfig": {
@@ -8732,7 +9411,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8754,7 +9433,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Virtual memory size",
                   "fieldConfig": {
@@ -8804,7 +9483,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "code",
@@ -8826,7 +9505,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of ratelimit rule hits in total",
                   "fieldConfig": {
@@ -8879,7 +9558,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -8901,7 +9580,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of rule hits over the NearLimit ratio threshold (currently 80%) but under the threshold rate.",
                   "fieldConfig": {
@@ -8954,7 +9633,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -8976,7 +9655,7 @@ data:
               {
                   "datasource": {
                       "type": "prometheus",
-                      "uid": "PBFA97CFB590B2093"
+                      "uid": "$datasource"
                   },
                   "description": "Number of rule hits exceeding the threshold rate",
                   "fieldConfig": {
@@ -9029,7 +9708,7 @@ data:
                       {
                           "datasource": {
                               "type": "prometheus",
-                              "uid": "PBFA97CFB590B2093"
+                              "uid": "$datasource"
                           },
                           "disableTextWrap": false,
                           "editorMode": "builder",
@@ -9060,7 +9739,7 @@ data:
                       "current": {
                           "selected": false,
                           "text": "Prometheus",
-                          "value": "PBFA97CFB590B2093"
+                          "value": "$datasource"
                       },
                       "hide": 0,
                       "includeAll": false,
@@ -9426,93 +10105,160 @@ kind: ClusterRole
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
 rules:
-  # Rules which allow discovery.kubernetes to function.
   - apiGroups:
-      - ""
-      - "discovery.k8s.io"
-      - "networking.k8s.io"
+    - ""
+    - discovery.k8s.io
+    - networking.k8s.io
     resources:
-      - endpoints
-      - endpointslices
-      - ingresses
-      - nodes
-      - nodes/proxy
-      - nodes/metrics
-      - pods
-      - services
+    - endpoints
+    - endpointslices
+    - ingresses
+    - pods
+    - services
     verbs:
-      - get
-      - list
-      - watch
-  # Rules which allow loki.source.kubernetes and loki.source.podlogs to work.
+    - get
+    - list
+    - watch
   - apiGroups:
-      - ""
+    - ""
     resources:
-      - pods
-      - pods/log
-      - namespaces
+    - pods
+    - pods/log
+    - namespaces
     verbs:
-      - get
-      - list
-      - watch
+    - get
+    - list
+    - watch
   - apiGroups:
-      - "monitoring.grafana.com"
+    - monitoring.grafana.com
     resources:
-      - podlogs
+    - podlogs
     verbs:
-      - get
-      - list
-      - watch
-  # Rules which allow mimir.rules.kubernetes to work.
-  - apiGroups: ["monitoring.coreos.com"]
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - monitoring.coreos.com
     resources:
-      - prometheusrules
+    - prometheusrules
     verbs:
-      - get
-      - list
-      - watch
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - monitoring.coreos.com
+    resources:
+    - alertmanagerconfigs
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - monitoring.coreos.com
+    resources:
+    - podmonitors
+    - servicemonitors
+    - probes
+    - scrapeconfigs
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - events
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - configmaps
+    - secrets
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - apps
+    - extensions
+    resources:
+    - replicasets
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - nodes
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - nodes/pods
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ""
+    resources:
+    - nodes/metrics
+    verbs:
+    - get
+    - list
+    - watch
   - nonResourceURLs:
-      - /metrics
+    - /metrics
     verbs:
-      - get
-  # Rules for prometheus.kubernetes.*
-  - apiGroups: ["monitoring.coreos.com"]
-    resources:
-      - podmonitors
-      - servicemonitors
-      - probes
-    verbs:
-      - get
-      - list
-      - watch
-  # Rules which allow eventhandler to work.
-  - apiGroups:
-      - ""
-    resources:
-      - events
-    verbs:
-      - get
-      - list
-      - watch
-  # needed for remote.kubernetes.*
+    - get
+---
+# Source: gateway-addons-helm/charts/loki/templates/backend/clusterrole.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    helm.sh/chart: loki-6.55.0
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "3.6.7"
+  name: loki-clusterrole
+rules:
+- apiGroups: [""] # "" indicates the core API group
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "watch", "list"]
+---
+# Source: gateway-addons-helm/charts/opentelemetry-collector/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector
+  labels:
+    helm.sh/chart: opentelemetry-collector-0.147.1
+    app.kubernetes.io/name: opentelemetry-collector
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "0.147.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
+rules:
   - apiGroups: [""]
-    resources:
-      - "configmaps"
-      - "secrets"
-    verbs:
-      - get
-      - list
-      - watch
-  # needed for otelcol.processor.k8sattributes
+    resources: ["pods", "namespaces"]
+    verbs: ["get", "watch", "list"]
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["get", "list", "watch"]
@@ -9528,9 +10274,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -9538,7 +10283,6 @@ rules:
       - ""
     resources:
       - nodes
-      - nodes/proxy
       - nodes/metrics
       - services
       - endpoints
@@ -9550,7 +10294,6 @@ rules:
       - list
       - watch
   - apiGroups:
-      - "extensions"
       - "networking.k8s.io"
     resources:
       - ingresses/status
@@ -9578,11 +10321,10 @@ kind: ClusterRoleBinding
 metadata:
   name: alloy
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: rbac
@@ -9595,6 +10337,47 @@ subjects:
     name: alloy
     namespace: monitoring
 ---
+# Source: gateway-addons-helm/charts/loki/templates/backend/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: loki-clusterrolebinding
+  labels:
+    helm.sh/chart: loki-6.55.0
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "3.6.7"
+subjects:
+  - kind: ServiceAccount
+    name: loki
+    namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: loki-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: gateway-addons-helm/charts/opentelemetry-collector/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector
+  labels:
+    helm.sh/chart: opentelemetry-collector-0.147.1
+    app.kubernetes.io/name: opentelemetry-collector
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "0.147.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector
+subjects:
+- kind: ServiceAccount
+  name: otel-collector
+  namespace: monitoring
+---
 # Source: gateway-addons-helm/charts/prometheus/templates/clusterrolebinding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -9603,9 +10386,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -9622,12 +10404,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: alloy
+  namespace: monitoring
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
     app.kubernetes.io/component: networking
@@ -9636,7 +10418,6 @@ spec:
   selector:
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-  internalTrafficPolicy: Cluster
   ports:
     - name: http-metrics
       port: 12345
@@ -9648,12 +10429,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loki-memberlist
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
+  annotations:
 spec:
   type: ClusterIP
   clusterIP: None
@@ -9674,13 +10456,13 @@ metadata:
   name: loki-headless
   namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
     variant: headless
     prometheus.io/service-monitor: "false"
+  annotations:
 spec:
   clusterIP: None
   ports:
@@ -9697,12 +10479,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loki
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
+  annotations:
 spec:
   type: ClusterIP
   ports:
@@ -9726,17 +10509,27 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.147.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
     component: standalone-collector
 spec:
   type: ClusterIP
   ports:
     
+    - name: datadog
+      port: 8126
+      targetPort: 8126
+      protocol: TCP
+    - name: envoy-als
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+      appProtocol: grpc
     - name: jaeger-compact
       port: 6831
       targetPort: 6831
@@ -9776,9 +10569,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -9862,16 +10654,15 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: alloy
+  namespace: monitoring
   labels:
-    helm.sh/chart: alloy-0.9.2
+    helm.sh/chart: alloy-1.6.2
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-    
-    app.kubernetes.io/version: "v1.4.3"
+    app.kubernetes.io/version: "v1.14.0"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
-  minReadySeconds: 10
   selector:
     matchLabels:
       app.kubernetes.io/name: alloy
@@ -9887,7 +10678,7 @@ spec:
       serviceAccountName: alloy
       containers:
         - name: alloy
-          image: docker.io/grafana/alloy:v1.4.3
+          image: docker.io/grafana/alloy:v1.14.0
           imagePullPolicy: IfNotPresent
           args:
             - run
@@ -9917,17 +10708,17 @@ spec:
             - name: config
               mountPath: /etc/alloy
         - name: config-reloader
-          image: ghcr.io/jimmidyson/configmap-reload:v0.12.0
+          image: quay.io/prometheus-operator/prometheus-config-reloader:v0.81.0
           args:
-            - --volume-dir=/etc/alloy
-            - --webhook-url=http://localhost:12345/-/reload
+            - --watched-dir=/etc/alloy
+            - --reload-url=http://localhost:12345/-/reload
           volumeMounts:
             - name: config
               mountPath: /etc/alloy
           resources:
             requests:
-              cpu: 1m
-              memory: 5Mi
+              cpu: 10m
+              memory: 50Mi
       dnsPolicy: ClusterFirst
       volumes:
         - name: config
@@ -9941,12 +10732,13 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.108.0
+    helm.sh/chart: opentelemetry-collector-0.147.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.111.0"
+    app.kubernetes.io/version: "0.147.0"
     app.kubernetes.io/managed-by: Helm
-    
+    app.kubernetes.io/part-of: opentelemetry-collector
+    app.kubernetes.io/component: standalone-collector
 spec:
   replicas: 1
   revisionHistoryLimit: 10
@@ -9960,7 +10752,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 77c11cf41a890ec6a75a644880450d53887eca3e37511c3139cf0b3e8ebbe1ee
+        checksum/config: 4308d6323756ee1d670efa46c6c68342f4ae98184afdd1b6bbe7cff8abb109fc
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -9970,6 +10762,7 @@ spec:
     spec:
       
       serviceAccountName: otel-collector
+      automountServiceAccountToken: true
       securityContext:
         {}
       containers:
@@ -9978,10 +10771,16 @@ spec:
             - --config=/conf/relay.yaml
           securityContext:
             {}
-          image: "otel/opentelemetry-collector-contrib:0.111.0"
+          image: "otel/opentelemetry-collector-contrib:0.149.0"
           imagePullPolicy: IfNotPresent
           ports:
             
+            - name: datadog
+              containerPort: 8126
+              protocol: TCP
+            - name: envoy-als
+              containerPort: 9000
+              protocol: TCP
             - name: jaeger-compact
               containerPort: 6831
               protocol: UDP
@@ -10006,6 +10805,29 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: status.podIP
+            - name: OTEL_K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: OTEL_K8S_NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: OTEL_K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: OTEL_K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: OTEL_K8S_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
           livenessProbe:
             httpGet:
               path: /
@@ -10025,6 +10847,7 @@ spec:
               - key: relay
                 path: relay.yaml
       hostNetwork: false
+      hostPID: false
 ---
 # Source: gateway-addons-helm/charts/prometheus/templates/deploy.yaml
 apiVersion: apps/v1
@@ -10034,13 +10857,15 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v2.52.0
-    helm.sh/chart: prometheus-25.21.0
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: v3.10.0
+    helm.sh/chart: prometheus-28.14.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
 spec:
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels:
       app.kubernetes.io/component: server
@@ -10048,36 +10873,49 @@ spec:
       app.kubernetes.io/instance: gateway-addons-helm
   replicas: 1
   revisionHistoryLimit: 10
-  strategy:
-    type: Recreate
-    rollingUpdate: null
   template:
     metadata:
       labels:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v2.52.0
-        helm.sh/chart: prometheus-25.21.0
-        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: v3.10.0
+        helm.sh/chart: prometheus-28.14.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
       serviceAccountName: prometheus
       containers:
         - name: prometheus-server-configmap-reload
-          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.73.2"
+          image: "quay.io/prometheus-operator/prometheus-config-reloader:v0.90.1"
           imagePullPolicy: "IfNotPresent"
           args:
             - --watched-dir=/etc/config
+            - --listen-address=0.0.0.0:8080
             - --reload-url=http://127.0.0.1:9090/-/reload
+          ports:
+            - containerPort: 8080
+              name: metrics
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+              scheme: HTTP
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+              scheme: HTTP
+            periodSeconds: 10
           volumeMounts:
             - name: config-volume
               mountPath: /etc/config
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v2.52.0"
+          image: "prom/prometheus:v3.10.0"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
@@ -10134,12 +10972,12 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: loki
+  namespace: monitoring
   labels:
-    helm.sh/chart: loki-4.8.0
+    helm.sh/chart: loki-6.55.0
     app.kubernetes.io/name: loki
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "2.7.3"
-    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/version: "3.6.7"
     app.kubernetes.io/component: single-binary
     app.kubernetes.io/part-of: memberlist
 spec:
@@ -10150,10 +10988,6 @@ spec:
       partition: 0
   serviceName: loki-headless
   revisionHistoryLimit: 10
-  
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: Delete
-    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: loki
@@ -10162,7 +10996,9 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 39a9cea617408d4add363b9ca660a8889e48b866eba2e8c8e4bfc10870b29162
+        checksum/config: 6b4509c66d127c358eaec628ad628a06a82b9eea1a0d0b619b774e1938e660da
+        storage/size: "10Gi"
+        kubectl.kubernetes.io/default-container: "loki"
       labels:
         app.kubernetes.io/name: loki
         app.kubernetes.io/instance: gateway-addons-helm
@@ -10181,11 +11017,12 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: loki
-          image: docker.io/grafana/loki:2.7.3
+          image: docker.io/grafana/loki:3.6.7
           imagePullPolicy: IfNotPresent
           args:
             - -config.file=/etc/loki/config/config.yaml
             - -target=all
+            - -config.expand-env=true
           ports:
             - name: http-metrics
               containerPort: 3100
@@ -10196,6 +11033,11 @@ spec:
             - name: http-memberlist
               containerPort: 7946
               protocol: TCP
+          env:
+            - name: INSTANCE_ADDR
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -10203,10 +11045,13 @@ spec:
               - ALL
             readOnlyRootFilesystem: true
           readinessProbe:
+            failureThreshold: 3
             httpGet:
               path: /ready
               port: http-metrics
-            initialDelaySeconds: 30
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
             timeoutSeconds: 1
           volumeMounts:
             - name: tmp
@@ -10217,29 +11062,66 @@ spec:
               mountPath: /etc/loki/runtime-config
             - name: storage
               mountPath: /var/loki
+            - name: sc-rules-volume
+              mountPath: "/rules"
           resources:
             {}
+        - name: loki-sc-rules
+          image: docker.io/kiwigrid/k8s-sidecar:2.5.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: METHOD
+              value: WATCH
+            - name: LABEL
+              value: "loki_rule"
+            - name: FOLDER
+              value: "/rules"
+            - name: RESOURCE
+              value: "both"
+            - name: WATCH_SERVER_TIMEOUT
+              value: "60"
+            - name: WATCH_CLIENT_TIMEOUT
+              value: "60"
+            - name: LOG_LEVEL
+              value: "INFO"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: sc-rules-volume
+              mountPath: "/rules"
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
-            - labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: loki
-                  app.kubernetes.io/instance: gateway-addons-helm
-                  app.kubernetes.io/component: single-binary
-              topologyKey: kubernetes.io/hostname
-        
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: single-binary
+                app.kubernetes.io/instance: 'gateway-addons-helm'
+                app.kubernetes.io/name: 'loki'
+            topologyKey: kubernetes.io/hostname
       volumes:
         - name: tmp
           emptyDir: {}
         - name: config
           configMap:
             name: loki
+            items:
+              - key: "config.yaml"
+                path: "config.yaml"
         - name: runtime-config
           configMap:
             name: loki-runtime
+        - name: sc-rules-volume
+          emptyDir: {}
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: storage
       spec:
         accessModes:
@@ -10273,7 +11155,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 0898f7ca87563d700c35d7ea1824cd042cf93fb2f05e254d12a854aa97a5c5e5
+        checksum/config: 658cd054eaa8051815e2801a76bff8e63e030ca415e6220fdec9c6373a970ebc
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true

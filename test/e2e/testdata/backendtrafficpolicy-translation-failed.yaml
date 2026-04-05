@@ -39,4 +39,3 @@ spec:
           limit:
             requests: 10
             unit: Hour
-      type: Global

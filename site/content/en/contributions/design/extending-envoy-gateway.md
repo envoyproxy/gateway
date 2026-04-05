@@ -92,7 +92,7 @@ If the extension wants Envoy Gateway to watch for policy resources then it must 
 - `version`: the API version of the resource
 - `kind`: the Kind of resource
 
-Policy resources, like all Gateway-API policies, must contain `targetRef` or `targetRefs` fields in the spec which allow Envoy Gateway to identify which resources are targeted by the policy. 
+Policy resources, like all Gateway-API policies, must contain `targetRef` or `targetRefs` fields in the spec which allow Envoy Gateway to identify which resources are targeted by the policy.
 Policies can currently only target `Gateway` resources, and are provided as context to calls to the `HTTPListener` hook.
 
 The extension can configure the `extensionManager.hooks` field to specify which hook points it would like to support. If a given hook is not listed here then it will not be executed even
@@ -162,7 +162,7 @@ Similarly, any registered policy resource that targets an `HTTPListener` will be
 
 ## Watching New Resources
 
-Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Policy attachments which target `Gateway` resources work in the same way. 
+Envoy Gateway will dynamically create new watches on resources introduced by the registered Extension. It does so by using the [controller-runtime][] to create new watches on [Unstructured][] resources that match the `version`s, `group`s, and `kind`s that the registered extension configured. When communicating with an extension, Envoy Gateway sends these Unstructured resources over to the extension. This eliminates the need for the extension to create its own watches which would have a strong chance of creating race conditions and reconciliation loops when resources change. When an extension receives the Unstructured resources from Envoy Gateway it can perform its own type validation on them. Currently we make the simplifying assumption that the registered extension's `Kinds` are filters referenced by `extensionRef` in `HTTPRouteFilter`s . Policy attachments which target `Gateway` resources work in the same way.
 
 ## xDS Hooks API
 
@@ -324,20 +324,20 @@ whenever Envoy Gateway creates an instance of Envoy Proxy. An extension develope
 Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does comes with a few trade-offs. One known trade-off is the impact of the time that it takes for the hook calls to be executed. Since an extension would make use of hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some extension developers. One way to minimize the request time of the hook calls is to load the extension server as a sidecar to Envoy Gateway using the Unix Local Domain transport to minimize the impact of networking on the hook calls.
 
 [official goals]: https://github.com/envoyproxy/gateway/blob/main/GOALS.md#extensibility
-[ExtensionRef filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
-[ExtensionRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
-[ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
-[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
+[ExtensionRef filters]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localobjectreference
+[ExtensionRef]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localobjectreference
+[ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localobjectreference
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference
 [Gateway API Policy attachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [Policy Attachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [policyAttachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [Envoy]: https://www.envoyproxy.io/
 [Envoy specific configuration (xDS)]: https://www.envoyproxy.io/docs/envoy/v1.25.1/configuration/configuration
-[v1]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1
+[v1]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/
 [rate limiting]: ./rate-limit
 [authentication]: ../../latest/tasks/security/jwt-authentication
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httproute
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#grpcroute
 [EnvoyGateway config]: ../../latest/api/extension_types#envoygateway
 [controller-runtime]: https://github.com/kubernetes-sigs/controller-runtime
 [Unstructured]: https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured

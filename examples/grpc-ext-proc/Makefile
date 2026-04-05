@@ -2,6 +2,7 @@
 IMAGE_PREFIX ?= envoyproxy/gateway-
 APP_NAME ?= grpc-ext-proc
 TAG ?= latest
+GO_LDFLAGS ?=
 
 .PHONY: docker-buildx
 docker-buildx:

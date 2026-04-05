@@ -8,6 +8,10 @@ package validation
 import (
 	"fmt"
 	"net/url"
+	"strings"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -56,6 +60,10 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	if err := validateEnvoyGatewayTelemetry(eg.Telemetry); err != nil {
+		return err
+	}
+
+	if err := validateEnvoyGatewayXDSServer(eg.XDSServer); err != nil {
 		return err
 	}
 
@@ -126,7 +134,7 @@ func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGateway
 			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
 		}
 	default:
-		return fmt.Errorf("unsupported infrastructure provdier: %s", infra.Type)
+		return fmt.Errorf("unsupported infrastructure provider: %s", infra.Type)
 	}
 	return nil
 }
@@ -143,6 +151,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 			egv1a1.LogComponentGatewayAPIRunner,
 			egv1a1.LogComponentXdsTranslatorRunner,
 			egv1a1.LogComponentXdsServerRunner,
+			egv1a1.LogComponentXdsRunner,
 			egv1a1.LogComponentInfrastructureRunner,
 			egv1a1.LogComponentGlobalRateLimitRunner:
 			switch logLevel {
@@ -151,7 +160,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 				return fmt.Errorf("envoy gateway logging level invalid. valid options: info/debug/warn/error")
 			}
 		default:
-			return fmt.Errorf("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/infrastructure")
+			return fmt.Errorf("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/xds/infrastructure")
 		}
 	}
 	return nil
@@ -167,8 +176,11 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit.Backend.Redis == nil || rateLimit.Backend.Redis.URL == "" {
 		return fmt.Errorf("empty ratelimit redis settings")
 	}
-	if _, err := url.Parse(rateLimit.Backend.Redis.URL); err != nil {
-		return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+	redisHosts := strings.Split(rateLimit.Backend.Redis.URL, ",")
+	for _, host := range redisHosts {
+		if _, err := url.Parse(host); err != nil {
+			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+		}
 	}
 	return nil
 }
@@ -201,16 +213,48 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 	}
 
 	if extensionManager.Service.TLS != nil {
-		certificateRefKind := extensionManager.Service.TLS.CertificateRef.Kind
-
-		if certificateRefKind == nil {
-			return fmt.Errorf("certificateRef empty in extension service server TLS settings")
+		certRef := &extensionManager.Service.TLS.CertificateRef
+		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
+			(certRef.Kind != nil && *certRef.Kind != "Secret") {
+			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
 		}
 
-		if *certificateRefKind != "Secret" {
-			return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
+		if extensionManager.Service.TLS.ClientCertificateRef != nil {
+			clientCertRef := extensionManager.Service.TLS.ClientCertificateRef
+			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
+				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
+				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
+			}
 		}
 	}
+	return nil
+}
+
+func validateEnvoyGatewayXDSServer(xdsServer *egv1a1.XDSServer) error {
+	if xdsServer == nil {
+		return nil
+	}
+
+	if xdsServer.MaxConnectionAge != nil {
+		d, err := time.ParseDuration(string(*xdsServer.MaxConnectionAge))
+		if err != nil {
+			return fmt.Errorf("invalid xdsServer.maxConnectionAge: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("xdsServer.maxConnectionAge must be greater than zero")
+		}
+	}
+
+	if xdsServer.MaxConnectionAgeGrace != nil {
+		d, err := time.ParseDuration(string(*xdsServer.MaxConnectionAgeGrace))
+		if err != nil {
+			return fmt.Errorf("invalid xdsServer.maxConnectionAgeGrace: %w", err)
+		}
+		if d <= 0 {
+			return fmt.Errorf("xdsServer.maxConnectionAgeGrace must be greater than zero")
+		}
+	}
+
 	return nil
 }
 

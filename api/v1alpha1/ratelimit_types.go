@@ -5,14 +5,19 @@
 
 package v1alpha1
 
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
 // RateLimitSpec defines the desired state of RateLimitSpec.
-// +union
 type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
 	// Valid RateLimitType values are "Global" or "Local".
 	//
-	// +unionDiscriminator
-	Type RateLimitType `json:"type"`
+	// Deprecated: Use Global and/or Local fields directly instead. Both can be specified simultaneously for combined rate limiting.
+	//
+	// +optional
+	Type *RateLimitType `json:"type,omitempty"`
 	// Global defines global rate limit configuration.
 	//
 	// +optional
@@ -49,7 +54,7 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:MaxItems=256
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -62,7 +67,7 @@ type LocalRateLimit struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	// +kubebuilder:validation:XValidation:rule="self.all(foo, !has(foo.cost) || !has(foo.cost.response))", message="response cost is not supported for Local Rate Limits"
+	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -99,6 +104,21 @@ type RateLimitRule struct {
 	//
 	// +optional
 	Cost *RateLimitCost `json:"cost,omitempty"`
+	// Shared determines whether this rate limit rule applies across all the policy targets.
+	// If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
+	// Default: false.
+	//
+	// +optional
+	Shared *bool `json:"shared,omitempty"`
+	// ShadowMode indicates whether this rate-limit rule runs in shadow mode.
+	// When enabled, all rate-limiting operations are performed (cache lookups,
+	// counter updates, telemetry generation), but the outcome is never enforced.
+	// The request always succeeds, even if the configured limit is exceeded.
+	//
+	// Only supported for Global Rate Limits.
+	//
+	// +optional
+	ShadowMode *bool `json:"shadowMode,omitempty"`
 }
 
 type RateLimitCost struct {
@@ -177,21 +197,94 @@ type RateLimitCostMetadata struct {
 // RateLimitSelectCondition specifies the attributes within the traffic flow that can
 // be used to select a subset of clients to be ratelimited.
 // All the individual conditions must hold True for the overall condition to hold True.
+// And, at least one of headers or methods or path or sourceCIDR or queryParams condition must be specified.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.headers) || has(self.methods) || has(self.path) || has(self.sourceCIDR) || has(self.queryParams)",message="at least one of headers, methods, path, sourceCIDR or queryParams must be specified"
 type RateLimitSelectCondition struct {
 	// Headers is a list of request headers to match. Multiple header values are ANDed together,
 	// meaning, a request MUST match all the specified headers.
-	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
+	// Methods is a list of request methods to match. Multiple method values are ORed together,
+	// meaning, a request can match any one of the specified methods. If not specified, it matches all methods.
+	//
+	// +optional
+	Methods []MethodMatch `json:"methods,omitempty"`
+
+	// Path is the request path to match.
+	// Support Exact, PathPrefix and RegularExpression match types.
+	//
+	// +optional
+	Path *PathMatch `json:"path,omitempty"`
+
 	// SourceCIDR is the client IP Address range to match on.
-	// At least one of headers or sourceCIDR condition must be specified.
 	//
 	// +optional
 	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
+
+	// QueryParams is a list of query parameters to match. Multiple query parameter values are ANDed together,
+	// meaning, a request MUST match all the specified query parameters.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=16
+	QueryParams []QueryParamMatch `json:"queryParams,omitempty"`
 }
+
+// QueryParamMatch defines the match attributes within the query parameters of the request.
+// +k8s:deepcopy-gen=true
+type QueryParamMatch struct {
+	// Type specifies how to match against the value of the query parameter.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *QueryParamMatchType `json:"type,omitempty"`
+
+	// Name of the query parameter.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Value of the query parameter.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the query parameter.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Value *string `json:"value,omitempty"`
+
+	// Invert specifies whether the value match result will be inverted.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the query parameter.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+}
+
+// QueryParamMatchType specifies the semantics of how query parameter values should be compared.
+// Valid QueryParamMatchType values are "Exact", "RegularExpression", and "Distinct".
+//
+// +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
+type QueryParamMatchType string
+
+// QueryParamMatchType constants.
+const (
+	// QueryParamMatchExact matches the exact value of the Value field against the value of
+	// the specified query parameter.
+	QueryParamMatchExact QueryParamMatchType = "Exact"
+	// QueryParamMatchRegularExpression matches a regular expression against the value of the
+	// specified query parameter. The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	QueryParamMatchRegularExpression QueryParamMatchType = "RegularExpression"
+	// QueryParamMatchDistinct matches any and all possible unique values encountered in the
+	// specified query parameter. Note that each unique value will receive its own rate limit
+	// bucket.
+	QueryParamMatchDistinct QueryParamMatchType = "Distinct"
+)
 
 // +kubebuilder:validation:Enum=Exact;Distinct
 type SourceMatchType string
@@ -202,7 +295,6 @@ const (
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	// Note: This is only supported for Global Rate Limits.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
@@ -214,13 +306,22 @@ type SourceMatch struct {
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
 	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
+	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Value string `json:"value"`
+
+	// Invert specifies whether the source range match result will be inverted.
+	// When true, the rule matches when the client IP is not in the specified range(s).
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
-type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with a general purpose StringMatch type.
+type HeaderMatch struct {
 	// Type specifies how to match against the value of the header.
 	//
 	// +optional
@@ -228,12 +329,14 @@ type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with 
 	Type *HeaderMatchType `json:"type,omitempty"`
 
 	// Name of the HTTP header.
+	// The header name is case-insensitive unless PreserveHeaderCase is set to true.
+	// For example, "Foo" and "foo" are considered the same header.
+	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the HTTP header. Due to the
-	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+	// Value within the HTTP header.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique
 	// values within the header.
 	//
@@ -268,9 +371,41 @@ const (
 	// HeaderMatchDistinct matches any and all possible unique values encountered in the
 	// specified HTTP Header. Note that each unique value will receive its own rate limit
 	// bucket.
-	// Note: This is only supported for Global Rate Limits.
 	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
+
+// MethodMatch defines the matching criteria for the HTTP method of a request.
+type MethodMatch struct {
+	// Value specifies the HTTP method.
+	Value gwapiv1.HTTPMethod `json:"value"`
+
+	// Invert specifies whether the value match result will be inverted.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+}
+
+// PathMatch defines the matching criteria for the HTTP path of a request.
+type PathMatch struct {
+	// Type specifies how to match against the value of the path.
+	//
+	// +optional
+	// +kubebuilder:default=PathPrefix
+	Type *gwapiv1.PathMatchType `json:"type,omitempty"`
+
+	// Value specifies the HTTP path.
+	//
+	// +kubebuilder:default="/"
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+
+	// Invert specifies whether the value match result will be inverted.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
+}
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
@@ -279,9 +414,9 @@ type RateLimitValue struct {
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.
-// Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
+// Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
 //
-// +kubebuilder:validation:Enum=Second;Minute;Hour;Day
+// +kubebuilder:validation:Enum=Second;Minute;Hour;Day;Month;Year
 type RateLimitUnit string
 
 // RateLimitUnit constants.
@@ -297,4 +432,10 @@ const (
 
 	// RateLimitUnitDay specifies the rate limit interval to be 1 day.
 	RateLimitUnitDay RateLimitUnit = "Day"
+
+	// RateLimitUnitMonth specifies the rate limit interval to be 1 month.
+	RateLimitUnitMonth RateLimitUnit = "Month"
+
+	// RateLimitUnitYear specifies the rate limit interval to be 1 year.
+	RateLimitUnitYear RateLimitUnit = "Year"
 )

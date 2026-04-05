@@ -1,15 +1,15 @@
 ---
 title: "Working on Envoy Gateway Docs"
-description: "This section tells the development of 
+description: "This section tells the development of
  Envoy Gateway Documents."
 ---
 
-The documentation for the Envoy Gateway lives in the `site/content/en` directory (the Chinese content in the `site/content/zh` directory).
+The documentation for the Envoy Gateway lives in the `site/content/en` directory.
 Any individual document can be written using [Markdown].
 
 ## Documentation Structure
 
-We supported the versioned Docs now, the directory name under docs represents
+We now support versioned Docs, the directory name under docs represents
 the version of docs. The root of the latest site is in `site/content/en/latest`.
 This is probably where to start if you're trying to understand how things fit together.
 
@@ -25,15 +25,46 @@ and you can access the website which contains the latest version changes in
 
 ## Documentation Workflow
 
-To work with the docs, just edit Markdown files in `site/content/en/latest`,
-then run
+If you are creating procedural or conceptual documentation, please use our provided templates. You can generate these templates by running the following commands in the site directory:
+
+### New Task Documentation
+
+To create a new task document, use the following command:
+
+```bash
+hugo new --kind task content/en/latest/tasks/your-category/your-new-task.md
+```
+
+Replace `your-category`, `your-new-task` with the appropriate names.
+
+### New Conceptual Documentation
+
+To create a new conceptual document, use the following command:
+
+```bash
+hugo new --kind concept content/en/latest/concepts/your-new-concept.md
+```
+
+Replace `your-new-concept` with the appropriate name for your documentation.
+
+{{% alert title="Note" color="primary" %}}
+When adding new documentation, please make sure it is included in both the `site/content/en/latest` directory and the `site/content/en/v#.#` directory (where v#.# is the highest version number) to ensure consistency across current and versioned docs.
+{{% /alert %}}
+
+### Editing Existing Docs
+
+To work with the docs, just edit Markdown files in `site/content/en/latest`
+
+### Previewing and Releasing the Docs
+Use the following commands to build, preview, and optionally version the Envoy Gateway documentation:
+
+Generate the static site files under site/public:
 
 ```bash
 make docs
 ```
 
-This will create `site/public` with the built HTML pages. You can preview it
-by running:
+Preview the site locally by running:
 
 ``` shell
 make docs-serve

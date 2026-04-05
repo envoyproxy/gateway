@@ -7,31 +7,49 @@ package translator
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	previoushost "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/host/previous_hosts/v3"
+	previouspriority "github.com/envoyproxy/go-control-plane/envoy/extensions/retry/priority/previous_priorities/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 const (
 	retryDefaultRetryOn             = "connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes"
 	retryDefaultRetriableStatusCode = 503
 	retryDefaultNumRetries          = 2
+
+	websocketUpgradeType = "websocket"
+
+	ConnectProtocol = "CONNECT"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
+// Allow websocket upgrades for HTTP 1.1
+// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+var defaultUpgradeConfig = []*routev3.RouteAction_UpgradeConfig{
+	{
+		UpgradeType: websocketUpgradeType,
+	},
+}
+
+func buildXdsRoute(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) (*routev3.Route, error) {
+	connectMatch := trafficUpgradeConnect(httpRoute.Traffic)
 	router := &routev3.Route{
 		Name:     httpRoute.Name,
-		Match:    buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
+		Match:    buildXdsRouteMatch(connectMatch, httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches, httpRoute.CookieMatches),
 		Metadata: buildXdsMetadata(httpRoute.Metadata),
 	}
 
@@ -41,6 +59,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
+	router.RequestHeadersToRemove = append(router.RequestHeadersToRemove, geoIPHeadersToRemove(httpListener)...)
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
 		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
@@ -55,38 +74,26 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction := buildXdsURLRewriteAction(httpRoute, httpRoute.URLRewrite, httpRoute.PathMatch)
+		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
-		backendWeights := httpRoute.Destination.ToBackendWeights()
-		routeAction := buildXdsRouteAction(backendWeights, httpRoute.Destination.Settings)
-		routeAction.IdleTimeout = idleTimeout(httpRoute)
+		routeAction := buildXdsRouteAction(httpRoute)
+		routeAction.IdleTimeout = idleTimeout(httpRoute, httpListener)
 
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 		if !httpRoute.IsHTTP2 {
-			// Allow websocket upgrades for HTTP 1.1
-			// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-			routeAction.UpgradeConfigs = []*routev3.RouteAction_UpgradeConfig{
-				{
-					UpgradeType: "websocket",
-				},
-			}
+			routeAction.UpgradeConfigs = buildUpgradeConfig(httpRoute.Traffic)
 		}
 		router.Action = &routev3.Route_Route{Route: routeAction}
 	}
@@ -102,6 +109,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		if rt != nil {
 			router.GetRoute().Timeout = durationpb.New(rt.Duration)
 		}
+
+		// Check if MaxStreamDuration is configured
+		if httpRoute.Traffic != nil &&
+			httpRoute.Traffic.Timeout != nil &&
+			httpRoute.Traffic.Timeout.HTTP != nil {
+			if httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration != nil {
+				maxStreamDuration := &routev3.RouteAction_MaxStreamDuration{
+					MaxStreamDuration: durationpb.New(httpRoute.Traffic.Timeout.HTTP.MaxStreamDuration.Duration),
+				}
+				router.GetRoute().MaxStreamDuration = maxStreamDuration
+			}
+		}
 	}
 
 	// Retries
@@ -114,15 +133,123 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*routev3.Route, error) {
 		}
 	}
 
+	// Telemetry
+	if httpRoute.Traffic != nil && httpRoute.Traffic.Telemetry != nil {
+		if tracingCfg, err := buildRouteTracing(httpRoute); err == nil {
+			router.Tracing = tracingCfg
+		} else {
+			return nil, err
+		}
+	}
+
+	// Metrics
+	router.StatPrefix = ptr.Deref(httpRoute.StatName, "")
+
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute, httpListener); err != nil {
 		return nil, err
 	}
 
 	return router, nil
 }
 
-func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+func trafficUpgradeConnect(trafficFeatures *ir.TrafficFeatures) bool {
+	if trafficFeatures == nil || trafficFeatures.HTTPUpgrade == nil {
+		return false
+	}
+
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		if strings.EqualFold(protocol.Type, ConnectProtocol) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func buildUpgradeConfig(trafficFeatures *ir.TrafficFeatures) []*routev3.RouteAction_UpgradeConfig {
+	if trafficFeatures == nil {
+		return defaultUpgradeConfig
+	}
+
+	if len(trafficFeatures.HTTPUpgrade) == 0 {
+		// If requestBuffer is configured, return nil to disable HTTP upgrades.
+		// Buffering is not compatible with upgrades because the buffer filter waits
+		// for the entire request body before processing, which can cause the client
+		// to time out.
+		if trafficFeatures.RequestBuffer != nil {
+			return nil
+		}
+		return defaultUpgradeConfig
+	}
+
+	upgradeConfigs := make([]*routev3.RouteAction_UpgradeConfig, 0, len(trafficFeatures.HTTPUpgrade))
+	for _, protocol := range trafficFeatures.HTTPUpgrade {
+		cfg := &routev3.RouteAction_UpgradeConfig{
+			UpgradeType: protocol.Type,
+		}
+		if protocol.Type == ConnectProtocol && protocol.Connect != nil && protocol.Connect.Terminate {
+			cfg.ConnectConfig = &routev3.RouteAction_UpgradeConfig_ConnectConfig{}
+		}
+		upgradeConfigs = append(upgradeConfigs, cfg)
+	}
+
+	return upgradeConfigs
+}
+
+func buildXdsRouteMatch(connectMatch bool, pathMatch *ir.StringMatch, headerMatches, queryParamMatches, cookieMatches []*ir.StringMatch) *routev3.RouteMatch {
+	var outMatch *routev3.RouteMatch
+	if connectMatch {
+		outMatch = &routev3.RouteMatch{
+			PathSpecifier: &routev3.RouteMatch_ConnectMatcher_{
+				ConnectMatcher: &routev3.RouteMatch_ConnectMatcher{},
+			},
+		}
+	} else {
+		outMatch = buildPathMatch(pathMatch)
+	}
+
+	// Header matches
+	for _, headerMatch := range headerMatches {
+		stringMatcher := buildXdsStringMatcher(headerMatch)
+
+		headerMatcher := &routev3.HeaderMatcher{
+			Name: headerMatch.Name,
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		}
+		outMatch.Headers = append(outMatch.Headers, headerMatcher)
+	}
+
+	// Query param matches
+	for _, queryParamMatch := range queryParamMatches {
+		stringMatcher := buildXdsStringMatcher(queryParamMatch)
+
+		queryParamMatcher := &routev3.QueryParameterMatcher{
+			Name: queryParamMatch.Name,
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		}
+		outMatch.QueryParameters = append(outMatch.QueryParameters, queryParamMatcher)
+	}
+
+	for _, cookieMatch := range cookieMatches {
+		stringMatcher := buildXdsStringMatcher(cookieMatch)
+
+		cookieMatcher := &routev3.CookieMatcher{
+			Name:        cookieMatch.Name,
+			StringMatch: stringMatcher,
+			InvertMatch: ptr.Deref(cookieMatch.Invert, false),
+		}
+		outMatch.Cookies = append(outMatch.Cookies, cookieMatcher)
+	}
+
+	return outMatch
+}
+
+func buildPathMatch(pathMatch *ir.StringMatch) *routev3.RouteMatch {
 	outMatch := &routev3.RouteMatch{}
 
 	// Add a prefix match to '/' if no matches are specified
@@ -157,31 +284,6 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				},
 			}
 		}
-	}
-	// Header matches
-	for _, headerMatch := range headerMatches {
-		stringMatcher := buildXdsStringMatcher(headerMatch)
-
-		headerMatcher := &routev3.HeaderMatcher{
-			Name: headerMatch.Name,
-			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-				StringMatch: stringMatcher,
-			},
-		}
-		outMatch.Headers = append(outMatch.Headers, headerMatcher)
-	}
-
-	// Query param matches
-	for _, queryParamMatch := range queryParamMatches {
-		stringMatcher := buildXdsStringMatcher(queryParamMatch)
-
-		queryParamMatcher := &routev3.QueryParameterMatcher{
-			Name: queryParamMatch.Name,
-			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
-				StringMatch: stringMatcher,
-			},
-		}
-		outMatch.QueryParameters = append(outMatch.QueryParameters, queryParamMatcher)
 	}
 
 	return outMatch
@@ -222,10 +324,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	// only use weighted cluster when there are invalid weights
-	if hasFiltersInSettings(settings) || backendWeights.Invalid != 0 {
-		return buildXdsWeightedRouteAction(backendWeights, settings)
+func buildXdsRouteAction(route *ir.HTTPRoute) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
+	if route.NeedsClusterPerSetting() {
+		return buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
 	}
 
 	return &routev3.RouteAction{
@@ -236,19 +338,19 @@ func buildXdsRouteAction(backendWeights *ir.BackendWeights, settings []*ir.Desti
 }
 
 func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*ir.DestinationSetting) *routev3.RouteAction {
-	weightedClusters := []*routev3.WeightedCluster_ClusterWeight{}
-	if backendWeights.Invalid > 0 {
+	weightedClusters := make([]*routev3.WeightedCluster_ClusterWeight, 0, len(settings))
+	if backendWeights.UnavailableWeight() > 0 {
 		invalidCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   "invalid-backend-cluster",
-			Weight: &wrapperspb.UInt32Value{Value: backendWeights.Invalid},
+			Weight: &wrapperspb.UInt32Value{Value: backendWeights.UnavailableWeight()},
 		}
 		weightedClusters = append(weightedClusters, invalidCluster)
 	}
 
 	for _, destinationSetting := range settings {
-		if len(destinationSetting.Endpoints) > 0 {
+		if len(destinationSetting.Endpoints) > 0 || destinationSetting.IsDynamicResolver { // Dynamic resolver has no endpoints
 			validCluster := &routev3.WeightedCluster_ClusterWeight{
-				Name:   backendWeights.Name,
+				Name:   destinationSetting.Name,
 				Weight: &wrapperspb.UInt32Value{Value: *destinationSetting.Weight},
 			}
 
@@ -268,15 +370,32 @@ func buildXdsWeightedRouteAction(backendWeights *ir.BackendWeights, settings []*
 				if len(destinationSetting.Filters.RemoveResponseHeaders) > 0 {
 					validCluster.ResponseHeadersToRemove = append(validCluster.ResponseHeadersToRemove, destinationSetting.Filters.RemoveResponseHeaders...)
 				}
+
+				if destinationSetting.Filters.URLRewrite != nil &&
+					destinationSetting.Filters.URLRewrite.Host != nil &&
+					destinationSetting.Filters.URLRewrite.Host.Name != nil {
+					validCluster.HostRewriteSpecifier = &routev3.WeightedCluster_ClusterWeight_HostRewriteLiteral{
+						HostRewriteLiteral: *destinationSetting.Filters.URLRewrite.Host.Name,
+					}
+				}
 			}
 
 			weightedClusters = append(weightedClusters, validCluster)
 		}
 	}
 
+	// According to the Gateway API:
+	// 500 status code should be returned for invalid HTTPBackendRef
+	// 503 status code should be returned for Services without ready endpoints
+	// Reference: https://gateway-api.sigs.k8s.io/reference/spec/#httprouterule
+	clusterNotFoundResponseCode := routev3.RouteAction_INTERNAL_SERVER_ERROR
+	// Envoy can't handle mixed 500 and 503 responses, so we use 503 when both invalid and empty
+	if backendWeights.NoEndpoints > 0 {
+		clusterNotFoundResponseCode = routev3.RouteAction_SERVICE_UNAVAILABLE
+	}
 	return &routev3.RouteAction{
-		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
+		// Intentionally route to a non-existent cluster and return a 503 error when it is not found
+		ClusterNotFoundResponseCode: clusterNotFoundResponseCode,
 		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
 			WeightedClusters: &routev3.WeightedCluster{
 				Clusters: weightedClusters,
@@ -301,21 +420,39 @@ func getEffectiveRequestTimeout(httpRoute *ir.HTTPRoute) *metav1.Duration {
 	return nil
 }
 
-func idleTimeout(httpRoute *ir.HTTPRoute) *durationpb.Duration {
-	rt := getEffectiveRequestTimeout(httpRoute)
-	timeout := time.Hour // Default to 1 hour
-	if rt != nil {
-		// Ensure is not less than the request timeout
-		if timeout < rt.Duration {
-			timeout = rt.Duration
-		}
+func idleTimeout(httpRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) *durationpb.Duration {
+	// When a user-configured stream idle timeout exists at the route level (Configured via BackendTrafficPolicy), use it
+	if httpRoute != nil &&
+		httpRoute.Traffic != nil &&
+		httpRoute.Traffic.Timeout != nil &&
+		httpRoute.Traffic.Timeout.HTTP != nil &&
+		httpRoute.Traffic.Timeout.HTTP.StreamIdleTimeout != nil {
+		return durationpb.New(httpRoute.Traffic.Timeout.HTTP.StreamIdleTimeout.Duration)
+	}
 
+	// When a user-configured stream idle timeout exists at the listener level (Configured via ClientTrafficPolicy),
+	// don't override it at the route level with the HTTPRoute's request timeout.
+	if httpListener != nil &&
+		httpListener.Timeout != nil &&
+		httpListener.Timeout.HTTP != nil &&
+		httpListener.Timeout.HTTP.StreamIdleTimeout != nil {
+		return nil
+	}
+
+	// Fallback to the HTTPRoute's request timeout when no user-configured stream idle timeout exists at both the route
+	// and listener levels. This is to avoid stream timeout before request timeout.
+	requestTimeout := getEffectiveRequestTimeout(httpRoute)
+	idleTimeout := time.Hour // Default to 1 hour
+	if requestTimeout != nil {
+		// Ensure the idle timeout is not less than the request timeout
+		if idleTimeout < requestTimeout.Duration {
+			idleTimeout = requestTimeout.Duration
+		}
 		// Disable idle timeout when request timeout is disabled
-		if rt.Duration == 0 {
-			timeout = 0
+		if requestTimeout.Duration == 0 {
+			idleTimeout = 0
 		}
-
-		return durationpb.New(timeout)
+		return durationpb.New(idleTimeout)
 	}
 	return nil
 }
@@ -357,9 +494,18 @@ func buildXdsRedirectAction(httpRoute *ir.HTTPRoute) *routev3.RedirectAction {
 		routeAction.PortRedirect = *redirection.Port
 	}
 	if redirection.StatusCode != nil {
-		if *redirection.StatusCode == 302 {
+		switch *redirection.StatusCode {
+		case 302:
 			routeAction.ResponseCode = routev3.RedirectAction_FOUND
-		} // no need to check for 301 since Envoy will use 301 as the default if the field is not configured
+		case 303:
+			routeAction.ResponseCode = routev3.RedirectAction_SEE_OTHER
+		case 307:
+			routeAction.ResponseCode = routev3.RedirectAction_TEMPORARY_REDIRECT
+		case 308:
+			routeAction.ResponseCode = routev3.RedirectAction_PERMANENT_REDIRECT
+		default:
+			// Envoy will use 301 as the default if the field is not configured
+		}
 	}
 
 	return routeAction
@@ -377,17 +523,26 @@ func useRegexRewriteForPrefixMatchReplace(pathMatch *ir.StringMatch, prefixMatch
 func prefix2RegexRewrite(prefix string) *matcherv3.RegexMatchAndSubstitute {
 	return &matcherv3.RegexMatchAndSubstitute{
 		Pattern: &matcherv3.RegexMatcher{
-			Regex: "^" + prefix + `\/*`,
+			// Escape prefix for regex metacharacters
+			// https://github.com/envoyproxy/gateway/issues/6857
+			Regex: "^" + regexp.QuoteMeta(prefix) + `\/*`,
 		},
 		Substitution: "/",
 	}
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
-	routeAction := &routev3.RouteAction{
-		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: destName,
-		},
+func buildXdsURLRewriteAction(route *ir.HTTPRoute, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
+	backendWeights := route.Destination.ToBackendWeights()
+	// only use weighted cluster when there are invalid weights
+	var routeAction *routev3.RouteAction
+	if route.NeedsClusterPerSetting() {
+		routeAction = buildXdsWeightedRouteAction(backendWeights, route.Destination.Settings)
+	} else {
+		routeAction = &routev3.RouteAction{
+			ClusterSpecifier: &routev3.RouteAction_Cluster{
+				Cluster: backendWeights.Name,
+			},
+		}
 	}
 
 	if urlRewrite.Path != nil {
@@ -423,23 +578,30 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 	}
 
 	if urlRewrite.Host != nil {
-
-		switch {
-		case urlRewrite.Host.Name != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
-				HostRewriteLiteral: *urlRewrite.Host.Name,
-			}
-		case urlRewrite.Host.Header != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
-				HostRewriteHeader: *urlRewrite.Host.Header,
-			}
-		case urlRewrite.Host.Backend != nil:
-			routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
-				AutoHostRewrite: wrapperspb.Bool(true),
+		// For DFP use cases, route-level host literal/header rewrites are not used, and instead DFP per-filter config is used, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/dynamic_forward_proxy/v3/dynamic_forward_proxy.proto#envoy-v3-api-msg-extensions-filters-http-dynamic-forward-proxy-v3-perrouteconfig
+		// Auto Host rewrites are only supported for strict/logical DNS clusters, so not relevant for DFP, see here:
+		// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite
+		if !route.IsDynamicResolverRoute() {
+			switch {
+			case urlRewrite.Host.Name != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
+					HostRewriteLiteral: *urlRewrite.Host.Name,
+				}
+			case urlRewrite.Host.Header != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteHeader{
+					HostRewriteHeader: *urlRewrite.Host.Header,
+				}
+			case urlRewrite.Host.Backend != nil:
+				routeAction.HostRewriteSpecifier = &routev3.RouteAction_AutoHostRewrite{
+					AutoHostRewrite: wrapperspb.Bool(true),
+				}
 			}
 		}
 
-		routeAction.AppendXForwardedHost = true
+		if urlRewrite.AppendXForwardedHost == nil || *urlRewrite.AppendXForwardedHost {
+			routeAction.AppendXForwardedHost = true
+		}
 	}
 
 	return routeAction
@@ -451,10 +613,14 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 		routeAction.Status = *res.StatusCode
 	}
 
-	if res.Body != nil && *res.Body != "" {
-		routeAction.Body = &corev3.DataSource{
-			Specifier: &corev3.DataSource_InlineString{
-				InlineString: *res.Body,
+	if len(res.Body) > 0 {
+		routeAction.BodyFormat = &corev3.SubstitutionFormatString{
+			Format: &corev3.SubstitutionFormatString_TextFormatSource{
+				TextFormatSource: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: res.Body,
+					},
+				},
 			},
 		}
 	}
@@ -462,27 +628,54 @@ func buildXdsDirectResponseAction(res *ir.CustomResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
-	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3.RouteAction_RequestMirrorPolicy {
+	var xdsMirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
 
-	for _, mirrorDest := range mirrorDestinations {
-		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-			Cluster: mirrorDest.Name,
-		})
+	for _, policy := range mirrorPolicies {
+		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
+			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+				Cluster:         policy.Destination.Name,
+				RuntimeFraction: mp,
+				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
+				DisableShadowHostSuffixAppend: true,
+			})
+		}
 	}
 
-	return mirrorPolicies
+	return xdsMirrorPolicies
+}
+
+// mirrorPercentByPolicy computes the mirror percent to be used based on ir.MirrorPolicy.
+func mirrorPercentByPolicy(mirror *ir.MirrorPolicy) *corev3.RuntimeFractionalPercent {
+	switch {
+	case mirror.Percentage != nil:
+		if p := *mirror.Percentage; p > 0 {
+			return &corev3.RuntimeFractionalPercent{
+				DefaultValue: fractionalpercent.FromFloat32(p),
+			}
+		}
+		// If zero percent is provided explicitly, we should not mirror.
+		return nil
+	default:
+		// Default to 100 percent if percent is not given.
+		return &corev3.RuntimeFractionalPercent{
+			DefaultValue: fractionalpercent.FromIn32(100),
+		}
+	}
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
-	headerValueOptions := []*corev3.HeaderValueOption{}
+	headerValueOptions := make([]*corev3.HeaderValueOption, 0, len(headersToAdd))
 
 	for _, header := range headersToAdd {
 		var appendAction corev3.HeaderValueOption_HeaderAppendAction
 
-		if header.Append {
+		switch {
+		case header.AddIfAbsent:
+			appendAction = corev3.HeaderValueOption_ADD_IF_ABSENT
+		case header.Append:
 			appendAction = corev3.HeaderValueOption_APPEND_IF_EXISTS_OR_ADD
-		} else {
+		default:
 			appendAction = corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD
 		}
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
@@ -523,15 +716,19 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 	ch := httpRoute.Traffic.LoadBalancer.ConsistentHash
 
 	switch {
-	case ch.Header != nil:
-		hashPolicy := &routev3.RouteAction_HashPolicy{
-			PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
-				Header: &routev3.RouteAction_HashPolicy_Header{
-					HeaderName: ch.Header.Name,
+	case ch.Headers != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.Headers))
+		for _, h := range ch.Headers {
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_Header_{
+					Header: &routev3.RouteAction_HashPolicy_Header{
+						HeaderName: h.Name,
+					},
 				},
-			},
+			}
+			hps = append(hps, hp)
 		}
-		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+		return hps
 	case ch.Cookie != nil:
 		hashPolicy := &routev3.RouteAction_HashPolicy{
 			PolicySpecifier: &routev3.RouteAction_HashPolicy_Cookie_{
@@ -541,7 +738,11 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		if ch.Cookie.TTL != nil {
-			hashPolicy.GetCookie().Ttl = durationpb.New(ch.Cookie.TTL.Duration)
+			d, err := time.ParseDuration(string(*ch.Cookie.TTL))
+			if err != nil {
+				return nil
+			}
+			hashPolicy.GetCookie().Ttl = durationpb.New(d)
 		}
 		if ch.Cookie.Attributes != nil {
 			attributes := make([]*routev3.RouteAction_HashPolicy_CookieAttribute, 0, len(ch.Cookie.Attributes))
@@ -566,6 +767,22 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 			},
 		}
 		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	case ch.QueryParams != nil:
+		hps := make([]*routev3.RouteAction_HashPolicy, 0, len(ch.QueryParams))
+		for _, q := range ch.QueryParams {
+			if q == nil {
+				continue
+			}
+			hp := &routev3.RouteAction_HashPolicy{
+				PolicySpecifier: &routev3.RouteAction_HashPolicy_QueryParameter_{
+					QueryParameter: &routev3.RouteAction_HashPolicy_QueryParameter{
+						Name: q.Name,
+					},
+				},
+			}
+			hps = append(hps, hp)
+		}
+		return hps
 	default:
 		return nil
 	}
@@ -573,7 +790,7 @@ func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy 
 
 func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	rr := route.GetRetry()
-	anyCfg, err := protocov.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
+	anyCfg, err := proto.ToAnyWithValidation(&previoushost.PreviousHostsPredicate{})
 	if err != nil {
 		return nil, err
 	}
@@ -596,6 +813,21 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 		rp.NumRetries = &wrapperspb.UInt32Value{Value: *rr.NumRetries}
 	}
 
+	if rr.NumAttemptsPerPriority != nil && *rr.NumAttemptsPerPriority > 0 {
+		anyCfgPriority, err := proto.ToAnyWithValidation(&previouspriority.PreviousPrioritiesConfig{
+			UpdateFrequency: *rr.NumAttemptsPerPriority,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rp.RetryPriority = &routev3.RetryPolicy_RetryPriority{
+			Name: "envoy.retry_priorities.previous_priorities",
+			ConfigType: &routev3.RetryPolicy_RetryPriority_TypedConfig{
+				TypedConfig: anyCfgPriority,
+			},
+		}
+	}
+
 	if rr.RetryOn != nil {
 		if len(rr.RetryOn.Triggers) > 0 {
 			if ro, err := buildRetryOn(rr.RetryOn.Triggers); err == nil {
@@ -605,9 +837,7 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 			}
 		}
 
-		if len(rr.RetryOn.HTTPStatusCodes) > 0 {
-			rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
-		}
+		rp.RetriableStatusCodes = buildRetryStatusCodes(rr.RetryOn.HTTPStatusCodes)
 	}
 
 	if rr.PerRetry != nil {
@@ -636,6 +866,29 @@ func buildRetryPolicy(route *ir.HTTPRoute) (*routev3.RetryPolicy, error) {
 	return rp, nil
 }
 
+func buildRouteTracing(httpRoute *ir.HTTPRoute) (*routev3.Tracing, error) {
+	if httpRoute == nil || httpRoute.Traffic == nil ||
+		httpRoute.Traffic.Telemetry == nil ||
+		httpRoute.Traffic.Telemetry.Tracing == nil {
+		return nil, nil
+	}
+
+	tracing := httpRoute.Traffic.Telemetry.Tracing
+	tags, err := buildTracingTags(tracing.CustomTags, tracing.Tags)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build route tracing tags:%w", err)
+	}
+
+	op, upstreamOp := buildTracingOperation(tracing.SpanName)
+
+	return &routev3.Tracing{
+		RandomSampling:    fractionalpercent.FromFraction(tracing.SamplingFraction),
+		CustomTags:        tags,
+		Operation:         op,
+		UpstreamOperation: upstreamOp,
+	}, nil
+}
+
 func buildRetryStatusCodes(codes []ir.HTTPStatus) []uint32 {
 	ret := make([]uint32, len(codes))
 	for i, c := range codes {
@@ -655,6 +908,7 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 		ir.Error5XX:             "5xx",
 		ir.GatewayError:         "gateway-error",
 		ir.Reset:                "reset",
+		ir.ResetBeforeRequest:   "reset-before-request",
 		ir.ConnectFailure:       "connect-failure",
 		ir.Retriable4XX:         "retriable-4xx",
 		ir.RefusedStream:        "refused-stream",
@@ -684,14 +938,4 @@ func buildRetryOn(triggers []ir.TriggerEnum) (string, error) {
 	}
 
 	return b.String(), nil
-}
-
-func hasFiltersInSettings(settings []*ir.DestinationSetting) bool {
-	for _, setting := range settings {
-		filters := setting.Filters
-		if filters != nil {
-			return true
-		}
-	}
-	return false
 }

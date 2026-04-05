@@ -166,7 +166,7 @@ The draft for this document is [here][draft_design].
 [cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster
 [draft_design]: https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
-[be]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
+[be]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [wcd]: ../watching
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37

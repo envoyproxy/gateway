@@ -13,8 +13,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/envoy"
 )
 
-// getEnvoyCommand returns the envoy cobra command to be executed.
-func getEnvoyCommand() *cobra.Command {
+// GetEnvoyCommand returns the envoy cobra command to be executed.
+func GetEnvoyCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "envoy",
 		Short: "Envoy proxy management",
@@ -35,7 +35,7 @@ func getShutdownCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "shutdown",
 		Short: "Gracefully drain open connections prior to pod shutdown.",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return envoy.Shutdown(drainTimeout, minDrainDuration, exitAtConnections)
 		},
 	}
@@ -59,7 +59,7 @@ func getShutdownManagerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "shutdown-manager",
 		Short: "Provides HTTP endpoint used in preStop hook to block until ready for pod shutdown.",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			return envoy.ShutdownManager(readyTimeout)
 		},
 	}

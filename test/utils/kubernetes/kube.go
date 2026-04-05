@@ -80,7 +80,7 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 
 	// remove the policy
 	if !blockTraffic {
-		if err := ka.Client.Delete(ctx, netPolicy); err != nil {
+		if err := ka.Delete(ctx, netPolicy); err != nil {
 			return nil, fmt.Errorf("failed to delete NetworkPolicy: %w", err)
 		}
 		return nil, nil
@@ -88,14 +88,14 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 
 	if kerrors.IsNotFound(err) {
 		// Create the NetworkPolicy if it doesn't exist
-		if err := ka.Client.Create(ctx, netPolicy); err != nil {
+		if err := ka.Create(ctx, netPolicy); err != nil {
 			return nil, fmt.Errorf("failed to create NetworkPolicy: %w", err)
 		}
 		fmt.Printf("NetworkPolicy %s created.\n", netPolicy.Name)
 	} else {
 		// Update the existing NetworkPolicy
 		existingPolicy.Spec = netPolicy.Spec
-		if err := ka.Client.Update(ctx, existingPolicy); err != nil {
+		if err := ka.Update(ctx, existingPolicy); err != nil {
 			return nil, fmt.Errorf("failed to update NetworkPolicy: %w", err)
 		}
 		fmt.Printf("NetworkPolicy %s updated.\n", netPolicy.Name)
@@ -105,6 +105,13 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 }
 
 func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentName, namespace string, replicas int32, timeout time.Duration, prefix bool) error {
+	if err := ka.ScaleDeployment(ctx, deploymentName, namespace, replicas, prefix); err != nil {
+		return err
+	}
+	return ka.WaitForDeploymentReplicaCount(ctx, deploymentName, namespace, replicas, timeout, prefix)
+}
+
+func (ka *KubeActions) ScaleDeployment(ctx context.Context, deploymentName, namespace string, replicas int32, prefix bool) error {
 	// Get the current deployment
 	deployment := &appsv1.Deployment{}
 	if prefix {
@@ -114,7 +121,7 @@ func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentNam
 			return err
 		}
 	} else {
-		err := ka.Client.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
+		err := ka.Get(ctx, client.ObjectKey{Name: deploymentName, Namespace: namespace}, deployment)
 		if err != nil {
 			return err
 		}
@@ -124,13 +131,13 @@ func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentNam
 	deployment.Spec.Replicas = &replicas
 
 	// Apply the update
-	err := ka.Client.Update(ctx, deployment)
+	err := ka.Update(ctx, deployment)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("Deployment %s scaled to %d replicas\n", deployment.Name, replicas)
-	return ka.WaitForDeploymentReplicaCount(ctx, deployment.Name, namespace, replicas, timeout, false)
+	return nil
 }
 
 func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replicas int32) error {
@@ -138,7 +145,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 
 	// Retrieve the existing EnvoyProxy resource
 	envoyProxy := &egv1a1.EnvoyProxy{}
-	err := ka.Client.Get(ctx, types.NamespacedName{Name: envoyProxyName, Namespace: namespace}, envoyProxy)
+	err := ka.Get(ctx, types.NamespacedName{Name: envoyProxyName, Namespace: namespace}, envoyProxy)
 	if err != nil {
 		return fmt.Errorf("failed to get EnvoyProxy: %w", err)
 	}
@@ -152,7 +159,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	envoyProxy.Spec.Provider.Kubernetes.EnvoyDeployment.Replicas = &replicas
 
 	// Apply the update
-	err = ka.Client.Update(ctx, envoyProxy)
+	err = ka.Update(ctx, envoyProxy)
 	if err != nil {
 		return fmt.Errorf("failed to update EnvoyProxy: %w", err)
 	}
@@ -256,16 +263,17 @@ func (ka *KubeActions) CheckDeploymentReplicas(ctx context.Context, prefix, name
 	return errors.New("deployment was not found")
 }
 
-func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix string, namespace string) (*appsv1.Deployment, error) {
+func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix, namespace string) (*appsv1.Deployment, error) {
 	deployments, err := ka.Kube().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
 
 	// Search for the deployment with the specified prefix
-	for _, dep := range deployments.Items {
+	for i := range deployments.Items {
+		dep := &deployments.Items[i]
 		if len(dep.Name) >= len(prefix) && dep.Name[:len(prefix)] == prefix {
-			return &dep, nil
+			return dep, nil
 		}
 	}
 	return nil, errors.New("deployment not found")

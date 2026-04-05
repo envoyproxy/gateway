@@ -79,6 +79,7 @@ securityPolicies:
     metadata:
       namespace: default
       name: policy-for-http-route-1
+      generation: 10
     spec:
       targetRef:
         group: gateway.networking.k8s.io
@@ -92,6 +93,7 @@ securityPolicies:
     metadata:
       namespace: default
       name: policy-for-gateway-1               # This will only apply to the httproute-2
+      generation: 20
     spec:
       targetRef:
         group: gateway.networking.k8s.io

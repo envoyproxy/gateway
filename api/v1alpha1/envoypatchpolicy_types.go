@@ -8,7 +8,7 @@ package v1alpha1
 import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -19,11 +19,14 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:categories=envoy-gateway,shortName=epp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
+// +kubebuilder:printcolumn:name="Accepted",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Accepted")].status`
+// +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.ancestors[0].conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 // resources by Envoy Gateway using this patch API
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyPatchPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -32,7 +35,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status gwapiv1a2.PolicyStatus `json:"status,omitempty"`
+	Status gwapiv1.PolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
@@ -54,7 +57,7 @@ type EnvoyPatchPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef
-	TargetRef gwapiv1a2.LocalPolicyTargetReference `json:"targetRef"`
+	TargetRef gwapiv1.LocalPolicyTargetReference `json:"targetRef"`
 	// Priority of the EnvoyPatchPolicy.
 	// If multiple EnvoyPatchPolicies are applied to the same
 	// TargetRef, they will be applied in the ascending order of
@@ -98,6 +101,8 @@ const (
 	ClusterEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.cluster.v3.Cluster"
 	// ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource
 	ClusterLoadAssignmentEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
+	// SecretEnvoyResourceType defines the Type URL of the Secret resource
+	SecretEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
 )
 
 // JSONPatchOperationType specifies the JSON Patch operations that can be performed.
@@ -145,28 +150,29 @@ const (
 	// * "Invalid"
 	// * "ResourceNotFound"
 	//
-	PolicyConditionProgrammed gwapiv1a2.PolicyConditionType = "Programmed"
+	PolicyConditionProgrammed gwapiv1.PolicyConditionType = "Programmed"
 
 	// PolicyReasonProgrammed is used with the "Programmed" condition when the policy
 	// is ready to be programmed into the data plane.
-	PolicyReasonProgrammed gwapiv1a2.PolicyConditionReason = "Programmed"
+	PolicyReasonProgrammed gwapiv1.PolicyConditionReason = "Programmed"
 
 	// PolicyReasonInvalid is used with the "Programmed" condition when the patch
 	// is syntactically or semantically invalid.
-	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
+	PolicyReasonInvalid gwapiv1.PolicyConditionReason = "Invalid"
 
 	// PolicyReasonResourceNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
-	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+	PolicyReasonResourceNotFound gwapiv1.PolicyConditionReason = "ResourceNotFound"
 
 	// PolicyReasonDisabled is used with the "Accepted" condition when the policy
 	// feature is disabled by the configuration.
-	PolicyReasonDisabled gwapiv1a2.PolicyConditionReason = "Disabled"
+	PolicyReasonDisabled gwapiv1.PolicyConditionReason = "Disabled"
 )
 
 //+kubebuilder:object:root=true
 
 // EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type EnvoyPatchPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -174,5 +180,5 @@ type EnvoyPatchPolicyList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyPatchPolicy{}, &EnvoyPatchPolicyList{})
+	localSchemeBuilder.Register(&EnvoyPatchPolicy{}, &EnvoyPatchPolicyList{})
 }

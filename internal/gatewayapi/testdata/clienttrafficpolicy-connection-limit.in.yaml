@@ -20,11 +20,49 @@ clientTrafficPolicies:
       connectionLimit:
         value: 3
         closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
       sectionName: http-1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-2
+  spec:
+    connection:
+      connectionLimit:
+        value: 3
+        closeDelay: 10s
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+        maxStreamDuration: 200s
+    http1:
+      disableSafeMaxConnectionDuration: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-2
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-1-section-http-3
+  spec:
+    connection:
+      connectionLimit:
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-3
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -43,6 +81,12 @@ gateways:
     - name: http-2
       protocol: HTTP
       port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: http-3
+      protocol: HTTP
+      port: 9090
       allowedRoutes:
         namespaces:
           from: Same

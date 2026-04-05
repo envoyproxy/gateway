@@ -18,11 +18,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwhttp "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -50,25 +50,25 @@ var OIDCTest = suite.ConformanceTest{
 	Description: "Test OIDC authentication",
 	Manifests:   []string{"testdata/oidc-keycloak.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
+		// Wait for the keycloak pod to be configured with the test user and client
+		WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, &podInitialized)
+		// Apply the security policy after the keycloak pod is ready, this is because EG will try to fetch the
+		// OIDC configuration from the keycloak's well-known endpoint
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
+
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
 			testOIDC(t, suite, "testdata/oidc-securitypolicy.yaml")
 		})
 
-		t.Run("http route without oidc authentication", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-
-			podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
-			// Wait for the keycloak pod to be configured with the test user and client
-			WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
-
-			// Apply the security policy that configures OIDC authentication
-			suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy.yaml", true)
-
-			routeNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
+		t.Run("oidc bypass", func(t *testing.T) {
+			routeWithOIDCNN := types.NamespacedName{Name: "http-with-oidc", Namespace: ns}
+			routeWithoutOIDCNN := types.NamespacedName{Name: "http-without-oidc", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeWithOIDCNN, routeWithoutOIDCNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -76,26 +76,61 @@ var OIDCTest = suite.ConformanceTest{
 			}
 			SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "oidc-test", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-			expectedResponse := gwhttp.ExpectedResponse{
-				Request: gwhttp.Request{
-					Host: "www.example.com",
-					Path: "/public",
+			testCases := []gwhttp.ExpectedResponse{
+				{
+					TestCaseName: "http route without oidc authentication",
+					Request: gwhttp.Request{
+						Host: "www.example.com",
+						Path: "/public",
+					},
+					Response: gwhttp.Response{
+						StatusCodes: []int{200},
+					},
+					Namespace: ns,
 				},
-				Response: gwhttp.Response{
-					StatusCode: 200,
+				{
+					TestCaseName: "oidc with jwt passthrough",
+					Request: gwhttp.Request{
+						Host: "www.example.com",
+						Path: "/myapp",
+						Headers: map[string]string{
+							"Authorization": "Bearer " + v1Token,
+						},
+					},
+					Backend: "infra-backend-v1",
+					Response: gwhttp.Response{
+						StatusCodes: []int{200},
+					},
+					Namespace: ns,
 				},
+			}
+
+			for i := range testCases {
+				tc := testCases[i]
+				t.Run(tc.GetTestCaseName(i), func(t *testing.T) {
+					t.Parallel()
+
+					gwhttp.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, tc)
+				})
+			}
+		})
+
+		// Delete the existing policy before applying the BackendCluster variant so the
+		// dataplane does not race between two versions of the same SecurityPolicy.
+		existingSP := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
-			}
+				Name:      "oidc-test",
+			},
+		}
+		err := suite.Client.Delete(context.TODO(), existingSP)
+		require.Truef(t, err == nil || apierrors.IsNotFound(err), "failed to delete SecurityPolicy %s/%s: %v", ns, existingSP.Name, err)
+		SecurityPolicyMustNotExist(t, suite.Client, types.NamespacedName{Name: existingSP.Name, Namespace: ns})
 
-			req := gwhttp.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
-			cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-			if err != nil {
-				t.Errorf("failed to get expected response: %v", err)
-			}
-
-			if err := gwhttp.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-				t.Errorf("failed to compare request and response: %v", err)
-			}
+		// Apply the security policy that configures OIDC authentication with BackendCluster.
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
+		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
+			testOIDC(t, suite, "testdata/oidc-securitypolicy-backendcluster.yaml")
 		})
 	},
 }
@@ -108,20 +143,12 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 		sp        = "oidc-test"
 		ns        = "gateway-conformance-infra"
 	)
-
-	podInitialized := corev1.PodCondition{Type: corev1.PodInitialized, Status: corev1.ConditionTrue}
-	// Wait for the keycloak pod to be configured with the test user and client
-	WaitForPods(t, suite.Client, ns, map[string]string{"job-name": "setup-keycloak"}, corev1.PodSucceeded, podInitialized)
-
-	// Apply the security policy that configures OIDC authentication
-	suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, securityPolicyManifest, true)
-
 	routeNN := types.NamespacedName{Name: route, Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 	httpGWAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN, "http"), routeNN)
 	host, _, _ := net.SplitHostPort(httpGWAddr)
 	tlsGWAddr := net.JoinHostPort(host, "443")
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -205,17 +232,15 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, securityPolicyMan
 	require.NoError(t, err)
 	require.Equal(t, http.StatusFound, res.StatusCode)
 
-	// After logout, OAuth2 filter will redirect back to the root of the host, e.g, "www.example.com".
-	// Ideally, this should redirect to the application's root, e.g, "www.example.com/myapp",
-	// but Envoy OAuth2 filter does not support this yet.
-	require.Equal(t, "http://www.example.com/", res.Header.Get("Location"), "Expected redirect to the root of the host")
+	// After logout, OAuth2 filter will redirect to the IdP end session endpoint.
+	require.Contains(t, res.Header.Get("Location"), "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout", "Expected redirect to the root of the host")
 
 	// Verify that the oauth2 cookies have been deleted
 	var cookieDeleted bool
 	deletedCookies := res.Header.Values("Set-Cookie")
 	regx := regexp.MustCompile("^IdToken-.+=deleted.+")
 	for _, cookie := range deletedCookies {
-		if regx.Match([]byte(cookie)) {
+		if regx.MatchString(cookie) {
 			cookieDeleted = true
 		}
 	}

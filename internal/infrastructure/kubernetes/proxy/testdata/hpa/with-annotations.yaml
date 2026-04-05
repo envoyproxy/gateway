@@ -9,6 +9,11 @@ metadata:
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
+  ownerReferences:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: GatewayClass
+      name: envoy-gateway-class
+      uid: test-owner-reference-uid-for-gatewayclass
 spec:
   metrics:
     - resource:

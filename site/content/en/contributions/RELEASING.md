@@ -9,7 +9,10 @@ This document guides maintainers through the process of creating an Envoy Gatewa
   - [Prerequisites](#prerequisites)
 - [Minor Release](#minor-release)
   - [Prerequisites](#prerequisites-1)
-- [Announce the Release](#announce-the-release)
+  - [Announce the Release](#announce-the-release)
+- [Patch Release](#patch-release)
+  - [Prerequisites](#prerequisites-2)
+  - [Announce the Release](#announce-the-release-1)
 
 ## Release Candidate
 
@@ -37,48 +40,62 @@ export GITHUB_REMOTE=origin
 
    __Note:__ The release candidate version should be in the format `${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}`.
 3. Sign, commit, and push your changes to your fork.
-4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until your PR has merged and
-   the [Build and Test][] has successfully completed.
-5. Create a new release branch from `main`. The release branch should be named
+4. Submit a [Pull Request][] to merge the changes into the `main` branch.
+5. Do not proceed until your PR has merged and the [Build and Test][] has successfully completed.
+6. **Create a new marker tag on `main` for the next minor version.**
+   This tag serves as a **non-release marker** to indicate the start of the next development cycle.
+   It is **not a real release candidate** (see [#7248](https://github.com/envoyproxy/gateway/issues/7248) for details).
+   ```shell
+   git tag "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
+   git push origin "v${MAJOR_VERSION}.$((MINOR_VERSION + 1)).0-rc.0"
+   ```
+7. Create a new release branch from `main`. The release branch should be named
    `release/v${MAJOR_VERSION}.${MINOR_VERSION}`, e.g. `release/v0.3`.
 
    ```shell
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-6. Push the branch to the Envoy Gateway repo.
+8. Push the branch to the Envoy Gateway repo.
 
     ```shell
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release.
- Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #2098][]
+9. Create a topic branch for updating the [Envoy proxy image][] and [Envoy Ratelimit image][] to the tag supported by the release.
+ Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
    for additional details on updating the image tag.
-8. Sign, commit, and push your changes to your fork.
-9. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. Do not
-   proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
-10. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
+
+    (+v1.8.x only) After updating the Envoy proxy image tag, update the dynamic module SDK and example dependencies:
+
+   ```shell
+   make update-dynamic-module-deps ENVOY_VERSION=v${ENVOY_PROXY_VERSION}
+   ```
+
+10. Sign, commit, and push your changes to your fork.
+11. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch.
+12. Do not proceed until your PR has merged into the release branch and the [Build and Test][] has completed for your PR.
+13. Ensure your release branch is up-to-date and tag the head of your release branch with the release candidate number.
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate"
     ```
 
-11. Push the tag to the Envoy Gateway repository.
+14. Push the tag to the Envoy Gateway repository.
 
     ```shell
     git push ${GITHUB_REMOTE} v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
     ```
 
-12. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-13. Confirm that the [release workflow][] completed successfully.
-14. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-15. Confirm that the [release][] was created.
-16. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
+15. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+16. Confirm that the [release workflow][] completed successfully.
+17. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+18. Confirm that the [release][] was created.
+19. Note that the [Quickstart][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
-17. [Generate][] the GitHub changelog.
-18. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
-19. If you find any bugs in this process, please create an issue.
+20. [Generate][] the GitHub changelog.
+21. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
+22. If you find any bugs in this process, please create an issue.
 
 ## Minor Release
 
@@ -109,10 +126,10 @@ export GITHUB_REMOTE=origin
    1. Generate the versioned release docs:
 
       ``` shell
-         make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
       ```
 
-   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/helm-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -125,12 +142,12 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest minor version.
+   1. Update `site/layouts/shortcodes/yaml-version.html`, add the latest version of the minor release, and update the short code for `{{- with (strings.HasPrefix $pagePrefix "version") -}}` to the latest minor version.
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -143,28 +160,48 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.0" -}}
       {{- end -}}
       ```
+      docs prefix should be updated after releasing and ensuring that everything is working as it should.
+
+   1. Update `site/hugo.toml`, add the new version to the `params.versions` section.
+
+      ```console
+      [[params.versions]]
+        version = "v1.3"
+        url = "/v1.3"
+        eol = "2025-07-30"
+      ```
+
+   1. Update `site/hugo.toml`, change the version to current major version.
+
+      ```console
+      # The version number for the version of the docs represented in this doc set.
+      # Used in the "version-banner" partial to display a version number for the
+      # current doc set.
+      version = "v1.3"
+      ```
 
 3. Sign, commit, and push your changes to your fork.
-4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
-   and the [Build and Test][] has completed for your final PR.
+4. Submit a [Pull Request][] to merge the changes into the `main` branch.
 
-5. Checkout the release branch.
+5. Do not proceed until all your PRs have merged and the [Build and Test][] has completed for your final PR.
+
+6. Checkout the release branch.
 
    ```shell
    git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-6. If the tip of the release branch does not match the tip of `main`, perform the following:
+7. If the tip of the release branch does not match the tip of `main`, perform the following:
 
    1. Create a topic branch from the release branch.
-   2. Cherry-pick the commits from `main` that differ from the release branch.
+   2. Cherry-pick the commits from `main` that differ from the release branch, e.g. `git cherry-pick <present commit in rc>..<latest commit on main> -s`
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
-   5. Submit a PR to merge the topic from of your fork into the Envoy Gateway release branch.
+   5. Submit a PR to merge the topic branch of your fork into the Envoy Gateway release branch.
    6. Do not proceed until the PR has merged and CI passes for the merged PR.
    7. If you are still on your topic branch, change to the release branch:
 
@@ -178,26 +215,38 @@ export GITHUB_REMOTE=origin
       git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
       ```
 
-7. Tag the head of your release branch with the release tag. For example:
+   9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
+   you should also create a topic branch for bumping these tags.
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+
+8. Tag the head of your release branch with the release tag. For example:
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release"
     ```
 
     __Note:__ The tag version differs from the release branch by including the `.0` patch version.
 
-8. Push the tag to the Envoy Gateway repository.
+9. Push the tag to the Envoy Gateway repository.
 
      ```shell
      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.0
      ```
 
-9.  This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-10. Confirm that the [release workflow][] completed successfully.
-11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-12. Confirm that the [release][] was created.
-13. Confirm that the steps in the [Quickstart][] work as expected.
-14. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+10. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+11. Confirm that the [release workflow][] completed successfully.
+12. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+13. Confirm that the [release][] was created.
+14. Update the benchmark dashboard data for the new release:
+
+    ```shell
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+    ```
+
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
+
+15. Confirm that the steps in the [Quickstart][] work as expected.
+16. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
@@ -206,7 +255,7 @@ export GITHUB_REMOTE=origin
    (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
 
-15. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+17. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 If you find any bugs in this process, please create an issue.
 
@@ -220,7 +269,7 @@ It's important that the world knows about the release. Use the following steps t
    Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION} has been released: https://github.com/envoyproxy/gateway/releases/tag/v${MAJOR_VERSION}.${MINOR_VERSION}.0
    ```
 
-2. Send a message to the Envoy Gateway Slack channel. For example:
+2. Send a message to the Envoy Gateway Slack channel and the [Google Group](https://groups.google.com/g/envoy-gateway-announce). For example:
 
    ```shell
    On behalf of the entire Envoy Gateway community, I am pleased to announce the release of Envoy Gateway
@@ -239,7 +288,7 @@ The following steps should be used for creating a patch release.
 ### Prerequisites
 
 - Permissions to push to the Envoy Gateway repository.
-- A minor release has already been released. Refer to the [Minor Release](#minor-candidate) section for additional details on releasing a minor release.
+- A minor release has already been released. Refer to the [Minor Release](#minor-release) section for additional details on releasing a minor release.
 
 Set environment variables for use in subsequent steps:
 
@@ -254,8 +303,7 @@ export GITHUB_REMOTE=origin
 2. Create a topic branch for adding the release notes.
 
    1. Create the release notes. The release note should only include the changes since the last minor or patch release.
-   1. Create a release announcement. Refer to [PR #635] as an example release announcement.
-   1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+   1. Update `site/layouts/shortcodes/helm-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "docs") -}}` to the latest patch version. For example:
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -268,12 +316,12 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
       ```
 
-   1. Update `site/layouts/shortcodes/yaml-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "doc") -}}` to the latest patch version. For example:
+   1. Update `site/layouts/shortcodes/yaml-version.html`, update the short code for `{{- with (strings.HasPrefix $pagePrefix "docs") -}}` to the latest patch version. For example:
 
       ```console
       {{- $pagePrefix := (index (split $.Page.File.Dir "/") 0) -}}
@@ -286,32 +334,31 @@ export GITHUB_REMOTE=origin
       {{- with (strings.HasPrefix $pagePrefix "v1.2") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
-      {{- with (strings.HasPrefix $pagePrefix "doc") -}}
+      {{- with (strings.HasPrefix $pagePrefix "docs") -}}
       {{- "v1.2.1" -}}
       {{- end -}}
       ```
 
 3. Sign, commit, and push your changes to your fork.
-4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until all your PRs have merged
-   and the [Build and Test][] has completed for your final PR.
-
-5. Checkout the release branch.
+4. Submit a [Pull Request][] to merge the changes into the `main` branch.
+5. Do not proceed until all your PRs have merged and the [Build and Test][] has completed for your final PR.
+6. Checkout the release branch.
 
    ```shell
    git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-6. Cherry-pick the release note and release announcement that you created in the previous step to the release branch. The release note will be included in the release artifacts.
+7. Cherry-pick the release note that you created in the previous step to the release branch. The release note will be included in the release artifacts.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the release note and release announcement commit from `main` to the topic branch.
-   3. Submit a PR to merge the topic from of your fork into the release branch.
+   3. Submit a PR to merge the topic branch of your fork into the release branch.
 
-7. Cherry-pick the commits that you want to include in the patch release.
+8. Cherry-pick the commits that you want to include in the patch release.
    1. Create a topic branch from the release branch.
    2. Cherry-pick the commits from `main` that you want to include in the patch release.
    3. Run tests locally, e.g. `make lint`.
    4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
-   5. Submit a PR to merge the topic from of your fork into the release branch.
+   5. Submit a PR to merge the topic branch of your fork into the release branch.
    6. Do not proceed until the PR has merged and CI passes for the merged PR.
    7. If you are still on your topic branch, change to the release branch:
 
@@ -325,33 +372,45 @@ export GITHUB_REMOTE=origin
       git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
       ```
 
-7. Tag the head of your release branch with the release tag. For example:
+   9. If upstream has updated the [Envoy proxy image][] or [Envoy Ratelimit image][] tag supported by the release,
+   you should also create a topic branch for bumping these tags.
+   Please note that the tags should be updated in both the source code and the Helm chart. Reference [PR #5872][]
+
+9. Tag the head of your release branch with the release tag. For example:
 
     ```shell
-    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} Release'
+    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} -m "Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} Release"
     ```
 
-8. Push the tag to the Envoy Gateway repository.
+10. Push the tag to the Envoy Gateway repository.
 
-     ```shell
-     git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION
-     ```
+      ```shell
+      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+      ```
 
-9.  This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-10. Confirm that the [release workflow][] completed successfully.
-11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-12. Confirm that the [release][] was created.
-13. Confirm that the steps in the [Quickstart][] work as expected.
-14. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+11. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+12. Confirm that the [release workflow][] completed successfully.
+13. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+14. Confirm that the [release][] was created.
+15. Update the benchmark dashboard data for the new release:
+
+    ```shell
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+    ```
+
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
+
+16. Confirm that the steps in the [Quickstart][] work as expected.
+17. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
 
-   Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}  release announcement]
-   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
+   Check out the [v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}  release announcement]
+   (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.html) to learn more about the release.
    ```
 
-15. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+18. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 ### Announce the Release
 
@@ -363,9 +422,21 @@ It's important that the world knows about the release. Use the following steps t
    Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION} has been released: https://github.com/envoyproxy/gateway/releases/tag/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
    ```
 
+2. Send a message to the Envoy Gateway Slack channel and the [Google Group](https://groups.google.com/g/envoy-gateway-announce). For example:
+
+   ```shell
+   On behalf of the entire Envoy Gateway community, I am pleased to announce the release of Envoy Gateway
+   v${MAJOR_VERSION}.${MINOR_VERSION}. A big thank you to all the contributors that made this release possible.
+   Refer to the official v${MAJOR_VERSION}.${MINOR_VERSION} announcement for release details and the project docs
+   to start using Envoy Gateway.
+   ...
+   ```
+
+   Link to the GitHub release and release announcement page that highlights the release.
+
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
+[Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
 [Build and Test]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/build_and_test.yaml
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
@@ -373,7 +444,9 @@ It's important that the world knows about the release. Use the following steps t
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
-[PR #2098]: https://github.com/envoyproxy/gateway/pull/2098
+[PR #5872]: https://github.com/envoyproxy/gateway/pull/5872
 [PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
 [PR #4666]: https://github.com/envoyproxy/gateway/pull/4666
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
+[Envoy proxy image]: https://hub.docker.com/r/envoyproxy/envoy/tags?name=distroless
+[Envoy Ratelimit image]: https://hub.docker.com/r/envoyproxy/ratelimit

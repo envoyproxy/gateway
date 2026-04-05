@@ -6,7 +6,6 @@
 package bootstrap
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -17,9 +16,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestApplyBootstrapConfig(t *testing.T) {
 	str, _ := readTestData("enable-prometheus")
@@ -74,7 +72,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 			data, err := ApplyBootstrapConfig(tc.boostrapConfig, tc.defaultBootstrap)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				// nolint:gosec
 				err = os.WriteFile(path.Join("testdata", "merge", fmt.Sprintf("%s.out.yaml", tc.name)), []byte(data), 0o644)
 				require.NoError(t, err)
@@ -88,7 +86,7 @@ func TestApplyBootstrapConfig(t *testing.T) {
 	}
 }
 
-func loadData(caseName string, inOrOut string) (string, error) {
+func loadData(caseName, inOrOut string) (string, error) {
 	filename := path.Join("testdata", "merge", fmt.Sprintf("%s.%s.yaml", caseName, inOrOut))
 	b, err := os.ReadFile(filename)
 	if err != nil {

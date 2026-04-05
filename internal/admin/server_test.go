@@ -6,6 +6,8 @@
 package admin
 
 import (
+	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -22,7 +24,14 @@ func TestInitAdminServer(t *testing.T) {
 		},
 	}
 
-	svrConfig.Logger = logging.NewLogger(egv1a1.DefaultEnvoyGatewayLogging())
-	err := Init(svrConfig)
+	svrConfig.Logger = logging.NewLogger(os.Stdout, egv1a1.DefaultEnvoyGatewayLogging())
+	runner := New(&Config{
+		Server: *svrConfig,
+	})
+	err := runner.Start(context.Background())
+	require.NoError(t, err)
+
+	// Clean up
+	err = runner.Close()
 	require.NoError(t, err)
 }

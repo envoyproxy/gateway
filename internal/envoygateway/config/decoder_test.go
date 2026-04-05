@@ -195,9 +195,7 @@ func TestDecode(t *testing.T) {
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					Gateway:  egv1a1.DefaultGateway(),
 					RateLimit: &egv1a1.RateLimit{
-						Timeout: &metav1.Duration{
-							Duration: 10000000,
-						},
+						Timeout:    ptr.To(gwapiv1.Duration("10ms")),
 						FailClosed: true,
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -338,6 +336,112 @@ func TestDecode(t *testing.T) {
 								RenewDeadline: ptr.To(gwapiv1.Duration("2s")),
 								RetryPeriod:   ptr.To(gwapiv1.Duration("3s")),
 							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "gateway-k8s-client-ratelimit.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
+							Client: &egv1a1.KubernetesClient{
+								RateLimit: &egv1a1.KubernetesClientRateLimit{
+									QPS:   ptr.To[int32](500),
+									Burst: ptr.To[int32](1000),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "standalone-extension-server.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{
+										"/tmp/envoy-gateway-test",
+									},
+								},
+							},
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeHost,
+								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
+							},
+						},
+					},
+					Logging: egv1a1.DefaultEnvoyGatewayLogging(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Resources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "CustomRouteFilterResource",
+							},
+						},
+						BackendResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "storage.example.io",
+								Version: "v1",
+								Kind:    "S3Bucket",
+							},
+						},
+						PolicyResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleExtPolicy",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+									egv1a1.XDSRoute,
+									egv1a1.XDSVirtualHost,
+									egv1a1.XDSCluster,
+									egv1a1.XDSTranslation,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "127.0.0.1",
+									Port:     5005,
+								},
+							},
+						},
+					},
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnableBackend:          true,
+						EnableEnvoyPatchPolicy: false,
+					},
+					RuntimeFlags: &egv1a1.RuntimeFlags{
+						Enabled: []egv1a1.RuntimeFlag{
+							"XDSNameSchemeV2",
 						},
 					},
 				},

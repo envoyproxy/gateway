@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
@@ -18,19 +18,30 @@ spec:
     metadata:
       labels:
         app: certgen
+        {{- if .Values.certgen.job.pod.labels }}
+          {{- toYaml .Values.certgen.job.pod.labels | nindent 8 -}}
+        {{- end }}
+      {{- if .Values.certgen.job.pod.annotations }}
+      annotations:
+        {{- toYaml .Values.certgen.job.pod.annotations | nindent 8 -}}
+      {{- end }}
     spec:
       containers:
-      {{- if .Values.certgen.job.args }}
+      {{- $args := .Values.certgen.job.args }}
+      {{- if not .Values.topologyInjector.enabled }}
+        {{- $args = append $args "--disable-topology-injector" }}
+      {{- end }}
+      {{- if $args }}
       - args:
-        {{- toYaml .Values.certgen.job.args | nindent 8 -}}
+        {{- toYaml $args | nindent 8 }}
         command:
         - envoy-gateway
         - certgen
-        {{- else }}
+      {{- else }}
       - command:
         - envoy-gateway
         - certgen
-        {{- end }}
+      {{- end }}
         env:
         - name: ENVOY_GATEWAY_NAMESPACE
           valueFrom:

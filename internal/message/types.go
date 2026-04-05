@@ -6,6 +6,9 @@
 package message
 
 import (
+	"context"
+	"reflect"
+
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,14 +18,13 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // ProviderResources message
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
-	// a group of gateway API and other related resources.
-	GatewayAPIResources watchable.Map[string, *resource.ControllerResources]
+	// a group of gateway API and other related resources with trace context.
+	GatewayAPIResources watchable.Map[string, *resource.ControllerResourcesContext]
 
 	// GatewayAPIStatuses is a group of gateway api
 	// resource statuses maps.
@@ -41,7 +43,9 @@ func (p *ProviderResources) GetResources() []*resource.Resources {
 	}
 
 	for _, v := range p.GatewayAPIResources.LoadAll() {
-		return *v
+		if v != nil && v.Resources != nil {
+			return *v.Resources
+		}
 	}
 
 	return nil
@@ -71,6 +75,7 @@ func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayAPIStatuses.Close()
 	p.PolicyStatuses.Close()
+	p.ExtensionStatuses.Close()
 }
 
 // GatewayAPIStatuses contains gateway API resources statuses
@@ -79,18 +84,21 @@ type GatewayAPIStatuses struct {
 	GatewayStatuses      watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
 	HTTPRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	GRPCRouteStatuses    watchable.Map[types.NamespacedName, *gwapiv1.GRPCRouteStatus]
-	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TLSRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1.TLSRouteStatus]
 	TCPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
 	UDPRouteStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	ListenerSetStatuses  watchable.Map[types.NamespacedName, *gwapiv1.ListenerSetStatus]
 }
 
 func (s *GatewayAPIStatuses) Close() {
+	s.GatewayClassStatuses.Close()
 	s.GatewayStatuses.Close()
 	s.HTTPRouteStatuses.Close()
 	s.GRPCRouteStatuses.Close()
 	s.TLSRouteStatuses.Close()
 	s.TCPRouteStatuses.Close()
 	s.UDPRouteStatuses.Close()
+	s.ListenerSetStatuses.Close()
 }
 
 type NamespacedNameAndGVK struct {
@@ -100,13 +108,13 @@ type NamespacedNameAndGVK struct {
 
 // PolicyStatuses contains policy related resources statuses
 type PolicyStatuses struct {
-	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.PolicyStatus]
-	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1a2.PolicyStatus]
+	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	SecurityPolicyStatuses       watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
+	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
 }
 
 // ExtensionStatuses contains statuses related to gw-api extension resources
@@ -116,6 +124,7 @@ type ExtensionStatuses struct {
 
 func (p *PolicyStatuses) Close() {
 	p.ClientTrafficPolicyStatuses.Close()
+	p.BackendTrafficPolicyStatuses.Close()
 	p.SecurityPolicyStatuses.Close()
 	p.EnvoyPatchPolicyStatuses.Close()
 	p.BackendTLSPolicyStatuses.Close()
@@ -123,9 +132,51 @@ func (p *PolicyStatuses) Close() {
 	p.ExtensionPolicyStatuses.Close()
 }
 
+func (e *ExtensionStatuses) Close() {
+	e.BackendStatuses.Close()
+}
+
+type XdsIRWithContext struct {
+	XdsIR   *ir.Xds
+	Context context.Context
+}
+
+// DeepCopy creates a new ControllerResourcesContext.
+// The Context field is preserved (not deep copied) since contexts are meant to be passed around.
+func (x *XdsIRWithContext) DeepCopy() *XdsIRWithContext {
+	if x == nil {
+		return nil
+	}
+	var xdsIRCopy *ir.Xds
+	if x.XdsIR != nil {
+		xdsIRCopy = x.XdsIR.DeepCopy()
+	}
+	return &XdsIRWithContext{
+		XdsIR:   xdsIRCopy,
+		Context: x.Context,
+	}
+}
+
+func (x *XdsIRWithContext) Equal(other *XdsIRWithContext) bool {
+	if x == nil && other == nil {
+		return true
+	}
+	if x == nil || other == nil {
+		return false
+	}
+	if x.XdsIR == nil && other.XdsIR == nil {
+		return true
+	}
+	if x.XdsIR == nil || other.XdsIR == nil {
+		return false
+	}
+
+	return reflect.DeepEqual(x.XdsIR, other.XdsIR)
+}
+
 // XdsIR message
 type XdsIR struct {
-	watchable.Map[string, *ir.Xds]
+	watchable.Map[string, *XdsIRWithContext]
 }
 
 // InfraIR message
@@ -133,7 +184,45 @@ type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
-// Xds message
-type Xds struct {
-	watchable.Map[string, *xdstypes.ResourceVersionTable]
-}
+type MessageName string
+
+const (
+	// XDSIRMessageName is a message containing xds-ir translated from provider-resources
+	XDSIRMessageName MessageName = "xds-ir"
+	// InfraIRMessageName is a message containing infra-ir translated from provider-resources
+	InfraIRMessageName MessageName = "infra-ir"
+	// ProviderResourcesMessageName is a message containing gw-api and envoy gateway resources from the provider
+	ProviderResourcesMessageName MessageName = "provider-resources"
+	// BackendStatusMessageName is a message containing updates to Backend status
+	BackendStatusMessageName MessageName = "backend-status"
+	// ExtensionServerPoliciesStatusMessageName is a message containing updates to ExtensionServerPolicy status
+	ExtensionServerPoliciesStatusMessageName MessageName = "extensionserverpolicies-status"
+	// EnvoyExtensionPolicyStatusMessageName is a message containing updates to EnvoyExtensionPolicy status
+	EnvoyExtensionPolicyStatusMessageName MessageName = "envoyextensionpolicy-status"
+	// EnvoyPatchPolicyStatusMessageName is a message containing updates to EnvoyPatchPolicy status
+	EnvoyPatchPolicyStatusMessageName MessageName = "envoypatchpolicy-status"
+	// SecurityPolicyStatusMessageName is a message containing updates to SecurityPolicy status
+	SecurityPolicyStatusMessageName MessageName = "securitypolicy-status"
+	// BackendTrafficPolicyStatusMessageName is a message containing updates to BackendTrafficPolicy status
+	BackendTrafficPolicyStatusMessageName MessageName = "backendtrafficpolicy-status"
+	// ClientTrafficPolicyStatusMessageName is a message containing updates to ClientTrafficPolicy status
+	ClientTrafficPolicyStatusMessageName MessageName = "clienttrafficpolicy-status"
+	// BackendTLSPolicyStatusMessageName is a message containing updates to BackendTLSPolicy status
+	BackendTLSPolicyStatusMessageName MessageName = "backendtlspolicy-status"
+	// UDPRouteStatusMessageName is a message containing updates to UDPRoute status
+	UDPRouteStatusMessageName MessageName = "udproute-status"
+	// TCPRouteStatusMessageName is a message containing updates to TCPRoute status
+	TCPRouteStatusMessageName MessageName = "tcproute-status"
+	// TLSRouteStatusMessageName is a message containing updates to TLSRoute status
+	TLSRouteStatusMessageName MessageName = "tlsroute-status"
+	// GRPCRouteStatusMessageName is a message containing updates to GRPCRoute status
+	GRPCRouteStatusMessageName MessageName = "grpcroute-status"
+	// HTTPRouteStatusMessageName is a message containing updates to HTTPRoute status
+	HTTPRouteStatusMessageName MessageName = "httproute-status"
+	// GatewayStatusMessageName is a message containing updates to Gateway status
+	GatewayStatusMessageName MessageName = "gateway-status"
+	// ListenerSetStatusMessageName is a message containing updates to ListenerSet status
+	ListenerSetStatusMessageName MessageName = "listenerset-status"
+	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
+	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
+)

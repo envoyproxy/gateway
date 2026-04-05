@@ -303,6 +303,42 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "happy ratelimit redis sentinel settings",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					RateLimit: &egv1a1.RateLimit{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
+								URL: "primary_.-,node-0:26379,node-1:26379",
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "happy ratelimit redis cluster settings",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					RateLimit: &egv1a1.RateLimit{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
+								URL: "node-0:6376,node-1:6376,node-2:6376",
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
@@ -369,6 +405,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 									Kind: &TLSSecretKind,
 									Name: gwapiv1.ObjectName("certificate"),
 								},
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("client-certificate"),
+								},
 							},
 						},
 					},
@@ -401,6 +441,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSSecretKind,
 									Name: gwapiv1.ObjectName("certificate"),
+								},
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("client-certificate"),
 								},
 							},
 						},
@@ -441,6 +485,10 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								CertificateRef: gwapiv1.SecretObjectReference{
 									Kind: &TLSUnrecognizedKind,
 									Name: gwapiv1.ObjectName("certificate"),
+								},
+								ClientCertificateRef: &gwapiv1.SecretObjectReference{
+									Kind: &TLSSecretKind,
+									Name: gwapiv1.ObjectName("client-certificate"),
 								},
 							},
 						},
@@ -853,6 +901,31 @@ func TestEnvoyGateway(t *testing.T) {
 	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
 	assert.NotNil(t, gatewayLogging)
 	assert.Equal(t, egv1a1.LogLevelInfo, gatewayLogging.Level[egv1a1.LogComponentGatewayDefault])
+}
+
+func TestValidateEnvoyGatewayXDSServer(t *testing.T) {
+	t.Run("valid no overrides", func(t *testing.T) {
+		require.NoError(t, validateEnvoyGatewayXDSServer(nil))
+	})
+
+	t.Run("valid overrides", func(t *testing.T) {
+		age := gwapiv1.Duration("30m")
+		grace := gwapiv1.Duration("1m")
+		x := &egv1a1.XDSServer{MaxConnectionAge: &age, MaxConnectionAgeGrace: &grace}
+		require.NoError(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("invalid duration", func(t *testing.T) {
+		age := gwapiv1.Duration("bad")
+		x := &egv1a1.XDSServer{MaxConnectionAge: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
+
+	t.Run("non positive", func(t *testing.T) {
+		age := gwapiv1.Duration("0s")
+		x := &egv1a1.XDSServer{MaxConnectionAgeGrace: &age}
+		require.Error(t, validateEnvoyGatewayXDSServer(x))
+	})
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {

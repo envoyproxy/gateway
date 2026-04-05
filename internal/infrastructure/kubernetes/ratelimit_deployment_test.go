@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,10 +21,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
-	cfg, err := config.New()
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egv1a1.RateLimit{
@@ -38,7 +40,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	ownerReferenceUID := map[string]types.UID{
 		ratelimit.ResourceKindDeployment: "foo.bar",
 	}
-	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
+	r := ratelimit.NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -79,15 +81,16 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 					Build()
 			}
 
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, ownerReferenceUID)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.Namespace,
+					Namespace: kube.ControllerNamespace,
 					Name:      ratelimit.InfraName,
 				},
 			}
@@ -122,7 +125,7 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
 			kube.EnvoyGateway.RateLimit = rl
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 

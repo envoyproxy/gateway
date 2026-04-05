@@ -16,12 +16,13 @@ import (
 	"net"
 	nethttp "net/http"
 	"net/http/httputil"
+	"strings"
 	"testing"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -51,29 +52,43 @@ var CompressionTest = suite.ConformanceTest{
 			testCompression(t, suite, egv1a1.GzipCompressorType)
 		})
 
+		t.Run("HTTPRoute with zstd compression", func(t *testing.T) {
+			testCompression(t, suite, egv1a1.ZstdCompressorType)
+		})
+
+		t.Run("HTTPRoute with multiple compressors chooseFirst", func(t *testing.T) {
+			testCompression(
+				t,
+				suite,
+				egv1a1.BrotliCompressorType,
+				egv1a1.GzipCompressorType,
+				egv1a1.ZstdCompressorType,
+			)
+		})
+
 		t.Run("HTTPRoute without compression", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "no-compression", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
-			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-all", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/no-compression",
 					Headers: map[string]string{
-						"Accept-encoding": "gzip",
+						"accept-encoding": "gzip",
 					},
 				},
 				Response: http.Response{
-					StatusCode:    200,
+					StatusCodes:   []int{200},
 					AbsentHeaders: []string{"content-encoding"},
 				},
 				Namespace: ns,
@@ -81,42 +96,86 @@ var CompressionTest = suite.ConformanceTest{
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		t.Run("HTTPRoute with minContentLength", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "compression-all", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			ancestorRef := gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
+			}
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-all", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/compression-min-content-length",
+					Headers: map[string]string{
+						"accept-encoding": "br",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/compression-min-content-length",
+					},
+					AbsentHeaders: []string{"accept-encoding"},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers: map[string]string{
+						"content-encoding": "br",
+					},
+				},
+				Namespace: ns,
+			}
+
+			roundTripper := &CompressionRoundTripper{Debug: suite.Debug, TimeoutConfig: suite.TimeoutConfig}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, roundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
 	},
 }
 
-func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressionType egv1a1.CompressorType) {
+func testCompression(t *testing.T, suite *suite.ConformanceTestSuite, compressionTypes ...egv1a1.CompressorType) {
 	ns := "gateway-conformance-infra"
-	routeNN := types.NamespacedName{Name: "compression", Namespace: ns}
+	routeNN := types.NamespacedName{Name: "compression-all", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
-	ancestorRef := gwapiv1a2.ParentReference{
+	ancestorRef := gwapiv1.ParentReference{
 		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 		Kind:      gatewayapi.KindPtr(resource.KindGateway),
 		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression", Namespace: ns}, suite.ControllerName, ancestorRef)
+	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "compression-all", Namespace: ns}, suite.ControllerName, ancestorRef)
 
-	var encoding string
-	switch compressionType {
-	case egv1a1.BrotliCompressorType:
-		encoding = "br"
-	case egv1a1.GzipCompressorType:
-		encoding = "gzip"
+	encodings := make([]string, len(compressionTypes))
+	for i, ct := range compressionTypes {
+		encodings[i] = ContentEncoding(ct)
 	}
 
+	acceptEncoding := strings.Join(encodings, ", ")
 	expectedResponse := http.ExpectedResponse{
 		Request: http.Request{
 			Path: "/compression",
 			Headers: map[string]string{
-				"Accept-encoding": encoding,
+				"accept-encoding": acceptEncoding,
 			},
 		},
+		ExpectedRequest: &http.ExpectedRequest{
+			Request: http.Request{
+				Path: "/compression",
+			},
+			AbsentHeaders: []string{"accept-encoding"},
+		},
 		Response: http.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 			Headers: map[string]string{
-				"content-encoding": encoding,
+				"content-encoding": encodings[0],
 			},
 		},
 		Namespace: ns,
@@ -132,11 +191,14 @@ type CompressionRoundTripper struct {
 	CustomDialContext func(context.Context, string, string) (net.Conn, error)
 }
 
+// CaptureRoundTrip satisfies the roundtripper.RoundTripper interface, which requires a value parameter.
+//
+//nolint:gocritic
 func (d *CompressionRoundTripper) CaptureRoundTrip(request roundtripper.Request) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
-	return d.defaultRoundTrip(request, &nethttp.Transport{})
+	return d.defaultRoundTrip(&request, &nethttp.Transport{})
 }
 
-func (d *CompressionRoundTripper) defaultRoundTrip(request roundtripper.Request, transport nethttp.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
+func (d *CompressionRoundTripper) defaultRoundTrip(request *roundtripper.Request, transport nethttp.RoundTripper) (*roundtripper.CapturedRequest, *roundtripper.CapturedResponse, error) {
 	client := &nethttp.Client{}
 
 	client.Transport = transport
@@ -199,6 +261,10 @@ func (d *CompressionRoundTripper) defaultRoundTrip(request roundtripper.Request,
 		}
 	case "br":
 		reader = brotli.NewReader(resp.Body)
+	case "zstd":
+		if reader, err = zstd.NewReader(resp.Body); err != nil {
+			return nil, nil, err
+		}
 	default:
 		reader = resp.Body
 	}

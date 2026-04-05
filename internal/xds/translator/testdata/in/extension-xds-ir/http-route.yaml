@@ -12,10 +12,8 @@ http:
     hostname: "*"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     - name: test
-      stringMatch:
       suffix: "end"
     queryParamMatches:
     - name: "debug"
@@ -24,5 +22,7 @@ http:
       name: "first-route-dest"
       settings:
       - endpoints:
-        - host: "1.2.3.4"
+        - hostname: "example.com"
+          host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"

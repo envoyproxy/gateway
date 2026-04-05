@@ -14,15 +14,8 @@
 package status
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-	"sigs.k8s.io/gateway-api/pkg/features"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 )
 
 const (
@@ -35,13 +28,12 @@ const (
 
 // SetGatewayClassAccepted inserts or updates the Accepted condition
 // for the provided GatewayClass.
-func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) *gwapiv1.GatewayClass {
+func SetGatewayClassAccepted(gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) {
 	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted, reason, msg))
 	// Disable SupportedFeatures until the field moves from experimental to stable to avoid
 	// status failures due to changes in the datatype. This can occur because we cannot control
 	// how a CRD is installed in the cluster
 	// gc.Status.SupportedFeatures = GatewaySupportedFeatures
-	return gc
 }
 
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
@@ -57,7 +49,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	default:
 		return metav1.Condition{
@@ -66,49 +57,6 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1.GatewayClass,
 			Reason:             reason,
 			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
-			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
 	}
-}
-
-// GatewaySupportedFeatures is a list of supported Gateway-API features,
-// based on the running conformance tests suite.
-var GatewaySupportedFeatures = getSupportedFeatures(conformance.EnvoyGatewaySuite, conformance.SkipTests)
-
-func getSupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []gwapiv1.SupportedFeature {
-	supportedFeatures := gatewaySuite.SupportedFeatures.Clone()
-	unsupportedFeatures := getUnsupportedFeatures(gatewaySuite, skippedTests)
-	supportedFeatures.Delete(unsupportedFeatures...)
-
-	ret := sets.New[gwapiv1.SupportedFeature]()
-	for _, feature := range supportedFeatures.UnsortedList() {
-		ret.Insert(gwapiv1.SupportedFeature{
-			Name: gwapiv1.FeatureName(feature),
-		})
-	}
-
-	var featureList []gwapiv1.SupportedFeature
-	for feature := range ret {
-		featureList = append(featureList, feature)
-	}
-	return featureList
-}
-
-func getUnsupportedFeatures(gatewaySuite suite.ConformanceOptions, skippedTests []suite.ConformanceTest) []features.FeatureName {
-	unsupportedFeatures := gatewaySuite.ExemptFeatures.UnsortedList()
-
-	for _, skippedTest := range skippedTests {
-		switch conformance.GetTestSupportLevel(skippedTest) {
-		case conformance.Core:
-			unsupportedFeatures = append(unsupportedFeatures, skippedTest.Features...)
-		case conformance.Extended:
-			for _, feature := range skippedTest.Features {
-				if conformance.GetFeatureSupportLevel(feature) == conformance.Extended {
-					unsupportedFeatures = append(unsupportedFeatures, feature)
-				}
-			}
-		}
-	}
-
-	return unsupportedFeatures
 }

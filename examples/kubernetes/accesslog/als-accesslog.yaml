@@ -28,7 +28,7 @@ spec:
             - type: ALS
               als:
                 backendRefs:
-                  - name: envoy-als
+                  - name: otel-collector
                     namespace: monitoring
                     port: 9000
                 http:

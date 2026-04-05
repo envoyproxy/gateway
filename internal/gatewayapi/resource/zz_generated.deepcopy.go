@@ -11,13 +11,12 @@ package resource
 
 import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
@@ -41,6 +40,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.EnvoyProxyDefaultSpec != nil {
+		in, out := &in.EnvoyProxyDefaultSpec, &out.EnvoyProxyDefaultSpec
+		*out = new(v1alpha1.EnvoyProxySpec)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.GatewayClass != nil {
 		in, out := &in.GatewayClass, &out.GatewayClass
 		*out = new(v1.GatewayClass)
@@ -53,6 +57,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(v1.Gateway)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.ListenerSets != nil {
+		in, out := &in.ListenerSets, &out.ListenerSets
+		*out = make([]*v1.ListenerSet, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1.ListenerSet)
 				(*in).DeepCopyInto(*out)
 			}
 		}
@@ -81,11 +96,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.TLSRoutes != nil {
 		in, out := &in.TLSRoutes, &out.TLSRoutes
-		*out = make([]*v1alpha2.TLSRoute, len(*in))
+		*out = make([]*v1.TLSRoute, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha2.TLSRoute)
+				*out = new(v1.TLSRoute)
 				(*in).DeepCopyInto(*out)
 			}
 		}
@@ -242,11 +257,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 	}
 	if in.BackendTLSPolicies != nil {
 		in, out := &in.BackendTLSPolicies, &out.BackendTLSPolicies
-		*out = make([]*v1alpha3.BackendTLSPolicy, len(*in))
+		*out = make([]*v1.BackendTLSPolicy, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha3.BackendTLSPolicy)
+				*out = new(v1.BackendTLSPolicy)
 				(*in).DeepCopyInto(*out)
 			}
 		}
@@ -291,20 +306,15 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.serviceMap != nil {
-		in, out := &in.serviceMap, &out.serviceMap
-		*out = make(map[types.NamespacedName]*corev1.Service, len(*in))
-		for key, val := range *in {
-			var outVal *corev1.Service
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				inVal := (*in)[key]
-				in, out := &inVal, &outVal
-				*out = new(corev1.Service)
+	if in.ClusterTrustBundles != nil {
+		in, out := &in.ClusterTrustBundles, &out.ClusterTrustBundles
+		*out = make([]*certificatesv1beta1.ClusterTrustBundle, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(certificatesv1beta1.ClusterTrustBundle)
 				(*in).DeepCopyInto(*out)
 			}
-			(*out)[key] = outVal
 		}
 	}
 }

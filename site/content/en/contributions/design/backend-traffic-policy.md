@@ -104,7 +104,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: eg
-    namespace: default
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -118,7 +117,6 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: ipv6-route
-    namespace: default
 ```
 
 ## Features / API Fields

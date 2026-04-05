@@ -1,4 +1,3 @@
-name: "http-route"
 http:
 - name: "first-listener"
   address: "::"
@@ -17,11 +16,11 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "request-header-route-dest/backend/0"
     addRequestHeaders:
     - name: "some-header-multi-value"
       value:
-      - "some-value"
-      - "some-additional-value"
+      - "some-value,some-additional-value"
       append: true
     - name: "some-header"
       value:

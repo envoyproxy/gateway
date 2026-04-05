@@ -23,7 +23,13 @@ type BasicAuth struct {
 	// Right now, only SHA hash algorithm is supported.
 	// Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
 	// for more details.
-	//
-	// Note: The secret must be in the same namespace as the SecurityPolicy.
 	Users gwapiv1.SecretObjectReference `json:"users"`
+
+	// This field specifies the header name to forward a successfully authenticated user to
+	// the backend. The header will be added to the request with the username as the value.
+	//
+	// If it is not specified, the username will not be forwarded.
+	//
+	// +optional
+	ForwardUsernameHeader *string `json:"forwardUsernameHeader,omitempty"`
 }

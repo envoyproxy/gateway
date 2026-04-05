@@ -1,4 +1,3 @@
-name: "http-route"
 http:
 - name: "first-listener"
   address: "::"
@@ -19,8 +18,43 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "rewrite-route/backend/0"
     urlRewrite:
       path:
         regexMatchReplace:
           pattern: '^/service/([^/]+)(/.*)$'
           substitution: '\2/instance/\1'
+  - name: "rewrite-route-with-special-characters"
+    pathMatch:
+      prefix: "/$env"
+    hostname: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route/backend/0"
+    urlRewrite:
+      path:
+        prefixMatchReplace: /
+  - name: "rewrite-route-timeout"
+    pathMatch:
+      prefix: "/origin"
+    hostname: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route/backend/0"
+    urlRewrite:
+      path:
+        regexMatchReplace:
+          pattern: '^/service/([^/]+)(/.*)$'
+          substitution: '\2/instance/\1'
+    traffic:
+      timeout:
+        http:
+          requestTimeout: 5s

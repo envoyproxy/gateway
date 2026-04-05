@@ -52,15 +52,16 @@
               retryPolicy:
                 numRetries: 3
                 retryBackOff:
-                  baseInterval: 1s
+                  baseInterval: 0.500s
                   maxInterval: 5s
                 retryOn: 5xx,gateway-error,reset
               signoutPath:
                 path:
                   exact: /bar/logout
+              statPrefix: securitypolicy/envoy-gateway/policy-for-gateway
               tokenEndpoint:
                 cluster: securitypolicy/envoy-gateway/policy-for-gateway/0
-                timeout: 10s
+                timeout: 5s
                 uri: https://oauth.foo.com/token
               useRefreshToken: true
         - name: envoy.filters.http.router
@@ -79,5 +80,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

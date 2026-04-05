@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -75,7 +76,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 		// Call server.Get() to initialize the local file cache.
 		servingURL, _, err = server.Get(
 			fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule),
-			GetOptions{
+			&GetOptions{
 				ResourceName:   resourceName,
 				RequestTimeout: time.Second * 1000,
 			})
@@ -91,7 +92,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 		// The serving URL should be the same as the previous one.
 		servingURL1, _, err := server.Get(
 			fmt.Sprintf("oci://%s/%s", registryURL.Host, validWasmModule),
-			GetOptions{
+			&GetOptions{
 				ResourceName:   resourceName,
 				RequestTimeout: time.Second * 1000,
 			})
@@ -124,7 +125,7 @@ func Test_httpServerWithOCIImage(t *testing.T) {
 
 		// Initialize the local cache.
 		_, _, err = server.Get(fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
-			GetOptions{
+			&GetOptions{
 				ResourceName:   resourceName,
 				RequestTimeout: time.Second * 10,
 			})
@@ -180,7 +181,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 		}
 
 		// Call server.Get() to initialize the local file cache.
-		servingURL, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
+		servingURL, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), &getOptions)
 		require.NoError(t, err)
 
 		// Get wasm module from the EG HTTP server.
@@ -191,7 +192,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 
 		// Call server.Get() again to get the serving URL for the same wasm module.
 		// The serving URL should be the same as the previous one.
-		servingURL1, _, err := server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), getOptions)
+		servingURL1, _, err := server.Get(fmt.Sprintf("%s/%s", fakeServerURL, validWasmModule), &getOptions)
 		require.NoError(t, err)
 		require.Equal(t, servingURL, servingURL1)
 
@@ -220,7 +221,7 @@ func Test_httpServerWithHTTP(t *testing.T) {
 		defer server.close()
 
 		// Initialize the local cache.
-		_, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, nonExistingWasmModule), GetOptions{
+		_, _, err = server.Get(fmt.Sprintf("%s/%s", fakeServerURL, nonExistingWasmModule), &GetOptions{
 			ResourceName:   resourceName,
 			RequestTimeout: time.Second * 10,
 		})
@@ -272,7 +273,7 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 		for i := 0; i <= 6; i++ {
 			_, _, err = server.Get(
 				fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
-				GetOptions{
+				&GetOptions{
 					ResourceName:   resourceName,
 					RequestTimeout: time.Second * 1000,
 				})
@@ -285,7 +286,7 @@ func Test_httpServerFailedAttempt(t *testing.T) {
 			time.Sleep(300 * time.Millisecond)
 			_, _, err = server.Get(
 				fmt.Sprintf("oci://%s/%s", registryURL.Host, nonExistingWasmModule),
-				GetOptions{
+				&GetOptions{
 					ResourceName:   resourceName,
 					RequestTimeout: time.Second * 1000,
 				})
@@ -327,7 +328,7 @@ func setupFakeRegistry(host string) error {
 }
 
 func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempts int, failedAttemptResetDelay, failedAttemptsResetInterval time.Duration) (*HTTPServer, error) {
-	logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
+	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	s := NewHTTPServerWithFileCache(
 		SeverOptions{
 			Salt:                        []byte("salt"),
@@ -337,7 +338,7 @@ func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempt
 		},
 		CacheOptions{
 			CacheDir: cacheDir,
-		}, logger)
+		}, "envoy-gateway-system", logger)
 	go s.Start(ctx)
 
 	// Wait for the server to start

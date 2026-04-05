@@ -17,10 +17,31 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-22.04
+  # Check if there are changes that require running the test jobs
+  changes:
+    runs-on: ubuntu-latest
+    # Required permissions
+    permissions:
+      pull-requests: read
+    # Set job outputs to values from filter step
+    outputs:
+      run_test_workflow: ${{ steps.check-changes.outputs.run_test_workflow }}
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4.0.1
+      id: check-changes
+      # A dependent job will be automatically skipped if its parent job is skipped.
+      # So we skip this step in pull_request event if the changes are not relevant.
+      if: github.event_name == 'pull_request'
+      with:
+        filters: |
+          run_test_workflow:
+            - "!?(.github|site|release-notes)/**"
+            - ".github/workflows/build_and_test.yaml"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
     # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
@@ -29,16 +50,16 @@ jobs:
     - run: make -k lint
 
   gen-check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -47,51 +68,112 @@ jobs:
     permissions:
       contents: read   #  for actions/checkout
       id-token: write  #  for fetching OIDC token
+    needs:
+    - changes
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3  # v5.3.1
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2  # v6.0.0
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
-        use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
+        use_oidc: true
+
+  go-benchmark-test:
+    runs-on: ubuntu-latest
+    needs:
+    - changes
+    - build
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      with:
+        fetch-depth: 0  # Need main branch access for benchmark comparison
+    - uses: ./tools/github-actions/setup-deps
+    - name: Run Benchmark Comparison
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          ./tools/hack/go-benchmark-compare.sh
+        else
+          make go-benchmark
+        fi
 
   build:
     runs-on: ubuntu-latest
-    needs: [lint, gen-check, license-check, coverage-test]
+    needs: [changes, lint, gen-check, license-check, coverage-test]
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      # For main branch builds, we need to fetch tags so go binary will be built with
+      # the recent vX.Y.Z-rc.0 tag, which helps avoid false positives in vulnerability scans.
+      # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
+      # As a workaround `filter: tree:0` is used to create a treeless clone.
+      # See:
+      # https://github.com/actions/checkout/issues/1471#issuecomment-1755639487
+      # https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      with:
+        fetch-depth: ${{ github.ref == 'refs/heads/main' && '0' || '1' }}
+        filter: ${{ github.ref == 'refs/heads/main' && 'tree:0' || '' }}
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
       with:
         name: envoy-gateway
         path: bin/
 
   conformance-test:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs:
+    - changes
+    - build
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     strategy:
       fail-fast: false
       matrix:
-        version: [ v1.29.10, v1.30.6, v1.31.4, v1.32.0 ]
+        target:
+        - version: v1.32.11
+          ipFamily: ipv4
+          profile: default
+          gwapiChannel: standard
+        - version: v1.33.7
+          ipFamily: ipv4
+          profile: default
+          gwapiChannel: experimental
+        - version: v1.34.3
+          ipFamily: ipv6  # only run ipv6 test on this version to save time
+          profile: default
+          gwapiChannel: experimental
+        # TODO: this's IPv4 first, need a way to test IPv6 first.
+        - version: v1.35.0
+          ipFamily: dual  # only run dual test on latest version to save time
+          profile: default
+          gwapiChannel: experimental
+        - version: v1.35.0
+          ipFamily: dual  # only run dual test on latest version to save time
+          gwapiChannel: experimental
+          profile: gateway-namespace-mode
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: xds-name-scheme-v2
+          gwapiChannel: experimental
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
       with:
         name: envoy-gateway
         path: bin/
@@ -104,32 +186,53 @@ jobs:
     # conformance
     - name: Run Standard Conformance Tests
       env:
-        KIND_NODE_TAG: ${{ matrix.version }}
+        KIND_NODE_TAG: ${{ matrix.target.version }}
         IMAGE_PULL_POLICY: IfNotPresent
+        IP_FAMILY: ${{ matrix.target.ipFamily }}
+        KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
+        E2E_GATEWAY_API_CHANNEL: ${{ matrix.target.gwapiChannel }}
+        # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
+        # which means to dump the current state when there's a case failed.
+        ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
       run: make conformance
 
   e2e-test:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs:
+    - changes
+    - build
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     strategy:
       fail-fast: false
       matrix:
         target:
-        - version: v1.29.10
+        - version: v1.32.11
           ipFamily: ipv4
-        - version: v1.30.6
+          profile: default
+        - version: v1.33.7
           ipFamily: ipv4
-        - version: v1.31.4
+          profile: default
+        - version: v1.34.3
           ipFamily: ipv6  # only run ipv6 test on this version to save time
+          profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.32.0
+        - version: v1.35.0
           ipFamily: dual  # only run dual test on latest version to save time
+          profile: default
+        - version: v1.35.0
+          ipFamily: dual  # only run dual test on latest version to save time
+          profile: gateway-namespace-mode
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: xds-name-scheme-v2
+
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
+    - uses: ./tools/github-actions/reclaim-storage
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
       with:
         name: envoy-gateway
         path: bin/
@@ -145,47 +248,64 @@ jobs:
         KIND_NODE_TAG: ${{ matrix.target.version }}
         IMAGE_PULL_POLICY: IfNotPresent
         IP_FAMILY: ${{ matrix.target.ipFamily }}
+        KUBE_DEPLOY_PROFILE: ${{ matrix.target.profile }}
         E2E_TIMEOUT: 1h
+        NUM_WORKERS: 2
+        # QPS more than 2000 may cause e2e flaky test.
+        # This is not the limit of Envoy Gateway,
+        # but the limit of running e2e tests in github CI.
+        E2E_BACKEND_UPGRADE_QPS: "2000"
+        # Cluster trust bundle reach beta in v1.33, so we can enable it for v1.33 and later.
+        ENABLE_CLUSTER_TRUST_BUNDLE: ${{ startsWith(matrix.target.version, 'v1.33') }}
+        # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
+        # which means to dump the current state when there's a case failed.
+        ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
       run: make e2e
 
   benchmark-test:
     runs-on: ubuntu-latest
+    needs:
+    - build
+    - changes
     # There's a different workflow for benchmark-test on push.
-    if: ${{ ! startsWith(github.event_name, 'push') }}
-    needs: [build]
+    # So we need to check if this is a pull request and changes.
+    if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Setup Graphviz
-      uses: ts-graphviz/setup-graphviz@b1de5da23ed0a6d14e0aeee8ed52fdd87af2363c  # v2.0.2
 
     # Benchmark
     - name: Run Benchmark tests
       env:
-        KIND_NODE_TAG: v1.29.10
         IMAGE_PULL_POLICY: IfNotPresent
         # Args for benchmark test
-        BENCHMARK_RPS: 10000
+        BENCHMARK_BASELINE_RPS: 100
         BENCHMARK_CONNECTIONS: 100
-        BENCHMARK_DURATION: 30
+        BENCHMARK_DURATION: 90
         BENCHMARK_CPU_LIMITS: 1000m
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
+        BENCHMARK_RENDER_PNG: "false"
       run: make benchmark
 
-    - name: Read Benchmark report
-      run: cat test/benchmark/benchmark_report/benchmark_report.md
+    - name: Upload Benchmark report
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+      with:
+        name: benchmark_report
+        path: ./test/benchmark/benchmark_report/
+
   resilience-test:
     runs-on: ubuntu-latest
-    if: ${{ ! startsWith(github.event_name, 'push') }}
-    needs: [build]
+    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
+    needs:
+    - build
+    - changes
     steps:
-    - uses: actions/checkout@v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
     - name: Resilience Test
       env:
-        KIND_NODE_TAG: v1.28.13
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
       run: make resilience
@@ -193,12 +313,13 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
-      uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16  # v4.1.8
+      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
       with:
         name: envoy-gateway
         path: bin/
@@ -210,30 +331,47 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      if: github.event_name == 'push'
-      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+      uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2  # v4.0.0
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Setup Multiarch Environment
-      if: github.event_name == 'push'
       run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
-      if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
       run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
       run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
       # use `Always` image pull policy for latest version.
       run: |
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-push
         IMAGE_PULL_POLICY=Always OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0-latest TAG=latest make helm-push
+
+  # Aggregate all the required jobs and make it easier to customize CI required jobs
+  ci-checks:
+    runs-on: ubuntu-latest
+    needs:
+    - lint
+    - gen-check
+    - license-check
+    - coverage-test
+    - build
+    - conformance-test
+    - e2e-test
+    - benchmark-test
+    - resilience-test
+    - publish
+    # We need this to run always to force-fail (and not skip) if any needed
+    # job has failed. Otherwise, a skipped job will not fail the workflow.
+    if: always()
+    steps:
+    - run: |
+        echo "CI checks completed"
+        [ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "false" ] || exit 1

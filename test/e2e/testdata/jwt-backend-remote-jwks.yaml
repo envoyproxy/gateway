@@ -98,7 +98,7 @@ spec:
         hostname: 'remote-jwks-server.gateway-conformance-infra'
         port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha3
+apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy
 metadata:
   name: remote-jwks-btls
@@ -151,7 +151,11 @@ spec:
                   maxInterval: 5s
               retryOn:
                 triggers: ["5xx", "gateway-error", "reset"]
+              timeout:
+                http:
+                  requestTimeout: 5s
           uri: https://remote-jwks-server.gateway-conformance-infra/jwt/jwks.json
+          cacheDuration: 300s
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

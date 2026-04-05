@@ -17,11 +17,11 @@ http:
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       # byte slice representation of "key-data"
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     - name: secret-2
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     caCertificate:
       name: ca-cert
@@ -35,6 +35,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10001
+        name: "first-route-dest/backend/0"
 - name: "second-listener"
   address: "::"
   port: 10002
@@ -54,11 +55,11 @@ http:
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       # byte slice representation of "key-data"
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     - name: secret-2
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     caCertificate:
       name: ca-cert
@@ -72,6 +73,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10002
+        name: "second-route-dest/backend/0"
 - name: "third-listener"
   address: "::"
   port: 10003
@@ -92,11 +94,11 @@ http:
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       # byte slice representation of "key-data"
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     - name: secret-2
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     caCertificate:
       name: ca-cert
@@ -110,6 +112,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10003
+        name: "third-route-dest/backend/0"
 - name: "fourth-listener"
   address: "::"
   port: 10004
@@ -132,11 +135,11 @@ http:
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       # byte slice representation of "key-data"
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     - name: secret-2
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     caCertificate:
       name: ca-cert
@@ -150,6 +153,7 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10004
+        name: "fourth-route-dest/backend/0"
 - name: "fifth-listener"
   address: "::"
   port: 10005
@@ -174,11 +178,11 @@ http:
     certificates:
     - name: secret-1
       # byte slice representation of "key-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       # byte slice representation of "key-data"
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     - name: secret-2
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+      certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
       privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
     caCertificate:
       name: ca-cert
@@ -192,3 +196,4 @@ http:
       - endpoints:
         - host: "10.0.0.1"
           port: 10005
+        name: "fifth-route-dest/backend/0"

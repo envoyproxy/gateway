@@ -9,11 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
+	"net/netip"
+	"strconv"
+	"strings"
 
 	"github.com/google/cel-go/cel"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -23,13 +28,190 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
-	"github.com/envoyproxy/gateway/internal/utils/net"
+	netutils "github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
 
 type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources)
+}
+
+func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *resource.Resources) {
+	for _, gtw := range gateways {
+		if gtw.Spec.TLS == nil {
+			continue
+		}
+
+		frontendResolvedRefsSuccess := true
+		backendResolvedRefsSuccess := true
+		if gtw.Spec.TLS.Frontend != nil {
+			var gtwDefaultTLSCACertificate *ListenerFrontendTLSValidation
+			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
+			allowInsecureFallback := false
+			if gtwDefaultFrontendTLSValidation.Validation != nil {
+				caCert, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
+				if err != nil {
+					t.Logger.Error(err, "Failed to get default frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters,
+						fmt.Sprintf("Failed to get default frontend CA certs for gateway: %v", err))
+					frontendResolvedRefsSuccess = false
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						ValidateError: err,
+					}
+				} else {
+					gtwDefaultTLSCACertificate = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
+							Certificate: caCert,
+						},
+						Mode: frontendValidationMode(gtwDefaultFrontendTLSValidation.Validation.Mode),
+					}
+					if gtwDefaultFrontendTLSValidation.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
+					}
+				}
+			}
+
+			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
+			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
+				if portValidation.TLS.Validation == nil {
+					continue
+				}
+				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
+					Group:     gwapiv1.GroupVersion.Group,
+					Kind:      resource.KindGateway,
+					Name:      gtw.Name,
+					Namespace: gtw.Namespace,
+				})
+				if err != nil {
+					t.Logger.Error(err, "Failed to get frontend CA certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name), "port", portValidation.Port)
+					status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidParameters, fmt.Sprintf("Failed to get frontend CA certs for gateway: %v", err))
+					frontendResolvedRefsSuccess = false
+					// should we fallback to the default validation if per-port validation is invalid? The spec doesn't explicitly say, but it seems safer to not fallback to default validation if per-port validation is specified but invalid, as it could lead to unexpected successful TLS handshakes. Instead, we will treat it as a separate validation error.
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						ValidateError: err,
+					}
+				} else {
+					gtwPerPortCaCertificate[portValidation.Port] = &ListenerFrontendTLSValidation{
+						TLSCACertificate: &ir.TLSCACertificate{
+							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
+							Certificate: caCert,
+						},
+						Mode: frontendValidationMode(portValidation.TLS.Validation.Mode),
+					}
+					if portValidation.TLS.Validation.Mode == gwapiv1.AllowInsecureFallback {
+						allowInsecureFallback = true
+					}
+				}
+			}
+
+			if allowInsecureFallback {
+				status.UpdateGatewayStatusCondition(gtw.Gateway, gwapiv1.GatewayConditionInsecureFrontendValidationMode, metav1.ConditionTrue, gwapiv1.GatewayReasonConfigurationChanged,
+					"Gateway is using AllowInsecureFallback frontend validation mode.")
+			}
+
+			for _, listener := range gtw.listeners {
+				// Frontend TLS validation only applies to HTTPS listeners, per the API contract.
+				// Skip HTTP, TCP, TLS, and UDP listeners.
+				if listener.Protocol != gwapiv1.HTTPSProtocolType {
+					continue
+				}
+
+				if perPortConfig, exits := gtwPerPortCaCertificate[listener.Port]; exits {
+					listener.tls.frontendTLSValidation = perPortConfig
+				} else {
+					// Listeners without a specific per-port validation configuration
+					// will use the default validation configuration, if specified.
+					listener.tls.frontendTLSValidation = gtwDefaultTLSCACertificate
+				}
+			}
+		}
+
+		if gtw.Spec.TLS.Backend != nil {
+			if validateErr := validClientCertificateRef(gtw.Spec.TLS.Backend.ClientCertificateRef); validateErr != nil {
+				t.Logger.Error(validateErr, "Invalid backend client certificate reference for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+				status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway,
+					metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef,
+					fmt.Sprintf("Invalid backend client certificate reference for gateway: %v", validateErr),
+				)
+				backendResolvedRefsSuccess = false
+			} else if gtw.Spec.TLS.Backend.ClientCertificateRef != nil {
+				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
+				if ns != gtw.Namespace {
+					// check reference grant
+					if !t.validateCrossNamespaceRef(
+						crossNamespaceFrom{
+							group:     gwapiv1.GroupName,
+							kind:      string(resource.KindGateway),
+							namespace: gtw.Namespace,
+						},
+						crossNamespaceTo{
+							group:     GroupDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Group, ""),
+							kind:      KindDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Kind, resource.KindSecret),
+							namespace: ns,
+							name:      string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name),
+						},
+						resources.ReferenceGrants,
+					) {
+						err := fmt.Errorf("invalid cross-namespace reference to backend client certificate")
+						t.Logger.Error(err, "Invalid backend client certificate reference for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway,
+							metav1.ConditionFalse, gwapiv1.GatewayReasonRefNotPermitted,
+							err.Error(),
+						)
+						backendResolvedRefsSuccess = false
+					}
+				}
+				if backendResolvedRefsSuccess {
+					secret := t.GetSecret(ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
+					switch {
+					case secret == nil:
+						err := fmt.Errorf("failed to get backend client certs for gateway")
+						t.Logger.Error(err, "Failed to get backend client certs for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
+						backendResolvedRefsSuccess = false
+					case !isValidClientCertificateRef(secret):
+						err := fmt.Errorf("invalid backend client cert secret for gateway: secret %s/%s must contain 'tls.crt' and 'tls.key' fields", ns, string(gtw.Spec.TLS.Backend.ClientCertificateRef.Name))
+						t.Logger.Error(err, "Invalid backend client cert secret for gateway", "gateway", fmt.Sprintf("%s/%s", gtw.Namespace, gtw.Name))
+						status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionFalse, gwapiv1.GatewayReasonInvalidClientCertificateRef, err.Error())
+						backendResolvedRefsSuccess = false
+					default:
+						gtw.backendTLS = &egv1a1.BackendTLSConfig{
+							ClientCertificateRef: gtw.Spec.TLS.Backend.ClientCertificateRef,
+						}
+					}
+				}
+
+			}
+		}
+
+		if frontendResolvedRefsSuccess && backendResolvedRefsSuccess {
+			status.UpdateGatewayStatusResolvedRefsCondition(gtw.Gateway, metav1.ConditionTrue, gwapiv1.GatewayReasonResolvedRefs, "Successfully resolved all TLS references for the gateway")
+		}
+	}
+}
+
+func validClientCertificateRef(ref *gwapiv1.SecretObjectReference) error {
+	if ref == nil {
+		return nil
+	}
+	switch ptr.Deref(ref.Kind, gwapiv1.Kind("Secret")) {
+	case resource.KindSecret:
+		if ptr.Deref(ref.Group, "") != "" {
+			return fmt.Errorf("invalid client certificate reference group: %s", ptr.Deref(ref.Group, ""))
+		}
+	default:
+		return fmt.Errorf("invalid client certificate reference kind: %s", ptr.Deref(ref.Kind, gwapiv1.Kind("Secret")))
+	}
+
+	return nil
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
@@ -51,7 +233,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		if gateway.envoyProxy != nil {
 			infraIR[irKey].Proxy.Config = gateway.envoyProxy
 		}
-		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy.Config, resources)
+		t.processProxyReadyListener(xdsIR[irKey], gateway.envoyProxy)
+		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -62,7 +245,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					case gwapiv1.TLSModePassthrough:
 						t.validateAllowedRoutes(listener, resource.KindTLSRoute)
 					case gwapiv1.TLSModeTerminate:
-						t.validateAllowedRoutes(listener, resource.KindTCPRoute)
+						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 					default:
 						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
 					}
@@ -77,8 +260,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
 			default:
 				listener.SetSupportedKinds()
-				status.SetGatewayListenerStatusCondition(listener.gateway.Gateway,
-					listener.listenerStatusIdx,
+				listener.SetCondition(
 					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
 					gwapiv1.ListenerReasonUnsupportedProtocol,
@@ -97,31 +279,34 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			t.validateHostName(listener)
 
 			// Process conditions and check if the listener is ready
-			isReady := t.validateListenerConditions(listener)
-			if !isReady {
+			t.validateListenerConditions(listener)
+
+			// Skip listeners with invalid frontend TLS validation as they are not functional.
+			if listener.frontendTLSValidationInvalid() {
 				continue
 			}
 
-			address := net.IPv4ListenerAddress
+			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
 			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
-				address = net.IPv6ListenerAddress
+				address = netutils.IPv6ListenerAddress
 			}
 
 			// Add the listener to the Xds IR
-			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
-			containerPort := t.servicePortToContainerPort(int32(listener.Port), gateway.envoyProxy)
+			servicePort := &protocolPort{protocol: listener.Protocol, port: listener.Port}
+			containerPort := t.servicePortToContainerPort(listener.Port, gateway.envoyProxy)
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						Metadata: buildListenerMetadata(listener, gateway),
-						IPFamily: ipFamily,
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
+						IPFamily:     ipFamily,
 					},
-					TLS: irTLSConfigs(listener.tlsSecrets...),
+					TLS: irTLSConfigs(&listener.tls),
 					Path: ir.PathSettings{
 						MergeSlashes:         true,
 						EscapedSlashesAction: ir.UnescapeAndRedirect,
@@ -131,34 +316,42 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
-					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+					// When unspecified, all hostnames are matched. This field is ignored for protocols that don't require hostname based matching.
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
+				irListener.RequestID = getRequestIDExtensionAction(gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
+				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
+				listener.httpIR = irListener
 			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
 				irListener := &ir.TCPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:     irListenerName(listener),
-						Address:  address,
-						Port:     uint32(containerPort),
-						IPFamily: ipFamily,
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
+						IPFamily:     ipFamily,
 					},
 
 					// Gateway is processed firstly, then ClientTrafficPolicy, then xRoute.
 					// TLS field should be added to TCPListener as ClientTrafficPolicy will affect
 					// Listener TLS. Then TCPRoute whose TLS should be configured as Terminate just
 					// refers to the Listener TLS.
-					TLS: irTLSConfigsForTCPListener(listener.tlsSecrets...),
+					TLS: irTLSConfigsForTCPListener(&listener.tls),
 				}
 				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			case gwapiv1.UDPProtocolType:
 				irListener := &ir.UDPListener{
 					CoreListenerDetails: ir.CoreListenerDetails{
-						Name:    irListenerName(listener),
-						Address: address,
-						Port:    uint32(containerPort),
+						Name:         irListenerName(listener),
+						Address:      address,
+						Port:         uint32(containerPort),
+						ExternalPort: uint32(listener.Port),
+						Metadata:     buildListenerMetadata(listener, gateway),
+						IPFamily:     ipFamily,
 					},
 				}
 				xdsIR[irKey].UDP = append(xdsIR[irKey].UDP, irListener)
@@ -172,6 +365,254 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 			}
 		}
 	}
+
+	t.checkOverlappingTLSConfig(gateways)
+}
+
+// checkOverlappingTLSConfig checks for overlapping hostnames and certificates between listeners and sets
+// the `OverlappingTLSConfig` condition if there are overlapping hostnames or certificates.
+func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
+	// If merging gateways, check overlapping hostnames and certificates between listeners in all merged gateways.
+	if t.MergeGateways {
+		httpsListeners := []*ListenerContext{}
+		for _, gateway := range gateways {
+			for _, listener := range gateway.listeners {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+					httpsListeners = append(httpsListeners, listener)
+				}
+			}
+		}
+		// Note: order of processing matters here.
+		// According to the Gateway API spec, If both hostname and certificate overlap,
+		// the controller SHOULD set the "OverlappingCertificates" Reason.
+		checkOverlappingHostnames(httpsListeners)
+		checkOverlappingCertificates(httpsListeners)
+	} else {
+		// Check overlapping hostnames and certificates between listeners in each gateway.
+		for _, gateway := range gateways {
+			httpsListeners := []*ListenerContext{}
+			for _, listener := range gateway.listeners {
+				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+					httpsListeners = append(httpsListeners, listener)
+				}
+			}
+			// Note: order of processing matters here.
+			// According to the Gateway API spec, If both hostname and certificate overlap,
+			// the controller SHOULD set the "OverlappingCertificates" Reason.
+			checkOverlappingHostnames(httpsListeners)
+			checkOverlappingCertificates(httpsListeners)
+		}
+	}
+}
+
+// checkOverlappingHostnames checks for overlapping hostnames between HTTPS listeners and sets
+// the `OverlappingTLSConfig` condition if there are overlapping hostnames.
+func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
+	type overlappingListener struct {
+		gateway1  *GatewayContext
+		gateway2  *GatewayContext
+		listener1 string
+		listener2 string
+		hostname1 string
+		hostname2 string
+	}
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
+	for i := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if overlappingListeners[j] != nil {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+			if areOverlappingHostnames(httpsListeners[i].Hostname, httpsListeners[j].Hostname) {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					gateway1:  httpsListeners[i].gateway,
+					gateway2:  httpsListeners[j].gateway,
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					hostname1: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+				}
+				overlappingListeners[j] = &overlappingListener{
+					gateway1:  httpsListeners[j].gateway,
+					gateway2:  httpsListeners[i].gateway,
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					hostname1: string(ptr.Deref(httpsListeners[j].Hostname, "")),
+					hostname2: string(ptr.Deref(httpsListeners[i].Hostname, "")),
+				}
+			}
+		}
+	}
+
+	for i, listener := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			var message string
+			gateway1 := overlappingListeners[i].gateway1
+			gateway2 := overlappingListeners[i].gateway2
+			if gateway1.Name == gateway2.Name &&
+				gateway1.Namespace == gateway2.Namespace {
+				message = fmt.Sprintf(
+					"The hostname %s overlaps with the hostname %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					overlappingListeners[i].hostname1,
+					overlappingListeners[i].hostname2,
+					overlappingListeners[i].listener2,
+				)
+			} else {
+				message = fmt.Sprintf(
+					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					overlappingListeners[i].hostname1,
+					overlappingListeners[i].hostname2,
+					overlappingListeners[i].listener2,
+					gateway2.GetName(),
+				)
+			}
+
+			listener.SetCondition(
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingHostnames,
+				message,
+			)
+			if listener.httpIR != nil {
+				listener.httpIR.TLSOverlaps = true
+			}
+		}
+	}
+}
+
+// checkOverlappingCertificates checks for overlapping certificates SANs between HTTPSlisteners and sets
+// the `OverlappingTLSConfig` condition if there are overlapping certificates.
+func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
+	type overlappingListener struct {
+		gateway1  *GatewayContext
+		gateway2  *GatewayContext
+		listener1 string
+		listener2 string
+		san1      string
+		san2      string
+	}
+
+	overlappingListeners := make([]*overlappingListener, len(httpsListeners))
+	for i := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			continue
+		}
+		for j := i + 1; j < len(httpsListeners); j++ {
+			if overlappingListeners[j] != nil {
+				continue
+			}
+			if httpsListeners[i].Port != httpsListeners[j].Port {
+				continue
+			}
+
+			overlappingCertificate := isOverlappingCertificate(httpsListeners[i].tls.certDNSNames, httpsListeners[j].tls.certDNSNames)
+			if overlappingCertificate != nil {
+				// Overlapping listeners can be more than two, we only report the first two for simplicity.
+				overlappingListeners[i] = &overlappingListener{
+					gateway1:  httpsListeners[i].gateway,
+					gateway2:  httpsListeners[j].gateway,
+					listener1: string(httpsListeners[i].Name),
+					listener2: string(httpsListeners[j].Name),
+					san1:      overlappingCertificate.san1,
+					san2:      overlappingCertificate.san2,
+				}
+				overlappingListeners[j] = &overlappingListener{
+					gateway1:  httpsListeners[j].gateway,
+					gateway2:  httpsListeners[i].gateway,
+					listener1: string(httpsListeners[j].Name),
+					listener2: string(httpsListeners[i].Name),
+					san1:      overlappingCertificate.san2,
+					san2:      overlappingCertificate.san1,
+				}
+			}
+		}
+	}
+
+	for i, listener := range httpsListeners {
+		if overlappingListeners[i] != nil {
+			var message string
+			gateway1 := overlappingListeners[i].gateway1
+			gateway2 := overlappingListeners[i].gateway2
+			if gateway1.Name == gateway2.Name &&
+				gateway1.Namespace == gateway2.Namespace {
+				message = fmt.Sprintf(
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					overlappingListeners[i].san1,
+					overlappingListeners[i].san2,
+					overlappingListeners[i].listener2,
+				)
+			} else {
+				message = fmt.Sprintf(
+					"The certificate SAN %s overlaps with the certificate SAN %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					overlappingListeners[i].san1,
+					overlappingListeners[i].san2,
+					overlappingListeners[i].listener2,
+					gateway2.GetName(),
+				)
+			}
+
+			listener.SetCondition(
+				gwapiv1.ListenerConditionOverlappingTLSConfig,
+				metav1.ConditionTrue,
+				gwapiv1.ListenerReasonOverlappingCertificates,
+				message)
+			if listener.httpIR != nil {
+				listener.httpIR.TLSOverlaps = true
+			}
+		}
+	}
+}
+
+type overlappingCertificate struct {
+	san1 string
+	san2 string
+}
+
+func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
+	for _, dns1 := range cert1DNSNames {
+		for _, dns2 := range cert2DNSNames {
+			if areOverlappingHostnames(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
+				return &overlappingCertificate{
+					san1: dns1,
+					san2: dns2,
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func areOverlappingHostnames(this, other *gwapiv1.Hostname) bool {
+	if this == nil || other == nil {
+		return true
+	}
+	return hostnameMatchesWithOther(this, other) || hostnameMatchesWithOther(other, this)
+}
+
+// hostnameMatchesWithOther returns true if this hostname matches other hostname.
+// Assumes that hostnames will either be fully qualified or a wildcard hostname prefixed with a single wildcard.
+// E.g. "*.*.example.com" is not valid.
+func hostnameMatchesWithOther(this, other *gwapiv1.Hostname) bool {
+	thisString := string(*this)
+	otherString := string(*other)
+	if hasWildcardPrefix(other) && !hasWildcardPrefix(this) {
+		return strings.HasSuffix(thisString, otherString[1:]) &&
+			!strings.Contains(strings.TrimSuffix(thisString, otherString[1:]), ".") // not a subdomain
+	}
+	return thisString == otherString
+}
+
+func hasWildcardPrefix(h *gwapiv1.Hostname) bool {
+	if h == nil {
+		return false
+	}
+	return len(string(*h)) > 1 && string(*h)[0] == '*'
 }
 
 func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *ir.ResourceMetadata {
@@ -179,34 +620,58 @@ func buildListenerMetadata(listener *ListenerContext, gateway *GatewayContext) *
 		Kind:        gateway.GetObjectKind().GroupVersionKind().Kind,
 		Name:        gateway.GetName(),
 		Namespace:   gateway.GetNamespace(),
-		Annotations: filterEGPrefix(gateway.GetAnnotations()),
+		Annotations: ir.MapToSlice(filterEGPrefix(gateway.GetAnnotations())),
 		SectionName: string(listener.Name),
 	}
 }
 
-func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy, resources *resource.Resources) {
-	var err error
+func (t *Translator) processProxyReadyListener(xdsIR *ir.Xds, envoyProxy *egv1a1.EnvoyProxy) {
+	var (
+		ipFamily = egv1a1.IPv4
+		address  = netutils.IPv4ListenerAddress
+	)
 
-	xdsIR.AccessLog, err = t.processAccessLog(envoyProxy, resources)
+	if envoyProxy != nil && envoyProxy.Spec.IPFamily != nil {
+		ipFamily = *envoyProxy.Spec.IPFamily
+	}
+	if ipFamily == egv1a1.IPv6 || ipFamily == egv1a1.DualStack {
+		address = netutils.IPv6ListenerAddress
+	}
+
+	xdsIR.ReadyListener = &ir.ReadyListener{
+		Address:  address,
+		Port:     uint32(bootstrap.EnvoyReadinessPort),
+		Path:     bootstrap.EnvoyReadinessPath,
+		IPFamily: ipFamily,
+	}
+}
+
+func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.Xds, proxyInfra *ir.ProxyInfra, resources *resource.Resources) {
+	var err error
+	envoyProxy := proxyInfra.Config
+
+	xdsIR.AccessLog, err = t.processAccessLog(gwCtx, envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid access log backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
-	xdsIR.Tracing, err = t.processTracing(gwCtx.Gateway, envoyProxy, t.MergeGateways, resources)
+	xdsIR.Tracing, err = t.processTracing(gwCtx, envoyProxy, t.MergeGateways, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid tracing backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
 
-	xdsIR.Metrics, err = t.processMetrics(envoyProxy, resources)
+	var resolvedSinks []ir.ResolvedMetricSink
+	xdsIR.Metrics, resolvedSinks, err = t.processMetrics(gwCtx, envoyProxy, resources)
 	if err != nil {
 		status.UpdateGatewayStatusNotAccepted(gwCtx.Gateway, gwapiv1.GatewayReasonInvalidParameters,
 			fmt.Sprintf("Invalid metrics backendRefs in the referenced EnvoyProxy: %v", err))
 		return
 	}
+	proxyInfra.ResolvedMetricSinks = resolvedSinks
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {
@@ -239,21 +704,21 @@ func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR r
 	infraIR[irKey].Proxy.Listeners = append(infraIR[irKey].Proxy.Listeners, proxyListener)
 }
 
-func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.AccessLog, error) {
+func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.AccessLog, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
-		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
+		(!ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
-			Text: []*ir.TextAccessLog{
+			JSON: []*ir.JSONAccessLog{
 				{
 					Path: "/dev/stdout",
 				},
 			},
 		}, nil
 	}
-	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
+	if ptr.Deref(envoyproxy.Spec.Telemetry.AccessLog.Disable, false) {
 		return nil, nil
 	}
 
@@ -267,6 +732,8 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
 			case egv1a1.ProxyAccessLogTypeListener:
 				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+			case egv1a1.ProxyAccessLogTypeUpstream:
+				accessLogType = ptr.To(ir.ProxyAccessLogTypeUpstream)
 			}
 		}
 
@@ -274,9 +741,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		if accessLog.Format != nil {
 			format = *accessLog.Format
 		} else {
+			defaultType := egv1a1.ProxyAccessLogFormatTypeJSON
 			format = egv1a1.ProxyAccessLogFormat{
-				Type: egv1a1.ProxyAccessLogFormatTypeText,
-				// Empty text format means default format
+				Type: &defaultType,
+				// Empty means default format
 			}
 		}
 
@@ -296,13 +764,13 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 		}
 
 		if len(accessLog.Sinks) == 0 {
-			al := &ir.TextAccessLog{
-				Format:     format.Text,
+			al := &ir.JSONAccessLog{
+				JSON:       ir.MapToSlice(format.JSON),
 				CELMatches: validExprs,
 				LogType:    accessLogType,
 				Path:       "/dev/stdout",
 			}
-			irAccessLog.Text = append(irAccessLog.Text, al)
+			irAccessLog.JSON = append(irAccessLog.JSON, al)
 		}
 
 		for j, sink := range accessLog.Sinks {
@@ -312,8 +780,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al := &ir.TextAccessLog{
 						Format:     format.Text,
 						Path:       sink.File.Path,
@@ -321,14 +788,10 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 						LogType:    accessLogType,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					if len(format.JSON) == 0 {
-						// TODO: use a default JSON format if not specified?
-						continue
-					}
-
+				} else {
+					// Default to JSON format if type is nil or JSON
 					al := &ir.JSONAccessLog{
-						JSON:       format.JSON,
+						JSON:       ir.MapToSlice(format.JSON),
 						Path:       sink.File.Path,
 						CELMatches: validExprs,
 						LogType:    accessLogType,
@@ -347,18 +810,25 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					logName = fmt.Sprintf("%s/%s", envoyproxy.Namespace, envoyproxy.Name)
 				}
 
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 				if err != nil {
 					return nil, err
+				}
+				// ALS should always use GRPC protocol. Setting this adds http2 by default to the cluster.
+				for _, setting := range ds {
+					setting.Protocol = ir.GRPC
 				}
 
 				al := &ir.ALSAccessLog{
 					LogName: logName,
 					Destination: ir.RouteDestination{
-						// TODO: rename this, so that we can share backend with tracing?
-						Name:     fmt.Sprintf("accesslog_als_%d_%d", i, j),
+						Name:     destName,
 						Settings: ds,
+						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic:    traffic,
 					Type:       sink.ALS.Type,
@@ -374,11 +844,11 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					}
 					al.HTTP = http
 				}
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				if format.Type != nil && *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				} else {
+					// Default to JSON format if type is nil or JSON
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.ALS = append(irAccessLog.ALS, al)
@@ -387,19 +857,27 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					continue
 				}
 
-				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				// TODO: rename this, so that we can share backend with tracing?
+				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
+				settingName := irDestinationSettingName(destName, -1)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 				if err != nil {
 					return nil, err
 				}
-				// TODO: remove support for Host/Port in v1.2
+				// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
+				for _, d := range ds {
+					d.Protocol = ir.GRPC
+				}
+
 				al := &ir.OpenTelemetryAccessLog{
-					CELMatches: validExprs,
-					Resources:  sink.OpenTelemetry.Resources,
+					CELMatches:         validExprs,
+					ResourceAttributes: ir.MapToSlice(sink.OpenTelemetry.GetResourceAttributes()),
+					Headers:            sink.OpenTelemetry.Headers,
+					Authority:          getAuthorityFromDestination(ds),
 					Destination: ir.RouteDestination{
-						// TODO: rename this, so that we can share backend with tracing?
-						Name:     fmt.Sprintf("accesslog_otel_%d_%d", i, j),
+						Name:     destName,
 						Settings: ds,
+						Metadata: buildResourceMetadata(envoyproxy, nil),
 					},
 					Traffic: traffic,
 					LogType: accessLogType,
@@ -412,15 +890,17 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 					if sink.OpenTelemetry.Host != nil {
 						host, port = *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port)
 					}
-					al.Destination.Settings = destinationSettingFromHostAndPort(host, port)
+					al.Destination.Settings = destinationSettingFromHostAndPort(settingName, host, port)
 					al.Authority = host
 				}
 
-				switch format.Type {
-				case egv1a1.ProxyAccessLogFormatTypeJSON:
-					al.Attributes = format.JSON
-				case egv1a1.ProxyAccessLogFormatTypeText:
+				// For OpenTelemetry, text (body) and attributes can be used together.
+				// When format.Type is nil, both text and json from format can be used.
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeText {
 					al.Text = format.Text
+				}
+				if format.Type == nil || *format.Type == egv1a1.ProxyAccessLogFormatTypeJSON {
+					al.Attributes = ir.MapToSlice(format.JSON)
 				}
 
 				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
@@ -430,7 +910,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 	return irAccessLog, nil
 }
 
-func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy,
+func (t *Translator) processTracing(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy,
 	mergeGateways bool, resources *resource.Resources,
 ) (*ir.Tracing, error) {
 	if envoyproxy == nil ||
@@ -440,13 +920,21 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	}
 	tracing := envoyproxy.Spec.Telemetry.Tracing
 
-	// TODO: how to get authority from the backendRefs?
-	ds, traffic, err := t.processBackendRefs(tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	// TODO: rename this, so that we can share backend with accesslog?
+	destName := "tracing"
+	settingName := irDestinationSettingName(destName, -1)
+	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 	if err != nil {
 		return nil, err
 	}
+	if tracing.Provider.Type == egv1a1.TracingProviderTypeOpenTelemetry {
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
+	}
 
-	var authority string
+	authority := getAuthorityFromDestination(ds)
 
 	// fallback to host and port
 	// TODO: remove support for Host/Port in v1.2
@@ -456,27 +944,37 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 		if tracing.Provider.Host != nil {
 			host, port = *tracing.Provider.Host, uint32(tracing.Provider.Port)
 		}
-		ds = destinationSettingFromHostAndPort(host, port)
+		ds = destinationSettingFromHostAndPort(settingName, host, port)
 		authority = host
 	}
 
+	gw := gwCtx.Gateway
 	serviceName := naming.ServiceName(utils.NamespacedName(gw))
 	if mergeGateways {
 		serviceName = string(gw.Spec.GatewayClassName)
 	}
 
+	// Use configured service name if provided
+	if tracing.Provider.ServiceName != nil {
+		serviceName = *tracing.Provider.ServiceName
+	}
+
 	return &ir.Tracing{
-		Authority:    authority,
-		ServiceName:  serviceName,
-		SamplingRate: proxySamplingRate(tracing),
-		CustomTags:   tracing.CustomTags,
+		Authority:          authority,
+		ServiceName:        serviceName,
+		SamplingRate:       proxySamplingRate(tracing),
+		CustomTags:         ir.CustomTagMapToSlice(tracing.CustomTags),
+		Tags:               ir.MapToSlice(tracing.Tags),
+		ResourceAttributes: ir.MapToSlice(getOpenTelemetryTracingResourceAttributes(&tracing.Provider)),
 		Destination: ir.RouteDestination{
-			// TODO: rename this, so that we can share backend with accesslog?
-			Name:     "tracing",
+			Name:     destName,
 			Settings: ds,
+			Metadata: buildResourceMetadata(envoyproxy, nil),
 		},
 		Provider: tracing.Provider,
 		Traffic:  traffic,
+		Headers:  getOpenTelemetryTracingHeaders(&tracing.Provider),
+		SpanName: tracing.SpanName,
 	}, nil
 }
 
@@ -486,12 +984,9 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 		rate = float64(*tracing.SamplingRate)
 	} else if tracing.SamplingFraction != nil {
 		numerator := float64(tracing.SamplingFraction.Numerator)
-		denominator := float64(100)
-		if tracing.SamplingFraction.Denominator != nil {
-			denominator = float64(*tracing.SamplingFraction.Denominator)
-		}
+		denominator := ptr.Deref(tracing.SamplingFraction.Denominator, 100)
 
-		rate = numerator / denominator
+		rate = numerator * 100 / float64(denominator)
 		// Identifies a percentage, in the range [0.0, 100.0]
 		rate = math.Max(0, rate)
 		rate = math.Min(100, rate)
@@ -499,21 +994,111 @@ func proxySamplingRate(tracing *egv1a1.ProxyTracing) float64 {
 	return rate
 }
 
-func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, error) {
+// getAuthorityFromDestination extracts the gRPC authority from a destination setting.
+// Priority: SNI > hostname > Service/Backend metadata.
+func getAuthorityFromDestination(ds []*ir.DestinationSetting) string {
+	if len(ds) == 0 {
+		return ""
+	}
+	dest := ds[0]
+
+	// Priority 1: SNI from TLS config
+	if dest.TLS != nil && dest.TLS.SNI != nil {
+		return *dest.TLS.SNI
+	}
+
+	// Priority 2: Endpoint host if it's a hostname (not IP)
+	if len(dest.Endpoints) > 0 {
+		host := dest.Endpoints[0].Host
+		if _, err := netip.ParseAddr(host); err != nil {
+			// Not an IP - use as authority
+			return host
+		}
+
+		// Priority 3: Derive from metadata when endpoint is an IP
+		if dest.Metadata != nil && dest.Metadata.Name != "" {
+			if dest.Metadata.Namespace != "" {
+				if dest.Metadata.Kind == resource.KindService {
+					return fmt.Sprintf("%s.%s.svc", dest.Metadata.Name, dest.Metadata.Namespace)
+				}
+				return fmt.Sprintf("%s.%s", dest.Metadata.Name, dest.Metadata.Namespace)
+			}
+			return dest.Metadata.Name
+		}
+	}
+	// Don't set authority to an IP - let Envoy use defaults
+	return ""
+}
+
+func getOpenTelemetryTracingHeaders(provider *egv1a1.TracingProvider) []gwapiv1.HTTPHeader {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.Headers
+	}
+	return nil
+}
+
+func getOpenTelemetryTracingResourceAttributes(provider *egv1a1.TracingProvider) map[string]string {
+	if provider != nil && provider.OpenTelemetry != nil {
+		return provider.OpenTelemetry.ResourceAttributes
+	}
+	return nil
+}
+
+func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.EnvoyProxy, resources *resource.Resources) (*ir.Metrics, []ir.ResolvedMetricSink, error) {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.Metrics == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	for _, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
+	var resolvedSinks []ir.ResolvedMetricSink
+	seen := sets.NewString()
+
+	for i, sink := range envoyproxy.Spec.Telemetry.Metrics.Sinks {
 		if sink.OpenTelemetry == nil {
 			continue
 		}
 
-		_, _, err := t.processBackendRefs(sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		destName := fmt.Sprintf("metrics_otel_%d", i)
+		settingName := irDestinationSettingName(destName, -1)
+		ds, _, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy, gwCtx)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
+		}
+		// TODO: update when OTLP/HTTP is completely supported (logs, traces, metrics)
+		for _, d := range ds {
+			d.Protocol = ir.GRPC
+		}
+
+		authority := getAuthorityFromDestination(ds)
+
+		// Fallback to deprecated host/port
+		if len(ds) == 0 && sink.OpenTelemetry.Host != nil {
+			ds = destinationSettingFromHostAndPort(settingName, *sink.OpenTelemetry.Host, uint32(sink.OpenTelemetry.Port))
+			authority = *sink.OpenTelemetry.Host
+		}
+
+		if len(ds) > 0 && len(ds[0].Endpoints) > 0 {
+			// Skip duplicate sinks (same address:port)
+			ep := ds[0].Endpoints[0]
+			addr := net.JoinHostPort(ep.Host, strconv.Itoa(int(ep.Port)))
+			if seen.Has(addr) {
+				continue
+			}
+			seen.Insert(addr)
+
+			resolvedSinks = append(resolvedSinks, ir.ResolvedMetricSink{
+				Destination: ir.RouteDestination{
+					Name:     destName,
+					Settings: ds,
+					Metadata: buildResourceMetadata(envoyproxy, nil),
+				},
+				Authority:                authority,
+				Headers:                  sink.OpenTelemetry.Headers,
+				ResourceAttributes:       sink.OpenTelemetry.ResourceAttributes,
+				ReportCountersAsDeltas:   ptr.Deref(sink.OpenTelemetry.ReportCountersAsDeltas, false),
+				ReportHistogramsAsDeltas: ptr.Deref(sink.OpenTelemetry.ReportHistogramsAsDeltas, false),
+			})
 		}
 	}
 
@@ -521,28 +1106,68 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 		EnableVirtualHostStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats, false),
 		EnablePerEndpointStats:          ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnablePerEndpointStats, false),
 		EnableRequestResponseSizesStats: ptr.Deref(envoyproxy.Spec.Telemetry.Metrics.EnableRequestResponseSizesStats, false),
-	}, nil
+	}, resolvedSinks, nil
 }
 
-func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, namespace string,
-	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
+func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
+	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	parent := gwapiv1.ParentReference{
+		Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
+		Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
+		Namespace: ptr.To(gwapiv1.Namespace(envoyProxy.Namespace)),
+		Name:      gwapiv1.ObjectName(envoyProxy.Name),
+	}
+
 	result := make([]*ir.DestinationSetting, 0, len(backendCluster.BackendRefs))
-	for _, ref := range backendCluster.BackendRefs {
+	for i := range backendCluster.BackendRefs {
+		ref := &backendCluster.BackendRefs[i]
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
 		kind := KindDerefOr(ref.Kind, resource.KindService)
-		if kind != resource.KindService {
-			return nil, nil, errors.New("only service kind is supported for backendRefs")
-		}
-		if err := validateBackendService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
-			return nil, nil, err
+
+		var ds *ir.DestinationSetting
+		switch kind {
+		case resource.KindService:
+			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
+				return nil, nil, err
+			}
+			ds, err = t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			if err != nil {
+				return nil, nil, err
+			}
+		case resource.KindBackend:
+			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
+				return nil, nil, err
+			}
+			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			// Dynamic resolver destinations are not supported for none-route destinations
+			if ds.IsDynamicResolver {
+				return nil, nil, errors.New("dynamic resolver destinations are not supported")
+			}
+		default:
+			return nil, nil, fmt.Errorf("unsupported kind for backendRefs: %s", kind)
 		}
 
-		ds := t.processServiceDestinationSetting(ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, gwCtx)
+		if err != nil {
+			return nil, nil, err
+		}
+		ds.TLS = backendTLS
+
+		// Infer SNI from FQDN for telemetry backends (no Host header available).
+		if ds.TLS != nil && ds.TLS.SNI == nil && kind == resource.KindBackend {
+			backend := t.GetBackend(ns, string(ref.Name))
+			if len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
+				ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+			}
+		}
+
 		result = append(result, ds)
 	}
 	if len(result) == 0 {
@@ -551,12 +1176,20 @@ func (t *Translator) processBackendRefs(backendCluster egv1a1.BackendCluster, na
 	return result, traffic, nil
 }
 
-func destinationSettingFromHostAndPort(host string, port uint32) []*ir.DestinationSetting {
+func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.DestinationSetting {
+	// check if host is an IP address or a hostname
+	addressType := ir.FQDN
+	if net.ParseIP(host) != nil {
+		addressType = ir.IP
+	}
+
 	return []*ir.DestinationSetting{
 		{
-			Weight:    ptr.To[uint32](1),
-			Protocol:  ir.GRPC,
-			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, port, false)},
+			Name:        name,
+			Weight:      ptr.To[uint32](1),
+			Protocol:    ir.GRPC,
+			AddressType: ptr.To(addressType),
+			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		},
 	}
 }
@@ -571,7 +1204,9 @@ func validCELExpression(expr string) bool {
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func (t *Translator) servicePortToContainerPort(servicePort int32, envoyProxy *egv1a1.EnvoyProxy) int32 {
-	if t.ListenerPortShiftDisabled {
+	// When running on the local host using the Host infrastructure provider, disable translating the
+	// gateway listener port into a non-privileged port and reuse the specified value.
+	if t.RunningOnHost {
 		return servicePort
 	}
 

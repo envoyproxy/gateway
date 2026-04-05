@@ -14,29 +14,32 @@
 package status
 
 import (
-	"time"
+	"reflect"
 	"unicode"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const (
+	conditionMessageMaxLength        = 32768
+	conditionMessageTruncationSuffix = " (message truncated)."
 )
 
 // MergeConditions adds or updates matching conditions, and updates the transition
 // time if details of a condition have changed. Returns the updated condition array.
 func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition) []metav1.Condition {
 	var additions []metav1.Condition
-	for i, update := range updates {
+	for i := range updates {
+		updates[i].Message = truncateConditionMessage(updates[i].Message)
 		add := true
-		for j, cond := range conditions {
-			if cond.Type == update.Type {
+		for j := range conditions {
+			if conditions[j].Type == updates[i].Type {
 				add = false
-				if conditionChanged(cond, update) {
-					conditions[j].Status = update.Status
-					conditions[j].Reason = update.Reason
-					conditions[j].Message = update.Message
-					conditions[j].ObservedGeneration = update.ObservedGeneration
-					conditions[j].LastTransitionTime = update.LastTransitionTime
+				if !reflect.DeepEqual(conditions[j], updates[i]) {
+					conditions[j].Status = updates[i].Status
+					conditions[j].Reason = updates[i].Reason
+					conditions[j].Message = updates[i].Message
+					conditions[j].ObservedGeneration = updates[i].ObservedGeneration
 					break
 				}
 			}
@@ -49,20 +52,14 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 	return conditions
 }
 
-func newCondition(t string, status metav1.ConditionStatus, reason, msg string, lt time.Time, og int64) metav1.Condition {
+func newCondition(t string, status metav1.ConditionStatus, reason, msg string, og int64) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,
 		Status:             status,
 		Reason:             reason,
-		Message:            msg,
-		LastTransitionTime: metav1.NewTime(lt),
+		Message:            truncateConditionMessage(msg),
 		ObservedGeneration: og,
 	}
-}
-
-func conditionChanged(a, b metav1.Condition) bool {
-	opts := cmpopts.IgnoreFields(metav1.Condition{}, "Type", "LastTransitionTime")
-	return !cmp.Equal(a, b, opts)
 }
 
 // Error2ConditionMsg format the error string to a Status condition message.
@@ -94,4 +91,12 @@ func Error2ConditionMsg(err error) string {
 
 	// Convert the rune slice back to a string
 	return string(runes)
+}
+
+func truncateConditionMessage(msg string) string {
+	if len(msg) <= conditionMessageMaxLength {
+		return msg
+	}
+	suffixLen := len(conditionMessageTruncationSuffix)
+	return msg[:conditionMessageMaxLength-suffixLen] + conditionMessageTruncationSuffix
 }

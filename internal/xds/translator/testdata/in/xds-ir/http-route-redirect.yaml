@@ -1,4 +1,3 @@
-name: "http-route"
 http:
 - name: "first-listener"
   address: "::"
@@ -17,6 +16,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "redirect-route-dest/backend/0"
     redirect:
       scheme: https
       statusCode: 302
@@ -34,6 +34,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "redirect-route-dest/backend/0"
     redirect:
       path:
         prefixMatchReplace: /
@@ -47,6 +48,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "redirect-route-dest/backend/0"
     redirect:
       path:
         prefixMatchReplace: /
@@ -58,6 +60,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "redirect-route-dest/backend/0"
     redirect:
       scheme: https
       statusCode: 302
@@ -72,6 +75,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "redirect-route-dest/backend/0"
     redirect:
       scheme: https
       statusCode: 302

@@ -32,7 +32,7 @@ metadata:
   name: enable-tcp-keepalive-policy
   namespace: default
 spec:
-  targetRef:
+  targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg
@@ -140,7 +140,7 @@ You should see the output like this:
 * Connection #0 to host 172.18.255.202 left intact
 }* Found bundle for host: 0x7fb9f5204ea0 [serially]
 * Can not multiplex, even if we wanted to
-* Re-using existing connection #0 with host 172.18.255.202
+* Reusing existing connection #0 with host 172.18.255.202
 > GET /headers HTTP/1.1
 > Host: www.example.com
 > User-Agent: curl/8.1.2
@@ -194,7 +194,7 @@ You can see keepalive connection marked by the output in:
 
 ```shell
 * Connection #0 to host 172.18.255.202 left intact
-* Re-using existing connection #0 with host 172.18.255.202
+* Reusing existing connection #0 with host 172.18.255.202
 ```
 
 ### Enable Proxy Protocol for downstream client
@@ -349,7 +349,7 @@ metadata:
   name: http-client-ip-detection
   namespace: default
 spec:
-  targetRef:
+  targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: eg

@@ -84,6 +84,7 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 ```
 
 ## GRPCRoute Match
+
 The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names.
 It supports two match types: `Exact` and `RegularExpression`.
 
@@ -99,7 +100,7 @@ as well as a match for all services with a method name `Ping` which matches `yag
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -132,7 +133,7 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -184,7 +185,7 @@ with match type `RegularExpression`. It matches all the services and methods wit
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -219,7 +220,7 @@ Save and apply the following resource to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
   name: yages
@@ -262,6 +263,27 @@ Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
 
+## Configuring or disabling timeouts with `BackendTrafficPolicy`
+
+Streaming GRPC connections will often have lifespans longer than the default Envoy proxy timeout of 15 seconds. With Envoy Gateway, this timeout value can be configured using a [BackendTrafficPolicy][] resource:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: configure-timeout-policy
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: name-of-my-grpc-route
+  timeout:
+    http:
+      # Set to '0s' to disable timeouts
+      requestTimeout: 0s
+```
+
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/

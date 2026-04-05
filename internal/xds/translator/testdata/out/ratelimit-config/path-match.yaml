@@ -1,0 +1,40 @@
+name: first-listener
+domain: first-listener
+descriptors:
+  - key: first-route
+    value: first-route
+    rate_limit: null
+    descriptors:
+      - key: rule-0-path
+        value: rule-0-path
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        quota_mode: false
+        detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
+      - key: rule-1-path
+        value: rule-1-path
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        quota_mode: false
+        detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
+    shadow_mode: false
+    quota_mode: false
+    detailed_metric: false
+    value_to_metric: false
+    share_threshold: false

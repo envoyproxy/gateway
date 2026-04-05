@@ -1,9 +1,9 @@
 ##@ Protobufs
 
 .PHONY: protos
-protos: $(tools/protoc-gen-go) $(tools/protoc-gen-go-grpc) $(tools/buf) ## Compile all protobufs
-	$(tools/buf) generate
+protos:
+	$(GO_TOOL) buf generate
 
-.PHONY: buf-mod-update
-buf-mod-update: $(tools/buf) ## Update buf.lock for protobuf dependency updates
-	$(tools/buf) mod update
+.PHONY: buf-dep-update
+buf-dep-update: ## Update buf.lock for protobuf dependency updates
+	$(GO_TOOL) buf dep update

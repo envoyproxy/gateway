@@ -26,7 +26,7 @@ where `command`, `name`, and `flags` are:
 
 * `entity`: Specifies the entity the operation is being performed on such as `envoy-proxy` or `envoy-gateway`.
 
-* `name`: Specifies the name of the specified instance. 
+* `name`: Specifies the name of the specified instance.
 
 * `flags`: Specifies optional flags. For example, you can use the `-c` or `--config` flags to specify the values for installing.
 

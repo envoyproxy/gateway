@@ -1,0 +1,32 @@
+- ignorePortInHostMatching: true
+  name: custom-backend-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: custom-backend-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: custom-backend-route
+      responseHeadersToAdd:
+      - header:
+          key: mock-extension-was-here-route-name
+          value: custom-backend-route
+      - header:
+          key: mock-extension-was-here-route-hostnames
+          value: '*'
+      - header:
+          key: mock-extension-was-here-extensionRef-name
+          value: inference-pool
+      - header:
+          key: mock-extension-was-here-extensionRef-namespace
+      - header:
+          key: mock-extension-was-here-extensionRef-kind
+          value: InferencePool
+      - header:
+          key: mock-extension-was-here-extensionRef-apiversion
+          value: inference.networking.x-k8s.io/v1alpha2
+      route:
+        cluster: custom-backend-dest
+        upgradeConfigs:
+        - upgradeType: websocket

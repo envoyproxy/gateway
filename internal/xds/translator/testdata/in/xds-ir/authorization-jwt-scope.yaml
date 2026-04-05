@@ -2,7 +2,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -23,6 +22,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     metadata:
@@ -54,6 +54,7 @@ http:
           name: example1
           remoteJWKS:
             uri: https://two.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
   - destination:
       name: httproute/default/httproute-2/rule/0
       settings:
@@ -63,6 +64,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     metadata:
@@ -93,3 +95,5 @@ http:
           name: example1
           remoteJWKS:
             uri: https://one.example.com/jwt/public-key/jwks.json
+            cacheDuration: 300s
+

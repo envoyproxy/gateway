@@ -53,6 +53,17 @@ spec:
             - type: File
               file:
                 path: /dev/stdout
+        - type: Upstream
+          format:
+            type: Text
+            text: |
+              UPSTREAM [%START_TIME%] %METADATA(ROUTE:envoy-gateway:resources)% "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+          matches:
+            - "'x-envoy-upstream-logged' in request.headers"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
@@ -137,4 +148,3 @@ spec:
     name: proxy-config
     namespace: envoy-gateway-system
 ---
-

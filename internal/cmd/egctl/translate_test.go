@@ -22,12 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
-
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
@@ -215,14 +213,6 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "rejected-http-route",
-			from:         "gateway-api",
-			to:           "gateway-api",
-			output:       yamlOutput,
-			resourceType: string(RouteEnvoyConfigType),
-			expect:       true,
-		},
-		{
 			name:         "echo-gateway-api",
 			from:         "gateway-api",
 			to:           "gateway-api",
@@ -294,6 +284,12 @@ func TestTranslate(t *testing.T) {
 			to:     "gateway-api",
 			expect: true,
 		},
+		{
+			name:   "default-namespace",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			expect: true,
+		},
 	}
 
 	flag.Parse()
@@ -314,9 +310,10 @@ func TestTranslate(t *testing.T) {
 				"testdata/translate/in/" + tc.name + ".yaml",
 			}
 
-			if tc.output == yamlOutput {
+			switch tc.output {
+			case yamlOutput:
 				args = append(args, "--output", yamlOutput)
-			} else if tc.output == jsonOutput {
+			case jsonOutput:
 				args = append(args, "--output", jsonOutput)
 			}
 
@@ -356,8 +353,8 @@ func TestTranslate(t *testing.T) {
 				out, err = yaml.Marshal(got)
 				require.NoError(t, err)
 			}
-			if *overrideTestData {
-				require.NoError(t, file.Write(string(out), filepath.Join("testdata", "translate", "out", fn)))
+			if test.OverrideTestData() {
+				require.NoError(t, file.Write(test.NormalizeCertPath(string(out)), filepath.Join("testdata", "translate", "out", fn)))
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
@@ -371,7 +368,6 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 			}
 
 			require.Empty(t, cmp.Diff(want, got, opts...))
@@ -384,7 +380,7 @@ func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	elems := append([]string{"testdata", "translate", "out"}, name...)
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
-	return content
+	return []byte(test.DenormalizeCertPath(string(content)))
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {

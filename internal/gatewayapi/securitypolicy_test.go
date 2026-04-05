@@ -6,13 +6,26 @@
 package gatewayapi
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_wildcard2regex(t *testing.T) {
@@ -166,7 +179,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -179,7 +192,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -192,7 +205,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "foo.bar.local",
 					Audiences: []string{"foo.bar.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -205,7 +218,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -225,7 +238,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "unqualified_...",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -239,7 +252,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -254,7 +267,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -262,7 +275,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "non-unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -270,7 +283,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "non-unique",
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -285,7 +298,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "http://invalid url.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "http://www.test.local",
 					},
 				},
@@ -299,7 +312,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@!123...",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -313,7 +326,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "http://www.test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "invalid/local",
 					},
 				},
@@ -326,7 +339,7 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:      "test",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "",
 					},
 				},
@@ -340,7 +353,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -360,7 +373,7 @@ func Test_JWTProvider(t *testing.T) {
 					Name:      "test",
 					Issuer:    "test@test.local",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					ClaimToHeaders: []egv1a1.ClaimToHeader{
@@ -379,7 +392,7 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:      "test",
 					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
@@ -392,12 +405,55 @@ func Test_JWTProvider(t *testing.T) {
 				{
 					Name:   "test",
 					Issuer: "https://www.test.local",
-					RemoteJWKS: egv1a1.RemoteJWKS{
+					RemoteJWKS: &egv1a1.RemoteJWKS{
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 				},
 			},
 			wantError: false,
+		},
+		{
+			name: "with both remoteJWKS and localJWKS",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: &egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+					LocalJWKS: &egv1a1.LocalJWKS{
+						Inline: ptr.To("{}"),
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "without remoteJWKS or localJWKS",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "localJWKS type without correct value",
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+					LocalJWKS: &egv1a1.LocalJWKS{
+						Type:   ptr.To(egv1a1.LocalJWKSTypeValueRef),
+						Inline: ptr.To("{}"),
+					},
+				},
+			},
+			wantError: true,
 		},
 	}
 
@@ -486,6 +542,1312 @@ func Test_APIKeyAuth(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Errorf("validateAPIKeyAuth() error = %v, wantErr %v", err, tt.wantError)
 				return
+			}
+		})
+	}
+}
+
+func Test_OIDC_PassThroughAuthHeader(t *testing.T) {
+	tests := []struct {
+		name      string
+		OIDC      egv1a1.OIDC
+		JWT       *egv1a1.JWT
+		wantError bool
+	}{
+		{
+			name: "oidc and jwt with PassThroughAuthHeader configured",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "jwt configured to read a non-standard header is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "SomeHeader", ValuePrefix: ToPointer("Bearer ")}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "jwt configured to read a non-standard header without valuePrefix is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "SomeHeader", ValuePrefix: nil}},
+						},
+					},
+				},
+			},
+			wantError: false,
+		},
+		{
+			name: "oidc with PassThroughAuthHeader configured requires jwt configured too",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT:       nil,
+			wantError: true,
+		},
+		{
+			name: "jwt configured to read cookie only is not ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Cookies: []string{"SomeCookie"},
+						},
+					},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "jwt configured with multiple providers is ok",
+			OIDC: egv1a1.OIDC{
+				PassThroughAuthHeader: ToPointer(true),
+			},
+			JWT: &(egv1a1.JWT{
+				Providers: []egv1a1.JWTProvider{
+					{
+						Name: "test",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Headers: []egv1a1.JWTHeaderExtractor{{Name: "Blah"}},
+						},
+					},
+					{
+						Name: "test2",
+						ExtractFrom: &egv1a1.JWTExtractor{
+							Cookies: []string{"SomeCookie"},
+						},
+					},
+				},
+			}),
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			securityPolicy := egv1a1.SecurityPolicy{
+				Spec: egv1a1.SecurityPolicySpec{
+					OIDC: &tt.OIDC,
+					JWT:  tt.JWT,
+				},
+			}
+			err := validateSecurityPolicy(&securityPolicy)
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateSecurityPolicy() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}
+
+func ToPointer[T any](v T) *T {
+	return &v
+}
+
+func Test_validateHtpasswdFormat(t *testing.T) {
+	tests := []struct {
+		name      string
+		htpasswd  string
+		wantError bool
+	}{
+		{
+			name:      "valid htpasswd with SHA format",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
+			wantError: false,
+		},
+		{
+			name:      "valid htpasswd with SHA format and empty lines",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\n\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\n",
+			wantError: false,
+		},
+		{
+			name:      "invalid htpasswd with missing SHA prefix",
+			htpasswd:  "user1:hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with MD5 format",
+			htpasswd:  "user1:$apr1$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with bcrypt format",
+			htpasswd:  "user1:$2y$hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with missing colon",
+			htpasswd:  "user1{SHA}hashed_user1_password",
+			wantError: true,
+		},
+		{
+			name:      "invalid htpasswd with hex sha1",
+			htpasswd:  "user1:{SHA}5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+			wantError: true,
+		},
+		{
+			name:      "mixed valid and invalid formats",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:$apr1$hashed_user2_password",
+			wantError: true,
+		},
+		{
+			name:      "valid htpasswd with CRLF line endings",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\r\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\r\n",
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHtpasswdFormat([]byte(tt.htpasswd))
+			if (err != nil) != tt.wantError {
+				t.Errorf("validateHtpasswdFormat() error = %v, wantErr %v", err, tt.wantError)
+				return
+			}
+		})
+	}
+}
+
+func Test_parseExtAuthTimeout(t *testing.T) {
+	tests := []struct {
+		name      string
+		timeout   *gwapiv1.Duration
+		wantValid bool
+		wantValue string
+	}{
+		{
+			name:      "valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("10s")),
+			wantValid: true,
+			wantValue: "10s",
+		},
+		{
+			name:      "invalid timeout format",
+			timeout:   ptr.To(gwapiv1.Duration("invalid-duration")),
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "nil timeout",
+			timeout:   nil,
+			wantValid: false,
+			wantValue: "",
+		},
+		{
+			name:      "complex valid timeout",
+			timeout:   ptr.To(gwapiv1.Duration("1h30m45s")),
+			wantValid: true,
+			wantValue: "1h30m45s",
+		},
+		{
+			name:      "millisecond timeout",
+			timeout:   ptr.To(gwapiv1.Duration("500ms")),
+			wantValid: true,
+			wantValue: "500ms",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseExtAuthTimeout(tt.timeout)
+
+			// Verify the timeout parsing behavior
+			if tt.wantValid {
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.wantValue, result.Duration.String())
+			} else {
+				assert.Nil(t, result)
+			}
+		})
+	}
+}
+
+func TestValidateCIDRs_ErrorOnBadCIDR(t *testing.T) {
+	if err := validateCIDRs([]egv1a1.CIDR{"10.0.0.0/33"}); err == nil {
+		t.Fatal("expected invalid ClientCIDR error")
+	}
+}
+
+func TestTranslatorFetchEndpointsFromIssuerCache(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"token_endpoint":%q,"authorization_endpoint":%q}`, server.URL+"/token", server.URL+"/authorize")
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cache")
+
+	cfgAgain, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.NoError(t, err)
+	require.NotNil(t, cfgAgain)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cache")
+}
+
+func TestTranslatorFetchEndpointsFromIssuerCacheError(t *testing.T) {
+	var (
+		callCount atomic.Int32
+		server    *httptest.Server
+	)
+
+	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/.well-known/openid-configuration" {
+			http.NotFound(w, r)
+			return
+		}
+
+		callCount.Add(1)
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	tr.oidcDiscoveryCache = newOIDCDiscoveryCache()
+
+	cfg, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfg)
+	require.Equal(t, int32(1), callCount.Load())
+
+	cfgCached, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgCached)
+	require.Equal(t, int32(1), callCount.Load(), "second fetch should use cached error")
+
+	cfgAfter, err := tr.fetchEndpointsFromIssuer(server.URL, nil)
+	require.Error(t, err)
+	require.Nil(t, cfgAfter)
+	require.Equal(t, int32(1), callCount.Load(), "subsequent fetch should continue using cached error")
+}
+
+// / tiny helper to build a minimal SecurityPolicy
+func sp(ns, name string) *egv1a1.SecurityPolicy {
+	return &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+	}
+}
+
+// looks for any False condition on PolicyStatus parents (how EG surfaces translation errors)
+func hasParentFalseCondition(p *egv1a1.SecurityPolicy) bool {
+	for _, pr := range p.Status.Ancestors {
+		for _, c := range pr.Conditions {
+			if c.Status == metav1.ConditionFalse {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func SetRouteParentContext(route RouteContext, parentRef gwapiv1.ParentReference) {
+	ctx := &RouteParentContext{ParentReference: &parentRef}
+	switch r := route.(type) {
+	case *HTTPRouteContext:
+		ctx.HTTPRoute = r.HTTPRoute
+	case *GRPCRouteContext:
+		ctx.GRPCRoute = r.GRPCRoute
+	case *TLSRouteContext:
+		ctx.TLSRoute = r.TLSRoute
+	case *TCPRouteContext:
+		ctx.TCPRoute = r.TCPRoute
+	case *UDPRouteContext:
+		ctx.UDPRoute = r.UDPRoute
+	}
+	route.SetRouteParentContext(parentRef, ctx)
+}
+
+// --- TCP branch: validateSecurityPolicyForTCP(...) returns err -> SetTranslationErrorForPolicyAncestors(...) + return
+func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
+
+	// Create an invalid TCP policy (has CORS which is not allowed for TCP)
+	policy := sp("default", "bad-tcp")
+	policy.Spec.CORS = &egv1a1.CORS{}
+
+	// Create a mock TCP route
+	tcpRoute := &TCPRouteContext{
+		TCPRoute: &gwapiv1a2.TCPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "tcp-route",
+			},
+			Spec: gwapiv1a2.TCPRouteSpec{
+				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+					ParentRefs: []gwapiv1a2.ParentReference{
+						{
+							Name: "test-gateway",
+						},
+					},
+				},
+				Rules: []gwapiv1a2.TCPRouteRule{
+					{
+						BackendRefs: []gwapiv1a2.BackendRef{
+							{
+								BackendObjectReference: gwapiv1a2.BackendObjectReference{
+									Name: "test-service",
+									Port: ptr.To(gwapiv1a2.PortNumber(80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	SetRouteParentContext(tcpRoute, tcpRoute.Spec.ParentRefs[0])
+
+	// Create the target reference
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
+			Kind:  resource.KindTCPRoute,
+			Name:  "tcp-route",
+		},
+	}
+
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindTCPRoute),
+		Name:      "tcp-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: tcpRoute}
+
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	resources := resource.NewResources()
+	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
+
+	// Process the policy - this should set error status
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+
+	// Assert that the policy has a False condition (error was set)
+	require.True(t, hasParentFalseCondition(policy))
+}
+
+// --- non-TCP branch: malformed CIDR should return err -> SetTranslationErrorForPolicyAncestors(...) + return
+func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
+	tr := &Translator{GatewayControllerName: "gateway.envoyproxy.io/gatewayclass-controller"}
+	trContext := &TranslatorContext{}
+
+	// Create an invalid HTTP policy (malformed CIDR)
+	policy := sp("default", "bad-http")
+	policy.Spec.Authorization = &egv1a1.Authorization{
+		Rules: []egv1a1.AuthorizationRule{
+			{Principal: egv1a1.Principal{ClientCIDRs: []egv1a1.CIDR{"not-a-cidr"}}},
+		},
+	}
+
+	// Create a mock HTTP route
+	httpRoute := &HTTPRouteContext{
+		HTTPRoute: &gwapiv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "http-route",
+			},
+			Spec: gwapiv1.HTTPRouteSpec{
+				CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+					ParentRefs: []gwapiv1.ParentReference{
+						{
+							Name: "test-gateway",
+						},
+					},
+				},
+				Rules: []gwapiv1.HTTPRouteRule{
+					{
+						BackendRefs: []gwapiv1.HTTPBackendRef{
+							{
+								BackendRef: gwapiv1.BackendRef{
+									BackendObjectReference: gwapiv1.BackendObjectReference{
+										Name: "test-service",
+										Port: ptr.To(gwapiv1.PortNumber(80)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	SetRouteParentContext(httpRoute, httpRoute.Spec.ParentRefs[0])
+
+	// Create the target reference
+	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
+			Kind:  resource.KindHTTPRoute,
+			Name:  "http-route",
+		},
+	}
+
+	// Create route map
+	routeMap := make(map[policyTargetRouteKey]*policyRouteTargetContext)
+	key := policyTargetRouteKey{
+		Kind:      string(resource.KindHTTPRoute),
+		Name:      "http-route",
+		Namespace: "default",
+	}
+	routeMap[key] = &policyRouteTargetContext{RouteContext: httpRoute}
+
+	gatewayRouteMap := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	resources := resource.NewResources()
+	xdsIR := make(resource.XdsIRMap)
+	trContext.SetServices(resources.Services)
+	tr.TranslatorContext = trContext
+
+	// Process the policy - this should set error status
+	gatewayPolicyMap := make(map[NamespacedNameWithSection]*egv1a1.SecurityPolicy)
+	gatewayPolicyMerged := &GatewayPolicyRouteMap{
+		Routes:       make(map[NamespacedNameWithSection]sets.Set[string]),
+		SectionIndex: make(map[types.NamespacedName]sets.Set[string]),
+	}
+	tr.processSecurityPolicyForRoute(resources, xdsIR, routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, target)
+
+	// Assert that the policy has a False condition (error was set)
+	require.True(t, hasParentFalseCondition(policy))
+}
+
+func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
+	tests := []struct {
+		name    string
+		spec    egv1a1.SecurityPolicySpec
+		wantErr bool
+	}{
+		{
+			name:    "no authorization (nil)",
+			spec:    egv1a1.SecurityPolicySpec{},
+			wantErr: false,
+		},
+		{
+			name: "authorization present but no rules",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "deny rule ok without cidrs",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{Action: egv1a1.AuthorizationActionDeny},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with valid cidr ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "allow with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "deny with invalid cidr errors",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/99"},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "jwt principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								JWT:         &egv1a1.JWTPrincipal{},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "headers principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+								Headers:     []egv1a1.AuthorizationHeaderMatch{{}},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "client ip geo locations principal not supported on tcp",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
+									{Country: ptr.To("US")},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed allow and deny ok",
+			spec: egv1a1.SecurityPolicySpec{
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{
+						{
+							Action: egv1a1.AuthorizationActionAllow,
+							Principal: egv1a1.Principal{
+								ClientCIDRs: []egv1a1.CIDR{"192.168.0.0/16"},
+							},
+						},
+						{
+							Action:    egv1a1.AuthorizationActionDeny,
+							Principal: egv1a1.Principal{},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &egv1a1.SecurityPolicy{Spec: tc.spec}
+			err := validateSecurityPolicyForTCP(p)
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
+	newAuthorization := func(location egv1a1.ClientIPGeoLocation) *ir.Authorization {
+		return &ir.Authorization{
+			Rules: []*ir.AuthorizationRule{
+				{
+					Principal: ir.Principal{
+						ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{location},
+					},
+				},
+			},
+		}
+	}
+
+	newEnvoyProxy := func(maxMind *egv1a1.GeoIPMaxMind) *egv1a1.EnvoyProxy {
+		if maxMind == nil {
+			return &egv1a1.EnvoyProxy{}
+		}
+
+		return &egv1a1.EnvoyProxy{
+			Spec: egv1a1.EnvoyProxySpec{
+				GeoIP: &egv1a1.EnvoyProxyGeoIP{
+					Provider: egv1a1.GeoIPProvider{
+						Type:    egv1a1.GeoIPProviderTypeMaxMind,
+						MaxMind: maxMind,
+					},
+				},
+			},
+		}
+	}
+
+	cityDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/city.mmdb"}}
+	countryDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/country.mmdb"}}
+	asnDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/asn.mmdb"}}
+	ispDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/isp.mmdb"}}
+	anonymousDB := &egv1a1.GeoIPDBSource{Local: egv1a1.LocalGeoIPDBSource{Path: "/db/anonymous.mmdb"}}
+	trueValue := true
+	customHeaderDetection := &ir.ClientIPDetectionSettings{
+		CustomHeader: &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+	}
+
+	tests := []struct {
+		name              string
+		authorization     *ir.Authorization
+		envoyProxy        *egv1a1.EnvoyProxy
+		clientIPDetection *ir.ClientIPDetectionSettings
+		wantProvider      bool
+		wantErr           string
+	}{
+		{
+			name:          "country allowed with country database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:              "missing provider rejected",
+			authorization:     newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy:        &egv1a1.EnvoyProxy{},
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "requires EnvoyProxy.spec.geoIP.provider to be configured",
+		},
+		{
+			name:          "missing client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "trusted cidrs rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				XForwardedFor: &egv1a1.XForwardedForSettings{
+					TrustedCIDRs: []egv1a1.CIDR{"10.0.0.0/8"},
+				},
+			},
+			wantErr: "does not support ClientIPDetection.XForwardedFor.TrustedCIDRs",
+		},
+		{
+			name:          "region requires city database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Region: ptr.To("CA")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.region requires EnvoyProxy.spec.geoIP.provider.maxMind.cityDbSource",
+		},
+		{
+			name:          "asn requires asn database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.asn requires EnvoyProxy.spec.geoIP.provider.maxMind.asnDbSource",
+		},
+		{
+			name:          "isp requires isp database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.isp requires EnvoyProxy.spec.geoIP.provider.maxMind.ispDbSource",
+		},
+		{
+			name: "anonymous requires anonymous database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{
+				Anonymous: &egv1a1.GeoIPAnonymousMatch{IsProxy: &trueValue},
+			}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantErr:           "clientIPGeoLocations.anonymous requires EnvoyProxy.spec.geoIP.provider.maxMind.anonymousIpDbSource",
+		},
+		{
+			name: "anonymous accepted with anonymous database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{
+				Anonymous: &egv1a1.GeoIPAnonymousMatch{IsProxy: &trueValue},
+			}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				AnonymousIPDBSource: anonymousDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "country accepted with city database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CityDBSource: cityDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "asn accepted with asn database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				ASNDBSource: asnDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "isp accepted with isp database",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				ISPDBSource: ispDB,
+			}),
+			clientIPDetection: customHeaderDetection,
+			wantProvider:      true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			provider, err := validateAuthorizationGeoIP(tc.authorization, tc.envoyProxy, tc.clientIPDetection)
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.wantErr)
+				require.Nil(t, provider)
+				return
+			}
+
+			require.NoError(t, err)
+			if tc.wantProvider {
+				require.NotNil(t, provider)
+			} else {
+				require.Nil(t, provider)
+			}
+		})
+	}
+}
+
+func Test_buildContextExtensions(t *testing.T) {
+	policyNs := "default"
+	tests := []struct {
+		name              string
+		contextExtensions []*egv1a1.ContextExtension
+		translatorContext *TranslatorContext
+		want              []*ir.ContextExtention
+		wantErr           bool
+	}{
+		{
+			name:              "Nil",
+			contextExtensions: nil,
+			want:              nil,
+		},
+		{
+			name:              "Empty",
+			contextExtensions: []*egv1a1.ContextExtension{},
+			want:              nil,
+		},
+		{
+			name: "TypeValue",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Value: ptr.To("bar")},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name:              "TypeValueEmpty",
+			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
+			want:              []*ir.ContextExtention{{Name: "foo", Value: nil}},
+		},
+		{
+			name: "TypeValueExplicit",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{
+					Name:  "foo",
+					Type:  egv1a1.ContextExtensionValueTypeValue,
+					Value: ptr.To("bar"),
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefNil",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{Name: "foo", Type: egv1a1.ContextExtensionValueTypeValueRef},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMapNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{},
+			wantErr:           true,
+		},
+		{
+			name: "TypeValueRefConfigMapKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: policyNs, Name: "test-cm"}: {},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefConfigMap",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindConfigMap,
+						Name: "test-cm",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: policyNs, Name: "test-cm"}: {
+						Data: map[string]string{"test-key": "bar"},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefSecretNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{},
+			wantErr:           true,
+		},
+		{
+			name: "TypeValueRefSecretKeyNotFound",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				SecretMap: map[types.NamespacedName]*corev1.Secret{
+					{Namespace: policyNs, Name: "test-secret"}: {},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "TypeValueRefSecret",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindSecret,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			translatorContext: &TranslatorContext{
+				SecretMap: map[types.NamespacedName]*corev1.Secret{
+					{Namespace: policyNs, Name: "test-secret"}: {
+						Data: map[string][]byte{"test-key": []byte("YmFy")},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefUnexpectedKind",
+			contextExtensions: []*egv1a1.ContextExtension{{
+				Name: "foo",
+				Type: egv1a1.ContextExtensionValueTypeValueRef,
+				ValueRef: &egv1a1.LocalObjectKeyReference{
+					LocalObjectReference: gwapiv1.LocalObjectReference{
+						Kind: resource.KindService,
+						Name: "test-secret",
+					},
+					Key: "test-key",
+				},
+			}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			translator := &Translator{TranslatorContext: tt.translatorContext}
+			got, err := translator.buildContextExtensions(tt.contextExtensions, policyNs)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.Nil(t, got)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMergeSecurityPolicy(t *testing.T) {
+	tests := []struct {
+		name         string
+		routePolicy  *egv1a1.SecurityPolicy
+		parentPolicy *egv1a1.SecurityPolicy
+		wantSpec     egv1a1.SecurityPolicySpec
+		wantErr      bool
+	}{
+		{
+			name: "merge with StrategicMerge - different fields",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+			},
+		},
+		{
+			name: "no merge when MergeType is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+		{
+			name: "no merge when parentPolicy is nil",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+				},
+			},
+			parentPolicy: nil,
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+			},
+		},
+		{
+			name: "merge CORS with Authorization",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://example.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+						Rules: []egv1a1.AuthorizationRule{
+							{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+						},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://example.com"},
+				},
+				Authorization: &egv1a1.Authorization{
+					DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+					Rules: []egv1a1.AuthorizationRule{
+						{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+					},
+				},
+			},
+		},
+		{
+			name: "merge with JSONMerge type",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.JSONMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.JSONMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+			},
+		},
+		{
+			name: "merge multiple fields - JWT, CORS, and BasicAuth",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					JWT: &egv1a1.JWT{
+						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+					},
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					BasicAuth: &egv1a1.BasicAuth{
+						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+					},
+					Authorization: &egv1a1.Authorization{
+						DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
+				},
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+				},
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
+				},
+				Authorization: &egv1a1.Authorization{
+					DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+				},
+			},
+		},
+		{
+			name: "merge same field - route overrides parent",
+			routePolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					MergeType: ptr.To(egv1a1.StrategicMerge),
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://route.com"},
+						AllowMethods: []string{"GET", "POST"},
+					},
+				},
+			},
+			parentPolicy: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
+				Spec: egv1a1.SecurityPolicySpec{
+					CORS: &egv1a1.CORS{
+						AllowOrigins: []egv1a1.Origin{"https://gateway.com"},
+						AllowMethods: []string{"GET"},
+					},
+				},
+			},
+			wantSpec: egv1a1.SecurityPolicySpec{
+				MergeType: ptr.To(egv1a1.StrategicMerge),
+				CORS: &egv1a1.CORS{
+					AllowOrigins: []egv1a1.Origin{"https://route.com"},
+					AllowMethods: []string{"GET", "POST"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				// Compare all fields that could be merged
+				require.Equal(t, tt.wantSpec.MergeType, got.Spec.MergeType, "MergeType should match")
+				require.Equal(t, tt.wantSpec.JWT, got.Spec.JWT, "JWT should match")
+				require.Equal(t, tt.wantSpec.BasicAuth, got.Spec.BasicAuth, "BasicAuth should match")
+				require.Equal(t, tt.wantSpec.CORS, got.Spec.CORS, "CORS should match")
+				require.Equal(t, tt.wantSpec.Authorization, got.Spec.Authorization, "Authorization should match")
 			}
 		})
 	}

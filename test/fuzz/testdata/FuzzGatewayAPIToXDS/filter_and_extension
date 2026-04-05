@@ -1,0 +1,30 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: direct-response-inline
+  namespace: default
+spec:
+  directResponse:
+    contentType: text/plain
+    body:
+      type: Inline
+      inline: "OK"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  extProc:
+    - backendRefs:
+        - name: grpc-ext-proc
+          port: 9002
+      processingMode:
+        request: {}
+        response:
+          body: Streamed

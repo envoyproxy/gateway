@@ -1,0 +1,115 @@
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: client1-secret
+    data:
+      client-secret: Y2xpZW50MTpzZWNyZXQK
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway-system
+      name: envoy-oidc-hmac
+    data:
+      hmac-secret: qrOYACHXoe7UEDI/raOjNSx+Z9ufXSc/22C3T6X/zPY=
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - www.example.com
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/foo"
+          backendRefs:
+            - name: service-1
+              port: 8080
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip
+      namespace: envoy-gateway
+    spec:
+      endpoints:
+        - ip:
+            address: 7.7.7.7
+            port: 3000
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-ip2
+      namespace: envoy-gateway
+    spec:
+      endpoints:
+        - ip:
+            address: 8.8.8.8
+            port: 3000
+securityPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway
+      uid: b8284d0f-de82-4c65-b204-96a0d3f258a1
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      oidc:
+        provider:
+          backendRefs:
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-ip
+              port: 3000
+            - group: gateway.envoyproxy.io
+              kind: Backend
+              name: backend-ip2
+              port: 3000
+          backendSettings:
+            retry:
+              numRetries: 3
+              perRetry:
+                backOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+              retryOn:
+                triggers: ["5xx", "gateway-error", "reset"]
+          issuer: "https://oauth.foo.com"
+          authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+          tokenEndpoint: "https://oauth.foo.com/token"
+        clientID: "client1.apps.googleusercontent.com"
+        clientSecret:
+          name: "client1-secret"
+        redirectURL: "https://www.example.com/bar/oauth2/callback"
+        logoutPath: "/bar/logout"
+        forwardAccessToken: true
+        defaultTokenTTL: 30m
+        refreshToken: true
+        defaultRefreshTokenTTL: 24h

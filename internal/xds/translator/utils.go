@@ -12,10 +12,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"k8s.io/utils/ptr"
 
@@ -27,7 +29,7 @@ import (
 const (
 	defaultHTTPSPort                uint64 = 443
 	defaultHTTPPort                 uint64 = 80
-	defaultExtServiceRequestTimeout        = 10 // 10 seconds
+	defaultExtServiceRequestTimeout        = 10 * time.Second
 )
 
 // urlCluster is a cluster that is created from a URL.
@@ -84,8 +86,14 @@ func clusterName(host string, port uint32) string {
 	return fmt.Sprintf("%s_%d", strings.ReplaceAll(host, ".", "_"), port)
 }
 
+func destinationSettingName(destName string) string {
+	// -1 is used here since this function is used to generate a name
+	// for a backend that is defined using a scalar field that has no index.
+	return fmt.Sprintf("%s/backend/-1", destName)
+}
+
 // enableFilterOnRoute enables a filterType on the provided route.
-func enableFilterOnRoute(route *routev3.Route, filterName string) error {
+func enableFilterOnRoute(route *routev3.Route, filterName string, routeCfg proto.Message) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -99,9 +107,7 @@ func enableFilterOnRoute(route *routev3.Route, filterName string) error {
 	}
 
 	// Enable the corresponding filter for this route.
-	routeCfgAny, err := anypb.New(&routev3.FilterConfig{
-		Config: &anypb.Any{},
-	})
+	routeCfgAny, err := anypb.New(routeCfg)
 	if err != nil {
 		return err
 	}
@@ -147,25 +153,22 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:              rd.Name,
-		settings:          rd.Settings,
-		tSocket:           tSocket,
-		loadBalancer:      traffic.LoadBalancer,
-		proxyProtocol:     traffic.ProxyProtocol,
-		circuitBreaker:    traffic.CircuitBreaker,
-		healthCheck:       traffic.HealthCheck,
-		timeout:           traffic.Timeout,
-		tcpkeepalive:      traffic.TCPKeepalive,
-		backendConnection: traffic.BackendConnection,
-		endpointType:      endpointType,
-		dns:               traffic.DNS,
-		http2Settings:     traffic.HTTP2,
-	})
+
+	args := &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+		metadata:     rd.Metadata,
+	}
+
+	applyTraffic(args, traffic)
+
+	return addXdsCluster(tCtx, args)
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
-func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
+func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.ResourceVersionTable) error {
 	var (
 		uc      *urlCluster
 		ds      *ir.DestinationSetting
@@ -179,14 +182,19 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 
 	ds = &ir.DestinationSetting{
 		Weight:    ptr.To[uint32](1),
-		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(uc.hostname, uc.port, false)},
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
+		Name:      destinationSettingName(uc.name),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	clusterArgs := &xdsClusterArgs{
 		name:         uc.name,
 		settings:     []*ir.DestinationSetting{ds},
 		endpointType: uc.endpointType,
+		metadata:     ds.Metadata,
 	}
+
 	if uc.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(uc.hostname); err != nil {
 			return err
@@ -194,7 +202,24 @@ func addClusterFromURL(url string, tCtx *types.ResourceVersionTable) error {
 		clusterArgs.tSocket = tSocket
 	}
 
+	applyTraffic(clusterArgs, traffic)
+
 	return addXdsCluster(tCtx, clusterArgs)
+}
+
+func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
+	if traffic == nil {
+		return
+	}
+	args.loadBalancer = traffic.LoadBalancer
+	args.proxyProtocol = traffic.ProxyProtocol
+	args.circuitBreaker = traffic.CircuitBreaker
+	args.healthCheck = traffic.HealthCheck
+	args.timeout = traffic.Timeout
+	args.tcpkeepalive = traffic.TCPKeepalive
+	args.backendConnection = traffic.BackendConnection
+	args.dns = traffic.DNS
+	args.http2Settings = traffic.HTTP2
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings

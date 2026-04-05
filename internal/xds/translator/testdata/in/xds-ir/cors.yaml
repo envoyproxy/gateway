@@ -18,14 +18,13 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
     security:
       cors:
         allowOrigins:
         - name: example.com
-          stringMatch:
           safeRegex: "*.example.com"
         - name: foo.bar.com
-          stringMatch:
           exact: foo.bar.com
         allowMethods:
         - GET

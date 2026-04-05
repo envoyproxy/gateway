@@ -52,11 +52,12 @@
               signoutPath:
                 path:
                   exact: /logout
+              statPrefix: securitypolicy/default/policy-for-http-route
               tokenEndpoint:
                 cluster: oidc_example_com_443
                 timeout: 10s
                 uri: https://oidc.example.com/oauth/token
-              useRefreshToken: false
+              useRefreshToken: true
         - name: envoy.filters.http.jwt_authn
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
@@ -72,6 +73,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: exjwt
                 remoteJwks:
                   asyncFetch: {}
@@ -102,5 +104,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

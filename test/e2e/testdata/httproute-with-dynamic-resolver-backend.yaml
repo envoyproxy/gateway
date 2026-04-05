@@ -1,0 +1,205 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-with-app-protocol
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver-with-app-protocol
+      matches:
+        - path:
+            type: PathPrefix
+            value: /status
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-default-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite-from-header-default-dns-cache
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite-default-dns-cache
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: host-rewrite-from-header-custom-dns-cache
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite-custom-dns-cache
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-with-dynamic-resolver-backend-host-rewrite-literal-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-dynamic-resolver
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: "test-service-foo.gateway-conformance-infra.svc.cluster.local"
+      matches:
+        - path:
+            type: PathPrefix
+            value: /host-rewrite-literal-name
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: dns-policy-custom-dns
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  dns:
+    dnsRefreshRate: "1s"
+    lookupFamily: IPv4AndIPv6
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-from-header-default-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-dynamic-host-header-1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-from-header-custom-dns-cache
+  namespace: gateway-conformance-infra
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-dynamic-host-header-2
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver
+  namespace: gateway-conformance-infra
+spec:
+  type: DynamicResolver
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: backend-dynamic-resolver-with-app-protocol
+  namespace: gateway-conformance-infra
+spec:
+  type: DynamicResolver
+  appProtocols:
+    - gateway.envoyproxy.io/h2c
+---
+# Test SecurityPolicy to deny requests with forbidden host rewrite header values
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-disallow-hosts
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-with-dynamic-resolver-backend-host-rewrite-custom-dns-cache
+  authorization:
+    defaultAction: Allow
+    rules:
+      - name: "disallow-forbidden-hosts"
+        action: Deny
+        principal:
+          headers:
+            - name: x-dynamic-host-header-2
+              values:
+                - forbidden.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service-foo
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-v1
+  ports:
+    - protocol: TCP
+      port: 80
+      name: http11
+      targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service-bar
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: infra-backend-v1
+  ports:
+    - protocol: TCP
+      port: 80
+      name: http11
+      targetPort: 3000

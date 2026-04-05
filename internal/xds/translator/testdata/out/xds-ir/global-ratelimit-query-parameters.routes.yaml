@@ -1,0 +1,35 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route-ratelimit-query-parameters
+      route:
+        cluster: first-route-dest
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: first-route-ratelimit-query-parameters
+              descriptorValue: first-route-ratelimit-query-parameters
+          - headerValueMatch:
+              descriptorKey: rule-0-match-0
+              descriptorValue: rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+          - queryParameterValueMatch:
+              descriptorKey: rule-0-match-1
+              descriptorValue: rule-0-match-1
+              expectMatch: true
+              queryParameters:
+              - name: user
+                stringMatch:
+                  exact: alice
+        upgradeConfigs:
+        - upgradeType: websocket

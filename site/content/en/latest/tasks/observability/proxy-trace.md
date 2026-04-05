@@ -72,7 +72,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -138,7 +138,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -202,7 +202,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -277,7 +277,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -336,7 +336,7 @@ spec:
         "k8s.namespace.name":
           type: Environment
           environment:
-            name: ENVOY_GATEWAY_NAMESPACE
+            name: ENVOY_POD_NAMESPACE
             defaultValue: "envoy-gateway-system"
         # This is an example of using a header value as a tag value
         header1:
@@ -347,5 +347,78 @@ spec:
 EOF
 ```
 
+### Sampler
+
+For OpenTelemetry tracing, you can configure the sampler using the `openTelemetry.sampler` field.
+When a sampler is configured, it becomes the sole sampling decision maker (`samplingRate` is
+effectively 100% so the sampler runs for every request).
+The sampler `type` maps to the standard [OTEL_TRACES_SAMPLER](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration) environment variable:
+
+| `sampler.type`                 | Discriminated fields                    |
+|--------------------------------|-----------------------------------------|
+| `AlwaysOn`                     | —                                       |
+| `AlwaysOff`                    | —                                       |
+| `TraceIdRatio`            | `samplingPercentage` (default 100%)     |
+| `ParentBasedAlwaysOn`          | —                                       |
+| `ParentBasedAlwaysOff`         | —                                       |
+| `ParentBasedTraceIdRatio` | `samplingPercentage` (default 100%)     |
+
+The following configuration uses `ParentBasedTraceIdRatio` to respect the parent span's sampling
+decision and drop all root spans:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+        openTelemetry:
+          sampler:
+            type: ParentBasedTraceIdRatio
+            samplingPercentage:
+              numerator: 0
+```
+
+### Custom Tags
+
+You can add custom tags to the traces by setting the `telemetry.tracing.tags` in the [EnvoyProxy][envoy-proxy-crd] CRD.
+You can use the same format as Envoy's [access log command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) to define the tag values.
+The following configurations show how to apply proxy with custom tags:
+
+```shell
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      # sample 100% of requests
+      samplingRate: 100
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+      tags:
+        # This is an example of using a literal as a tag value
+        provider: "otel"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+        # This is an example of using a header value as a tag value
+        "header1": "%REQUEST_HEADER(X-Header-1)%"
+        "requestedServerName": "%REQUESTED_SERVER_NAME%"
+```
 
 [envoy-proxy-crd]: ../../api/extension_types#envoyproxy

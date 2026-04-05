@@ -91,6 +91,11 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 	}
 
 	for _, route := range irListener.Routes {
+		// CORS settings from the Gateway API HTTPCORSFilter
+		if route.CORS != nil {
+			return true
+		}
+		// CORS settings from the SecurityPolicy
 		if route.Security != nil && route.Security.CORS != nil {
 			return true
 		}
@@ -100,14 +105,15 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 }
 
 // patchRoute patches the provided route with the CORS config if applicable.
-func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.Security == nil || irRoute.Security.CORS == nil {
+	if irRoute.CORS == nil &&
+		(irRoute.Security == nil || irRoute.Security.CORS == nil) {
 		return nil
 	}
 
@@ -119,17 +125,25 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	var (
-		allowOrigins     []*matcherv3.StringMatcher
 		allowMethods     string
 		allowHeaders     string
 		exposeHeaders    string
 		maxAge           string
 		allowCredentials *wrapperspb.BoolValue
-		c                = irRoute.Security.CORS
+		c                *ir.CORS
 	)
+
+	// The CORS settings from the Gateway API HTTPCORSFilter take precedence
+	// over the CORS settings from the SecurityPolicy.
+	if irRoute.CORS != nil {
+		c = irRoute.CORS
+	} else {
+		c = irRoute.Security.CORS
+	}
 
 	//nolint:gocritic
 
+	allowOrigins := make([]*matcherv3.StringMatcher, 0, len(c.AllowOrigins))
 	for _, origin := range c.AllowOrigins {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}

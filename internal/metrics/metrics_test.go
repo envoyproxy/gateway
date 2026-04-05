@@ -10,7 +10,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -28,9 +27,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-)
 
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
+	"github.com/envoyproxy/gateway/internal/utils/test"
+)
 
 func TestCounter(t *testing.T) {
 	name := "counter_metric"
@@ -213,7 +212,7 @@ func newTestMetricsProvider(metricType string, writer io.Writer) (*metric.MeterP
 }
 
 func loadMetricsFile(t *testing.T, name string, reader io.Reader) {
-	if !*overrideTestData {
+	if !test.OverrideTestData() {
 		fname := fmt.Sprintf("testdata/%s.json", name)
 
 		// nolint:gosec
@@ -229,7 +228,7 @@ func loadMetricsFile(t *testing.T, name string, reader io.Reader) {
 }
 
 func exporterWriter(name string, origin io.ReadWriter) (io.ReadWriter, error) {
-	if *overrideTestData {
+	if test.OverrideTestData() {
 		fname := fmt.Sprintf("testdata/%s.json", name)
 
 		// nolint:gosec

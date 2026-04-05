@@ -19,6 +19,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -30,6 +31,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -41,6 +43,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"
   - name: "fourth-route"
     hostname: "*"
     traffic:
@@ -53,6 +56,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     traffic:
@@ -66,6 +70,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fifth-route-dest/backend/0"
   - name: "sixth-route"
     hostname: "*"
     traffic:
@@ -79,19 +84,21 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "sixth-route-dest/backend/0"
   - name: "seventh-route"
     hostname: "*"
     traffic:
       loadBalancer:
         consistentHash:
-          header:
-            name: name
+          headers:
+          - name: name
     destination:
       name: "seventh-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "seventh-route-dest/backend/0"
   - name: "eighth-route"
     hostname: "*"
     traffic:
@@ -104,6 +111,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "eighth-route-dest/backend/0"
   - name: "ninth-route"
     hostname: "*"
     traffic:
@@ -117,6 +125,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "ninth-route-dest/backend/0"
   - name: "tenth-route"
     hostname: "*"
     traffic:
@@ -132,3 +141,116 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "tenth-route-dest/backend/0"
+  - name: "eleventh-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        roundRobin: {}
+        endpointOverride:
+          extractFrom:
+          - header: "x-custom-host"
+    destination:
+      name: "eleventh-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "eleventh-route-dest/backend/0"
+  - name: "twelfth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        endpointOverride:
+          extractFrom:
+          - header: "x-fallback-host"
+    destination:
+      name: "twelfth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "twelfth-route-dest/backend/0"
+  - name: "thirteen-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        leastRequest: {}
+        endpointOverride:
+          extractFrom:
+          - header: "x-custom-host"
+    destination:
+      name: "thirteen-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "thirteen-route-dest/backend/0"
+  - name: "fourteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          headers:
+          - name: name
+          - name: bar
+    destination:
+      name: "fourteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fourteenth-route-dest/backend/0"
+  - name: "fifteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        consistentHash:
+          queryParams:
+          - name: "name"
+          - name: "bar"
+    destination:
+      name: "fifteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "fifteenth-route-dest/backend/0"
+  - name: "sixteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          blackoutPeriod: 30s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          slowStart:
+            window: 45s
+          errorUtilizationPenaltyPercent: 100
+          metricNamesForComputingUtilization:
+          - "cpu_utilization"
+    destination:
+      name: "sixteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "sixteenth-route-dest/backend/0"
+  - name: "seventeenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        backendUtilization:
+          blackoutPeriod: 30s
+          weightExpirationPeriod: 60s
+          weightUpdatePeriod: 10s
+          metricNamesForComputingUtilization:
+          - "named_metric.foo"
+    destination:
+      name: "seventeenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "seventeenth-route-dest/backend/0"

@@ -9,27 +9,30 @@ package tests
 
 import (
 	"context"
-	"github.com/envoyproxy/gateway/test/resilience/suite"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
-	"testing"
-	"time"
+
+	"github.com/envoyproxy/gateway/test/resilience/suite"
 )
 
 const (
 	namespace    = "envoy-gateway-system"
 	envoygateway = "envoy-gateway"
+	envoyproxy   = "envoy-gateway-resilience-all-namespaces"
 	targetString = "successfully acquired lease"
 	apiServerIP  = "10.96.0.1"
 	timeout      = 2 * time.Minute
 	policyName   = "egress-rules"
 	leaseName    = "5b9825d2.gateway.envoyproxy.io"
-	trashHold    = 2
+	threshold    = 2
 )
 
 func init() {
@@ -47,7 +50,12 @@ var EGResilience = suite.ResilienceTest{
 		}
 		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/base.yaml", true)
 
-		//this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
+		// Preserve original convergence semantics for resilience tests
+		localTimeout := suite.TimeoutConfig
+		localTimeout.RequiredConsecutiveSuccesses = threshold
+		localTimeout.MaxTimeToConsistency = timeout
+
+		// this test will fail until https://github.com/envoyproxy/gateway/pull/4767/files is merged
 		t.Run("Secondary EnvoyGateway instances can serve an up to date xDS", func(t *testing.T) {
 			ctx := context.Background()
 			t.Log("Scaling down the deployment to 0 replicas")
@@ -91,32 +99,19 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/welcome",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 
 		t.Run("EnvoyGateway reconciles missed resources and sync xDS after api server connectivity is restored", func(t *testing.T) {
@@ -150,32 +145,19 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
-			http.AwaitConvergence(t, trashHold, time.Minute, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
-
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
-				}
-				return true
-			})
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 
 			require.NoError(t, err, "Failed during connectivity checkup")
 		})
@@ -221,33 +203,77 @@ var EGResilience = suite.ResilienceTest{
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/route-change",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "http", "http")
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
+		})
 
-			http.AwaitConvergence(t, trashHold, timeout, func(elapsed time.Duration) bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					tlog.Logf(t, "Request failed, not ready yet: %v (after %v)", err.Error(), elapsed)
-					return false
-				}
+		t.Run("EnvoyGateway recovers after failing to start runners", func(t *testing.T) {
+			ctx := context.Background()
 
-				if err := http.CompareRequest(t, &req, cReq, cRes, expectedResponse); err != nil {
-					tlog.Logf(t, "Response expectation failed for request: %+v  not ready yet: %v (after %v)", req, err, elapsed)
-					return false
+			t.Log("Scaling down the deployment to 0 replicas")
+			err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, timeout, false)
+			require.NoError(t, err, "Failed to scale deployment replicas")
+
+			scope := map[string]string{"app.kubernetes.io/name": "gateway-helm"}
+			policyRemoved := false
+			t.Cleanup(func() {
+				if !policyRemoved {
+					_, _ = suite.Kube().ManageEgress(context.Background(), apiServerIP, namespace, policyName, false, scope)
 				}
-				return true
 			})
+
+			t.Log("Blocking API server network access for EnvoyGateway pods")
+			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, true, scope)
+			require.NoError(t, err, "Failed to block API server connectivity")
+
+			t.Log("Scaling up the deployment while API server access is blocked")
+			err = suite.Kube().ScaleDeployment(ctx, envoygateway, namespace, 1, false)
+			require.NoError(t, err, "Failed to scale deployment replicas")
+
+			t.Log("Deployment should not reach the ready replica count with API server access blocked")
+			err = suite.Kube().CheckDeploymentReplicas(ctx, envoygateway, namespace, 1, 30*time.Second)
+			require.Error(t, err, "Deployment became ready despite API server connectivity being blocked")
+
+			t.Log("Restoring API server network access for EnvoyGateway pods")
+			_, err = suite.Kube().ManageEgress(ctx, apiServerIP, namespace, policyName, false, scope)
+			require.NoError(t, err, "Failed to unblock API server connectivity")
+			policyRemoved = true
+
+			t.Log("Waiting for EnvoyGateway to recover")
+			err = suite.Kube().WaitForDeploymentReplicaCount(ctx, envoygateway, namespace, 1, timeout, false)
+			require.NoError(t, err, "Failed to ensure EnvoyGateway pod came online")
+
+			t.Log("EnvoyGateway is online again")
+
+			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_changes.yaml", true)
+
+			ns := "gateway-resilience"
+			routeNN := types.NamespacedName{Name: "backend", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/route-change",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, localTimeout, gwAddr, expectedResponse)
 		})
 	},
 }

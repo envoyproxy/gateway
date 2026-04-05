@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -71,6 +72,8 @@ type HTTPServer struct {
 	cache Cache
 	// HTTP server to serve the Wasm modules to the Envoy Proxies.
 	server *http.Server
+	// The namespace where the Envoy Gateway is running.
+	controllerNamespace string
 	// logger
 	logger logging.Logger
 }
@@ -94,15 +97,16 @@ type wasmModuleEntry struct {
 // NewHTTPServerWithFileCache creates a HTTP server with a local file cache for Wasm modules.
 // The local file cache is used to store the Wasm modules downloaded from the original URL.
 // The HTTP server serves the cached Wasm modules over HTTP to the Envoy Proxies.
-func NewHTTPServerWithFileCache(serverOptions SeverOptions, cacheOptions CacheOptions, logger logging.Logger) *HTTPServer {
+func NewHTTPServerWithFileCache(serverOptions SeverOptions, cacheOptions CacheOptions, controllerNamespace string, logger logging.Logger) *HTTPServer {
 	logger = logger.WithName("wasm-cache")
 	serverOptions.setDefault()
 	return &HTTPServer{
-		SeverOptions:      serverOptions,
-		mappingPath2Cache: make(map[string]wasmModuleEntry),
-		failedAttempts:    make(map[string]attemptEntry),
-		cache:             newLocalFileCache(cacheOptions, logger),
-		logger:            logger,
+		SeverOptions:        serverOptions,
+		mappingPath2Cache:   make(map[string]wasmModuleEntry),
+		failedAttempts:      make(map[string]attemptEntry),
+		cache:               newLocalFileCache(cacheOptions, logger),
+		controllerNamespace: controllerNamespace,
+		logger:              logger,
 	}
 }
 
@@ -126,7 +130,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 		} else {
 			err = s.server.ListenAndServe()
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error(err, "Failed to start Wasm HTTP server")
 			return
 		}
@@ -156,7 +160,7 @@ func (s *HTTPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // and the checksum of the Wasm module.
 // EG downloads the Wasm module from its original URL, caches it locally in the
 // file system, and serves it through an HTTP server.
-func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL string, checksum string, err error) {
+func (s *HTTPServer) Get(originalURL string, opts *GetOptions) (servingURL, checksum string, err error) {
 	var (
 		mappingPath string
 		localFile   string
@@ -207,7 +211,8 @@ func (s *HTTPServer) Get(originalURL string, opts GetOptions) (servingURL string
 	if s.enableTLS() {
 		scheme = "https"
 	}
-	servingURL = fmt.Sprintf("%s://%s:%d/%s", scheme, serverHost, serverPort, mappingPath)
+	serverHostFQDN := fmt.Sprintf("%s.%s.svc.cluster.local", serverHost, s.controllerNamespace)
+	servingURL = fmt.Sprintf("%s://%s:%d/%s", scheme, serverHostFQDN, serverPort, mappingPath)
 	return servingURL, checksum, nil
 }
 

@@ -3,7 +3,6 @@ http:
   address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -23,6 +22,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: www.example.com
     isHTTP2: false
     metadata:
@@ -60,6 +60,7 @@ http:
           name: exjwt
           remoteJWKS:
             uri: https://oidc.example.com/auth/realms/example/protocol/openid-connect/certs
+            cacheDuration: 300s
       oidc:
         clientID: prometheus
         clientSecret: '[redacted]'
@@ -74,6 +75,7 @@ http:
           tokenEndpoint: https://oidc.example.com/oauth/token
         redirectPath: /oauth2/callback
         redirectURL: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+        refreshToken: true
         scopes:
         - openid
         - email

@@ -1,0 +1,39 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-0-path
+        descriptor_value: rule-0-path
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                Exact: foo/bar
+          name: :path
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      HeaderValueMatch:
+        descriptor_key: rule-1-path
+        descriptor_value: rule-1-path
+        expect_match:
+          value: true
+        headers:
+        - HeaderMatchSpecifier:
+            StringMatch:
+              MatchPattern:
+                SafeRegex:
+                  EngineType: null
+                  regex: foo/bar
+          name: :path
+routeName: first-route

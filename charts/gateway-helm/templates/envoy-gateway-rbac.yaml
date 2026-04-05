@@ -19,7 +19,7 @@ metadata:
   name: {{ include "eg.fullname" $ }}-envoy-gateway-role
   namespace: {{ $ns | quote }}
 rules:
-{{ include "eg.rbac.namespaced" . }}
+{{ include "eg.rbac.namespaced" $ }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -33,7 +33,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ $.Release.Namespace }}'
+  namespace: {{ include "eg.namespace" $ }}
 {{ end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -55,7 +55,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
 {{ else }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -78,5 +78,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
 {{ end }}

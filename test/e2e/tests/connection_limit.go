@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -38,18 +37,20 @@ var ConnectionLimitTest = suite.ConformanceTest{
 	Description: "Deny Requests over connection limit",
 	Manifests:   []string{"testdata/connection-limit.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ctx := context.Background()
-
 		promClient, err := prometheus.NewClient(suite.Client, types.NamespacedName{Name: "prometheus", Namespace: "monitoring"})
 		require.NoError(t, err)
+
+		// connection limit is 5, we will open 6 connections to verify that at least one connection is closed or limited
+		const openConnections = 6
 
 		t.Run("Close connections over limit", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-with-connection-limit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "connection-limit-gateway", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			gwAddr := net.JoinHostPort(gwHost, "80")
 
-			ancestorRef := gwapiv1a2.ParentReference{
+			ancestorRef := gwapiv1.ParentReference{
 				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
 				Kind:      gatewayapi.KindPtr(resource.KindGateway),
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
@@ -67,24 +68,28 @@ var ConnectionLimitTest = suite.ConformanceTest{
 						tlog.Logf(t, "failed to open connection: %v", err)
 						return false, nil
 					}
-					t.Log("opened connection 1")
+					tlog.Logf(t, "opened connection 1")
 					return true, nil
 				}); err != nil {
-				t.Errorf("failed to open connections: %v", err)
+				tlog.Logf(t, "failed to open connections: %v", err)
 			}
 
 			// Open the remaining 5 connections
-			for i := 1; i < 6; i++ {
+			for i := 1; i < openConnections; i++ {
 				conn, err := net.Dial("tcp", gwAddr)
 				tlog.Logf(t, "opened connection %d", i+1)
 				if err != nil {
-					t.Errorf("failed to open connection: %v", err)
-				} else {
-					defer conn.Close()
+					tlog.Logf(t, "failed to open connection: %v", err)
+					continue
 				}
+
+				defer conn.Close()
 			}
 
 			prefix := "http-10080"
+			if XDSNameSchemeV2() {
+				prefix = "http-80"
+			}
 			gtwName := "connection-limit-gateway"
 			promQL := fmt.Sprintf(`envoy_connection_limit_limited_connections{envoy_connection_limit_prefix="%s",gateway_envoyproxy_io_owning_gateway_name="%s"}`, prefix, gtwName)
 
@@ -94,7 +99,7 @@ var ConnectionLimitTest = suite.ConformanceTest{
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
 					// check connection_limit stats from Prometheus
-					v, err := promClient.QuerySum(ctx, promQL)
+					v, err := promClient.QuerySum(t.Context(), promQL)
 					if err != nil {
 						// wait until Prometheus sync stats
 						return false
@@ -104,11 +109,11 @@ var ConnectionLimitTest = suite.ConformanceTest{
 					// connection interruptions or other connection errors may occur
 					// we just need to determine whether there is a connection limit stats
 					if v == 0 {
-						t.Error("connection is not limited as expected")
-					} else {
-						t.Log("connection is limited as expected")
+						tlog.Logf(t, "connection is not limited as expected")
+						return false
 					}
 
+					tlog.Logf(t, "connection is limited as expected")
 					return true
 				},
 			)

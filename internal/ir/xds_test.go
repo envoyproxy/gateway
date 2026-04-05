@@ -11,12 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -504,7 +503,7 @@ var (
 				Providers: []JWTProvider{
 					{
 						Name: "test1",
-						RemoteJWKS: RemoteJWKS{
+						RemoteJWKS: &RemoteJWKS{
 							URI: "https://test1.local",
 						},
 					},
@@ -518,7 +517,11 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("mirrorfilter"),
 		},
-		Mirrors: []*RouteDestination{&happyRouteDestination},
+		Mirrors: []*MirrorPolicy{
+			{
+				Destination: &happyRouteDestination,
+			},
+		},
 	}
 
 	// RouteDestination
@@ -589,9 +592,9 @@ func TestValidateXds(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -643,9 +646,9 @@ func TestValidateHTTPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -694,9 +697,9 @@ func TestValidateTCPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -728,7 +731,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 					PrivateKey: []byte("priv-key"),
 				}},
 			},
-			want: ErrTLSServerCertEmpty,
+			want: ErrTLSCertEmpty,
 		},
 		{
 			name: "invalid private key",
@@ -743,84 +746,10 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
-		})
-	}
-}
-
-func TestEqualXds(t *testing.T) {
-	tests := []struct {
-		desc  string
-		a     *Xds
-		b     *Xds
-		equal bool
-	}{
-		{
-			desc: "out of order tcp listeners are equal",
-			a: &Xds{
-				TCP: []*TCPListener{
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
-				},
-			},
-			b: &Xds{
-				TCP: []*TCPListener{
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
-				},
-			},
-			equal: true,
-		},
-		{
-			desc: "out of order http routes are equal",
-			a: &Xds{
-				HTTP: []*HTTPListener{
-					{
-						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
-						Routes: []*HTTPRoute{
-							{Name: "route-1"},
-							{Name: "route-2"},
-						},
-					},
-				},
-			},
-			b: &Xds{
-				HTTP: []*HTTPListener{
-					{
-						CoreListenerDetails: CoreListenerDetails{Name: "listener-1"},
-						Routes: []*HTTPRoute{
-							{Name: "route-2"},
-							{Name: "route-1"},
-						},
-					},
-				},
-			},
-			equal: true,
-		},
-		{
-			desc: "out of order udp listeners are equal",
-			a: &Xds{
-				UDP: []*UDPListener{
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
-				},
-			},
-			b: &Xds{
-				UDP: []*UDPListener{
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-2"}},
-					{CoreListenerDetails: CoreListenerDetails{Name: "listener-1"}},
-				},
-			},
-			equal: true,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.desc, func(t *testing.T) {
-			require.Equal(t, tc.equal, cmp.Equal(tc.a, tc.b))
 		})
 	}
 }
@@ -855,9 +784,9 @@ func TestValidateUDPListener(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -1006,9 +935,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
 				}
@@ -1047,13 +976,142 @@ func TestValidateTCPRoute(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
-				got := test.input.Validate()
+				got := (&test.input).Validate()
 				for _, w := range test.want {
 					assert.ErrorContains(t, got, w.Error())
 				}
 			}
+		})
+	}
+}
+
+func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    RouteDestination
+		expected bool
+	}{
+		{
+			name: "single cluster",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "cluster per setting mixed endpoints",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.2",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "cluster per setting has zone aware routing more than one setting",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+						PreferLocal: &PreferLocalZone{
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+						},
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example1.com",
+								Port: 8082,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "cluster per setting has zone aware routing one setting",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+						PreferLocal: &PreferLocalZone{
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "cluster per setting has filters",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(FQDN),
+						Filters:     &DestinationFilters{},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.expected, test.input.NeedsClusterPerSetting())
 		})
 	}
 }
@@ -1172,7 +1230,7 @@ func TestValidateRouteDestination(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1228,7 +1286,7 @@ func TestValidateStringMatch(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1262,8 +1320,10 @@ func TestValidateLoadBalancer(t *testing.T) {
 			name: "consistent hash with header hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
-					Header: &Header{
-						Name: "name",
+					Headers: []*egv1a1.Header{
+						{
+							Name: "name",
+						},
 					},
 				},
 			},
@@ -1277,12 +1337,23 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: ErrLoadBalancerInvalid,
 		},
+		{
+			name: "backend utilization set",
+			input: LoadBalancer{
+				BackendUtilization: &BackendUtilization{
+					BlackoutPeriod:                     MetaV1DurationPtr(30 * time.Second),
+					WeightExpirationPeriod:             MetaV1DurationPtr(10 * time.Second),
+					WeightUpdatePeriod:                 MetaV1DurationPtr(1 * time.Second),
+					MetricNamesForComputingUtilization: []string{"named_metrics.foo"},
+				},
+			},
+		},
 	}
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
@@ -1323,6 +1394,13 @@ func TestRedaction(t *testing.T) {
 		{
 			name: "explicit string check",
 			input: Xds{
+				GlobalResources: &GlobalResources{
+					EnvoyClientCertificate: &TLSCertificate{
+						Name:        "test",
+						Certificate: []byte("Certificate"),
+						PrivateKey:  PrivateBytes([]byte("PrivateBytes")),
+					},
+				},
 				HTTP: []*HTTPListener{{
 					TLS: &TLSConfig{
 						Certificates: []TLSCertificate{{
@@ -1343,10 +1421,13 @@ func TestRedaction(t *testing.T) {
 								HMACSecret:   []byte("secret"),
 							},
 							APIKeyAuth: &APIKeyAuth{
-								Credentials: map[string]PrivateBytes{"client-id": []byte("secret")},
+								Credentials: []APIKeyCredential{{Client: []byte("client-id"), Key: []byte("secret")}},
 							},
 							BasicAuth: &BasicAuth{
 								Users: []byte("secret"),
+							},
+							ExtAuth: &ExtAuth{
+								ContextExtensions: []*ContextExtention{{Name: "key", Value: []byte("secret")}},
 							},
 						},
 					}},
@@ -1354,16 +1435,18 @@ func TestRedaction(t *testing.T) {
 			},
 			wantStr: `{"http":[{"name":"","address":"","port":0,"hostnames":null,` +
 				`"tls":{` +
-				`"certificates":[{"name":"server","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
-				`"clientCertificates":[{"name":"client","serverCertificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"certificates":[{"name":"server","certificate":"LS0t","privateKey":"[redacted]"}],` +
+				`"clientCertificates":[{"name":"client","certificate":"LS0t","privateKey":"[redacted]"}],` +
 				`"alpnProtocols":null},` +
 				`"routes":[{` +
 				`"name":"","hostname":"","isHTTP2":false,"security":{` +
-				`"oidc":{"name":"","provider":{},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
-				`"apiKeyAuth":{"credentials":{"client-id":"[redacted]"},"extractFrom":null},` +
-				`"basicAuth":{"name":"","users":"[redacted]"}` +
+				`"oidc":{"name":"","provider":{"authorizationEndpoint":"","tokenEndpoint":""},"clientID":"","clientSecret":"[redacted]","hmacSecret":"[redacted]"},` +
+				`"apiKeyAuth":{"credentials":[{"client":"[redacted]","key":"[redacted]"}],"extractFrom":null},` +
+				`"basicAuth":{"name":"","users":"[redacted]"},` +
+				`"extAuth":{"name":"","contextExtensions":[{"name":"key","value":"[redacted]"}]}` +
 				`}}],` +
-				`"isHTTP2":false,"path":{"mergeSlashes":false,"escapedSlashesAction":""}}]}`,
+				`"path":{"mergeSlashes":false,"escapedSlashesAction":""}}],` +
+				`"globalResources":{"envoyClientCertificate":{"name":"test","certificate":"Q2VydGlmaWNhdGU=","privateKey":"[redacted]"}}}`,
 		},
 	}
 	for _, test := range tests {
@@ -1391,8 +1474,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid timeout",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Duration(0)},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Duration(0)),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1409,8 +1492,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid panic threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Duration(3)},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Duration(3)),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1427,8 +1510,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid interval",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Duration(0)},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Duration(0)),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1444,11 +1527,32 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckIntervalInvalid,
 		},
 		{
+			name: "invalid initial jitter",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					InitialJitter:      ptr.To(gwapiv1.Duration("-1s")),
+					UnhealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold:   ptr.To[uint32](3),
+					HTTP: &HTTPHealthChecker{
+						Host:             "*",
+						Path:             "/healthz",
+						Method:           ptr.To(http.MethodGet),
+						ExpectedStatuses: []HTTPStatus{200, 400},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHealthCheckInitialJitterInvalid,
+		},
+		{
 			name: "invalid unhealthy threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](0),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1467,8 +1571,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "invalid healthy threshold",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](0),
 					HTTP: &HTTPHealthChecker{
@@ -1487,8 +1591,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1506,8 +1610,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid path",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To[uint32](3),
 					HealthyThreshold:   ptr.To[uint32](3),
 					HTTP: &HTTPHealthChecker{
@@ -1526,8 +1630,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid method",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1546,8 +1650,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid expected-statuses",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1566,8 +1670,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "http-health-check: invalid range",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1583,11 +1687,53 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHTTPStatusInvalid,
 		},
 		{
+			name: "http-health-check: invalid retriable-statuses range",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:              "*",
+						Path:              "/healthz",
+						Method:            ptr.To(http.MethodHead),
+						ExpectedStatuses:  []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatus{503, 600},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHTTPStatusInvalid,
+		},
+		{
+			name: "http-health-check: valid retriable-statuses",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
+					UnhealthyThreshold: ptr.To(uint32(3)),
+					HealthyThreshold:   ptr.To(uint32(3)),
+					HTTP: &HTTPHealthChecker{
+						Host:              "*",
+						Path:              "/healthz",
+						Method:            ptr.To(http.MethodGet),
+						ExpectedStatuses:  []HTTPStatus{200},
+						RetriableStatuses: []HTTPStatus{503, 429},
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: nil,
+		},
+		{
 			name: "http-health-check: invalid expected-responses",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					HTTP: &HTTPHealthChecker{
@@ -1610,8 +1756,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "tcp-health-check: invalid send payload",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					TCP: &TCPHealthChecker{
@@ -1633,8 +1779,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			name: "tcp-health-check: invalid receive payload",
 			input: HealthCheck{
 				&ActiveHealthCheck{
-					Timeout:            &metav1.Duration{Duration: time.Second},
-					Interval:           &metav1.Duration{Duration: time.Second},
+					Timeout:            MetaV1DurationPtr(time.Second),
+					Interval:           MetaV1DurationPtr(time.Second),
 					UnhealthyThreshold: ptr.To(uint32(3)),
 					HealthyThreshold:   ptr.To(uint32(3)),
 					TCP: &TCPHealthChecker{
@@ -1657,8 +1803,8 @@ func TestValidateHealthCheck(t *testing.T) {
 			input: HealthCheck{
 				&ActiveHealthCheck{},
 				&OutlierDetection{
-					Interval:         &metav1.Duration{Duration: time.Duration(0)},
-					BaseEjectionTime: &metav1.Duration{Duration: time.Second},
+					Interval:         MetaV1DurationPtr(time.Duration(0)),
+					BaseEjectionTime: MetaV1DurationPtr(time.Second),
 				},
 				ptr.To[uint32](10),
 			},
@@ -1669,19 +1815,32 @@ func TestValidateHealthCheck(t *testing.T) {
 			input: HealthCheck{
 				&ActiveHealthCheck{},
 				&OutlierDetection{
-					Interval:         &metav1.Duration{Duration: time.Second},
-					BaseEjectionTime: &metav1.Duration{Duration: time.Duration(0)},
+					Interval:         MetaV1DurationPtr(time.Second),
+					BaseEjectionTime: MetaV1DurationPtr(time.Duration(0)),
 				},
 				ptr.To[uint32](10),
 			},
 			want: ErrOutlierDetectionBaseEjectionTimeInvalid,
+		},
+		{
+			name: "HealthCheckOverrides invalid port",
+			input: HealthCheck{
+				&ActiveHealthCheck{
+					Overrides: &HealthCheckOverrides{
+						Port: uint32(65536),
+					},
+				},
+				&OutlierDetection{},
+				ptr.To[uint32](10),
+			},
+			want: ErrHealthCheckOverridesPortInvalid,
 		},
 	}
 	for i := range tests {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, (&test.input).Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}

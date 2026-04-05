@@ -10,7 +10,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,24 +33,29 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/utils"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 	"github.com/envoyproxy/gateway/internal/wasm"
 )
 
-var overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
-
-func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+func mustUnmarshal(t *testing.T, val []byte, out any) {
 	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
 func TestTranslate(t *testing.T) {
 	testCasesConfig := []struct {
-		name                    string
-		EnvoyPatchPolicyEnabled bool
-		BackendEnabled          bool
+		name                            string
+		EnvoyPatchPolicyEnabled         bool
+		BackendEnabled                  bool
+		GatewayNamespaceMode            bool
+		RunningOnHost                   bool
+		LuaEnvoyExtensionPolicyDisabled bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -61,10 +65,32 @@ func TestTranslate(t *testing.T) {
 			name:                    "backend-invalid-feature-disabled",
 			EnvoyPatchPolicyEnabled: false,
 		},
+		{
+			name:                 "gateway-namespace-mode-infra-httproute",
+			GatewayNamespaceMode: true,
+		},
+		{
+			name:           "backend-with-localhost-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
+		},
+		{
+			name:           "httproute-attaching-to-listener-with-backend-backendref-host-infra",
+			BackendEnabled: true,
+			RunningOnHost:  true,
+		},
+		{
+			name:                            "envoyextensionpolicy-lua-feature-disabled",
+			LuaEnvoyExtensionPolicyDisabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
+	base, err := os.ReadFile("testdata/base/base.yaml")
+	require.NoError(t, err)
+	baseResources := &resource.Resources{}
+	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
 		t.Run(testName(inputFile), func(t *testing.T) {
@@ -73,116 +99,151 @@ func TestTranslate(t *testing.T) {
 
 			resources := &resource.Resources{}
 			mustUnmarshal(t, input, resources)
+			// Merge base resources with test resources
+			// Only secrets are in the base resources, we may have more in the future
+			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			gatewayNamespaceMode := false
+			runningOnHost := false
+			luaEnvoyExtensionPolicyDisabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					gatewayNamespaceMode = config.GatewayNamespaceMode
+					runningOnHost = config.RunningOnHost
+					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
 				}
 			}
 
 			translator := &Translator{
-				GatewayControllerName:   egv1a1.GatewayControllerName,
-				GatewayClassName:        "envoy-gateway-class",
-				GlobalRateLimitEnabled:  true,
-				EnvoyPatchPolicyEnabled: envoyPatchPolicyEnabled,
-				BackendEnabled:          backendEnabled,
-				Namespace:               "envoy-gateway-system",
-				MergeGateways:           IsMergeGatewaysEnabled(resources),
-				WasmCache:               &mockWasmCache{},
+				GatewayControllerName:           egv1a1.GatewayControllerName,
+				GatewayClassName:                "envoy-gateway-class",
+				GlobalRateLimitEnabled:          true,
+				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
+				BackendEnabled:                  backendEnabled,
+				ControllerNamespace:             "envoy-gateway-system",
+				MergeGateways:                   IsMergeGatewaysEnabled(resources),
+				GatewayNamespaceMode:            gatewayNamespaceMode,
+				WasmCache:                       &mockWasmCache{},
+				RunningOnHost:                   runningOnHost,
+				LuaEnvoyExtensionPolicyDisabled: luaEnvoyExtensionPolicyDisabled,
+				Logger:                          logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
 			for i := 1; i <= 4; i++ {
 				svcName := "service-" + strconv.Itoa(i)
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
-				resources.Services = append(resources.Services,
-					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      svcName,
-						},
-						Spec: corev1.ServiceSpec{
-							ClusterIP: "1.1.1.1",
-							Ports: []corev1.ServicePort{
-								{
-									Name:       "http",
-									Port:       8080,
-									TargetPort: intstr.IntOrString{IntVal: 8080},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "https",
-									Port:       8443,
-									TargetPort: intstr.IntOrString{IntVal: 8443},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "tcp",
-									Port:       8163,
-									TargetPort: intstr.IntOrString{IntVal: 8163},
-									Protocol:   corev1.ProtocolTCP,
-								},
-								{
-									Name:       "udp",
-									Port:       8162,
-									TargetPort: intstr.IntOrString{IntVal: 8162},
-									Protocol:   corev1.ProtocolUDP,
-								},
-							},
-						},
-					},
-				)
-				resources.EndpointSlices = append(resources.EndpointSlices,
-					&discoveryv1.EndpointSlice{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      epSliceName,
-							Namespace: "default",
-							Labels: map[string]string{
-								discoveryv1.LabelServiceName: svcName,
-							},
-						},
-						AddressType: discoveryv1.AddressTypeIPv4,
-						Ports: []discoveryv1.EndpointPort{
-							{
-								Name:     ptr.To("http"),
-								Port:     ptr.To[int32](8080),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("https"),
-								Port:     ptr.To[int32](8443),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("tcp"),
-								Port:     ptr.To[int32](8163),
-								Protocol: ptr.To(corev1.ProtocolTCP),
-							},
-							{
-								Name:     ptr.To("udp"),
-								Port:     ptr.To[int32](8162),
-								Protocol: ptr.To(corev1.ProtocolUDP),
-							},
-						},
-						Endpoints: []discoveryv1.Endpoint{
-							{
-								Addresses: []string{
-									"7.7.7.7",
-								},
-								Conditions: discoveryv1.EndpointConditions{
-									Ready: ptr.To(true),
-								},
-							},
-						},
-					},
-				)
-			}
 
+				svc := &corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      svcName,
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "1.1.1.1",
+						Ports: []corev1.ServicePort{
+							{
+								Name:       "http",
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "https",
+								Port:       8443,
+								TargetPort: intstr.IntOrString{IntVal: 8443},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "tcp",
+								Port:       8163,
+								TargetPort: intstr.IntOrString{IntVal: 8163},
+								Protocol:   corev1.ProtocolTCP,
+							},
+							{
+								Name:       "udp",
+								Port:       8162,
+								TargetPort: intstr.IntOrString{IntVal: 8162},
+								Protocol:   corev1.ProtocolUDP,
+							},
+						},
+					},
+				}
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+				}
+				resources.Services = append(resources.Services, svc)
+
+				endptSlice := &discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      epSliceName,
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: svcName,
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     ptr.To("http"),
+							Port:     ptr.To[int32](8080),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("https"),
+							Port:     ptr.To[int32](8443),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("tcp"),
+							Port:     ptr.To[int32](8163),
+							Protocol: ptr.To(corev1.ProtocolTCP),
+						},
+						{
+							Name:     ptr.To("udp"),
+							Port:     ptr.To[int32](8162),
+							Protocol: ptr.To(corev1.ProtocolUDP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.7.7.7",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: ptr.To(true),
+							},
+						},
+					},
+				}
+
+				// TODO: Add zone information by default
+				if strings.Contains(inputFile, "enable-zone-discovery") {
+					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+					zoneIdx := rune('a' + i)
+					zone := fmt.Sprintf("%s%c", "antarctica-east1", zoneIdx)
+					endptSlice.Endpoints[0].Zone = ptr.To(zone)
+				}
+				resources.EndpointSlices = append(resources.EndpointSlices, endptSlice)
+			}
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -202,6 +263,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -233,6 +298,10 @@ func TestTranslate(t *testing.T) {
 			// add otel-collector service
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "monitoring",
 						Name:      "otel-collector",
@@ -259,6 +328,10 @@ func TestTranslate(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "otel-collector-endpointslice",
 						Namespace: "monitoring",
@@ -292,11 +365,105 @@ func TestTranslate(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					gSvc := svc.DeepCopy()
+					if gatewayNamespaceMode {
+						// In gateway namespace mode, the service name is the same as the gateway name
+						// and the namespace is the gateway namespace.
+						gSvc.Name = g.Name
+						gSvc.Namespace = g.Namespace
+					} else {
+						gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					}
+
+					gSvc.Labels[OwningGatewayNameLabel] = g.Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					gEndPtSlice := endPtSlice.DeepCopy()
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Namespace = gSvc.Namespace
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
@@ -308,8 +475,9 @@ func TestTranslate(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				overrideOutputConfig(t, string(out), outputFilePath)
+				return
 			}
 
 			output, err := os.ReadFile(outputFilePath)
@@ -320,7 +488,6 @@ func TestTranslate(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 				cmp.Transformer("ClearXdsEqual", xdsWithoutEqual),
 				cmpopts.IgnoreTypes(ir.PrivateBytes{}),
 				cmpopts.EquateEmpty(),
@@ -349,8 +516,11 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				ExtensionGroupKinds: []schema.GroupKind{
 					{Group: "foo.example.io", Kind: "Foo"},
 					{Group: "bar.example.io", Kind: "Bar"},
+					{Group: "storage.example.io", Kind: "S3Backend"},
+					{Group: "compute.example.io", Kind: "LambdaBackend"},
 				},
 				MergeGateways: IsMergeGatewaysEnabled(resources),
+				Logger:        logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo),
 			}
 
 			// Add common test fixtures
@@ -359,6 +529,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
 					&corev1.Service{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "v1",
+							Kind:       "Service",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
 							Name:      svcName,
@@ -396,6 +570,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				)
 				resources.EndpointSlices = append(resources.EndpointSlices,
 					&discoveryv1.EndpointSlice{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: "discovery.k8s.io/v1",
+							Kind:       "EndpointSlice",
+						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      epSliceName,
 							Namespace: "default",
@@ -442,6 +620,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			resources.Services = append(resources.Services,
 				&corev1.Service{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "v1",
+						Kind:       "Service",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
@@ -460,6 +642,10 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			)
 			resources.EndpointSlices = append(resources.EndpointSlices,
 				&discoveryv1.EndpointSlice{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: "discovery.k8s.io/v1",
+						Kind:       "EndpointSlice",
+					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "mirror-service-endpointslice",
 						Namespace: "default",
@@ -488,11 +674,103 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				},
 			)
 
+			svc := corev1.Service{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Service",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					// Matches proxy.ExpectedResourceHashedName()
+					Name:      fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(string(translator.GatewayClassName), 48)),
+					Namespace: translator.ControllerNamespace,
+					Labels:    make(map[string]string),
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "6.7.8.9",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 8080},
+							Protocol:   corev1.ProtocolTCP,
+						},
+					},
+				},
+			}
+
+			endPtSlice := discoveryv1.EndpointSlice{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "discovery.k8s.io/v1",
+					Kind:       "EndpointSlice",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      svc.Name,
+					Namespace: svc.Namespace,
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: svc.Name,
+					},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     ptr.To("http"),
+						Port:     ptr.To[int32](8080),
+						Protocol: ptr.To(corev1.ProtocolTCP),
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{
+							"7.6.5.4",
+						},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: ptr.To(true),
+						},
+						Zone: ptr.To("zone1"),
+					},
+				},
+			}
+
+			if translator.MergeGateways {
+				svc.Labels[OwningGatewayClassLabel] = string(translator.GatewayClassName)
+				resources.Services = append(resources.Services, &svc)
+				resources.EndpointSlices = append(resources.EndpointSlices, &endPtSlice)
+			} else {
+				for _, g := range resources.Gateways {
+					if g == nil {
+						panic("nil Gateway")
+					}
+					gSvc := svc.DeepCopy()
+					gSvc.
+						Labels[OwningGatewayNameLabel] = g.
+						Name
+					gSvc.Labels[OwningGatewayNamespaceLabel] = g.
+						Namespace
+					// Matches proxy.ExpectedResourceHashedName()
+					gSvc.Name = fmt.Sprintf("%s-%s", config.EnvoyPrefix, utils.GetHashedName(fmt.Sprintf("%s/%s", g.Namespace, g.Name), 48))
+					gEndPtSlice := endPtSlice.DeepCopy()
+					gEndPtSlice.Name = gSvc.Name
+					gEndPtSlice.Labels[discoveryv1.LabelServiceName] = gSvc.Name
+					gEndPtSlice.Labels[OwningGatewayNameLabel] = g.Name
+					gEndPtSlice.Labels[OwningGatewayNamespaceLabel] = g.Namespace
+					resources.Services = append(resources.Services, gSvc)
+					resources.EndpointSlices = append(resources.EndpointSlices, gEndPtSlice)
+				}
+			}
+
 			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
 			}, &corev1.Namespace{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Namespace",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
@@ -509,7 +787,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			out, err := yaml.Marshal(got)
 			require.NoError(t, err)
 
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(out), outputFilePath))
 			}
 
@@ -521,14 +799,13 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			opts := []cmp.Option{
 				cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime"),
-				cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
 			}
 			require.Empty(t, cmp.Diff(want, got, opts...))
 		})
 	}
 }
 
-func overrideOutputConfig(t *testing.T, data string, filepath string) {
+func overrideOutputConfig(t *testing.T, data, filepath string) {
 	t.Helper()
 	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	require.NoError(t, err)
@@ -763,10 +1040,10 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 func TestServicePortToContainerPort(t *testing.T) {
 	testCases := []struct {
-		servicePort               int32
-		containerPort             int32
-		envoyProxy                *egv1a1.EnvoyProxy
-		listenerPortShiftDisabled bool
+		servicePort   int32
+		containerPort int32
+		envoyProxy    *egv1a1.EnvoyProxy
+		runningOnHost bool
 	}{
 		{
 			servicePort:   99,
@@ -794,7 +1071,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 					},
 				},
 			},
@@ -805,7 +1082,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(false),
 						},
@@ -819,7 +1096,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 			envoyProxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							UseListenerPortAsContainerPort: ptr.To(true),
 						},
@@ -828,13 +1105,13 @@ func TestServicePortToContainerPort(t *testing.T) {
 			},
 		},
 		{
-			servicePort:               99,
-			containerPort:             99,
-			listenerPortShiftDisabled: true,
+			servicePort:   99,
+			containerPort: 99,
+			runningOnHost: true,
 		},
 	}
 	for _, tc := range testCases {
-		translator := &Translator{ListenerPortShiftDisabled: tc.listenerPortShiftDisabled}
+		translator := &Translator{RunningOnHost: tc.runningOnHost}
 		got := translator.servicePortToContainerPort(tc.servicePort, tc.envoyProxy)
 		assert.Equal(t, tc.containerPort, got)
 	}
@@ -846,7 +1123,7 @@ type mockWasmCache struct{}
 
 func (m *mockWasmCache) Start(_ context.Context) {}
 
-func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url string, checksum string, err error) {
+func (m *mockWasmCache) Get(downloadURL string, options *wasm.GetOptions) (url, checksum string, err error) {
 	// This is a mock implementation of the wasm.Cache.Get method.
 	sha := sha256.Sum256([]byte(downloadURL))
 	hashedName := hex.EncodeToString(sha[:])
@@ -857,7 +1134,7 @@ func (m *mockWasmCache) Get(downloadURL string, options wasm.GetOptions) (url st
 	if options.Checksum != "" && checksum != options.Checksum {
 		return "", "", fmt.Errorf("module downloaded from %v has checksum %v, which does not match: %v", downloadURL, checksum, options.Checksum)
 	}
-	return fmt.Sprintf("https://envoy-gateway:18002/%s.wasm", hashedName), checksum, nil
+	return fmt.Sprintf("https://envoy-gateway.envoy-gateway-system.svc.cluster.local:18002/%s.wasm", hashedName), checksum, nil
 }
 
 func (m *mockWasmCache) Cleanup() {}
@@ -868,23 +1145,29 @@ func (m *mockWasmCache) Cleanup() {}
 // This allows us to use cmp.Diff to compare the types with field-level cmpopts.
 func xdsWithoutEqual(a *ir.Xds) any {
 	ret := struct {
-		AccessLog          *ir.AccessLog
-		Tracing            *ir.Tracing
-		Metrics            *ir.Metrics
-		HTTP               []*ir.HTTPListener
-		TCP                []*ir.TCPListener
-		UDP                []*ir.UDPListener
-		EnvoyPatchPolicies []*ir.EnvoyPatchPolicy
-		FilterOrder        []egv1a1.FilterPosition
+		ReadyListener           *ir.ReadyListener
+		AccessLog               *ir.AccessLog
+		Tracing                 *ir.Tracing
+		Metrics                 *ir.Metrics
+		HTTP                    []*ir.HTTPListener
+		TCP                     []*ir.TCPListener
+		UDP                     []*ir.UDPListener
+		EnvoyPatchPolicies      []*ir.EnvoyPatchPolicy
+		FilterOrder             []egv1a1.FilterPosition
+		GlobalResources         *ir.GlobalResources
+		ExtensionServerPolicies []*ir.UnstructuredRef
 	}{
-		AccessLog:          a.AccessLog,
-		Tracing:            a.Tracing,
-		Metrics:            a.Metrics,
-		HTTP:               a.HTTP,
-		TCP:                a.TCP,
-		UDP:                a.UDP,
-		EnvoyPatchPolicies: a.EnvoyPatchPolicies,
-		FilterOrder:        a.FilterOrder,
+		ReadyListener:           a.ReadyListener,
+		AccessLog:               a.AccessLog,
+		Tracing:                 a.Tracing,
+		Metrics:                 a.Metrics,
+		HTTP:                    a.HTTP,
+		TCP:                     a.TCP,
+		UDP:                     a.UDP,
+		EnvoyPatchPolicies:      a.EnvoyPatchPolicies,
+		FilterOrder:             a.FilterOrder,
+		GlobalResources:         a.GlobalResources,
+		ExtensionServerPolicies: a.ExtensionServerPolicies,
 	}
 
 	// Ensure we didn't drop an exported field.

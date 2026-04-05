@@ -10,10 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/telepresenceio/watchable"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/envoyproxy/gateway/internal/ir"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -22,18 +26,19 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 	close(ch)
 
 	var calls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
-		func(update message.Update[string, any], errChans chan error) { calls++ },
+		func(_ message.Update[string, any], _ chan error) { calls++ },
 	)
-	assert.Equal(t, 0, calls)
+	require.Equal(t, 0, calls)
 }
 
 func TestPanicInSubscriptionHandler(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
-			assert.Fail(t, "recovered from an unexpected panic")
+			require.Fail(t, "recovered from an unexpected panic")
 		}
 	}()
 	var m watchable.Map[string, any]
@@ -47,15 +52,16 @@ func TestPanicInSubscriptionHandler(t *testing.T) {
 	}()
 
 	numCalls := 0
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, any], _ chan error) {
 			numCalls++
 			panic("oops " + update.Key)
 		},
 	)
-	assert.Equal(t, 2, numCalls)
+	require.Equal(t, 2, numCalls)
 }
 
 func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
@@ -75,10 +81,11 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	message.HandleSubscription[string, any](
+	message.HandleSubscription(
+		logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
 		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any], errChans chan error) {
+		func(update message.Update[string, any], _ chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -87,46 +94,151 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 			}
 		},
 	)
-	assert.Equal(t, 2, storeCalls)
-	assert.Equal(t, 1, deleteCalls)
+	require.LessOrEqual(t, storeCalls, 2) // updates can be coalesced
+	require.Equal(t, 1, deleteCalls)
 }
 
-func TestXdsIRUpdates(t *testing.T) {
+func TestControllerResourceUpdate(t *testing.T) {
 	tests := []struct {
-		desc    string
-		xx      []*ir.Xds
-		updates int
+		desc      string
+		resources []*resource.ControllerResources
+		updates   int
 	}{
 		{
-			desc: "HTTP listener order change skips update",
-			xx: []*ir.Xds{
+			desc: "Resource order change skips update",
+			resources: []*resource.ControllerResources{
 				{
-					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
 					},
 				},
 				{
-					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
 					},
 				},
 			},
 			updates: 1,
 		},
 		{
-			desc: "Additional HTTP listener triggers update",
-			xx: []*ir.Xds{
+			desc: "Additional resource triggers update",
+			resources: []*resource.ControllerResources{
 				{
-					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
 					},
 				},
 				{
-					HTTP: []*ir.HTTPListener{
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-1"}},
-						{CoreListenerDetails: ir.CoreListenerDetails{Name: "listener-2"}},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+					},
+				},
+			},
+			updates: 2,
+		},
+		{
+			desc: "Multiple Gateways in Resources struct with order change skips update",
+			resources: []*resource.ControllerResources{
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-2", Namespace: "default"}},
+						},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-3", Namespace: "system"}},
+						},
+					},
+				},
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-3", Namespace: "system"}},
+						},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-2", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+						},
+					},
+				},
+			},
+			updates: 1,
+		},
+		{
+			desc: "Multiple Gateways with Gateway change triggers update",
+			resources: []*resource.ControllerResources{
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+						},
+					},
+				},
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-2", Namespace: "default"}},
+						},
+					},
+				},
+			},
+			updates: 2,
+		},
+		{
+			desc: "Multiple Resources with varying Gateway counts",
+			resources: []*resource.ControllerResources{
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-2", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-3", Namespace: "test"}},
+						},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-4", Namespace: "system"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-5", Namespace: "system"}},
+						},
+					},
+				},
+				{
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-1"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-1", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-2", Namespace: "default"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-3", Namespace: "test"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-6", Namespace: "test"}},
+						},
+					},
+					{
+						GatewayClass: &gwapiv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "class-2"}},
+						Gateways: []*gwapiv1.Gateway{
+							{ObjectMeta: metav1.ObjectMeta{Name: "gateway-4", Namespace: "system"}},
+						},
 					},
 				},
 			},
@@ -136,31 +248,47 @@ func TestXdsIRUpdates(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.desc, func(t *testing.T) {
 			ctx := context.Background()
-			m := new(message.XdsIR)
+			m := &message.ProviderResources{}
 
-			snapshotC := m.Subscribe(ctx)
-			endCtx, end := context.WithCancel(ctx)
-			m.Store("start", &ir.Xds{})
+			snapshotC := m.GatewayAPIResources.Subscribe(ctx)
+			endCtx, cancel := context.WithCancel(ctx)
+			m.GatewayAPIResources.Store("start", &resource.ControllerResourcesContext{
+				Resources: &resource.ControllerResources{},
+				Context:   ctx,
+			})
 
 			go func() {
 				<-endCtx.Done()
-				for _, x := range tc.xx {
-					m.Store("test", x)
+				for _, r := range tc.resources {
+					r.Sort()
+					m.GatewayAPIResources.Store("test", &resource.ControllerResourcesContext{
+						Resources: r,
+						Context:   ctx,
+					})
 				}
-				m.Store("end", &ir.Xds{})
+				m.GatewayAPIResources.Store("end", &resource.ControllerResourcesContext{
+					Resources: &resource.ControllerResources{},
+					Context:   ctx,
+				})
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *ir.Xds], errChans chan error) {
-				end()
-				if u.Key == "test" {
-					updates += 1
-				}
-				if u.Key == "end" {
-					m.Close()
-				}
-			})
-			assert.Equal(t, tc.updates, updates)
+			message.HandleSubscription(
+				logging.NewLogger(t.Output(), egv1a1.DefaultEnvoyGatewayLogging()),
+				message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *resource.ControllerResourcesContext], _ chan error) {
+					cancel()
+					if u.Key == "test" {
+						updates += 1
+					}
+					if u.Key == "end" {
+						m.GatewayAPIResources.Close()
+					}
+				})
+			if tc.updates > 1 {
+				require.LessOrEqual(t, updates, tc.updates) // Updates can be coalesced
+			} else {
+				require.Equal(t, 1, updates)
+			}
 		})
 	}
 }

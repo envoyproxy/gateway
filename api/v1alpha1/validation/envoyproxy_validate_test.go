@@ -6,6 +6,7 @@
 package validation
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -52,11 +53,42 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeCustom,
+						Type: egv1a1.EnvoyProxyProviderType("unsupported"),
 					},
 				},
 			},
 			expected: false,
+		},
+		{
+			name: "nil custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid custom provider",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{},
+					},
+				},
+			},
+			expected: true,
 		},
 		{
 			name: "nil envoy service",
@@ -67,7 +99,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: nil,
 						},
@@ -85,7 +117,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: egv1a1.GetKubernetesServiceType(""),
@@ -105,7 +137,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceType(corev1.ServiceTypeNodePort)),
@@ -125,7 +157,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -145,7 +177,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
@@ -165,7 +197,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -186,7 +218,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
@@ -208,7 +240,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -229,7 +261,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                     egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
@@ -250,7 +282,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -271,7 +303,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -292,7 +324,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
@@ -317,7 +349,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 									},
 								},
 							},
@@ -340,7 +372,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
 									Format: &egv1a1.ProxyAccessLogFormat{
-										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
 										Text: ptr.To("[%START_TIME%]"),
 									},
 									Sinks: []egv1a1.ProxyAccessLogSink{
@@ -411,7 +443,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -435,7 +467,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -459,7 +491,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -483,7 +515,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -508,7 +540,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -530,7 +562,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyPDB: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -554,7 +586,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -578,7 +610,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -603,7 +635,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -625,7 +657,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -649,7 +681,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -671,7 +703,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -696,7 +728,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 				Spec: egv1a1.EnvoyProxySpec{
 					Provider: &egv1a1.EnvoyProxyProvider{
-						Type: egv1a1.ProviderTypeKubernetes,
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
 								Patch: &egv1a1.KubernetesPatchSpec{
@@ -753,6 +785,42 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						{
 							Name:   egv1a1.EnvoyFilterExtProc,
 							Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To(fmt.Sprintf("%s/%s/%s/%s/%s/%s/%s", egv1a1.StatFormatterRouteName,
+								egv1a1.StatFormatterRouteName, egv1a1.StatFormatterRouteNamespace, egv1a1.StatFormatterRouteKind,
+								egv1a1.StatFormatterRouteRuleName, egv1a1.StatFormatterRouteRuleNumber, egv1a1.StatFormatterBackendRefs)),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid operators in ClusterStatName",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							ClusterStatName: ptr.To("%ROUTE_NAME%.%FOO%.%BAR%/my/%BACKEND_REFS%/%FOOBAR%"),
 						},
 					},
 				},
@@ -847,7 +915,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 	}{
 		{
 			logging:  egv1a1.ProxyLogging{},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{
@@ -855,7 +923,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
-			expected: "",
+			expected: "misc:error",
 		},
 		{
 			logging: egv1a1.ProxyLogging{
@@ -893,6 +961,156 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got := tc.logging.GetEnvoyProxyComponentLevel()
 			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestValidateClusterStatName(t *testing.T) {
+	testCases := []struct {
+		name     string
+		statName string
+		expected bool
+	}{
+		{
+			name:     "valid cluster stat name with supported operators",
+			statName: "%ROUTE_NAME%/%ROUTE_NAMESPACE%/%BACKEND_REFS%",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name with unsupported operators",
+			statName: "%ROUTE_NAME%/%FOO%/%BAR%",
+			expected: false,
+		},
+		{
+			name:     "valid cluster stat name",
+			statName: "any_custom_name",
+			expected: true,
+		},
+		{
+			name:     "invalid cluster stat name",
+			statName: "%ROUTE_NAME",
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			errs := ValidateClusterStatName(tc.statName)
+			if tc.expected {
+				require.NoError(t, errs)
+			} else {
+				require.Error(t, errs)
+			}
+		})
+	}
+}
+
+func TestValidateProxyAccessLog(t *testing.T) {
+	tests := []struct {
+		name      string
+		accessLog *egv1a1.ProxyAccessLog
+		expected  []error
+	}{
+		{
+			name: "nil format type with text only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: ptr.To("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with json only",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "nil format type with both text and json",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Text: ptr.To("[%START_TIME%]"),
+							JSON: map[string]string{"start_time": "%START_TIME%"},
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Text type without text field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+								File: &egv1a1.FileEnvoyProxyAccessLog{Path: "/dev/stdout"},
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")},
+		},
+		{
+			name: "File sink without file field",
+			accessLog: &egv1a1.ProxyAccessLog{
+				Settings: []egv1a1.ProxyAccessLogSetting{
+					{
+						Format: &egv1a1.ProxyAccessLogFormat{
+							Type: ptr.To(egv1a1.ProxyAccessLogFormatTypeText),
+							Text: ptr.To("[%START_TIME%]"),
+						},
+						Sinks: []egv1a1.ProxyAccessLogSink{
+							{
+								Type: egv1a1.ProxyAccessLogSinkTypeFile,
+							},
+						},
+					},
+				},
+			},
+			expected: []error{fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := validateProxyAccessLog(tc.accessLog)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

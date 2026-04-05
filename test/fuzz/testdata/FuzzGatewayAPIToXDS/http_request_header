@@ -1,0 +1,52 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-headers
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - headers.example
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: early-added-header
+                value: late
+              - name: early-set-header
+                value: late
+              - name: early-removed-header
+                value: late
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: enable-early-headers
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+  headers:
+    earlyRequestHeaders:
+      add:
+        - name: "early-added-header"
+          value: "early"
+      set:
+        - name: "early-set-header"
+          value: "early"
+      remove:
+        - "early-removed-header"

@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -21,11 +20,8 @@ import (
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/kube"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -33,11 +29,11 @@ import (
 	"k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
-	"sigs.k8s.io/gateway-api/pkg/consts"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	"github.com/envoyproxy/gateway/internal/utils/helm"
@@ -52,7 +48,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			chartPath := "../../../charts/gateway-helm"
 			relName := "eg"
 			depNS := "envoy-gateway-system"
-			lastVersionTag := "v1.2.3" //  the latest prior release
+			lastVersionTag := "1.7.1" //  the latest prior release
 
 			t.Logf("Upgrading from version: %s", lastVersionTag)
 
@@ -60,7 +56,13 @@ var EGUpgradeTest = suite.ConformanceTest{
 			relNamespace := "envoy-gateway-system"
 			options.DefaultConfigFlags.Namespace = ptr.To(relNamespace)
 
-			ht := helm.NewPackageTool()
+			// use values file for e2e test
+			valuesFile := "../../config/helm/default.yaml"
+			if IsGatewayNamespaceMode() {
+				valuesFile = "../../config/helm/gateway-namespace-mode.yaml"
+			}
+
+			ht := helm.NewPackageTool(valuesFile)
 			if err := ht.Setup(); err != nil {
 				t.Errorf("failed to setup of packageTool: %v", err)
 			}
@@ -124,7 +126,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 
 			// wait for everything to startup
 			routeNN := types.NamespacedName{Name: "http-backend-eg-upgrade", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 			kubernetes.NamespacesMustBeReady(t, suite.Client, suite.TimeoutConfig, []string{depNS})
 			expectOkResp := http.ExpectedResponse{
@@ -132,7 +134,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 					Path: "/eg-upgrade",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -140,7 +142,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			t.Log("Confirm routing works before starting to validate the eg upgrade flow")
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 			// fire the rest of requests
-			if err := GotExactExpectedResponse(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponseExceptErrors(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 
@@ -158,7 +160,7 @@ var EGUpgradeTest = suite.ConformanceTest{
 			t.Log("Confirm routing works after upgrading Envoy Gateway with current main version")
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
 			// fire the rest of requests
-			if err := GotExactExpectedResponse(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+			if err := GotExactExpectedResponseExceptErrors(t, 5, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
 				t.Errorf("failed to get expected response for the first three requests: %v", err)
 			}
 		})
@@ -228,17 +230,12 @@ func upgradeChartFromPath(relName, relNamespace, chartPath string, timeout time.
 		return err
 	}
 
-	err = migrateChartCRDs(actionConfig, gatewayChart, timeout)
-	if err != nil {
-		return err
-	}
-
 	err = updateChartCRDs(actionConfig, gatewayChart, timeout)
 	if err != nil {
 		return err
 	}
 
-	_, err = upgrade.Run(relName, gatewayChart, map[string]interface{}{})
+	_, err = upgrade.Run(relName, gatewayChart, map[string]any{})
 	if err != nil {
 		return err
 	}
@@ -273,60 +270,6 @@ func updateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Cha
 	return err
 }
 
-func migrateChartCRDs(actionConfig *action.Configuration, gatewayChart *chart.Chart, _ time.Duration) error {
-	crds, err := extractCRDs(actionConfig, gatewayChart)
-	if err != nil {
-		return err
-	}
-
-	// https: //gateway-api.sigs.k8s.io/guides/?h=upgrade#v12-upgrade-notes
-	storedVersionsMap := map[string]string{
-		"referencegrants.gateway.networking.k8s.io": "v1beta1",
-		"grpcroutes.gateway.networking.k8s.io":      "v1",
-	}
-
-	restCfg, err := actionConfig.RESTClientGetter.ToRESTConfig()
-	if err != nil {
-		return err
-	}
-
-	cli, err := client.New(restCfg, client.Options{})
-	if err != nil {
-		return err
-	}
-
-	for _, crd := range crds {
-		storedVersion, ok := storedVersionsMap[crd.Name]
-		if !ok {
-			continue
-		}
-
-		newVersion, err := getGWAPIVersion(crd.Object)
-		if err != nil {
-			return err
-		}
-
-		if strings.HasPrefix(newVersion, "v1.2.0") {
-			existingCRD := &apiextensionsv1.CustomResourceDefinition{}
-			err := cli.Get(context.Background(), types.NamespacedName{Name: crd.Name}, existingCRD)
-			if kerrors.IsNotFound(err) {
-				continue
-			}
-			if err != nil {
-				return fmt.Errorf("failed to get CRD: %s", err.Error())
-			}
-
-			existingCRD.Status.StoredVersions = []string{storedVersion}
-
-			if err := cli.Status().Patch(context.Background(), existingCRD, client.MergeFrom(existingCRD)); err != nil {
-				return fmt.Errorf("failed to patch CRD: %s", err.Error())
-			}
-		}
-	}
-
-	return nil
-}
-
 func deleteChartCRDsFromPath(relNamespace, chartPath string, t *testing.T, timeout time.Duration) error {
 	actionConfig := new(action.Configuration)
 	if err := actionConfig.Init(cli.New().RESTClientGetter(), relNamespace, "secret", t.Logf); err != nil {
@@ -355,19 +298,6 @@ func deleteChartCRDsFromPath(relNamespace, chartPath string, t *testing.T, timeo
 	}
 
 	return nil
-}
-
-func getGWAPIVersion(object runtime.Object) (string, error) {
-	accessor, err := meta.Accessor(object)
-	if err != nil {
-		return "", err
-	}
-	annotations := accessor.GetAnnotations()
-	newVersion, ok := annotations[consts.BundleVersionAnnotation]
-	if ok {
-		return newVersion, nil
-	}
-	return "", fmt.Errorf("failed to determine Gateway API CRD version: %v", annotations)
 }
 
 // extractCRDs Extract the CRDs part of the chart

@@ -1,0 +1,11 @@
+global:
+  images:
+    envoyGateway:
+      image: "docker.io/envoyproxy/gateway-dev:latest"
+      pullPolicy: Always
+
+deployment:
+  annotations:
+    my-custom-annotation-1: example-1
+    my-custom-annotation-2: example-2
+    my-custom-annotation-3: example-3

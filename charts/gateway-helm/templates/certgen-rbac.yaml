@@ -2,14 +2,15 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -18,14 +19,15 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -43,14 +45,15 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   {{- if .Values.certgen.rbac.labels }}
   {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
   {{- end }}
   annotations:
-    "helm.sh/hook": pre-install
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
   {{- if .Values.certgen.rbac.annotations }}
     {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{- end }}
@@ -61,4 +64,64 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
+---
+{{- if .Values.topologyInjector.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+    {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
+rules:
+  - apiGroups:
+    - admissionregistration.k8s.io
+    resources:
+    - mutatingwebhookconfigurations
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    resourceNames:
+      - 'envoy-gateway-topology-injector.{{ include "eg.namespace" . }}'
+    verbs:
+      - update
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+    {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
+  annotations:
+    "helm.sh/hook": pre-install, pre-upgrade
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: '{{ include "eg.fullname" . }}-certgen:{{ include "eg.namespace" . }}'
+subjects:
+  - kind: ServiceAccount
+    name: '{{ include "eg.fullname" . }}-certgen'
+    namespace: {{ include "eg.namespace" . }}
+{{- end }}

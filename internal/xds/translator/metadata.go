@@ -20,6 +20,7 @@ const (
 	envoyGatewayXdsMetadataKeyAnnotations = "annotations"
 	envoyGatewayXdsMetadataKeySectionName = "sectionName"
 	envoyGatewayMetadataKeyResources      = "resources"
+	envoyGatewayMetadataKeyPolicies       = "policies"
 )
 
 func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
@@ -30,7 +31,7 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 	resourcesList := &structpb.ListValue{}
 	resourcesList.Values = append(resourcesList.Values, buildResourceMetadata(metadata))
 
-	return &corev3.Metadata{
+	md := &corev3.Metadata{
 		FilterMetadata: map[string]*structpb.Struct{
 			envoyGatewayXdsMetadataNamespace: {
 				Fields: map[string]*structpb.Value{
@@ -40,6 +41,50 @@ func buildXdsMetadata(metadata *ir.ResourceMetadata) *corev3.Metadata {
 						},
 					},
 				},
+			},
+		},
+	}
+
+	policyList := &structpb.ListValue{}
+
+	for _, policy := range metadata.Policies {
+		policyList.Values = append(policyList.Values, buildpolicyMetadata(policy))
+	}
+
+	if len(policyList.Values) > 0 {
+		md.FilterMetadata[envoyGatewayXdsMetadataNamespace].Fields[envoyGatewayMetadataKeyPolicies] = &structpb.Value{
+			Kind: &structpb.Value_ListValue{
+				ListValue: policyList,
+			},
+		}
+	}
+
+	return md
+}
+
+func buildpolicyMetadata(md *ir.PolicyMetadata) *structpb.Value {
+	routeResourceFields := map[string]*structpb.Value{
+		envoyGatewayXdsMetadataKeyKind: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: md.Kind,
+			},
+		},
+		envoyGatewayXdsMetadataKeyName: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: md.Name,
+			},
+		},
+		envoyGatewayXdsMetadataKeyNamespace: {
+			Kind: &structpb.Value_StringValue{
+				StringValue: md.Namespace,
+			},
+		},
+	}
+
+	return &structpb.Value{
+		Kind: &structpb.Value_StructValue{
+			StructValue: &structpb.Struct{
+				Fields: routeResourceFields,
 			},
 		},
 	}
@@ -90,12 +135,12 @@ func buildResourceMetadata(metadata *ir.ResourceMetadata) *structpb.Value {
 	return routeResourceValue
 }
 
-func mapToStruct(data map[string]string) *structpb.Struct {
+func mapToStruct(data []ir.MapEntry) *structpb.Struct {
 	fields := make(map[string]*structpb.Value)
-	for key, value := range data {
-		fields[key] = &structpb.Value{
+	for _, entry := range data {
+		fields[entry.Key] = &structpb.Value{
 			Kind: &structpb.Value_StringValue{
-				StringValue: value,
+				StringValue: entry.Value,
 			},
 		}
 	}

@@ -13,6 +13,7 @@ go.mod
 go.sum
 bin
 ./charts
+./test/helm/*
 *.js
 */testdata/*.yaml
 ./site/public/*

@@ -8,6 +8,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_0_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -28,6 +29,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_0_2/backend/0
       logType: Route
       name: envoy-gateway-system/test
       text: |
@@ -41,6 +43,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_1_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -61,6 +64,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_1_2/backend/0
       logType: Listener
       name: envoy-gateway-system/test
       text: |
@@ -74,6 +78,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_2_1/backend/0
       http:
         requestHeaders:
           - x-client-ip-address
@@ -93,6 +98,7 @@ accessLog:
               - host: 10.240.0.10
                 port: 9090
             protocol: GRPC
+            name: accesslog_als_2_2/backend/0
       name: envoy-gateway-system/test
       text: |
         this is a Global log
@@ -106,10 +112,13 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
+            name: accesslog_otel_0_3/backend/0
       logType: Route
-      resources:
-        k8s.cluster.name: cluster-1
+      resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a route log
     - authority: otel-collector.monitoring.svc.cluster.local
@@ -120,10 +129,13 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
+            name: accesslog_otel_1_3/backend/0
       logType: Listener
-      resources:
-        k8s.cluster.name: cluster-1
+      resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a listener log
     - authority: otel-collector.monitoring.svc.cluster.local
@@ -134,16 +146,15 @@ accessLog:
               - host: otel-collector.monitoring.svc.cluster.local
                 port: 4317
             protocol: GRPC
+            addressType: FQDN
             weight: 1
-      resources:
-        k8s.cluster.name: cluster-1
+            name: accesslog_otel_2_3/backend/0
+      resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         this is a Global log
   text:
-    - logType: Route
-      path: /dev/stdout
-    - logType: Listener
-      path: /dev/stdout
     - format: |
         this is a route log
       logType: Route
@@ -155,11 +166,16 @@ accessLog:
     - format: |
         this is a Global log
       path: /dev/stdout
+    - format: |
+        Upstream access log: [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%\n
+      logType: Upstream
+      path: /dev/stdout
+  json:
+    - path: "/dev/stdout"
 http:
   - address: 0.0.0.0
     hostnames:
       - '*'
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1
@@ -179,3 +195,4 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "direct-route-dest/backend/0"

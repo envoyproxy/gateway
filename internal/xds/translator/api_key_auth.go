@@ -13,10 +13,11 @@ import (
 	apikeyauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/api_key_auth/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -69,11 +70,7 @@ func (*apiKeyAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 // buildHCMAPIKeyAuthFilter returns a api_key_auth HTTP filter from the provided IR HTTPRoute.
 func buildHCMAPIKeyAuthFilter(apiKeyAuth *ir.APIKeyAuth) (*hcmv3.HttpFilter, error) {
 	apiKeyAuthProto := buildAPIKeyAuthFilterConfig(apiKeyAuth)
-	if err := apiKeyAuthProto.ValidateAll(); err != nil {
-		return nil, err
-	}
-
-	apiKeyAuthAny, err := protocov.ToAnyWithValidation(apiKeyAuthProto)
+	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +90,7 @@ func (*apiKeyAuth) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) 
 
 // patchRoute patches the provided route with the apiKeyAuth config if applicable.
 // Note: this method overwrites the HCM level filter config with the per route filter config.
-func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -114,11 +111,7 @@ func (*apiKeyAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error
 
 	// Overwrite the HCM level filter config with the per route filter config.
 	apiKeyAuthProto := buildAPIKeyAuthFilterPerRouteConfig(irRoute.Security.APIKeyAuth)
-	if err := apiKeyAuthProto.ValidateAll(); err != nil {
-		return err
-	}
-
-	apiKeyAuthAny, err := protocov.ToAnyWithValidation(apiKeyAuthProto)
+	apiKeyAuthAny, err := proto.ToAnyWithValidation(apiKeyAuthProto)
 	if err != nil {
 		return err
 	}
@@ -135,10 +128,10 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 	apiKeyAuthProto := &apikeyauthv3.ApiKeyAuth{
 		Credentials: make([]*apikeyauthv3.Credential, 0, len(apiKeyAuth.Credentials)),
 	}
-	for clientid, key := range apiKeyAuth.Credentials {
+	for _, cred := range apiKeyAuth.Credentials {
 		apiKeyAuthProto.Credentials = append(apiKeyAuthProto.Credentials, &apikeyauthv3.Credential{
-			Client: clientid,
-			Key:    string(key),
+			Client: string(cred.Client),
+			Key:    string(cred.Key),
 		})
 	}
 
@@ -163,6 +156,15 @@ func buildAPIKeyAuthFilterConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv3.ApiKey
 		}
 	}
 
+	clientIDHeader := ptr.Deref(apiKeyAuth.ForwardClientIDHeader, "")
+	sanitize := ptr.Deref(apiKeyAuth.Sanitize, false)
+	if clientIDHeader != "" || sanitize {
+		apiKeyAuthProto.Forwarding = &apikeyauthv3.Forwarding{
+			Header:          clientIDHeader,
+			HideCredentials: sanitize,
+		}
+	}
+
 	return apiKeyAuthProto
 }
 
@@ -171,5 +173,6 @@ func buildAPIKeyAuthFilterPerRouteConfig(apiKeyAuth *ir.APIKeyAuth) *apikeyauthv
 	return &apikeyauthv3.ApiKeyAuthPerRoute{
 		Credentials: apiKeyAuthProto.Credentials,
 		KeySources:  apiKeyAuthProto.KeySources,
+		Forwarding:  apiKeyAuthProto.Forwarding,
 	}
 }

@@ -29,6 +29,7 @@ import (
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
+	"github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -56,7 +57,7 @@ func newFakePortForwarder(b []byte) (kube.PortForwarder, error) {
 		localPort:    p,
 		mux:          http.NewServeMux(),
 	}
-	fw.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	fw.mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(fw.responseBody)
 	})
 
@@ -118,7 +119,7 @@ func TestExtractAllConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			require.NoError(t, err)
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
@@ -206,7 +207,7 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			require.NoError(t, err)
-			if *overrideTestData {
+			if test.OverrideTestData() {
 				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
 			}
 			out, err := readOutputConfig(tc.expected)
@@ -223,8 +224,6 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 }
 
 func TestLabelSelectorBadInput(t *testing.T) {
-	podNamespace = "default"
-
 	cases := []struct {
 		name   string
 		args   []string
@@ -297,11 +296,14 @@ func (f *fakeCLIClient) PodsForSelector(string, ...string) (*corev1.PodList, err
 	return &corev1.PodList{Items: f.pods}, nil
 }
 
-func (f *fakeCLIClient) PodExec(types.NamespacedName, string, string) (stdout string, stderr string, err error) {
+func (f *fakeCLIClient) PodExec(types.NamespacedName, string, string) (stdout, stderr string, err error) {
 	return "", "", nil
 }
 
 func (f *fakeCLIClient) Kube() kubernetes.Interface {
+	if f.cm == nil {
+		return fake.NewSimpleClientset()
+	}
 	return fake.NewSimpleClientset(f.cm)
 }
 
@@ -521,8 +523,104 @@ func TestCheckRateLimitPodStatusReady(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			actual := checkRateLimitPodStatusReady(tc.status)
+			actual := checkRateLimitPodStatusReady(&tc.status)
 			require.Equal(t, tc.expect, actual)
 		})
 	}
+}
+
+func TestExtractEnvoyGatewayConfigDump(t *testing.T) {
+	fw, err := newFakePortForwarder([]byte(`{
+  "resources": [
+    {
+      "metadata": {
+        "name": "eg",
+        "namespace": "default"
+      }
+    }
+  ],
+  "timestamp": "2026-01-01T00:00:00Z",
+  "totalCount": 1
+}`))
+	require.NoError(t, err)
+	require.NoError(t, fw.Start())
+
+	resources, err := extractEnvoyGatewayConfigDump(fw, GatewayEnvoyGatewayConfigType)
+	require.NoError(t, err)
+	items, ok := resources.([]interface{})
+	require.True(t, ok)
+	require.Len(t, items, 1)
+
+	fw.Stop()
+}
+
+func TestEnvoyGatewayConfigDumpRequestUsesResourceQuery(t *testing.T) {
+	fw, err := newFakePortForwarder([]byte(`{"resources":[]}`))
+	require.NoError(t, err)
+
+	fakeFW := fw.(*fakePortForwarder)
+	fakeFW.mux = http.NewServeMux()
+	fakeFW.mux.HandleFunc("/api/config_dump", func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "resource=gateway", r.URL.RawQuery)
+		_, _ = w.Write([]byte(`{"resources":[]}`))
+	})
+
+	require.NoError(t, fakeFW.Start())
+	_, err = envoyGatewayConfigDumpRequest(fakeFW.Address(), GatewayEnvoyGatewayConfigType)
+	require.NoError(t, err)
+	fakeFW.Stop()
+}
+
+func TestFetchRunningEnvoyGatewayPods(t *testing.T) {
+	t.Run("find running pods with default selector", func(t *testing.T) {
+		fakeCli := &fakeCLIClient{
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "envoy-gateway-abc",
+						Namespace: "envoy-gateway-system",
+					},
+					Status: corev1.PodStatus{
+						Phase: corev1.PodRunning,
+					},
+				},
+			},
+		}
+
+		pods, err := fetchRunningEnvoyGatewayPods(fakeCli, types.NamespacedName{Namespace: "envoy-gateway-system"}, nil, false)
+		require.NoError(t, err)
+		require.Len(t, pods, 1)
+		require.Equal(t, "envoy-gateway-abc", pods[0].Name)
+	})
+
+	t.Run("return error when no pods match default selector", func(t *testing.T) {
+		fakeCli := &fakeCLIClient{pods: nil}
+		_, err := fetchRunningEnvoyGatewayPods(fakeCli, types.NamespacedName{Namespace: "envoy-gateway-system"}, nil, false)
+		require.ErrorContains(t, err, envoyGatewayDefaultLabelSelector)
+	})
+
+	t.Run("return error when all namespaces has no matching pods", func(t *testing.T) {
+		fakeCli := &fakeCLIClient{pods: nil}
+		_, err := fetchRunningEnvoyGatewayPods(fakeCli, types.NamespacedName{}, nil, true)
+		require.ErrorContains(t, err, envoyGatewayDefaultLabelSelector)
+	})
+
+	t.Run("return error when pod is not running", func(t *testing.T) {
+		fakeCli := &fakeCLIClient{
+			pods: []corev1.Pod{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "envoy-gateway-abc",
+						Namespace: "envoy-gateway-system",
+					},
+					Status: corev1.PodStatus{
+						Phase: corev1.PodPending,
+					},
+				},
+			},
+		}
+
+		_, err := fetchRunningEnvoyGatewayPods(fakeCli, types.NamespacedName{Namespace: "envoy-gateway-system"}, nil, false)
+		require.ErrorContains(t, err, "is not running")
+	})
 }

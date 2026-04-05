@@ -2,7 +2,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -23,6 +22,7 @@ http:
           port: 8080
         protocol: HTTP
         weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
     hostname: gateway.envoyproxy.io
     isHTTP2: false
     metadata:
@@ -38,4 +38,4 @@ http:
       compression:
       - type: Brotli
       - type: Gzip
-      - type: Brotli
+      - type: Zstd

@@ -10,12 +10,17 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"regexp"
+	"strings"
 
 	"github.com/dominikbraun/graph"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+var statNameRegex = regexp.MustCompile("%[^%]*%")
 
 // ValidateEnvoyProxy validates the provided EnvoyProxy.
 func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
@@ -65,24 +70,30 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
-		if spec.Provider.Type != egv1a1.ProviderTypeKubernetes {
+		switch spec.Provider.Type {
+		case egv1a1.EnvoyProxyProviderTypeKubernetes:
+			validateDeploymentErrs := validateDeployment(spec)
+			if len(validateDeploymentErrs) != 0 {
+				errs = append(errs, validateDeploymentErrs...)
+			}
+			validateHpaErrors := validateHpa(spec)
+			if len(validateHpaErrors) != 0 {
+				errs = append(errs, validateHpaErrors...)
+			}
+			validatePdbErrors := validatePdb(spec)
+			if len(validatePdbErrors) != 0 {
+				errs = append(errs, validatePdbErrors...)
+			}
+			validateServiceErrs := validateService(spec)
+			if len(validateServiceErrs) != 0 {
+				errs = append(errs, validateServiceErrs...)
+			}
+		case egv1a1.EnvoyProxyProviderTypeHost:
+			if spec.Provider.Host == nil {
+				errs = append(errs, fmt.Errorf("field 'host' should be specified when provider type is 'Host'"))
+			}
+		default:
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
-		}
-		validateDeploymentErrs := validateDeployment(spec)
-		if len(validateDeploymentErrs) != 0 {
-			errs = append(errs, validateDeploymentErrs...)
-		}
-		validateHpaErrors := validateHpa(spec)
-		if len(validateHpaErrors) != 0 {
-			errs = append(errs, validateHpaErrors...)
-		}
-		validatePdbErrors := validatePdb(spec)
-		if len(validatePdbErrors) != 0 {
-			errs = append(errs, validatePdbErrors...)
-		}
-		validateServiceErrs := validateService(spec)
-		if len(validateServiceErrs) != 0 {
-			errs = append(errs, validateServiceErrs...)
 		}
 	}
 	return errs
@@ -203,31 +214,34 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 				}
 			}
 		}
+
+		if spec.Telemetry.Metrics.ClusterStatName != nil {
+			if clusterStatErr := ValidateClusterStatName(*spec.Telemetry.Metrics.ClusterStatName); clusterStatErr != nil {
+				errs = append(errs, clusterStatErr)
+			}
+		}
 	}
 
 	return errs
 }
 
 func validateProxyAccessLog(accessLog *egv1a1.ProxyAccessLog) []error {
-	if accessLog.Disable {
+	if ptr.Deref(accessLog.Disable, false) {
 		return nil
 	}
 
 	var errs []error
 
 	for _, setting := range accessLog.Settings {
-		if setting.Format != nil {
-			switch setting.Format.Type {
+		if setting.Format != nil && setting.Format.Type != nil {
+			switch *setting.Format.Type {
 			case egv1a1.ProxyAccessLogFormatTypeText:
 				if setting.Format.Text == nil {
 					err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
 					errs = append(errs, err)
 				}
 			case egv1a1.ProxyAccessLogFormatTypeJSON:
-				if setting.Format.JSON == nil {
-					err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
-					errs = append(errs, err)
-				}
+				// TODO: add JSON format validation if needed
 			}
 		}
 
@@ -278,6 +292,59 @@ func validateFilterOrder(filterOrder []egv1a1.FilterPosition) error {
 				return fmt.Errorf("there is a cycle in the filter order: %s -> %s", from, to)
 			}
 		}
+	}
+
+	return nil
+}
+
+var (
+	routeStatSupportedOperators = map[string]bool{
+		egv1a1.StatFormatterRouteName:      true,
+		egv1a1.StatFormatterRouteNamespace: true,
+		egv1a1.StatFormatterRouteKind:      true,
+		egv1a1.StatFormatterRouteRuleName:  true,
+	}
+
+	clusterStatSupportedOperators = map[string]bool{
+		egv1a1.StatFormatterRouteName:       true,
+		egv1a1.StatFormatterRouteNamespace:  true,
+		egv1a1.StatFormatterRouteKind:       true,
+		egv1a1.StatFormatterRouteRuleName:   true,
+		egv1a1.StatFormatterRouteRuleNumber: true,
+		egv1a1.StatFormatterBackendRefs:     true,
+	}
+)
+
+func ValidateRouteStatName(routeStatName string) error {
+	if err := validateStatName(routeStatName, routeStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Route Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func ValidateClusterStatName(clusterStatName string) error {
+	if err := validateStatName(clusterStatName, clusterStatSupportedOperators); err != nil {
+		return fmt.Errorf("unable to configure Cluster Stat Name: %w", err)
+	}
+
+	return nil
+}
+
+func validateStatName(statName string, supportedOperators map[string]bool) error {
+	var unsupportedOperators []string
+	matches := statNameRegex.FindAllString(statName, -1)
+	if len(matches) == 0 && strings.Contains(statName, "%") {
+		return fmt.Errorf("unable to configure stat name with invalid operator")
+	}
+	for _, operator := range matches {
+		if _, ok := supportedOperators[operator]; !ok {
+			unsupportedOperators = append(unsupportedOperators, operator)
+		}
+	}
+
+	if len(unsupportedOperators) > 0 {
+		return fmt.Errorf("unsupported operators: %v", unsupportedOperators)
 	}
 
 	return nil

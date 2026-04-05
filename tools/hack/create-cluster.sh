@@ -3,12 +3,14 @@
 set -euo pipefail
 
 # Setup default values
+KIND=${KIND:-go tool -modfile=tools/go.mod kind}
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
-METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.32.0"}
+METALLB_VERSION=${METALLB_VERSION:-"v0.15.3"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.35.0"}
 NUM_WORKERS=${NUM_WORKERS:-""}
 IP_FAMILY=${IP_FAMILY:-"ipv4"}
 CUSTOM_CNI=${CUSTOM_CNI:-"false"}
+ENABLE_CLUSTER_TRUST_BUNDLE=${ENABLE_CLUSTER_TRUST_BUNDLE:-"false"}
 
 if [ "$CUSTOM_CNI" = "true" ]; then
   CNI_CONFIG="disableDefaultCNI: true"
@@ -19,35 +21,47 @@ fi
 KIND_CFG=$(cat <<-EOM
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+runtimeConfig:
+  certificates.k8s.io/v1beta1/clustertrustbundles: ${ENABLE_CLUSTER_TRUST_BUNDLE}
+featureGates:
+  "ClusterTrustBundle": ${ENABLE_CLUSTER_TRUST_BUNDLE}
+  "ClusterTrustBundleProjection": ${ENABLE_CLUSTER_TRUST_BUNDLE}
 networking:
   ${CNI_CONFIG}
   ipFamily: ${IP_FAMILY}
+  # uncomment following line when use IPv6 on macos or windows
+  # apiServerAddress: 127.0.0.1
   # it's to prevent inherit search domains from the host which slows down DNS resolution
   # and cause problems to IPv6 only clusters running on IPv4 host.
   dnsSearch: []
 nodes:
 - role: control-plane
+  labels:
+    "topology.kubernetes.io/zone": 0
 EOM
 )
 
 # https://kind.sigs.k8s.io/docs/user/quick-start/#multi-node-clusters
 if [[ -n "${NUM_WORKERS}" ]]; then
-for _ in $(seq 1 "${NUM_WORKERS}"); do
-  KIND_CFG+=$(printf "\n%s" "- role: worker")
+for i in $(seq 1 "${NUM_WORKERS}"); do
+  KIND_CFG+=$(printf "\n- role: worker\n  labels:\n    \"topology.kubernetes.io/zone\": %s" "$i")
 done
 fi
 
 ## Check if kind cluster already exists.
-if tools/bin/kind get clusters | grep -q "${CLUSTER_NAME}"; then
+if ${KIND} get clusters | grep -q "${CLUSTER_NAME}"; then
   echo "Cluster ${CLUSTER_NAME} already exists."
 else
+  echo "Creating kind cluster ${CLUSTER_NAME} with the following configuration:"
+  echo "${KIND_CFG}"
+
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
-  cat << EOF | tools/bin/kind create cluster --name "${CLUSTER_NAME}" --config -
+  cat << EOF | ${KIND} create cluster --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 else
-  cat << EOF | tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
+  cat << EOF | ${KIND} create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config -
 ${KIND_CFG}
 EOF
 fi
@@ -163,4 +177,3 @@ echo "Applying configuration with retries..."
     sleep $RETRY_INTERVAL
     ELAPSED_TIME=$((ELAPSED_TIME + RETRY_INTERVAL))
   done
-

@@ -26,6 +26,7 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: example
                 remoteJwks:
                   asyncFetch: {}
@@ -53,5 +54,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

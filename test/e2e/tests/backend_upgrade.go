@@ -20,10 +20,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -39,7 +41,19 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-backend-upgrade", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			// Make sure the backend is healthy before starting the test
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/backend-upgrade",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			})
+
 			reqURL := url.URL{Scheme: "http", Host: http.CalculateHost(t, gwAddr, "http"), Path: "/backend-upgrade"}
 
 			// get deployment to restart
@@ -53,24 +67,23 @@ var BackendUpgradeTest = suite.ConformanceTest{
 			// will contain indication on success or failure of load test
 			loadSuccess := make(chan bool)
 
-			t.Log("Starting load generation")
+			tlog.Logf(t, "Starting load generation")
 			// Run load async and continue to restart deployment
-			go runLoadAndWait(t, suite.TimeoutConfig, loadSuccess, aborter, reqURL.String())
+			go runLoadAndWait(t, &suite.TimeoutConfig, loadSuccess, aborter, reqURL.String(), 0)
 
-			t.Log("Restarting deployment")
-			err = restartDeploymentAndWaitForNewPods(t, suite.TimeoutConfig, suite.Client, dp)
+			tlog.Logf(t, "Restarting deployment")
+			err = restartDeploymentAndWaitForNewPods(t, &suite.TimeoutConfig, suite.Client, dp)
 
-			t.Log("Stopping load generation and collecting results")
+			tlog.Logf(t, "Stopping load generation and collecting results")
 			aborter.Abort(false) // abort the load either way
-
 			if err != nil {
-				t.Errorf("Failed to restart deployment")
+				tlog.Errorf(t, "Failed to restart deployment")
 			}
 
 			// Wait for the goroutine to finish
 			result := <-loadSuccess
 			if !result {
-				t.Errorf("Load test failed")
+				tlog.Errorf(t, "Load test failed")
 			}
 		})
 	},
@@ -84,17 +97,21 @@ func getDeploymentByNN(namespace, name string, c client.Client) (*appsv1.Deploym
 	return dp, err
 }
 
-func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
+func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig *config.TimeoutConfig, c client.Client, dp *appsv1.Deployment) error {
 	t.Helper()
 	const kubeRestartAnnotation = "kubectl.kubernetes.io/restartedAt"
 
 	ctx := context.Background()
 
-	if dp.Spec.Template.ObjectMeta.Annotations == nil {
-		dp.Spec.Template.ObjectMeta.Annotations = make(map[string]string)
+	if timeoutConfig == nil {
+		t.Fatalf("timeoutConfig cannot be nil")
+	}
+
+	if dp.Spec.Template.Annotations == nil {
+		dp.Spec.Template.Annotations = make(map[string]string)
 	}
 	restartTime := time.Now().Format(time.RFC3339)
-	dp.Spec.Template.ObjectMeta.Annotations[kubeRestartAnnotation] = restartTime
+	dp.Spec.Template.Annotations[kubeRestartAnnotation] = restartTime
 
 	if err := c.Update(ctx, dp); err != nil {
 		return err
@@ -114,7 +131,8 @@ func restartDeploymentAndWaitForNewPods(t *testing.T, timeoutConfig config.Timeo
 		}
 
 		rolled := int32(0)
-		for _, rs := range podList.Items {
+		for i := range podList.Items {
+			rs := &podList.Items[i]
 			if rs.Annotations[kubeRestartAnnotation] == restartTime {
 				rolled++
 			}

@@ -8,21 +8,24 @@ package host
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
+
+	func_e "github.com/tetratelabs/func-e"
+	func_e_api "github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
 const (
-	// TODO: Make these path configurable.
-	defaultHomeDir          = "/tmp/envoy-gateway"
-	defaultLocalCertPathDir = "/tmp/envoy-gateway/certs/envoy"
-
 	// XdsTLSCertFilename is the fully qualified name of the file containing Envoy's
 	// xDS server TLS certificate.
 	XdsTLSCertFilename = "tls.crt"
@@ -37,60 +40,76 @@ const (
 // Infra manages the creation and deletion of host process
 // based on Infra IR resources.
 type Infra struct {
-	HomeDir string
-	Logger  logging.Logger
+	// Paths contains the XDG-compliant directory paths.
+	Paths  *Paths
+	Logger logging.Logger
 
 	// EnvoyGateway is the configuration used to startup Envoy Gateway.
 	EnvoyGateway *egv1a1.EnvoyGateway
 
 	// proxyContextMap store the context of each running proxy by its name for lifecycle management.
-	proxyContextMap map[string]*proxyContext
+	proxyContextMap sync.Map
 
-	// TODO: remove this field once it supports the configurable homeDir
+	// sdsConfigPath is the path to SDS configuration files.
 	sdsConfigPath string
+
+	// defaultEnvoyImage is the default Envoy image to use if no Envoy version is set.
+	defaultEnvoyImage string
+
+	// Stdout is the writer for standard output (for func-e and Envoy stdout).
+	Stdout io.Writer
+	// Stderr is the writer for error output (for Envoy stderr).
+	Stderr io.Writer
+
+	// envoyRunner runs Envoy (can be overridden in tests).
+	envoyRunner func_e_api.RunFunc
+
+	// errors is the notifier used to send async errors to the main control loop.
+	errors message.RunnerErrorNotifier
 }
 
-func NewInfra(runnerCtx context.Context, cfg *config.Server, logger logging.Logger) (*Infra, error) {
-	// Ensure the home directory exist.
-	if err := os.MkdirAll(defaultHomeDir, 0o750); err != nil {
-		return nil, fmt.Errorf("failed to create dir: %w", err)
+func NewInfra(_ context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (*Infra, error) {
+	// Get configuration from provider
+	var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+	if p := cfg.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+		p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+		hostCfg = p.Custom.Infrastructure.Host
 	}
 
-	// Check local certificates dir exist.
-	if _, err := os.Lstat(defaultLocalCertPathDir); err != nil {
-		return nil, fmt.Errorf("failed to stat dir: %w", err)
+	// Get paths using helper
+	paths, err := GetPaths(hostCfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine paths: %w", err)
 	}
 
-	// Ensure the sds config exist.
-	if err := createSdsConfig(defaultLocalCertPathDir); err != nil {
+	// Ensure the data directory exists
+	if err := os.MkdirAll(paths.DataHome, 0o750); err != nil {
+		return nil, fmt.Errorf("failed to create data directory: %w", err)
+	}
+
+	// Check if certificates exist, generate them if not
+	certPath := paths.CertDir("envoy")
+	if err := maybeGenerateCertificates(cfg, certPath); err != nil {
+		return nil, err
+	}
+
+	// Ensure the sds config exist
+	if err := createSdsConfig(certPath); err != nil {
 		return nil, fmt.Errorf("failed to create sds config: %w", err)
 	}
 
 	infra := &Infra{
-		HomeDir:         defaultHomeDir,
-		Logger:          logger,
-		EnvoyGateway:    cfg.EnvoyGateway,
-		proxyContextMap: make(map[string]*proxyContext),
-		sdsConfigPath:   defaultLocalCertPathDir,
+		Paths:             paths,
+		Logger:            logger,
+		EnvoyGateway:      cfg.EnvoyGateway,
+		sdsConfigPath:     certPath,
+		defaultEnvoyImage: egv1a1.DefaultEnvoyProxyImage,
+		Stdout:            cfg.Stdout,
+		Stderr:            cfg.Stderr,
+		envoyRunner:       func_e.Run,
+		errors:            errors,
 	}
-	go infra.cleanProxy(runnerCtx)
-
 	return infra, nil
-}
-
-// cleanProxy stops all the running proxies when infra provider is closing.
-func (i *Infra) cleanProxy(ctx context.Context) {
-	<-ctx.Done()
-	if len(i.proxyContextMap) < 1 {
-		return
-	}
-
-	i.Logger.Info("start cleaning up proxies")
-	for name, proxyCtx := range i.proxyContextMap {
-		proxyCtx.cancel()
-		i.Logger.Info("proxy closed", "name", name)
-	}
-	i.Logger.Info("all proxies has been cleaned up")
 }
 
 // createSdsConfig creates the needing SDS config under certain directory.
@@ -108,5 +127,54 @@ func createSdsConfig(dir string) error {
 		return err
 	}
 
+	return nil
+}
+
+// maybeGenerateCertificates checks if all required certificate files exist and generates them if any is missing.
+func maybeGenerateCertificates(cfg *config.Server, certPath string) error {
+	certFiles := []string{"ca.crt", "tls.crt", "tls.key"}
+
+	// Check if any cert file is missing
+	var missing bool
+	for _, filename := range certFiles {
+		filePath := filepath.Join(certPath, filename)
+		_, err := os.Lstat(filePath)
+		if os.IsNotExist(err) {
+			missing = true
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to stat %s: %w", filename, err)
+		}
+	}
+
+	if !missing {
+		// All files exist, nothing to do
+		return nil
+	}
+
+	// Generate certificates automatically
+	certs, err := crypto.GenerateCerts(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to generate certificates: %w", err)
+	}
+
+	// Create the cert directory
+	if err := os.MkdirAll(certPath, 0o750); err != nil {
+		return fmt.Errorf("failed to create cert directory: %w", err)
+	}
+
+	// Write cert files
+	certMap := map[string][]byte{
+		"ca.crt":  certs.CACertificate,
+		"tls.crt": certs.EnvoyCertificate,
+		"tls.key": certs.EnvoyPrivateKey,
+	}
+
+	for filename, content := range certMap {
+		if err := file.Write(string(content), filepath.Join(certPath, filename)); err != nil {
+			return fmt.Errorf("failed to write %s: %w", filename, err)
+		}
+	}
 	return nil
 }

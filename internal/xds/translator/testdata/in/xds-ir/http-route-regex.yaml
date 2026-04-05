@@ -14,11 +14,9 @@ http:
       safeRegex: "/v1/.*"
     headerMatches:
     - name: re_header
-      stringMatch:
       safeRegex: ".*"
     queryParamMatches:
     - name: re_query
-      stringMatch:
       safeRegex: ".*"
     destination:
       name: "regex-route-dest"
@@ -26,3 +24,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "regex-route-dest/backend/0"

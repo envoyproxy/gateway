@@ -6,11 +6,13 @@
 package logging
 
 import (
+	"context"
 	"io"
 	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -19,21 +21,23 @@ import (
 
 type Logger struct {
 	logr.Logger
+	out           io.Writer
 	logging       *egv1a1.EnvoyGatewayLogging
 	sugaredLogger *zap.SugaredLogger
 }
 
-func NewLogger(logging *egv1a1.EnvoyGatewayLogging) Logger {
-	logger := initZapLogger(os.Stdout, logging, logging.Level[egv1a1.LogComponentGatewayDefault])
+func NewLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging) Logger {
+	logger := initZapLogger(w, logging, logging.Level[egv1a1.LogComponentGatewayDefault])
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
+		out:           w,
 		logging:       logging,
 		sugaredLogger: logger.Sugar(),
 	}
 }
 
-func FileLogger(file string, name string, level egv1a1.LogLevel) Logger {
+func FileLogger(file, name string, level egv1a1.LogLevel) Logger {
 	writer, err := os.OpenFile(file, os.O_WRONLY, 0o666)
 	if err != nil {
 		panic(err)
@@ -45,16 +49,18 @@ func FileLogger(file string, name string, level egv1a1.LogLevel) Logger {
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       logging,
+		out:           writer,
 		sugaredLogger: logger.Sugar(),
 	}
 }
 
-func DefaultLogger(level egv1a1.LogLevel) Logger {
+func DefaultLogger(out io.Writer, level egv1a1.LogLevel) Logger {
 	logging := egv1a1.DefaultEnvoyGatewayLogging()
-	logger := initZapLogger(os.Stdout, logging, level)
+	logger := initZapLogger(out, logging, level)
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),
+		out:           out,
 		logging:       logging,
 		sugaredLogger: logger.Sugar(),
 	}
@@ -67,11 +73,12 @@ func DefaultLogger(level egv1a1.LogLevel) Logger {
 // more information).
 func (l Logger) WithName(name string) Logger {
 	logLevel := l.logging.Level[egv1a1.EnvoyGatewayLogComponent(name)]
-	logger := initZapLogger(os.Stdout, l.logging, logLevel)
+	logger := initZapLogger(l.out, l.logging, logLevel)
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       l.logging,
+		out:           l.out,
 		sugaredLogger: logger.Sugar().Named(name),
 	}
 }
@@ -81,6 +88,27 @@ func (l Logger) WithName(name string) Logger {
 func (l Logger) WithValues(keysAndValues ...interface{}) Logger {
 	l.Logger = l.Logger.WithValues(keysAndValues...)
 	return l
+}
+
+// WithTrace returns a new Logger that includes basic OpenTelemetry metadata
+// extracted from the provided context. If the context does not contain a valid
+// span, the original Logger is returned unchanged.
+func (l Logger) WithTrace(ctx context.Context) Logger {
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return l
+	}
+
+	fields := []interface{}{
+		"trace_id", sc.TraceID().String(),
+		"span_id", sc.SpanID().String(),
+	}
+
+	if ts := sc.TraceState(); ts.Len() > 0 {
+		fields = append(fields, "trace_state", ts.String())
+	}
+
+	return l.WithValues(fields...)
 }
 
 // A Sugar wraps the base Logger functionality in a slower, but less
@@ -107,7 +135,21 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 
 func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
 	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
-	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
+	cfg := zap.NewProductionEncoderConfig()
+	var encoder zapcore.Encoder
+	logEncoder := egv1a1.EnvoyGatewayLogEncoderText
+	if logging != nil && logging.Encoder != nil {
+		logEncoder = *logging.Encoder
+	}
+
+	switch logEncoder {
+	case egv1a1.EnvoyGatewayLogEncoderJSON:
+		encoder = zapcore.NewJSONEncoder(cfg)
+	default:
+		encoder = zapcore.NewConsoleEncoder(cfg)
+	}
+
+	core := zapcore.NewCore(encoder, zapcore.AddSync(w), zap.NewAtomicLevelAt(parseLevel))
 
 	return zap.New(core, zap.AddCaller())
 }

@@ -10,7 +10,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### go
 
-* Version: 1.22
+* Version: 1.26
 * Installation Guide: https://go.dev/doc/install
 
 ### make
@@ -34,7 +34,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ## Quickstart
 
-* Run `make help` to see all the available targets to build, test and run Envoy Gateway.
+Run `make help` to see all the available targets to build, test and run Envoy Gateway. Below are the other make directives
 
 ### Building
 
@@ -48,11 +48,61 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 * Run `make test` to run the golang tests.
 
+* Run `make e2e` to perform end-to-end testing.
+
 * Run `make testdata` to generate the golden YAML testdata files.
+
+#### Working with Test Data Files
+
+Envoy Gateway uses golden file testing, where test input files (`.in.yaml`) are processed and compared against expected output files (`.out.yaml`).
+
+##### Gateway API Tests (`internal/gatewayapi`)
+
+The Gateway API translator tests use a straightforward filesystem-based approach:
+
+**Test Structure:**
+- Input files: `internal/gatewayapi/testdata/*.in.yaml`
+- Output files: `internal/gatewayapi/testdata/*.out.yaml`
+- Test name is derived from the filename without the `.in.yaml` extension
+
+**Testing a Single File:**
+
+```bash
+# Run test to verify output matches expected
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/<test-name>
+
+# Example: Test a specific file
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/securitypolicy-with-jwt
+
+# Generate/update the .out.yaml file for a single test
+go test -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi \
+  -run TestTranslate/<test-name> --override-testdata=true
+```
+
+##### XDS Translator Tests (`internal/xds/translator`)
+
+**Test Structure:**
+- Input files: `internal/xds/translator/testdata/in/xds-ir/*.yaml`
+- Output files: Multiple files per test:
+  - `.listeners.yaml` (always required)
+  - `.routes.yaml` (always required)
+  - `.clusters.yaml` (always required)
+  - `.endpoints.yaml` (always required)
+  - `.secrets.yaml` (only if test includes TLS/secrets)
+
+**Testing a Single XDS File**
+
+```bash
+go test -v -timeout 30s github.com/envoyproxy/gateway/internal/xds/translator \
+  -run TestTranslateXds/<test-name>
+```
 
 ### Running Linters
 
 * Run `make lint` to make sure your code passes all the linter checks.
+
 __Note:__ The `golangci-lint` configuration resides [here](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml).
 
 ### Building and Pushing the Image
@@ -61,6 +111,10 @@ __Note:__ The `golangci-lint` configuration resides [here](https://github.com/en
 * Run `IMAGE=docker.io/you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
 
 __Note:__  Replace `IMAGE` with your registry's image name.
+
+### Raising a PR
+
+* Run `make generate gen-check` and push the generated files along with your commit, if your PR contains any **API** changes (changes in `/api` folder), you've added some unit tests, modified the helm charts or you've updated the modules used in the project.
 
 ### Deploying Envoy Gateway for Test/Dev
 
@@ -116,27 +170,6 @@ workarounds to run conformance tests:
 __Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
 is unspecified, the short SHA of your current branch is used.
 
-### Debugging the Envoy Config
-
-An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port
-(currently `19000`) on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
-
-Get the name of the Envoy deployment. The following example is for Gateway `eg` in the `default` namespace:
-
-```shell
-export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
-```
-
-Port forward the admin interface port:
-
-```shell
-kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
-```
-
-Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
-
-There are many other endpoints on the [Envoy admin interface][] that may be helpful when debugging.
-
 ### JWT Testing
 
 An example [JSON Web Token (JWT)][jwt] and [JSON Web Key Set (JWKS)][jwks] are used for the [request authentication][]
@@ -155,18 +188,18 @@ The performance and scalability concerns come from several aspects for control-p
 - The consumption of memory and CPU.
 - The rate of configuration changes.
 
-The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and 
+The benchmark test is running on a [Kind][Kind] cluster, you can start a Kind cluster and
 run benchmark test on it by executing `make benchmark`.
 
 The benchmark report will be included in the release artifacts, you can learn more by downloading
 the detailed benchmark report, namely `benchmark_report.zip`.
 
-Here are some brief benchmark reports about Envoy Gateway: 
+Here are some brief benchmark reports about Envoy Gateway:
 
-- It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTRoutes) settings
+- It will take up nearly 550MiB memory and 11s total CPU time for (1 GatewayClass + 1 Gateway + 500 HTTPRoutes) settings
 
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
+[Quickstart]: https://gateway.envoyproxy.io/docs/tasks/quickstart/
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
@@ -176,7 +209,6 @@ Here are some brief benchmark reports about Envoy Gateway:
 [Kubernetes support]: https://docs.docker.com/desktop/kubernetes/
 [gateway-dev]: https://hub.docker.com/r/envoyproxy/gateway-dev/tags
 [mac_connect]: https://github.com/chipmk/docker-mac-net-connect
-[Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
 [request authentication]: ../latest/tasks/security/jwt-authentication

@@ -2,7 +2,6 @@ http:
   - address: 0.0.0.0
     hostnames:
       - "*"
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1
@@ -23,6 +22,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:
@@ -39,7 +39,16 @@ http:
                     - value: 404
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/0
                 response:
-                  body: gateway-1 Not Found
+                  addResponseHeaders:
+                    - append: true
+                      name: X-Add-Header
+                      value:
+                        - added-404
+                    - append: false
+                      name: X-Set-Header
+                      value:
+                        - set-404
+                  body: Z2F0ZXdheS0xIE5vdCBGb3VuZA==
                   contentType: text/plain
               - match:
                   statusCodes:
@@ -49,11 +58,19 @@ http:
                         start: 501
                 name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/1
                 response:
-                  body: |
-                    {
-                      "error": "Internal Server Error"
-                    }
+                  body: ewogICJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IiCn0K
                   contentType: application/json
+              - match:
+                  statusCodes:
+                    - value: 401
+                name: backendtrafficpolicy/default/policy-for-gateway/responseoverride/rule/2
+                redirect:
+                  scheme: https
+                  hostname: www.redirect.com
+                  port: 8443
+                  statusCode: 301
+                  path:
+                    fullReplace: /redirect/path
       - destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -63,6 +80,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         hostname: "*"
         isHTTP2: false
         metadata:

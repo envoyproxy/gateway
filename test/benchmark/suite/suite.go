@@ -10,13 +10,17 @@ package suite
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	batchv1 "k8s.io/api/batch/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,23 +28,50 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 	"sigs.k8s.io/yaml"
 
 	opt "github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/test/benchmark/proto"
 	prom "github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
 const (
-	BenchmarkTestScaledKey = "benchmark-test/scaled"
-	BenchmarkTestClientKey = "benchmark-test/client"
-	DefaultControllerName  = "gateway.envoyproxy.io/gatewayclass-controller"
+	BenchmarkTestScaledKey     = "benchmark-test/scaled"
+	BenchmarkTestClientKey     = "benchmark-test/client"
+	BenchmarkMetricsSampleTick = 3 * time.Second
+	DefaultControllerName      = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
 type BenchmarkTest struct {
 	ShortName   string
 	Description string
 	Test        func(*testing.T, *BenchmarkTestSuite) []*BenchmarkReport
+}
+
+type BenchmarkSuiteReport struct {
+	Title    string                 `json:"title"`
+	Settings map[string]string      `json:"settings,omitempty"`
+	Reports  []*BenchmarkTestReport `json:"reports,omitempty"`
+}
+
+type BenchmarkTestReport struct {
+	Title       string                 `json:"title"`
+	Description string                 `json:"description"`
+	Reports     []*BenchmarkCaseReport `json:"reports"`
+}
+
+type BenchmarkCaseReport struct {
+	Title             string        `json:"title"`
+	Routes            int           `json:"routes"`
+	RoutesPerHostname int           `json:"routesPerHostname"`
+	Phase             string        `json:"phase"`
+	Result            *proto.Result `json:"result,omitempty"`
+	RouteConvergence  *PerfDuration `json:"routeConvergence,omitempty"`
+	// Prometheus metrics and pprof profiles sampled data
+	Samples          []BenchmarkMetricSample `json:"samples,omitempty"`
+	HeapProfileImage string                  `json:"heapProfileImage,omitempty"`
 }
 
 type BenchmarkTestSuite struct {
@@ -140,41 +171,141 @@ func NewBenchmarkTestSuite(client client.Client, options BenchmarkOptions,
 	}, nil
 }
 
+var nighthawkProtoUnmarshalOptions = protojson.UnmarshalOptions{
+	DiscardUnknown: true,
+}
+
 func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
-	t.Logf("Running %d benchmark test", len(tests))
+	tlog.Logf(t, "Running %d benchmark test", len(tests))
 
-	buf := make([]byte, 0)
-	writer := bytes.NewBuffer(buf)
-
-	writeSection(writer, "Benchmark Report", 1, "Benchmark test settings:")
-	renderEnvSettingsTable(writer)
+	suiteReport := &BenchmarkSuiteReport{
+		Title: "Benchmark Report",
+		Settings: map[string]string{
+			"rps":         os.Getenv("BENCHMARK_BASELINE_RPS"),
+			"connections": os.Getenv("BENCHMARK_CONNECTIONS"),
+			"duration":    os.Getenv("BENCHMARK_DURATION"),
+			"cpu":         os.Getenv("BENCHMARK_CPU_LIMITS"),
+			"memory":      os.Getenv("BENCHMARK_MEMORY_LIMITS"),
+		},
+	}
 
 	for _, test := range tests {
-		t.Logf("Running benchmark test: %s", test.ShortName)
+		tlog.Logf(t, "Running benchmark test: %s", test.ShortName)
 
 		reports := test.Test(t, b)
 		if len(reports) == 0 {
 			continue
 		}
 
-		// Generate a human-readable benchmark report for each test.
-		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
+		tCaseReports := make([]*BenchmarkCaseReport, 0, len(reports))
+		for _, r := range reports {
+			output := &proto.Output{}
+			data := trimNighthawkResult(r.Result)
+			if err := nighthawkProtoUnmarshalOptions.Unmarshal(data, output); err != nil {
+				tlog.Errorf(t, "Error unmarshalling nighthawk result for test %s: %v", test.ShortName, err)
+				tlog.Errorf(t, "with the data: %s", string(data))
+				continue
+			}
 
-		if err := RenderReport(writer, "Test: "+test.ShortName, test.Description, 2, reports); err != nil {
-			t.Errorf("Error generating report for %s: %v", test.ShortName, err)
+			// dump the pprof to profiles directory
+			// get the heap profile when control plane memory is at its maximum.
+			sortedSamples := make([]BenchmarkMetricSample, len(r.Samples))
+			copy(sortedSamples, r.Samples)
+			sort.Slice(sortedSamples, func(i, j int) bool {
+				return sortedSamples[i].ControlPlaneProcessMem > sortedSamples[j].ControlPlaneProcessMem
+			})
+			var heapPprofPath string
+			if len(sortedSamples) > 0 && sortedSamples[0].HeapProfile != nil {
+				heapPprof := sortedSamples[0].HeapProfile
+				// replace space with underscore for file name
+				sanitizedName := strings.ReplaceAll(r.Name, " ", "_")
+				heapPprofPath = path.Join(r.ProfilesOutputDir, fmt.Sprintf("heap.%s.pprof", sanitizedName))
+				_ = os.WriteFile(heapPprofPath, heapPprof, 0o600)
+
+				// The image is not be rendered yet, so it is a placeholder for the path.
+				// The image will be rendered after the test has finished.
+				rootDir := strings.SplitN(heapPprofPath, "/", 2)[0]
+				heapPprofPath = strings.TrimPrefix(heapPprofPath, rootDir+"/")
+			}
+			// let's clean the heap profile data now
+			for i := range sortedSamples {
+				sortedSamples[i].HeapProfile = nil
+			}
+
+			tCaseReports = append(tCaseReports, &BenchmarkCaseReport{
+				Title:             r.Name,
+				RoutesPerHostname: r.RoutesPerHost,
+				Routes:            r.Routes,
+				Phase:             r.Phase,
+				Result:            getGlobalResult(output),
+				RouteConvergence:  r.RouteConvergence,
+				Samples:           sortedSamples,
+				HeapProfileImage:  strings.Replace(heapPprofPath, ".pprof", ".png", 1),
+			})
 		}
+
+		suiteReport.Reports = append(suiteReport.Reports, &BenchmarkTestReport{
+			Title:       test.ShortName,
+			Description: test.Description,
+			Reports:     tCaseReports,
+		})
+
+		t.Logf("Got %d reports for test: %s", len(reports), test.ShortName)
 	}
 
 	if len(b.ReportSaveDir) > 0 {
-		reportPath := path.Join(b.ReportSaveDir, "benchmark_report.md")
-		if err := os.WriteFile(reportPath, writer.Bytes(), 0o600); err != nil {
-			t.Errorf("Error writing report to path '%s': %v", reportPath, err)
-		} else {
-			t.Logf("Writing report to path '%s' successfully", reportPath)
+		{
+			data, err := ToMarkdown(suiteReport)
+			if err != nil {
+				tlog.Logf(t, "Error converting benchmark report to markdown: %v", err)
+			}
+			reportPath := path.Join(b.ReportSaveDir, "benchmark_result.md")
+			if err := os.WriteFile(reportPath, data, 0o600); err != nil {
+				t.Errorf("Error writing markdown to path '%s': %v", reportPath, err)
+			}
 		}
-	} else {
-		t.Logf("%s", writer.Bytes())
+
+		// convert to the JSON output used by the benchmark-report-explorer
+		{
+			data := ToJSON(suiteReport)
+			resultPath := path.Join(b.ReportSaveDir, "benchmark_result.json")
+			if err := os.WriteFile(resultPath, data, 0o600); err != nil {
+				t.Errorf("Error writing JSON result to path '%s': %v", resultPath, err)
+			}
+		}
+		return
 	}
+
+	data, _ := json.MarshalIndent(suiteReport, "", "  ")
+	t.Logf("%s", data)
+}
+
+// getGlobalResult extracts the global result from nighthawk output.
+func getGlobalResult(output *proto.Output) *proto.Result {
+	if output == nil || output.Results == nil {
+		return nil
+	}
+
+	for _, r := range output.Results {
+		if r.Name == "global" {
+			return r
+		}
+	}
+
+	return nil
+}
+
+func trimNighthawkResult(result []byte) []byte {
+	// Trim the result to remove the lines which is not needed.
+	lines := bytes.Split(result, []byte("\n"))
+	// remove those lines starting with "[" or "Nighthawk"
+	outLines := make([][]byte, 0, len(lines))
+	for _, line := range lines {
+		if !bytes.HasPrefix(line, []byte("[")) && !bytes.HasPrefix(line, []byte("Nighthawk")) {
+			outLines = append(outLines, line)
+		}
+	}
+	return bytes.Join(outLines, []byte("\n"))
 }
 
 // Benchmark runs benchmark test as a Kubernetes Job, and return the benchmark result.
@@ -182,10 +313,17 @@ func (b *BenchmarkTestSuite) Run(t *testing.T, tests []BenchmarkTest) {
 // TODO: currently running benchmark test via nighthawk_client,
 // consider switching to gRPC nighthawk-service for benchmark test.
 // ref: https://github.com/envoyproxy/nighthawk/blob/main/api/client/service.proto
-func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*BenchmarkReport, error) {
-	t.Logf("Running benchmark test: %s", name)
-
-	jobNN, err := b.createBenchmarkClientJob(ctx, name, gatewayHostPort, requestHeaders...)
+func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context,
+	jobName, resultTitle, gatewayHostPort, hostnamePattern string, host int, rps string,
+	startAt time.Time,
+) (*BenchmarkReport, error) {
+	tlog.Logf(t, "Running benchmark test: %s, start at %s", resultTitle, startAt)
+	requestHeaders := make([]string, 0, host)
+	// hostname index starts with 1
+	for i := 1; i <= host; i++ {
+		requestHeaders = append(requestHeaders, "Host: "+fmt.Sprintf(hostnamePattern, i))
+	}
+	jobNN, err := b.createBenchmarkClientJob(t, jobName, gatewayHostPort, requestHeaders, rps)
 	if err != nil {
 		return nil, err
 	}
@@ -195,8 +333,16 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return nil, err
 	}
 
+	profilesOutputDir := path.Join(b.ReportSaveDir, "profiles")
+	if err := createDirIfNotExist(profilesOutputDir); err != nil {
+		return nil, err
+	}
+
 	// Wait from benchmark test job to complete.
-	if err = wait.PollUntilContextTimeout(ctx, 6*time.Second, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
+	trafficStartAt := time.Now()
+	trafficEndTime := trafficStartAt.Add(time.Duration(duration) * time.Second)
+	report := NewBenchmarkReport(resultTitle, profilesOutputDir, b.kubeClient, b.promClient)
+	if err = wait.PollUntilContextTimeout(ctx, BenchmarkMetricsSampleTick, time.Duration(duration*10)*time.Second, true, func(ctx context.Context) (bool, error) {
 		job := new(batchv1.Job)
 		if err = b.Client.Get(ctx, *jobNN, job); err != nil {
 			return false, err
@@ -214,7 +360,18 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 			}
 		}
 
-		t.Logf("Job %s still not complete", name)
+		tlog.Logf(t, "Job %s still not complete", jobName)
+
+		// Sample the metrics and profiles at runtime.
+		if time.Now().Before(trafficEndTime) {
+			if err := report.Sample(t, ctx, startAt, trafficStartAt); err != nil {
+				tlog.Logf(t, "Error occurs while sampling metrics or profiles, the sampling will be skipped: %v", err)
+			}
+		} else {
+			// Skip sampling after benchmark duration, otherwise we may get sampling data that is out of benchmark traffic window.
+			// These sampling data will lower the min/avg values of the benchmark result.
+			tlog.Logf(t, "Skipping sampling; benchmark traffic window (%ds) has ended", duration)
+		}
 
 		return false, nil
 	}); err != nil {
@@ -223,33 +380,29 @@ func (b *BenchmarkTestSuite) Benchmark(t *testing.T, ctx context.Context, name, 
 		return nil, err
 	}
 
-	t.Logf("Running benchmark test: %s successfully", name)
+	tlog.Logf(t, "Running benchmark test: %s successfully", resultTitle)
 
-	report, err := NewBenchmarkReport(name, path.Join(b.ReportSaveDir, "profiles"), b.kubeClient, b.promClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create benchmark report: %w", err)
-	}
-
-	// Get all the reports from this benchmark test run.
-	if err = report.Collect(ctx, jobNN); err != nil {
+	// Get nighthawk result from this benchmark test run.
+	if err = report.GetResult(ctx, jobNN); err != nil {
 		return nil, err
 	}
 
 	return report, nil
 }
 
-func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name, gatewayHostPort string, requestHeaders ...string) (*types.NamespacedName, error) {
+func (b *BenchmarkTestSuite) createBenchmarkClientJob(t *testing.T, name, gatewayHostPort string, requestHeaders []string, rps string) (*types.NamespacedName, error) {
 	job := b.BenchmarkClientJob.DeepCopy()
 	job.SetName(name)
 	job.SetLabels(map[string]string{
 		BenchmarkTestClientKey: "true",
 	})
 
-	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders...)
+	runtimeArgs := prepareBenchmarkClientRuntimeArgs(gatewayHostPort, requestHeaders, rps)
 	container := &job.Spec.Template.Spec.Containers[0]
 	container.Args = append(container.Args, runtimeArgs...)
 
-	if err := b.CreateResource(ctx, job); err != nil {
+	t.Logf("Creating benchmark client job: %s with args: %v", name, job)
+	if err := b.CreateResource(t.Context(), job); err != nil {
 		return nil, err
 	}
 
@@ -258,21 +411,21 @@ func (b *BenchmarkTestSuite) createBenchmarkClientJob(ctx context.Context, name,
 
 func prepareBenchmarkClientStaticArgs(options BenchmarkOptions) []string {
 	staticArgs := []string{
-		"--rps", options.RPS,
 		"--connections", options.Connections,
 		"--duration", options.Duration,
 		"--concurrency", options.Concurrency,
+		"--output-format", "json",
 	}
 	return staticArgs
 }
 
-func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ...string) []string {
-	args := make([]string, 0, len(requestHeaders)*2+1)
+func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders []string, rps string) []string {
+	args := make([]string, 0, len(requestHeaders)*2+3)
 
 	for _, reqHeader := range requestHeaders {
 		args = append(args, "--request-header", reqHeader)
 	}
-	args = append(args, "http://"+gatewayHostPort)
+	args = append(args, "--rps", rps, "http://"+gatewayHostPort)
 
 	return args
 }
@@ -284,7 +437,10 @@ func prepareBenchmarkClientRuntimeArgs(gatewayHostPort string, requestHeaders ..
 // has been created successfully.
 //
 // All created scaled resources will be labeled with BenchmarkTestScaledKey.
-func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16, routeNameFormat, refGateway string, afterCreation func(*gwapiv1.HTTPRoute)) error {
+func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [2]uint16,
+	routeNameFormat, routeHostnameFormat, refGateway string, batchNumPerHost uint16,
+	afterCreation func(*gwapiv1.HTTPRoute, time.Time),
+) error {
 	var i, begin, end uint16
 	begin, end = scaleRange[0], scaleRange[1]
 
@@ -292,19 +448,30 @@ func (b *BenchmarkTestSuite) ScaleUpHTTPRoutes(ctx context.Context, scaleRange [
 		return fmt.Errorf("got wrong scale range, %d is not greater than %d", end, begin)
 	}
 
+	var counterPerBatch, currentBatch uint16 = 0, 1
 	for i = begin + 1; i <= end; i++ {
 		routeName := fmt.Sprintf(routeNameFormat, i)
+		routeHostname := fmt.Sprintf(routeHostnameFormat, currentBatch)
+
 		newRoute := b.HTTPRouteTemplate.DeepCopy()
 		newRoute.SetName(routeName)
 		newRoute.SetLabels(b.scaledLabels)
 		newRoute.Spec.ParentRefs[0].Name = gwapiv1.ObjectName(refGateway)
+		newRoute.Spec.Hostnames[0] = gwapiv1.Hostname(routeHostname)
 
 		if err := b.CreateResource(ctx, newRoute); err != nil {
 			return err
 		}
+		applyAt := time.Now()
 
 		if afterCreation != nil {
-			afterCreation(newRoute)
+			afterCreation(newRoute, applyAt)
+		}
+
+		counterPerBatch++
+		if counterPerBatch == batchNumPerHost {
+			counterPerBatch = 0
+			currentBatch++
 		}
 	}
 
@@ -381,12 +548,12 @@ func (b *BenchmarkTestSuite) DeleteScaledResources(ctx context.Context, object c
 // RegisterCleanup registers cleanup functions for all benchmark test resources.
 func (b *BenchmarkTestSuite) RegisterCleanup(t *testing.T, ctx context.Context, object, scaledObject client.Object) {
 	t.Cleanup(func() {
-		t.Logf("Start to cleanup benchmark test resources")
+		tlog.Logf(t, "Start to cleanup benchmark test resources")
 
 		_ = b.DeleteResource(ctx, object)
 		_ = b.DeleteScaledResources(ctx, scaledObject)
 
-		t.Logf("Clean up complete!")
+		tlog.Logf(t, "Clean up complete!")
 	})
 }
 

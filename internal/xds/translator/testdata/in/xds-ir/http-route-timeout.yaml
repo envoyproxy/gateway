@@ -14,9 +14,10 @@ http:
       timeout:
         http:
           requestTimeout: 5s
+          maxStreamDuration: 30s
+          streamIdleTimeout: 20s
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     destination:
       name: "first-route-dest"
@@ -24,18 +25,21 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
       timeout:
         http:
           requestTimeout: 4000s
+          maxStreamDuration: 0s
     destination:
       name: "second-route-dest"
       settings:
       - endpoints:
         - host: "1.2.3.4"
           port: 50001
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -48,6 +52,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "third-route-dest/backend/0"
   - name: "forth-route"
     hostname: "*"
     timeout: 10s
@@ -61,6 +66,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "fourth-route-dest/backend/0"
   - name: "fifth-route"
     hostname: "*"
     timeout: 10s
@@ -70,6 +76,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "fifth-route-dest/backend/0"
   - name: "sixth-route"
     hostname: "*"
     timeout: 0s
@@ -79,6 +86,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "sixth-route-dest/backend/0"
   - name: "seventh-route"
     hostname: "*"
     timeout: 0s
@@ -92,3 +100,32 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50002
+        name: "seventh-route-dest/backend/0"
+- name: "second-listener"
+  address: "::"
+  port: 10081
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  timeout:
+    http:
+      streamIdleTimeout: 10s
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      timeout:
+        http:
+          requestTimeout: 5s          # should not set route-level idle timeout because listener has it
+    headerMatches:
+    - name: user
+      exact: "jason"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

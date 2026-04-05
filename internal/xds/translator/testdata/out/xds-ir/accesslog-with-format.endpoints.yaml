@@ -1,0 +1,22 @@
+- clusterName: direct-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality: {}
+- clusterName: accesslog/monitoring/envoy-als/port/9000
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 9000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality: {}

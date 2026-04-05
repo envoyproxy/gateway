@@ -3,6 +3,10 @@ kind: EnvoyGateway
 provider:
   type: Kubernetes
   kubernetes:
+    client:
+      rateLimit:
+        qps: 50
+        burst: 100
     leaderElection:
       leaseDuration: 15s
       renewDeadline: 10s

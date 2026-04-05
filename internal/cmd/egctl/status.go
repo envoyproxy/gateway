@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -93,27 +91,27 @@ func newStatusCommand() *cobra.Command {
 			switch strings.ToLower(resourceType) {
 			case "all":
 				for _, rt := range supportedAllTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			case "xroute":
 				for _, rt := range supportedXRouteTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			case "xpolicy":
 				for _, rt := range supportedXPolicyTypes {
-					if err = runStatus(ctx, k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
+					if err = runStatus(ctx, cmd.OutOrStdout(), k8sClient, rt, namespace, quiet, verbose, allNamespaces, true, true); err != nil {
 						return err
 					}
 				}
 				return nil
 			default:
-				return runStatus(ctx, k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
+				return runStatus(ctx, cmd.OutOrStdout(), k8sClient, resourceType, namespace, quiet, verbose, allNamespaces, false, false)
 			}
 		},
 	}
@@ -138,11 +136,11 @@ func writeStatusTable(table *tabwriter.Writer, header []string, body [][]string)
 }
 
 // runStatus find and write the summary table of status for a specific resource type.
-func runStatus(ctx context.Context, cli client.Client, inputResourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
+func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputResourceType, namespace string, quiet, verbose, allNamespaces, ignoreEmpty, typedName bool) error {
 	var (
 		resourcesList client.ObjectList
 		resourceKind  string
-		table         = newStatusTableWriter(os.Stdout)
+		table         = newStatusTableWriter(logOut)
 	)
 
 	if allNamespaces {
@@ -199,7 +197,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = resource.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwapiv1a2.TLSRouteList{}
+		tlsroute := gwapiv1.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -207,7 +205,7 @@ func runStatus(ctx context.Context, cli client.Client, inputResourceType, namesp
 		resourceKind = resource.KindTLSRoute
 
 	case "btlspolicy", "backendtlspolicy":
-		btlspolicy := gwapiv1a3.BackendTLSPolicyList{}
+		btlspolicy := gwapiv1.BackendTLSPolicyList{}
 		if err := cli.List(ctx, &btlspolicy, client.InNamespace(namespace)); err != nil {
 			return err
 		}
@@ -422,7 +420,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 
 	// All conditions are sorted in descending order by time.
 	for i := len(conditions) - 1; i >= 0; i-- {
-		row := fetchCondition(conditions[i], verbose)
+		row := fetchCondition(&conditions[i], verbose)
 		rows = append(rows, row)
 
 		if quiet {
@@ -434,7 +432,7 @@ func fetchConditions(parent reflect.Value, quiet, verbose bool) [][]string {
 }
 
 // fetchCondition fetches the Type, Status, Reason of one condition, and more if verbose.
-func fetchCondition(condition metav1.Condition, verbose bool) []string {
+func fetchCondition(condition *metav1.Condition, verbose bool) []string {
 	row := []string{condition.Type, string(condition.Status), condition.Reason}
 
 	// Write more details about this condition if verbose is on.

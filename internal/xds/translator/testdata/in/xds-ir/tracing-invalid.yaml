@@ -1,22 +1,24 @@
-name: "tracing"
 tracing:
   serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:
-    "literal1":
-      type: Literal
-      literal:
-        value: "value1"
-    "env1":
-      type: Environment
-      environment:
-        name: "env1"
-        defaultValue: "-"
-    "req1":
-      type: RequestHeader
-      requestHeader:
-        name: "X-Request-Id"
-        defaultValue: "-"
+    - key: "env1"
+      value:
+        type: Environment
+        environment:
+          name: "env1"
+          defaultValue: "-"
+    - key: "literal1"
+      value:
+        type: Literal
+        literal:
+          value: "value1"
+    - key: "req1"
+      value:
+        type: RequestHeader
+        requestHeader:
+          name: "X-Request-Id"
+          defaultValue: "-"
   provider:
     host: ""
     port: 4317
@@ -38,6 +40,7 @@ http:
             - endpoints:
                 - host: "1.2.3.4"
                   port: 50000
+              name: "direct-route-dest/backend/0"
         directResponse:
-          body: "Unknown custom filter type: UnsupportedType"
+          body: VW5rbm93biBjdXN0b20gZmlsdGVyIHR5cGU6IFVuc3VwcG9ydGVkVHlwZQ==
           statusCode: 500

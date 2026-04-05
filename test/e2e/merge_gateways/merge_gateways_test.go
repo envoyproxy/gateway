@@ -25,6 +25,10 @@ import (
 )
 
 func TestMergeGateways(t *testing.T) {
+	// Skip the entire test suite if we're in Gateway Namespace Mode
+	if tests.IsGatewayNamespaceMode() {
+		t.Skip("MergeGateways tests are not supported in Gateway Namespace Mode")
+	}
 	flag.Parse()
 
 	c, cfg := kubetest.NewClient(t)
@@ -44,9 +48,10 @@ func TestMergeGateways(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
-		SupportedFeatures: sets.New[features.FeatureName](features.SupportGateway),
+		SupportedFeatures: sets.New(features.SupportGateway),
 		SkipTests:         []string{},
 	})
 	if err != nil {
@@ -59,8 +64,13 @@ func TestMergeGateways(t *testing.T) {
 	cSuite.Applier.GatewayClass = *flags.GatewayClassName
 	cSuite.ControllerName = kubernetes.GWCMustHaveAcceptedConditionTrue(t, cSuite.Client, cSuite.TimeoutConfig, cSuite.GatewayClassName)
 
+	recorder := e2e.NewTimingRecorder()
+	t.Cleanup(func() {
+		recorder.Report(t)
+	})
+	timedTests := e2e.WrapConformanceTestsWithTiming(tests.MergeGatewaysTests, recorder)
 	tlog.Logf(t, "Running %d MergeGateways tests", len(tests.MergeGatewaysTests))
-	err = cSuite.Run(t, tests.MergeGatewaysTests)
+	err = cSuite.Run(t, timedTests)
 	if err != nil {
 		t.Fatalf("Failed to run MergeGateways tests: %v", err)
 	}

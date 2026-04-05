@@ -13,13 +13,44 @@ clientTrafficPolicies:
         add:
         - name: ""
           value: "empty"
-        - name: "invalid"
+        - name: "Example/Header/1"
           value: ":/"
+        - name: "example-header-2"
+          value: |
+            multi-line-header-value
         set:
         - name: ""
           value: "empty"
-        - name: "invalid"
+        - name: "Example:Header:3"
           value: ":/"
+        - name: "example-header-4"
+          value: "  invalid"
+        remove:
+        - ""
+      lateResponseHeaders:
+        add:
+        - name: ""
+          value: "empty"
+        - name: "Example/Header/1"
+          value: ":/"
+        - name: "example-header-2"
+          value: |
+            multi-line-header-value
+        set:
+        - name: ""
+          value: "empty"
+        - name: "Example:Header:3"
+          value: ":/"
+        - name: "example-header-4"
+          value: "  invalid"
+        addIfAbsent:
+        - name: ""
+          value: "empty"
+        - name: "Example/Header/5"
+          value: ":/"
+        - name: "example-header-6"
+          value: |
+            multi-line-header-value
         remove:
         - ""
     targetRef:

@@ -36,6 +36,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -57,11 +58,7 @@
             - append:
                 header:
                   key: some-header
-                  value: some-value1
-            - append:
-                header:
-                  key: some-header
-                  value: some-value2
+                  value: some-value1,some-value2
             - append:
                 header:
                   key: some-header-2
@@ -83,6 +80,19 @@
                 keepEmptyValue: true
             - remove: some-header5
             - remove: some-header6
+            - removeOnMatch:
+                keyMatcher:
+                  exact: my-removed-header-value
+            - removeOnMatch:
+                keyMatcher:
+                  prefix: removed-prefix-
+            - removeOnMatch:
+                keyMatcher:
+                  suffix: -removed-suffix
+            - removeOnMatch:
+                keyMatcher:
+                  safeRegex:
+                    regex: removed-regex-.*
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
@@ -102,5 +112,6 @@
         statPrefix: http-10081
         useRemoteAddress: true
     name: second-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768

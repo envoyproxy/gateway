@@ -46,15 +46,15 @@ to the following guidelines for all code, APIs, and documentation:
 * Tests will automatically run for you.
 * We will **not** merge any PR that is not passing tests.
 * PRs are expected to have 100% test coverage for added code. This can be verified with a coverage
-  build. If your PR cannot have 100% coverage for some reason please clearly explain why when you
+  build. If your PR cannot have 100% coverage for some reason please clearly explain why, when you
   open it.
 * Any PR that changes user-facing behavior **must** have associated documentation in the [docs](https://github.com/envoyproxy/gateway/tree/main/site) folder of the repo as
   well as the [changelog](./RELEASING).
 * All code comments and documentation are expected to have proper English grammar and punctuation.
   If you are not a fluent English speaker (or a bad writer ;-)) please let us know and we will try
   to find some help but there are no guarantees.
-* Your PR title should be descriptive, and generally start with type that contains a subsystem name with `()` if necessary 
-  and summary followed by a colon. format `chore/docs/feat/fix/refactor/style/test: summary`.
+* Your PR title should be descriptive, and generally start with type that contains a subsystem name with `()` if necessary
+  and summary followed by a colon format `chore/docs/feat/fix/refactor/style/test: summary`.
   Examples:
   * "docs: fix grammar error"
   * "feat(translator): add new feature"

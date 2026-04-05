@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
@@ -30,41 +31,42 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	}
 	ret := &ir.TrafficFeatures{}
 
-	if timeout, err := buildClusterSettingsTimeout(*policy); err != nil {
+	if timeout, err := buildClusterSettingsTimeout(policy); err != nil {
 		return nil, err
 	} else {
 		ret.Timeout = timeout
 	}
 
-	if bc, err := buildBackendConnection(*policy); err != nil {
+	if bc, err := buildBackendConnection(policy); err != nil {
 		return nil, err
 	} else {
 		ret.BackendConnection = bc
 	}
 
-	if ka, err := buildTCPKeepAlive(*policy); err != nil {
+	if ka, err := buildTCPKeepAlive(policy); err != nil {
 		return nil, err
 	} else {
 		ret.TCPKeepalive = ka
 	}
 
-	if cb, err := buildCircuitBreaker(*policy); err != nil {
+	if cb, err := buildCircuitBreaker(policy); err != nil {
 		return nil, err
 	} else {
 		ret.CircuitBreaker = cb
 	}
 
-	if lb, err := buildLoadBalancer(*policy); err != nil {
+	if lb, err := buildLoadBalancer(policy); err != nil {
 		return nil, err
 	} else {
 		ret.LoadBalancer = lb
 	}
 
-	ret.ProxyProtocol = buildProxyProtocol(*policy)
+	ret.ProxyProtocol = buildProxyProtocol(policy)
 
-	ret.HealthCheck = buildHealthCheck(*policy)
+	ret.HealthCheck = buildHealthCheck(policy)
 
-	ret.DNS = translateDNS(*policy)
+	// The name for non-policy DNS settings is not used in xDS generation for now, so leave it empty.
+	ret.DNS = translateDNS(policy, "")
 
 	if h2, err := buildIRHTTP2Settings(policy.HTTP2); err != nil {
 		return nil, err
@@ -87,7 +89,7 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 	return ret, nil
 }
 
-func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, error) {
+func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, error) {
 	if policy.Timeout == nil {
 		return nil, nil
 	}
@@ -104,7 +106,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			errs = errors.Join(errs, fmt.Errorf("invalid ConnectTimeout value %s", *pto.TCP.ConnectTimeout))
 		} else {
 			to.TCP = &ir.TCPTimeout{
-				ConnectTimeout: ptr.To(metav1.Duration{Duration: d}),
+				ConnectTimeout: ir.MetaV1DurationPtr(d),
 			}
 		}
 	}
@@ -119,7 +121,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionIdleTimeout value %s", *pto.HTTP.ConnectionIdleTimeout))
 			} else {
-				cit = ptr.To(metav1.Duration{Duration: d})
+				cit = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -128,7 +130,7 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxConnectionDuration value %s", *pto.HTTP.MaxConnectionDuration))
 			} else {
-				mcd = ptr.To(metav1.Duration{Duration: d})
+				mcd = ir.MetaV1DurationPtr(d)
 			}
 		}
 
@@ -137,7 +139,27 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid RequestTimeout value %s", *pto.HTTP.RequestTimeout))
 			} else {
-				rt = ptr.To(metav1.Duration{Duration: d})
+				rt = ir.MetaV1DurationPtr(d)
+			}
+		}
+
+		var msd *metav1.Duration
+		if pto.HTTP.MaxStreamDuration != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.MaxStreamDuration))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
+			} else {
+				msd = ir.MetaV1DurationPtr(d)
+			}
+		}
+
+		var sit *metav1.Duration
+		if pto.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamIdleTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
+			} else {
+				sit = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
@@ -145,12 +167,14 @@ func buildClusterSettingsTimeout(policy egv1a1.ClusterSettings) (*ir.Timeout, er
 			ConnectionIdleTimeout: cit,
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
+			MaxStreamDuration:     msd,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs
 }
 
-func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
+func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnection, error) {
 	if policy.Connection == nil {
 		return nil, nil
 	}
@@ -173,12 +197,23 @@ func buildBackendConnection(policy egv1a1.ClusterSettings) (*ir.BackendConnectio
 
 			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
 		}
+		if bc.Preconnect != nil {
+			preconnect := &ir.Preconnect{}
+			pc := bc.Preconnect
+			if pc.PerEndpointPercent != nil {
+				preconnect.PerEndpointPercent = pc.PerEndpointPercent
+			}
+			if pc.PredictivePercent != nil {
+				preconnect.PredictivePercent = pc.PredictivePercent
+			}
+			bcIR.Preconnect = preconnect
+		}
 	}
 
 	return bcIR, nil
 }
 
-func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
+func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) {
 	if policy.TCPKeepalive == nil {
 		return nil, nil
 	}
@@ -208,7 +243,7 @@ func buildTCPKeepAlive(policy egv1a1.ClusterSettings) (*ir.TCPKeepalive, error) 
 	return ka, nil
 }
 
-func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
+func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, error) {
 	if policy.CircuitBreaker == nil {
 		return nil, nil
 	}
@@ -216,55 +251,68 @@ func buildCircuitBreaker(policy egv1a1.ClusterSettings) (*ir.CircuitBreaker, err
 	var cb *ir.CircuitBreaker
 	pcb := policy.CircuitBreaker
 
-	if pcb != nil {
-		cb = &ir.CircuitBreaker{}
-
-		if pcb.MaxConnections != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
-				cb.MaxConnections = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
-			}
-		}
-
-		if pcb.MaxParallelRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
-				cb.MaxParallelRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
-			}
-		}
-
-		if pcb.MaxPendingRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
-				cb.MaxPendingRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
-			}
-		}
-
-		if pcb.MaxParallelRetries != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
-				cb.MaxParallelRetries = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
-			}
-		}
-
-		if pcb.MaxRequestsPerConnection != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
-				cb.MaxRequestsPerConnection = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
-			}
-		}
-
+	if pcb == nil {
+		return nil, nil
 	}
+
+	cb = &ir.CircuitBreaker{}
+
+	if pcb.MaxConnections != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+			cb.MaxConnections = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
+		}
+	}
+
+	if pcb.MaxParallelRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+			cb.MaxParallelRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
+		}
+	}
+
+	if pcb.MaxPendingRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+			cb.MaxPendingRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
+		}
+	}
+
+	if pcb.MaxParallelRetries != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+			cb.MaxParallelRetries = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
+		}
+	}
+
+	if pcb.MaxRequestsPerConnection != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+			cb.MaxRequestsPerConnection = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
+		}
+	}
+
+	if pcb.PerEndpoint != nil {
+		perEndpoint := &ir.PerEndpointCircuitBreakers{}
+		if pcb.PerEndpoint.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+				perEndpoint.MaxConnections = &ui32
+			}
+		}
+		cb.PerEndpoint = perEndpoint
+	}
+
+	cb.RetryBudget = buildRetryBudget(policy.CircuitBreaker.RetryBudget)
 
 	return cb, nil
 }
 
-func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -284,8 +332,12 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			LeastRequest: &ir.LeastRequest{},
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
 			lb.LeastRequest.SlowStart = &ir.SlowStart{
-				Window: policy.LoadBalancer.SlowStart.Window,
+				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
 	case egv1a1.RandomLoadBalancerType:
@@ -297,10 +349,88 @@ func buildLoadBalancer(policy egv1a1.ClusterSettings) (*ir.LoadBalancer, error) 
 			RoundRobin: &ir.RoundRobin{},
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
-				Window: policy.LoadBalancer.SlowStart.Window,
+				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
+	case egv1a1.BackendUtilizationLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			BackendUtilization: &ir.BackendUtilization{},
+		}
+		backendUtilization := policy.LoadBalancer.BackendUtilization
+		if backendUtilization != nil {
+			if backendUtilization.BlackoutPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid BlackoutPeriod value %s: %w", *backendUtilization.BlackoutPeriod, err)
+				}
+				lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightExpirationPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightExpirationPeriod value %s: %w", *backendUtilization.WeightExpirationPeriod, err)
+				}
+				lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightUpdatePeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightUpdatePeriod value %s: %w", *backendUtilization.WeightUpdatePeriod, err)
+				}
+				lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
+				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
+			}
+			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
+				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
+			}
+			lb.BackendUtilization.KeepResponseHeaders = ptr.To(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
+		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
+			lb.BackendUtilization.SlowStart = &ir.SlowStart{
+				Window: ir.MetaV1DurationPtr(d),
+			}
+		}
+	}
+
+	// Add ZoneAware loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && policy.LoadBalancer.ZoneAware.PreferLocal != nil {
+		preferLocal := policy.LoadBalancer.ZoneAware.PreferLocal
+		lb.PreferLocal = &ir.PreferLocalZone{
+			MinEndpointsThreshold: preferLocal.MinEndpointsThreshold,
+			PercentageEnabled:     preferLocal.PercentageEnabled,
+		}
+		if preferLocal.Force != nil {
+			lb.PreferLocal.Force = &ir.ForceLocalZone{
+				MinEndpointsInZoneThreshold: preferLocal.Force.MinEndpointsInZoneThreshold,
+			}
+		}
+	}
+
+	// Add WeightedZones loadbalancer settings
+	if policy.LoadBalancer.ZoneAware != nil && len(policy.LoadBalancer.ZoneAware.WeightedZones) > 0 {
+		lb.WeightedZones = make([]ir.WeightedZoneConfig, len(policy.LoadBalancer.ZoneAware.WeightedZones))
+		for i, wz := range policy.LoadBalancer.ZoneAware.WeightedZones {
+			lb.WeightedZones[i] = ir.WeightedZoneConfig{
+				Zone:   wz.Zone,
+				Weight: wz.Weight,
+			}
+		}
+	}
+
+	// Add EndpointOverride if specified
+	if policy.LoadBalancer.EndpointOverride != nil {
+		lb.EndpointOverride = buildEndpointOverride(*policy.LoadBalancer.EndpointOverride)
 	}
 
 	return lb, nil
@@ -323,17 +453,52 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 	case egv1a1.SourceIPConsistentHashType:
 		consistentHash.SourceIP = ptr.To(true)
 	case egv1a1.HeaderConsistentHashType:
-		consistentHash.Header = &ir.Header{
-			Name: policy.ConsistentHash.Header.Name,
+		consistentHash.Headers = []*egv1a1.Header{
+			{
+				Name: policy.ConsistentHash.Header.Name,
+			},
 		}
+	case egv1a1.HeadersConsistentHashType:
+		headers := make([]*egv1a1.Header, 0, len(policy.ConsistentHash.Headers))
+		for _, h := range policy.ConsistentHash.Headers {
+			headers = append(headers, &egv1a1.Header{
+				Name: h.Name,
+			})
+		}
+		consistentHash.Headers = headers
 	case egv1a1.CookieConsistentHashType:
 		consistentHash.Cookie = policy.ConsistentHash.Cookie
+	case egv1a1.QueryParamsConsistentHashType:
+		queryParams := make([]*egv1a1.QueryParam, 0, len(policy.ConsistentHash.QueryParams))
+		for _, q := range policy.ConsistentHash.QueryParams {
+			queryParams = append(queryParams, &egv1a1.QueryParam{
+				Name: q.Name,
+			})
+		}
+		consistentHash.QueryParams = queryParams
 	}
 
 	return consistentHash, nil
 }
 
-func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
+func buildEndpointOverride(policy egv1a1.EndpointOverride) *ir.EndpointOverride {
+	endpointOverride := &ir.EndpointOverride{}
+
+	// Convert extract from sources
+	for _, source := range policy.ExtractFrom {
+		irSource := ir.EndpointOverrideExtractFrom{}
+
+		if source.Header != nil {
+			irSource.Header = source.Header
+		}
+
+		endpointOverride.ExtractFrom = append(endpointOverride.ExtractFrom, irSource)
+	}
+
+	return endpointOverride
+}
+
+func buildProxyProtocol(policy *egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	if policy.ProxyProtocol == nil {
 		return nil
 	}
@@ -352,7 +517,7 @@ func buildProxyProtocol(policy egv1a1.ClusterSettings) *ir.ProxyProtocol {
 	return pp
 }
 
-func buildHealthCheck(policy egv1a1.ClusterSettings) *ir.HealthCheck {
+func buildHealthCheck(policy *egv1a1.ClusterSettings) *ir.HealthCheck {
 	if policy.HealthCheck == nil {
 		return nil
 	}
@@ -371,13 +536,29 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 
 	hc := policy.Passive
 	irOD := &ir.OutlierDetection{
-		Interval:                       hc.Interval,
 		SplitExternalLocalOriginErrors: hc.SplitExternalLocalOriginErrors,
 		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
-		BaseEjectionTime:               hc.BaseEjectionTime,
 		MaxEjectionPercent:             hc.MaxEjectionPercent,
+		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
+		AlwaysEjectOneEndpoint:         hc.AlwaysEjectOneEndpoint,
+	}
+
+	if hc.Interval != nil {
+		d, err := time.ParseDuration(string(*hc.Interval))
+		if err != nil {
+			return nil
+		}
+		irOD.Interval = ir.MetaV1DurationPtr(d)
+	}
+
+	if hc.BaseEjectionTime != nil {
+		d, err := time.ParseDuration(string(*hc.BaseEjectionTime))
+		if err != nil {
+			return nil
+		}
+		irOD.BaseEjectionTime = ir.MetaV1DurationPtr(d)
 	}
 	return irOD
 }
@@ -389,10 +570,21 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 
 	hc := policy.Active
 	irHC := &ir.ActiveHealthCheck{
-		Timeout:            hc.Timeout,
-		Interval:           hc.Interval,
+		InitialJitter:      hc.InitialJitter,
 		UnhealthyThreshold: hc.UnhealthyThreshold,
 		HealthyThreshold:   hc.HealthyThreshold,
+	}
+
+	if hc.Timeout != nil {
+		if d, err := time.ParseDuration(string(*hc.Timeout)); err == nil {
+			irHC.Timeout = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	if hc.Interval != nil {
+		if d, err := time.ParseDuration(string(*hc.Interval)); err == nil {
+			irHC.Interval = ir.MetaV1DurationPtr(d)
+		}
 	}
 	switch hc.Type {
 	case egv1a1.ActiveHealthCheckerTypeHTTP:
@@ -403,6 +595,10 @@ func buildActiveHealthCheck(policy egv1a1.HealthCheck) *ir.ActiveHealthCheck {
 		irHC.GRPC = &ir.GRPCHealthChecker{
 			Service: ptr.Deref(hc.GRPC, egv1a1.GRPCActiveHealthChecker{}).Service,
 		}
+	}
+
+	if hc.Overrides != nil {
+		irHC.Overrides = buildHealthCheckOverrides(hc.Overrides)
 	}
 
 	return irHC
@@ -419,6 +615,9 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 	if irHTTP.Method != nil {
 		*irHTTP.Method = strings.ToUpper(*irHTTP.Method)
+	}
+	if h.Hostname != nil {
+		irHTTP.Host = *h.Hostname
 	}
 
 	// deduplicate http statuses
@@ -437,6 +636,19 @@ func buildHTTPActiveHealthChecker(h *egv1a1.HTTPActiveHealthChecker) *ir.HTTPHea
 	}
 	irHTTP.ExpectedStatuses = irStatuses
 
+	// deduplicate retriable http statuses
+	retriableStatusSet := sets.NewInt()
+	for _, r := range h.RetriableStatuses {
+		retriableStatusSet.Insert(int(r))
+	}
+	if retriableStatusSet.Len() > 0 {
+		irRetriableStatuses := make([]ir.HTTPStatus, 0, retriableStatusSet.Len())
+		for _, r := range retriableStatusSet.List() {
+			irRetriableStatuses = append(irRetriableStatuses, ir.HTTPStatus(r))
+		}
+		irHTTP.RetriableStatuses = irRetriableStatuses
+	}
+
 	irHTTP.ExpectedResponse = translateActiveHealthCheckPayload(h.ExpectedResponse)
 	return irHTTP
 }
@@ -451,6 +663,18 @@ func buildTCPActiveHealthChecker(h *egv1a1.TCPActiveHealthChecker) *ir.TCPHealth
 		Receive: translateActiveHealthCheckPayload(h.Receive),
 	}
 	return irTCP
+}
+
+func buildHealthCheckOverrides(overrides *egv1a1.HealthCheckOverrides) *ir.HealthCheckOverrides {
+	if overrides == nil {
+		return nil
+	}
+
+	irOverrides := &ir.HealthCheckOverrides{
+		Port: uint32(overrides.Port),
+	}
+
+	return irOverrides
 }
 
 func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.HealthCheckPayload {
@@ -470,14 +694,23 @@ func translateActiveHealthCheckPayload(p *egv1a1.ActiveHealthCheckPayload) *ir.H
 	return irPayload
 }
 
-func translateDNS(policy egv1a1.ClusterSettings) *ir.DNS {
+func translateDNS(policy *egv1a1.ClusterSettings, policyName string) *ir.DNS {
 	if policy.DNS == nil {
 		return nil
 	}
-	return &ir.DNS{
-		RespectDNSTTL:  policy.DNS.RespectDNSTTL,
-		DNSRefreshRate: policy.DNS.DNSRefreshRate,
+	irDNS := &ir.DNS{
+		LookupFamily:  policy.DNS.LookupFamily,
+		RespectDNSTTL: policy.DNS.RespectDNSTTL,
+		Name:          policyName,
 	}
+
+	if policy.DNS.DNSRefreshRate != nil {
+		if d, err := time.ParseDuration(string(*policy.DNS.DNSRefreshRate)); err == nil {
+			irDNS.DNSRefreshRate = ir.MetaV1DurationPtr(d)
+		}
+	}
+
+	return irDNS
 }
 
 func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
@@ -490,6 +723,8 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	if r.NumRetries != nil {
 		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
 	}
+
+	rt.NumAttemptsPerPriority = r.NumAttemptsPerPriority
 
 	if r.RetryOn != nil {
 		ro := &ir.RetryOn{}
@@ -514,7 +749,11 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 		bpr := false
 
 		if r.PerRetry.Timeout != nil {
-			pr.Timeout = r.PerRetry.Timeout
+			d, err := time.ParseDuration(string(*r.PerRetry.Timeout))
+			if err != nil {
+				return nil, err
+			}
+			pr.Timeout = ir.MetaV1DurationPtr(d)
 			bpr = true
 		}
 
@@ -522,18 +761,22 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 			if r.PerRetry.BackOff.MaxInterval != nil || r.PerRetry.BackOff.BaseInterval != nil {
 				bop := &ir.BackOffPolicy{}
 				if r.PerRetry.BackOff.BaseInterval != nil {
-					bop.BaseInterval = r.PerRetry.BackOff.BaseInterval
-					if bop.BaseInterval.Duration == 0 {
-						return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+					if d, err := time.ParseDuration(string(*r.PerRetry.BackOff.BaseInterval)); err == nil {
+						bop.BaseInterval = ir.MetaV1DurationPtr(d)
+						if bop.BaseInterval.Duration == 0 {
+							return nil, fmt.Errorf("baseInterval cannot be set to 0s")
+						}
 					}
 				}
 				if r.PerRetry.BackOff.MaxInterval != nil {
-					bop.MaxInterval = r.PerRetry.BackOff.MaxInterval
-					if bop.MaxInterval.Duration == 0 {
-						return nil, fmt.Errorf("maxInterval cannot be set to 0s")
-					}
-					if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
-						return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+					if d, err := time.ParseDuration(string(*r.PerRetry.BackOff.MaxInterval)); err == nil {
+						bop.MaxInterval = ir.MetaV1DurationPtr(d)
+						if bop.MaxInterval.Duration == 0 {
+							return nil, fmt.Errorf("maxInterval cannot be set to 0s")
+						}
+						if bop.BaseInterval != nil && bop.BaseInterval.Duration > bop.MaxInterval.Duration {
+							return nil, fmt.Errorf("maxInterval cannot be less than baseInterval")
+						}
 					}
 				}
 
@@ -548,4 +791,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	}
 
 	return rt, nil
+}
+
+func buildRetryBudget(r *egv1a1.RetryBudget) *ir.RetryBudget {
+	if r == nil {
+		return nil
+	}
+
+	rb := &ir.RetryBudget{
+		Percent:             fractionalpercent.ToPercent(&r.Percent),
+		MinRetryConcurrency: ptr.Deref(r.MinRetryConcurrency, 3),
+	}
+	return rb
 }

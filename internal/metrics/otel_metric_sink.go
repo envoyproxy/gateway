@@ -11,7 +11,11 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	api "go.opentelemetry.io/otel/metric"
+
+	log "github.com/envoyproxy/gateway/internal/logging"
 )
+
+var metricsLogger log.Logger
 
 // NewCounter creates a new Counter Metric (the values will be cumulative).
 // That means that data collected by the new Metric will be summed before export.
@@ -69,7 +73,7 @@ func newGauge(o MetricOptions) *Gauge {
 	r := &Gauge{mutex: &sync.RWMutex{}, name: o.Name}
 	r.stores = map[attribute.Set]*GaugeValues{}
 	g, err := meter().Float64ObservableGauge(o.Name,
-		api.WithFloat64Callback(func(ctx context.Context, observer api.Float64Observer) error {
+		api.WithFloat64Callback(func(_ context.Context, observer api.Float64Observer) error {
 			r.mutex.Lock()
 			defer r.mutex.Unlock()
 			for _, gv := range r.stores {

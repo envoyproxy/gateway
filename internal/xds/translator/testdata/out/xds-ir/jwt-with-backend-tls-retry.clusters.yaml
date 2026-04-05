@@ -1,8 +1,7 @@
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
+  commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
   edsClusterConfig:
@@ -11,19 +10,43 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
   name: httproute/default/httproute-1/rule/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
     thresholds:
-    - maxRetries: 1024
-  commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
+    - maxConnections: 2048
+      maxPendingRequests: 1
+      maxRequests: 4294967295
+      maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 15s
+  dnsLookupFamily: ALL
   dnsRefreshRate: 30s
-  lbPolicy: LEAST_REQUEST
+  healthChecks:
+  - healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      - end: "301"
+        start: "300"
+      method: GET
+      path: /healthz
+      receive:
+      - binary: RXZlcnl0aGluZyBPSw==
+    interval: 3s
+    timeout: 0.500s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-route/jwt/0
     endpoints:
@@ -41,9 +64,28 @@
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/default/policy-for-route/jwt/0/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.maglev
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.maglev.v3.Maglev
   name: securitypolicy/default/policy-for-route/jwt/0
-  perConnectionBufferLimitBytes: 32768
+  outlierDetection:
+    baseEjectionTime: 160s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
+    interval: 2s
+    maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 100000000
   respectDnsTtl: true
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
   transportSocketMatches:
   - match:
       name: securitypolicy/default/policy-for-route/jwt/0/tls/0
@@ -66,3 +108,20 @@
                 resourceApiVersion: V3
         sni: foo.bar.com
   type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      autoConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+        httpProtocolOptions: {}
+      commonHttpProtocolOptions:
+        idleTimeout: 16s
+        maxConnectionDuration: 17s
+        maxRequestsPerConnection: 1
+  upstreamConnectionOptions:
+    tcpKeepalive:
+      keepaliveInterval: 60
+      keepaliveProbes: 3
+      keepaliveTime: 1200

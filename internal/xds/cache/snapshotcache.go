@@ -25,6 +25,8 @@ import (
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -32,7 +34,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var Hash = cachev3.IDHash{}
+var (
+	Hash   = cachev3.IDHash{}
+	tracer = otel.Tracer("envoy-gateway/xds/snapshotcache")
+)
 
 // SnapshotCacheWithCallbacks uses the go-control-plane SimpleCache to store snapshots of
 // Envoy resources, sliced by Node ID so that we can do incremental xDS properly.
@@ -46,18 +51,23 @@ var Hash = cachev3.IDHash{}
 type SnapshotCacheWithCallbacks interface {
 	cachev3.SnapshotCache
 	serverv3.Callbacks
-	GenerateNewSnapshot(string, types.XdsResources) error
+	GenerateNewSnapshot(string, types.XdsResources, context.Context) error
+	SnapshotHasIrKey(string) bool
+	GetIrKeys() []string
 }
 
 type snapshotMap map[string]*cachev3.Snapshot
 
 type nodeInfoMap map[int64]*corev3.Node
 
+type nodeFrequencyMap map[string]int
+
 type streamDurationMap map[int64]time.Time
 
 type snapshotCache struct {
 	cachev3.SnapshotCache
 	streamIDNodeInfo    nodeInfoMap
+	nodeFrequency       nodeFrequencyMap
 	streamDuration      streamDurationMap
 	deltaStreamDuration streamDurationMap
 	snapshotVersion     int64
@@ -68,11 +78,18 @@ type snapshotCache struct {
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources) error {
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources, ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	version := s.newSnapshotVersion()
+	_, span := tracer.Start(ctx, "SnapshotCache.GenerateNewSnapshot")
+	defer span.End()
+
+	sc := trace.SpanContextFromContext(ctx)
+	version := sc.TraceID().String()
+	if !sc.IsValid() {
+		version = s.newSnapshotVersion()
+	}
 
 	// Create a snapshot with all xDS resources.
 	snapshot, err := cachev3.NewSnapshot(
@@ -85,7 +102,13 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	}
 	xdsSnapshotCreateTotal.WithSuccess().Increment()
 
-	s.lastSnapshot[irKey] = snapshot
+	// Delete snapshot from cache if resources are nil
+	if resources == nil {
+		delete(s.lastSnapshot, irKey)
+	} else {
+		// Update snapshot in cache
+		s.lastSnapshot[irKey] = snapshot
+	}
 
 	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
@@ -125,6 +148,7 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 		log:                 wrappedLogger,
 		lastSnapshot:        make(snapshotMap),
 		streamIDNodeInfo:    make(nodeInfoMap),
+		nodeFrequency:       make(nodeFrequencyMap),
 		streamDuration:      make(streamDurationMap),
 		deltaStreamDuration: make(streamDurationMap),
 	}
@@ -171,6 +195,15 @@ func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.streamDuration, streamID)
+
+	s.nodeFrequency[node.Id] -= 1
+	if s.nodeFrequency[node.Id] <= 0 {
+		delete(s.nodeFrequency, node.Id)
+
+		// Only snapshots for nodes with active connections are updated, we need to clear
+		// the snapshot for this node so it doesn't get stale data when it reconnects.
+		s.ClearSnapshot(node.Id)
+	}
 }
 
 func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
@@ -188,6 +221,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		}
 		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
 		s.streamIDNodeInfo[streamID] = req.Node
+		s.nodeFrequency[req.Node.Id] += 1
 	}
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
@@ -231,12 +265,17 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 		nodeID, nodeVersion, req.ResourceNames, req.GetTypeUrl(),
 		errorCode, errorMessage)
 
+	if errorCode != 0 {
+		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+	}
+
 	return nil
 }
 
 func (s *snapshotCache) OnStreamResponse(_ context.Context, streamID int64, _ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
-	// No mutex lock required here because no writing to the cache.
+	s.mu.Lock()
 	node := s.streamIDNodeInfo[streamID]
+	s.mu.Unlock()
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
 	} else {
@@ -274,6 +313,15 @@ func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 
 	delete(s.streamIDNodeInfo, streamID)
 	delete(s.deltaStreamDuration, streamID)
+
+	s.nodeFrequency[node.Id] -= 1
+	if s.nodeFrequency[node.Id] <= 0 {
+		delete(s.nodeFrequency, node.Id)
+
+		// Only snapshots for nodes with active connections are updated, we need to clear
+		// the snapshot for this node so it doesn't get stale data when it reconnects.
+		s.ClearSnapshot(node.Id)
+	}
 }
 
 func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.DeltaDiscoveryRequest) error {
@@ -296,6 +344,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		}
 		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
 		s.streamIDNodeInfo[streamID] = req.Node
+		s.nodeFrequency[req.Node.Id] += 1
 	}
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
@@ -336,12 +385,17 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 		req.GetTypeUrl(),
 		errorCode, errorMessage)
 
+	if errorCode != 0 {
+		s.log.Errorf("Envoy rejected the last update with code %d and message %s", errorCode, errorMessage)
+	}
+
 	return nil
 }
 
 func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, _ *discoveryv3.DeltaDiscoveryRequest, _ *discoveryv3.DeltaDiscoveryResponse) {
-	// No mutex lock required here because no writing to the cache.
+	s.mu.Lock()
 	node := s.streamIDNodeInfo[streamID]
+	s.mu.Unlock()
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
 	} else {
@@ -354,4 +408,29 @@ func (s *snapshotCache) OnFetchRequest(_ context.Context, _ *discoveryv3.Discove
 }
 
 func (s *snapshotCache) OnFetchResponse(_ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
+}
+
+func (s *snapshotCache) SnapshotHasIrKey(irKey string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for key, snapshot := range s.lastSnapshot {
+		if snapshot != nil && key == irKey {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *snapshotCache) GetIrKeys() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	irKeys := make([]string, 0, len(s.lastSnapshot))
+	for key := range s.lastSnapshot {
+		irKeys = append(irKeys, key)
+	}
+
+	return irKeys
 }

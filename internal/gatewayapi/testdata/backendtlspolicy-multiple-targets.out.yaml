@@ -2,7 +2,6 @@ backendTLSPolicies:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: policy-btls
     namespace: envoy-gateway
   spec:
@@ -29,6 +28,11 @@ backendTLSPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -38,7 +42,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-btls
     namespace: envoy-gateway
   spec:
@@ -79,7 +82,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-btls-1
     namespace: envoy-gateway
   spec:
@@ -117,7 +119,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-btls-2
     namespace: envoy-gateway
   spec:
@@ -156,8 +157,7 @@ infraIR:
   envoy-gateway/gateway-btls:
     proxy:
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-btls/http
+      - name: envoy-gateway/gateway-btls/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -167,17 +167,42 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-btls
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway/gateway-btls
+      namespace: envoy-gateway-system
 xdsIR:
   envoy-gateway/gateway-btls:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-gateway-btls-a945b5bb
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway/gateway-btls
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-gateway-btls-a945b5bb
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway/gateway-btls
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-btls
@@ -190,9 +215,23 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-1
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-1/rule/0
           settings:
-          - protocol: HTTP
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8080
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8080"
+            name: httproute/envoy-gateway/httproute-btls-1/rule/0/backend/0
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:
@@ -200,8 +239,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -214,9 +251,23 @@ xdsIR:
           exact: /exact-1
           name: ""
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-btls-2
+            namespace: envoy-gateway
           name: httproute/envoy-gateway/httproute-btls-2/rule/0
           settings:
-          - protocol: HTTP
+          - addressType: IP
+            endpoints:
+            - host: 10.244.0.11
+              port: 8081
+            metadata:
+              kind: Service
+              name: http-backend
+              namespace: envoy-gateway
+              sectionName: "8081"
+            name: httproute/envoy-gateway/httproute-btls-2/rule/0/backend/0
+            protocol: HTTP
             tls:
               alpnProtocols: null
               caCertificate:
@@ -224,8 +275,6 @@ xdsIR:
                 name: policy-btls/envoy-gateway-ca
               sni: example.com
             weight: 1
-        directResponse:
-          statusCode: 500
         hostname: '*'
         isHTTP2: false
         metadata:
@@ -237,3 +286,8 @@ xdsIR:
           distinct: false
           exact: /exact-2
           name: ""
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

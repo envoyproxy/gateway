@@ -16,3 +16,16 @@
           substitution: /rewrite
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        pathSeparatedPrefix: /origin
+      name: rewrite-route-timeout
+      route:
+        cluster: rewrite-route
+        idleTimeout: 3600s
+        regexRewrite:
+          pattern:
+            regex: ^/.*$
+          substitution: /rewrite
+        timeout: 5s
+        upgradeConfigs:
+        - upgradeType: websocket

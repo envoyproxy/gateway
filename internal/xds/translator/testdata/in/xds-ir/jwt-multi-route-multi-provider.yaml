@@ -21,6 +21,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: http://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
           claimToHeaders:
           - header: one-route-example-key1
             claim: claim.neteased.key
@@ -29,8 +30,15 @@ http:
           audiences:
           - one.foo.com
           - two.foo.com
-          remoteJWKS:
-            uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+          localJWKS: |
+              {
+                "keys": [
+                  {
+                    "kty": "oct",
+                    "k": "1234567890"
+                  }
+                ]
+              }
           recomputeRoute: true
           claimToHeaders:
           - header: one-route-example2-key1
@@ -43,6 +51,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-www.test.com-dest/backend/0"
   - name: "second-route-www.test.com"
     hostname: "*"
     pathMatch:
@@ -56,6 +65,7 @@ http:
           - foo.com
           remoteJWKS:
             uri: http://localhost/jwt/public-key/jwks.json
+            cacheDuration: 300s
           claimToHeaders:
           - header: second-route-example-key1
             claim: claim.neteased.key
@@ -66,9 +76,11 @@ http:
           - two.foo.com
           remoteJWKS:
             uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+            cacheDuration: 300s
     destination:
       name: "second-route-www.test.com-dest"
       settings:
       - endpoints:
         - host: "5.6.7.8"
           port: 50000
+        name: "second-route-www.test.com-dest/backend/0"

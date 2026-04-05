@@ -30,6 +30,7 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 1500
 - address:
@@ -44,5 +45,6 @@
         cluster: tcp-route-dest
         statPrefix: tcp-10081
     name: tcp-route-dest
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 1500

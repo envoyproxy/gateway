@@ -4,7 +4,9 @@ http:
   port: 10080
   hostnames:
   - "*"
-  isHTTP2: true
+  grpc:
+    enableGRPCStats: true
+    enableGRPCWeb: true
   path:
     mergeSlashes: true
     escapedSlashesAction: UnescapeAndRedirect
@@ -16,7 +18,6 @@ http:
       exact: "foo/bar"
     headerMatches:
     - name: user
-      stringMatch:
       exact: "jason"
     queryParamMatches:
     - name: "debug"
@@ -28,12 +29,18 @@ http:
         - host: "1.2.3.4"
           port: 50000
         protocol: GRPC
+        name: "first-route-dest/backend/0"
     traffic:
       http2:
         initialConnectionWindowSize: 1048576
         initialStreamWindowSize: 524288000
         maxConcurrentStreams: 200
         resetStreamOnError: true
+        connectionKeepalive:
+          interval: 60s
+          timeout: 10s
+          intervalJitter: 20
+          idleInterval: 30s
   - name: "second-route"
     hostname: "*"
     pathMatch:
@@ -46,6 +53,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
         protocol: GRPC
+        name: "second-route-dest/backend/0"
     traffic:
       http2: {}
   - name: "third-route-use-client"
@@ -60,6 +68,7 @@ http:
         - host: "1.2.3.4"
           port: 50000
         protocol: HTTP
+        name: "third-route-dest/backend/0"
     useClientProtocol: true
     traffic:
       http2:
@@ -78,6 +87,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fourth-route-dest/backend/0"
     traffic:
       http2:
         initialConnectionWindowSize: 1048576

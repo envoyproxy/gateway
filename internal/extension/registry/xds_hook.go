@@ -9,12 +9,14 @@ import (
 	"context"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -68,6 +70,43 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 	return resp.Route, nil
 }
 
+func (h *XDSHook) PostClusterModifyHook(cluster *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {
+	// Take all of the unstructured resources for the extension and package them into bytes
+	extensionResourceBytes, err := translateUnstructuredToUnstructuredBytes(extensionResources)
+	if err != nil {
+		return cluster, err
+	}
+
+	// Make the request to the extension server
+	ctx := context.Background()
+	resp, err := h.grpcClient.PostClusterModify(ctx,
+		&extension.PostClusterModifyRequest{
+			Cluster: cluster,
+			PostClusterContext: &extension.PostClusterExtensionContext{
+				BackendExtensionResources: extensionResourceBytes,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Cluster, nil
+}
+
+func (h *XDSHook) PostEndpointsModifyHook(loadAssignment *endpoint.ClusterLoadAssignment) (*endpoint.ClusterLoadAssignment, error) {
+	ctx := context.Background()
+	resp, err := h.grpcClient.PostEndpointsModify(ctx,
+		&extension.PostEndpointsModifyRequest{
+			LoadAssignment:       loadAssignment,
+			PostEndpointsContext: &extension.PostEndpointsExtensionContext{},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.LoadAssignment, nil
+}
+
 func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
 	// Make the request to the extension server
 	ctx := context.Background()
@@ -105,18 +144,33 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener, extensionReso
 	return resp.Listener, nil
 }
 
-func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error) {
+func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret, listeners []*listener.Listener, routes []*route.RouteConfiguration, extensionPolicies []*ir.UnstructuredRef) ([]*cluster.Cluster, []*tls.Secret, []*listener.Listener, []*route.RouteConfiguration, error) {
 	// Make the request to the extension server
+	// Take all of the unstructured resources for the extension and package them into bytes
+	unstructuredPolicies := make([]*unstructured.Unstructured, len(extensionPolicies))
+	for i, policy := range extensionPolicies {
+		unstructuredPolicies[i] = policy.Object
+	}
+	// Convert the unstructured policies to bytes
+	extensionPoliciesBytes, err := translateUnstructuredToUnstructuredBytes(unstructuredPolicies)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostTranslateModify(ctx,
 		&extension.PostTranslateModifyRequest{
-			PostTranslateContext: &extension.PostTranslateExtensionContext{},
-			Clusters:             clusters,
-			Secrets:              secrets,
+			PostTranslateContext: &extension.PostTranslateExtensionContext{
+				ExtensionResources: extensionPoliciesBytes,
+			},
+			Clusters:  clusters,
+			Secrets:   secrets,
+			Listeners: listeners,
+			Routes:    routes,
 		})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return resp.Clusters, resp.Secrets, nil
+	return resp.Clusters, resp.Secrets, resp.Listeners, resp.Routes, nil
 }

@@ -15,6 +15,10 @@ maintainers:
 - zhaohuabing
 - guydc
 - shawnh2
+- cnvergence
+- rudrakhp
+- jukie
+- kkk777-7
 
 emeritus-maintainers:
 
@@ -28,9 +32,15 @@ emeritus-maintainers:
 
 reviewers:
 
-- chauhanshubham
 - kflynn
-- tmsnan
 - tanujd11
-- cnvergence
 - liorokman
+- shahar-h
+- sudiptob2
+- nareddyt
+
+emeritus-reviewers:
+
+- chauhanshubham
+- tmsnan
+- sanposhiho

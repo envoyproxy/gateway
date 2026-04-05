@@ -6,8 +6,23 @@
 package v1alpha1
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
+
+const (
+	// PolicyConditionAggregated indicates whether the policy has been aggregated
+	// to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Aggregated"
+	//
+	PolicyConditionAggregated gwapiv1.PolicyConditionType = "Aggregated"
+
+	// PolicyReasonAggregated is used with the "Aggregated" condition when the policy
+	// is aggregated to satisfy CEL constraints in PolicyAncestorStatus (not exceeding 16).
+	PolicyReasonAggregated gwapiv1.PolicyConditionReason = "Aggregated"
 )
 
 type PolicyTargetReferences struct {
@@ -16,11 +31,11 @@ type PolicyTargetReferences struct {
 	// Policy to have effect
 	//
 	// Deprecated: use targetRefs/targetSelectors instead
-	TargetRef *gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
+	TargetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRef,omitempty"`
 
 	// TargetRefs are the names of the Gateway resources this policy
 	// is being attached to.
-	TargetRefs []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
+	TargetRefs []gwapiv1.LocalPolicyTargetReferenceWithSectionName `json:"targetRefs,omitempty"`
 
 	// TargetSelectors allow targeting resources for this policy based on labels
 	TargetSelectors []TargetSelector `json:"targetSelectors,omitempty"`
@@ -37,14 +52,20 @@ type TargetSelector struct {
 	Kind gwapiv1.Kind `json:"kind"`
 
 	// MatchLabels are the set of label selectors for identifying the targeted resource
-	MatchLabels map[string]string `json:"matchLabels"`
+	// +optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// MatchExpressions is a list of label selector requirements. The requirements are ANDed.
+	//
+	// +optional
+	// +listType=atomic
+	MatchExpressions []metav1.LabelSelectorRequirement `json:"matchExpressions,omitempty"`
 
 	// Namespaces determines if the resource from all namespaces or the current namespace
 	// are considered when matching by label selectors specified in MatchLabels.
 	// Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be
 	// configured to allow the selection.
 	// +optional
-	// +notImplementedHide
 	Namespaces *TargetSelectorNamespaces `json:"namespaces,omitempty"`
 }
 
@@ -53,19 +74,21 @@ type FromNamespaces string
 const (
 	// FromNamespacesAll indicates that the target selector should apply to targets from all namespaces
 	FromNamespacesAll FromNamespaces = "All"
+	// FromNamespacesSame indicates that the target selector should apply to targets from the same namespace as the policy
+	FromNamespacesSame FromNamespaces = "Same"
 )
 
 // TargetSelectorNamespaces determines which namespaces are used when selecting policy targets.
 type TargetSelectorNamespaces struct {
 	// Indicates where targets would be selected for the Policy's TargetSelector.
-	// +kubebuilder:validation:Enum=All
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=All;Same
+	// +kubebuilder:default:="Same"
 	FromNamespaces FromNamespaces `json:"from,omitempty"`
 }
 
-func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName {
+func (p PolicyTargetReferences) GetTargetRefs() []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	if p.TargetRef != nil {
-		return []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{*p.TargetRef}
+		return []gwapiv1.LocalPolicyTargetReferenceWithSectionName{*p.TargetRef}
 	}
 	return p.TargetRefs
 }

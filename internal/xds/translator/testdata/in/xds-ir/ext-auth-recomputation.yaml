@@ -2,7 +2,6 @@ http:
   - address: 0.0.0.0
     hostnames:
       - '*'
-    isHTTP2: false
     name: default/gateway-1/http
     path:
       escapedSlashesAction: UnescapeAndRedirect
@@ -16,9 +15,6 @@ http:
           distinct: false
           name: ""
           prefix: /foo1
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -28,6 +24,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/0/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
@@ -43,6 +40,7 @@ http:
                         port: 9000
                     protocol: GRPC
                     weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
             headersToExtAuth:
               - header1
               - header2
@@ -53,9 +51,6 @@ http:
           distinct: false
           name: ""
           prefix: /foo2
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/1
           settings:
@@ -65,6 +60,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-1/rule/1/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-http-route-1
@@ -80,6 +76,7 @@ http:
                         port: 3000
                     protocol: GRPC
                     weight: 1
+                    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
             headersToExtAuth:
               - header1
               - header2
@@ -90,9 +87,7 @@ http:
           distinct: false
           name: ""
           prefix: /bar
-        backendWeights:
-          invalid: 0
-          valid: 0
+
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -102,6 +97,7 @@ http:
                   port: 8080
               protocol: HTTP
               weight: 1
+              name: httproute/default/httproute-2/rule/0/backend/0
         security:
           extAuth:
             name: securitypolicy/default/policy-for-gateway-1
@@ -118,6 +114,7 @@ http:
                         port: 80
                     protocol: HTTP
                     weight: 1
+                    name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
               headersToBackend:
                 - header1
                 - header2

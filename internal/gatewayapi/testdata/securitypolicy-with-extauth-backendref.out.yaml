@@ -2,7 +2,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: default
   spec:
@@ -43,7 +42,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-1
     namespace: default
   spec:
@@ -87,7 +85,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: httproute-2
     namespace: default
   spec:
@@ -126,8 +123,7 @@ infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - address: null
-        name: default/gateway-1/http
+      - name: default/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -137,12 +133,15 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: default/gateway-1
+      namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-http-route-1
     namespace: default
   spec:
@@ -173,11 +172,15 @@ securityPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
-    creationTimestamp: null
     name: policy-for-gateway-1
     namespace: default
   spec:
@@ -188,6 +191,12 @@ securityPolicies:
         - name: http-backend
           namespace: envoy-gateway
           port: 80
+        backendSettings:
+          circuitBreaker:
+            maxConnections: 30001
+            maxParallelRequests: 1022
+            maxParallelRetries: 1023
+            maxPendingRequests: 1024
         headersToBackend:
         - header1
         - header2
@@ -219,13 +228,34 @@ securityPolicies:
 xdsIR:
   default/gateway-1:
     accessLog:
-      text:
+      json:
       - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -238,12 +268,22 @@ xdsIR:
       port: 10080
       routes:
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -263,12 +303,22 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
+                  metadata:
+                    kind: Service
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -276,12 +326,22 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
           name: httproute/default/httproute-1/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.foo.com
@@ -301,12 +361,22 @@ xdsIR:
             grpc:
               authority: grpc-backend.default:9000
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-http-route-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-http-route-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
                   - host: 8.8.8.8
                     port: 9000
+                  metadata:
+                    kind: Service
+                    name: grpc-backend
+                    namespace: default
+                    sectionName: "9000"
+                  name: securitypolicy/default/policy-for-http-route-1/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             headersToExtAuth:
@@ -314,12 +384,22 @@ xdsIR:
             - header2
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
           name: httproute/default/httproute-2/rule/0
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
+            metadata:
+              kind: Service
+              name: service-3
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: www.bar.com
@@ -339,12 +419,22 @@ xdsIR:
             http:
               authority: http-backend.envoy-gateway:80
               destination:
+                metadata:
+                  kind: SecurityPolicy
+                  name: policy-for-gateway-1
+                  namespace: default
                 name: securitypolicy/default/policy-for-gateway-1/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
                   - host: 7.7.7.7
                     port: 80
+                  metadata:
+                    kind: Service
+                    name: http-backend
+                    namespace: envoy-gateway
+                    sectionName: "80"
+                  name: securitypolicy/default/policy-for-gateway-1/extauth/0/backend/0
                   protocol: HTTP
                   weight: 1
               headersToBackend:
@@ -352,3 +442,14 @@ xdsIR:
               - header2
               path: /auth
             name: securitypolicy/default/policy-for-gateway-1
+            traffic:
+              circuitBreaker:
+                maxConnections: 30001
+                maxParallelRequests: 1022
+                maxParallelRetries: 1023
+                maxPendingRequests: 1024
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

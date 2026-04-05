@@ -27,17 +27,18 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			Logging:   DefaultEnvoyGatewayLogging(),
 			Admin:     DefaultEnvoyGatewayAdmin(),
 			Telemetry: DefaultEnvoyGatewayTelemetry(),
+			XDSServer: DefaultXDSServer(),
 		},
 	}
 }
 
 // SetEnvoyGatewayDefaults sets default EnvoyGateway configuration parameters.
 func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
-	if e.TypeMeta.Kind == "" {
-		e.TypeMeta.Kind = KindEnvoyGateway
+	if e.Kind == "" {
+		e.Kind = KindEnvoyGateway
 	}
-	if e.TypeMeta.APIVersion == "" {
-		e.TypeMeta.APIVersion = GroupVersion.String()
+	if e.APIVersion == "" {
+		e.APIVersion = GroupVersion.String()
 	}
 	if e.Provider == nil {
 		e.Provider = DefaultEnvoyGatewayProvider()
@@ -50,6 +51,11 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Provider.Kubernetes.LeaderElection == nil {
 		e.Provider.Kubernetes.LeaderElection = DefaultLeaderElection()
 	}
+
+	if e.Provider.Kubernetes.Client == nil {
+		e.Provider.Kubernetes.Client = DefaultKubernetesClient()
+	}
+
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
@@ -61,6 +67,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.Telemetry == nil {
 		e.Telemetry = DefaultEnvoyGatewayTelemetry()
+	}
+	if e.XDSServer == nil {
+		e.XDSServer = DefaultXDSServer()
 	}
 }
 
@@ -96,6 +105,69 @@ func (e *EnvoyGateway) NamespaceMode() bool {
 		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
 }
 
+// GatewayNamespaceMode returns true if controller uses gateway namespace mode for infra deployments.
+func (e *EnvoyGateway) GatewayNamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Deploy != nil &&
+		*e.Provider.Kubernetes.Deploy.Type == KubernetesDeployModeTypeGatewayNamespace
+}
+
+// TopologyInjectorDisabled checks whether the provided EnvoyGateway disables TopologyInjector
+func (e *EnvoyGateway) TopologyInjectorDisabled() bool {
+	if e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.TopologyInjector != nil {
+		return ptr.Deref(e.Provider.Kubernetes.TopologyInjector.Disable, false)
+	}
+	return false
+}
+
+// GetEnvoyProxyDefaultSpec returns the default EnvoyProxySpec if specified,
+// otherwise returns nil.
+func (e *EnvoyGateway) GetEnvoyProxyDefaultSpec() *EnvoyProxySpec {
+	return e.EnvoyProxy
+}
+
+// defaultRuntimeFlags are the default runtime flags for Envoy Gateway.
+var defaultRuntimeFlags = map[RuntimeFlag]bool{
+	XDSNameSchemeV2: false,
+}
+
+// IsEnabled checks if an experimental Gateway API is enabled in the EnvoyGateway configuration.
+func (f *GatewayAPISettings) IsEnabled(api GatewayAPI) bool {
+	if f != nil {
+		for _, enable := range f.Enabled {
+			if enable == api {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// IsEnabled checks if a runtime flag is enabled in the EnvoyGateway configuration.
+func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
+	if f != nil {
+		for _, disable := range f.Disabled {
+			if disable == flag {
+				return false
+			}
+		}
+		for _, enable := range f.Enabled {
+			if enable == flag {
+				return true
+			}
+		}
+	}
+
+	if defaultValue, found := defaultRuntimeFlags[flag]; found {
+		return defaultValue
+	}
+	return false
+}
+
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
@@ -106,11 +178,26 @@ func DefaultLeaderElection() *LeaderElection {
 	}
 }
 
+// DefaultKubernetesClient returns a new DefaultKubernetesClient with default parameters.
+func DefaultKubernetesClient() *KubernetesClient {
+	return &KubernetesClient{
+		RateLimit: &KubernetesClientRateLimit{
+			QPS:   ptr.To(DefaultKubernetesClientQPS),
+			Burst: ptr.To(DefaultKubernetesClientBurst),
+		},
+	}
+}
+
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
 	}
+}
+
+// DefaultXDSServer returns a new XDSServer with default configuration parameters.
+func DefaultXDSServer() *XDSServer {
+	return &XDSServer{}
 }
 
 // DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
@@ -171,6 +258,7 @@ func DefaultEnvoyGatewayProvider() *EnvoyGatewayProvider {
 		Type: ProviderTypeKubernetes,
 		Kubernetes: &EnvoyGatewayKubernetesProvider{
 			LeaderElection: DefaultLeaderElection(),
+			Client:         DefaultKubernetesClient(),
 		},
 	}
 }
@@ -222,11 +310,18 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		if r.Kubernetes.LeaderElection == nil {
 			r.Kubernetes.LeaderElection = DefaultLeaderElection()
 		}
+		if r.Kubernetes.Client == nil {
+			r.Kubernetes.Client = DefaultKubernetesClient()
+		}
 		return r.Kubernetes
 	}
 
 	if r.Kubernetes.LeaderElection == nil {
 		r.Kubernetes.LeaderElection = DefaultLeaderElection()
+	}
+
+	if r.Kubernetes.Client == nil {
+		r.Kubernetes.Client = DefaultKubernetesClient()
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
@@ -275,4 +370,61 @@ func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
 	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
 		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
+}
+
+func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
+	if kcr == nil {
+		return float32(DefaultKubernetesClientQPS), int(DefaultKubernetesClientBurst)
+	}
+	qps := ptr.Deref(kcr.QPS, DefaultKubernetesClientQPS)
+	burst := ptr.Deref(kcr.Burst, DefaultKubernetesClientBurst)
+	return float32(qps), int(burst)
+}
+
+// ShouldIncludeClusters returns true if clusters should be included in the translation hook.
+// When TranslationConfig is nil, defaults to true for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeClusters() bool {
+	if tc == nil || tc.Cluster == nil {
+		// Default behavior: include clusters for backward compatibility
+		return true
+	}
+
+	return ptr.Deref(tc.Cluster.IncludeAll, true)
+}
+
+// ShouldIncludeSecrets returns true if secrets should be included in the translation hook.
+// When TranslationConfig is nil, defaults to true for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeSecrets() bool {
+	if tc == nil || tc.Secret == nil {
+		// Default behavior: include secrets for backward compatibility
+		return true
+	}
+
+	return ptr.Deref(tc.Secret.IncludeAll, true)
+}
+
+// ShouldIncludeListeners returns true if listeners should be included in the translation hook.
+// When TranslationConfig is nil, defaults to false for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeListeners() bool {
+	if tc == nil || tc.Listener == nil {
+		// Default behavior: exclude listeners for backward compatibility
+		return false
+	}
+
+	return ptr.Deref(tc.Listener.IncludeAll, false)
+}
+
+// ShouldIncludeRoutes returns true if routes should be included in the translation hook.
+// When TranslationConfig is nil, defaults to false for backward compatibility.
+// When TranslationConfig is explicitly set, uses the configuration.
+func (tc *TranslationConfig) ShouldIncludeRoutes() bool {
+	if tc == nil || tc.Route == nil {
+		// Default behavior: exclude routes for backward compatibility
+		return false
+	}
+
+	return ptr.Deref(tc.Route.IncludeAll, false)
 }

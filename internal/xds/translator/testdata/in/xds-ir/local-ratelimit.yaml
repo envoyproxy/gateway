@@ -33,6 +33,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route-ratelimit-multiple-rules"
     hostname: "*"
     traffic:
@@ -53,6 +54,7 @@ http:
           - cidrMatch:
               cidr: 192.168.0.0/16
               maskLen: 16
+              isIPv6: false
             headerMatches:
             - name: x-user-id
               exact: two
@@ -69,6 +71,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route-ratelimit-no-rule"
     hostname: "*"
     traffic:
@@ -85,3 +88,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"

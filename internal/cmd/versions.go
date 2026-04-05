@@ -11,15 +11,15 @@ import (
 	"github.com/envoyproxy/gateway/internal/cmd/version"
 )
 
-// getVersionCommand returns the version cobra command to be executed.
-func getVersionCommand() *cobra.Command {
+// GetVersionCommand returns the version cobra command to be executed.
+func GetVersionCommand() *cobra.Command {
 	var output string
 
 	cmd := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"versions", "v"},
 		Short:   "Show versions",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return version.Print(cmd.OutOrStdout(), output)
 		},
 	}

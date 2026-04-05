@@ -1,0 +1,37 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route-ratelimit-query-parameters"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 10
+            unit: Minute
+          rules:
+          - headerMatches:
+            - name: x-user-id
+              exact: one
+            queryParamMatches:
+            - name: "user"
+              exact: "alice"
+            limit:
+              requests: 10
+              unit: Hour
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

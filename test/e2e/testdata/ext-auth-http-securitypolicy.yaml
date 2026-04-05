@@ -47,8 +47,9 @@ spec:
     name: http-with-ext-auth
   extAuth:
     http:
+      path: /auth
       backendRef:
-        name: http-ext-auth
+        name: envoy-ext-auth
         namespace: gateway-conformance-infra
-        port: 9002
+        port: 8080
       headersToBackend: ["x-current-user"]

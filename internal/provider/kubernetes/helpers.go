@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -24,6 +25,15 @@ import (
 const (
 	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
 )
+
+// cachedConfigMapKeys defines the keys to keep in ConfigMap data cache
+var cachedConfigMapKeys = map[string]bool{
+	gatewayapi.JWKSConfigMapKey:         true,
+	gatewayapi.LuaConfigMapKey:          true,
+	gatewayapi.ResponseBodyConfigMapKey: true,
+	gatewayapi.CACertKey:                true,
+	gatewayapi.CRLKey:                   true,
+}
 
 type ObjectKindNamespacedName struct {
 	kind      string
@@ -97,35 +107,6 @@ func (cc *controlledClasses) removeMatch(gc *gwapiv1.GatewayClass) {
 	}
 }
 
-// isAccepted returns true if the provided gatewayclass contains the Accepted=true
-// status condition.
-func isAccepted(gc *gwapiv1.GatewayClass) bool {
-	if gc == nil {
-		return false
-	}
-	for _, cond := range gc.Status.Conditions {
-		if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
-// gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
-func gatewaysOfClass(gc *gwapiv1.GatewayClass, gwList *gwapiv1.GatewayList) []gwapiv1.Gateway {
-	var gateways []gwapiv1.Gateway
-	if gwList == nil || gc == nil {
-		return gateways
-	}
-	for i := range gwList.Items {
-		gw := gwList.Items[i]
-		if string(gw.Spec.GatewayClassName) == gc.Name {
-			gateways = append(gateways, gw)
-		}
-	}
-	return gateways
-}
-
 // terminatesTLS returns true if the provided gateway contains a listener configured
 // for TLS termination.
 func terminatesTLS(listener *gwapiv1.Listener) bool {
@@ -134,6 +115,17 @@ func terminatesTLS(listener *gwapiv1.Listener) bool {
 			listener.Protocol == gwapiv1.TLSProtocolType) &&
 		listener.TLS.Mode != nil &&
 		*listener.TLS.Mode == gwapiv1.TLSModeTerminate {
+		return true
+	}
+	return false
+}
+
+func isListenerEntryTerminatesTLS(listenerEntry *gwapiv1.ListenerEntry) bool {
+	if listenerEntry.TLS != nil &&
+		(listenerEntry.Protocol == gwapiv1.HTTPSProtocolType ||
+			listenerEntry.Protocol == gwapiv1.TLSProtocolType) &&
+		listenerEntry.TLS.Mode != nil &&
+		*listenerEntry.TLS.Mode == gwapiv1.TLSModeTerminate {
 		return true
 	}
 	return false
@@ -158,21 +150,10 @@ func validateBackendRef(ref *gwapiv1.BackendRef) error {
 		return fmt.Errorf("invalid group; must be nil, empty string %q or %q", mcsapiv1a1.GroupName, egv1a1.GroupName)
 	case gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindService && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != resource.KindServiceImport && gatewayapi.KindDerefOr(ref.Kind, resource.KindService) != egv1a1.KindBackend:
 		return fmt.Errorf("invalid kind %q; must be %q, %q or %q",
-			*ref.BackendObjectReference.Kind, resource.KindService, resource.KindServiceImport, egv1a1.KindBackend)
+			*ref.Kind, resource.KindService, resource.KindServiceImport, egv1a1.KindBackend)
 	}
 
 	return nil
-}
-
-// classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
-func classRefsEnvoyProxy(gc *gwapiv1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
-	if gc == nil || ep == nil {
-		return false
-	}
-
-	return refsEnvoyProxy(gc) &&
-		string(*gc.Spec.ParametersRef.Namespace) == ep.Namespace &&
-		gc.Spec.ParametersRef.Name == ep.Name
 }
 
 // refsEnvoyProxy returns true if the provided GatewayClass references an EnvoyProxy.
@@ -184,7 +165,6 @@ func refsEnvoyProxy(gc *gwapiv1.GatewayClass) bool {
 	return gc.Spec.ParametersRef != nil &&
 		string(gc.Spec.ParametersRef.Group) == egv1a1.GroupVersion.Group &&
 		gc.Spec.ParametersRef.Kind == egv1a1.KindEnvoyProxy &&
-		gc.Spec.ParametersRef.Namespace != nil &&
 		len(gc.Spec.ParametersRef.Name) > 0
 }
 
@@ -202,4 +182,48 @@ func classAccepted(gc *gwapiv1.GatewayClass) bool {
 	}
 
 	return false
+}
+
+// expectedAndFirstFallbackFilter filters a data map to only keep expected keys plus the first key for fallback.
+func expectedAndFirstFallbackFilter[T any](data map[string]T, expectedKeys map[string]bool) map[string]T {
+	filtered := make(map[string]T, min(len(expectedKeys)+1, len(data)))
+	firstFallbackKey := "" // to track lexicographically first key for fallback
+	for k := range data {
+		if expectedKeys[k] {
+			filtered[k] = data[k]
+		}
+		if firstFallbackKey == "" || k < firstFallbackKey {
+			firstFallbackKey = k
+		}
+	}
+	filtered[firstFallbackKey] = data[firstFallbackKey]
+	return filtered
+}
+
+// transformConfigMapData filters ConfigMap data to only keep needed keys to reduce memory usage.
+func transformConfigMapData(obj interface{}) (interface{}, error) {
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok || len(cm.Data) <= 1 {
+		return obj, nil
+	}
+
+	cm.Data = expectedAndFirstFallbackFilter(cm.Data, cachedConfigMapKeys)
+	return cm, nil
+}
+
+// composeTransforms chains multiple transform functions together.
+func composeTransforms(transforms ...toolscache.TransformFunc) toolscache.TransformFunc {
+	return func(obj interface{}) (interface{}, error) {
+		var err error
+		for _, transform := range transforms {
+			if transform == nil {
+				continue
+			}
+			obj, err = transform(obj)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return obj, nil
+	}
 }

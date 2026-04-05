@@ -1,3 +1,9 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+
 http:
 - name: "first-listener"
   address: "::"
@@ -17,6 +23,7 @@ http:
           - cidrMatch:
               cidr: 192.168.0.0/16
               maskLen: 16
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -28,6 +35,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "first-route-dest/backend/0"
   - name: "second-route"
     hostname: "*"
     traffic:
@@ -37,6 +45,7 @@ http:
           - cidrMatch:
               cidr: 192.168.0.0/24
               maskLen: 24
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -48,6 +57,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "second-route-dest/backend/0"
   - name: "third-route"
     hostname: "*"
     traffic:
@@ -65,6 +75,7 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "third-route-dest/backend/0"
   - name: "fourth-route"
     hostname: "*"
     traffic:
@@ -75,6 +86,7 @@ http:
               cidr: 192.168.0.0/16
               maskLen: 16
               distinct: true
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -86,3 +98,4 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "fourth-route-dest/backend/0"

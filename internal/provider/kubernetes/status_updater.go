@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -78,9 +77,10 @@ func (u *UpdateHandler) apply(update Update) {
 	var (
 		startTime = time.Now()
 		obj       = update.Resource
-		objKind   = kindOf(obj)
+		objKind   = KindOf(obj)
 	)
-
+	log := u.log.WithValues("name", update.NamespacedName.Name,
+		"namespace", update.NamespacedName.Namespace, "kind", objKind)
 	defer func() {
 		updateDuration := time.Since(startTime)
 		statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
@@ -104,9 +104,7 @@ func (u *UpdateHandler) apply(update Update) {
 		newObj := update.Mutator.Mutate(obj)
 
 		if isStatusEqual(obj, newObj) {
-			u.log.WithName(update.NamespacedName.Name).
-				WithName(update.NamespacedName.Namespace).
-				Info("status unchanged, bypassing update")
+			log.Info("status unchanged, bypassing update")
 
 			statusUpdateTotal.WithStatus(statusNoAction, kindLabel.Value(objKind)).Increment()
 			return nil
@@ -116,8 +114,7 @@ func (u *UpdateHandler) apply(update Update) {
 
 		return u.client.Status().Update(context.Background(), newObj)
 	}); err != nil {
-		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
-			"namespace", update.NamespacedName.Namespace)
+		log.Error(err, "unable to update status")
 
 		statusUpdateTotal.WithFailure(metrics.ReasonError, kindLabel.Value(objKind)).Increment()
 	} else {
@@ -143,7 +140,7 @@ func (u *UpdateHandler) Start(ctx context.Context) error {
 			return nil
 		case update := <-u.updateChannel:
 			u.log.Info("received a status update", "namespace", update.NamespacedName.Namespace,
-				"name", update.NamespacedName.Name)
+				"name", update.NamespacedName.Name, "kind", KindOf(update.Resource))
 
 			u.apply(update)
 		}
@@ -220,8 +217,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a2.TLSRoute:
-		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
+	case *gwapiv1.TLSRoute:
+		if b, ok := objB.(*gwapiv1.TLSRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -268,8 +265,8 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
-	case *gwapiv1a3.BackendTLSPolicy:
-		if b, ok := objB.(*gwapiv1a3.BackendTLSPolicy); ok {
+	case *gwapiv1.BackendTLSPolicy:
+		if b, ok := objB.(*gwapiv1.BackendTLSPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -297,7 +294,7 @@ func isStatusEqual(objA, objB interface{}) bool {
 	return false
 }
 
-// kindOf returns the known kind string for the given Kubernetes object,
+// KindOf returns the known kind string for the given Kubernetes object,
 // returns Unknown for the unsupported object.
 //
 // Supported objects:
@@ -316,7 +313,7 @@ func isStatusEqual(objA, objB interface{}) bool {
 //	BackendTLSPolicy
 //	EnvoyExtensionPolicy
 //	Unstructured (for Extension Policies)
-func kindOf(obj interface{}) string {
+func KindOf(obj interface{}) string {
 	var kind string
 	switch o := obj.(type) {
 	case *gwapiv1.GatewayClass:
@@ -325,7 +322,7 @@ func kindOf(obj interface{}) string {
 		kind = resource.KindGateway
 	case *gwapiv1.HTTPRoute:
 		kind = resource.KindHTTPRoute
-	case *gwapiv1a2.TLSRoute:
+	case *gwapiv1.TLSRoute:
 		kind = resource.KindTLSRoute
 	case *gwapiv1a2.TCPRoute:
 		kind = resource.KindTCPRoute
@@ -343,7 +340,7 @@ func kindOf(obj interface{}) string {
 		kind = resource.KindSecurityPolicy
 	case *egv1a1.EnvoyExtensionPolicy:
 		kind = resource.KindEnvoyExtensionPolicy
-	case *gwapiv1a3.BackendTLSPolicy:
+	case *gwapiv1.BackendTLSPolicy:
 		kind = resource.KindBackendTLSPolicy
 	case *unstructured.Unstructured:
 		kind = o.GetKind()

@@ -7,11 +7,15 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
 	// KindHTTPRouteFilter is the name of the HTTPRouteFilter kind.
 	KindHTTPRouteFilter = "HTTPRouteFilter"
+
+	// InjectedCredentialKey is the key in the secret where the injected credential is stored.
+	InjectedCredentialKey = "credential"
 )
 
 // +kubebuilder:object:root=true
@@ -20,6 +24,9 @@ const (
 
 // HTTPRouteFilter is a custom Envoy Gateway HTTPRouteFilter which provides extended
 // traffic processing options such as path regex rewrite, direct response and more.
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -35,6 +42,16 @@ type HTTPRouteFilterSpec struct {
 	URLRewrite *HTTPURLRewriteFilter `json:"urlRewrite,omitempty"`
 	// +optional
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
+	// +optional
+	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// Matches defines additional matching criteria for the HTTPRoute rule.
+	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+	// effective matching is the logical AND of the two sets.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=8
+	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host
@@ -48,17 +65,23 @@ type HTTPURLRewriteFilter struct {
 	//
 	// +optional
 	Path *HTTPPathModifier `json:"path,omitempty"`
+	// AppendXForwardedHost controls whether the original Host header value is
+	// appended to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true for backward compatibility.
+	//
+	// +optional
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty"`
 }
 
 // HTTPDirectResponseFilter defines the configuration to return a fixed response.
 type HTTPDirectResponseFilter struct {
-	// Content Type of the response. This will be set in the Content-Type header.
+	// Content Type of the direct response. This will be set in the Content-Type header.
 	//
 	// +optional
 	ContentType *string `json:"contentType,omitempty"`
 
-	// Body of the Response
-	//
+	// Body of the direct response.
+	// Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
 	// +optional
 	Body *CustomResponseBody `json:"body,omitempty"`
 
@@ -66,6 +89,11 @@ type HTTPDirectResponseFilter struct {
 	// If unset, defaults to 200.
 	// +optional
 	StatusCode *int `json:"statusCode,omitempty"`
+
+	// Header defines the headers of the direct response.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.remove) || size(self.remove) == 0",message="header.remove is not supported for DirectResponse"
+	Header *gwapiv1.HTTPHeaderFilter `json:"header,omitempty"`
 }
 
 // HTTPPathModifierType defines the type of path redirect or rewrite.
@@ -140,9 +168,90 @@ type HTTPHostnameModifier struct {
 	Header *string `json:"header,omitempty"`
 }
 
+// HTTPCredentialInjectionFilter defines the configuration to inject credentials into the request.
+// This is useful when the backend service requires credentials in the request, and the original
+// request does not contain them. The filter can inject credentials into the request before forwarding
+// it to the backend service.
+type HTTPCredentialInjectionFilter struct {
+	// Header is the name of the header where the credentials are injected.
+	// If not specified, the credentials are injected into the Authorization header.
+	// +optional
+	Header *string `json:"header,omitempty"`
+
+	// Whether to overwrite the value or not if the injected headers already exist.
+	// If not specified, the default value is false.
+	// +optional
+	Overwrite *bool `json:"overwrite"`
+
+	// Credential is the credential to be injected.
+	Credential InjectedCredential `json:"credential"`
+}
+
+// InjectedCredential defines the credential to be injected.
+type InjectedCredential struct {
+	// ValueRef is a reference to the secret containing the credentials to be injected.
+	// This is an Opaque secret. The credential should be stored in the key
+	// "credential", and the value should be the credential to be injected.
+	// For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
+	// for bearer token, the value should be "Bearer <token>".
+	ValueRef gwapiv1.SecretObjectReference `json:"valueRef"`
+
+	// EG may support more credential types in the future, for example, OAuth2 access token retrieved by Client Credentials Grant flow.
+}
+
+// HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+// At least one matcher must be specified.
+//
+// +kubebuilder:validation:MinProperties=1
+type HTTPRouteMatchFilter struct {
+	// Cookies is a list of cookie matchers evaluated against the HTTP request.
+	// All specified matchers must match.
+	//
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Cookies []HTTPCookieMatch `json:"cookies,omitempty"`
+}
+
+// CookieMatchType specifies the semantics of how cookie values should be compared.
+// Valid CookieMatchType values are "Exact" and "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;RegularExpression
+type CookieMatchType string
+
+// CookieMatchType constants.
+const (
+	// CookieMatchExact matches the exact value of the cookie.
+	CookieMatchExact CookieMatchType = "Exact"
+	// CookieMatchRegularExpression matches a regular expression against the value of the cookie.
+	// The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
+	CookieMatchRegularExpression CookieMatchType = "RegularExpression"
+)
+
+// HTTPCookieMatch defines how to match a single cookie.
+type HTTPCookieMatch struct {
+	// Type specifies how to match against the value of the cookie.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *CookieMatchType `json:"type,omitempty"`
+
+	// Name is the cookie name to evaluate.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Value is the cookie value to be matched.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=4096
+	Value string `json:"value"`
+}
+
 //+kubebuilder:object:root=true
 
 // HTTPRouteFilterList contains a list of HTTPRouteFilter resources.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type HTTPRouteFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -150,5 +259,5 @@ type HTTPRouteFilterList struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
+	localSchemeBuilder.Register(&HTTPRouteFilter{}, &HTTPRouteFilterList{})
 }

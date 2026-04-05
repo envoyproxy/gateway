@@ -135,11 +135,11 @@ func TestCreateRateLimitInfra(t *testing.T) {
 			for _, ref := range tc.ownerReferences {
 				switch ref {
 				case ratelimit.ResourceKindService:
-					createEnvoyGatewayService(t, kube.Client.Client, kube.Namespace)
+					createEnvoyGatewayService(t, kube.Client.Client, kube.ControllerNamespace)
 				case ratelimit.ResourceKindDeployment:
-					createEnvoyGatewayDeployment(t, kube.Client.Client, kube.Namespace)
+					createEnvoyGatewayDeployment(t, kube.Client.Client, kube.ControllerNamespace)
 				case ratelimit.ResourceKindServiceAccount:
-					createEnvoyGatewayServiceAccount(t, kube.Client.Client, kube.Namespace)
+					createEnvoyGatewayServiceAccount(t, kube.Client.Client, kube.ControllerNamespace)
 				}
 			}
 
@@ -154,7 +154,7 @@ func TestCreateRateLimitInfra(t *testing.T) {
 				// Verify all resources were created via the fake kube client.
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      ratelimit.InfraName,
 					},
 				}
@@ -162,7 +162,7 @@ func TestCreateRateLimitInfra(t *testing.T) {
 
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      ratelimit.InfraName,
 					},
 				}
@@ -170,7 +170,7 @@ func TestCreateRateLimitInfra(t *testing.T) {
 
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
+						Namespace: kube.ControllerNamespace,
 						Name:      ratelimit.InfraName,
 					},
 				}

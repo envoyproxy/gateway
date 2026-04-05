@@ -9,15 +9,15 @@ package suite
 
 // BenchmarkOptions for nighthawk-client.
 type BenchmarkOptions struct {
-	RPS         string
+	BaselineRPS string
 	Connections string
 	Duration    string
 	Concurrency string
 }
 
-func NewBenchmarkOptions(rps, connections, duration, concurrency string) BenchmarkOptions {
+func NewBenchmarkOptions(baselineRPS, connections, duration, concurrency string) BenchmarkOptions {
 	return BenchmarkOptions{
-		RPS:         rps,
+		BaselineRPS: baselineRPS,
 		Connections: connections,
 		Duration:    duration,
 		Concurrency: concurrency,

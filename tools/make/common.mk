@@ -14,7 +14,14 @@
 # https://news.ycombinator.com/item?id=16486331
 .SECONDARY:
 
-SHELL:=/bin/bash
+SHELL:=/usr/bin/env bash -euo pipefail
+
+GNU_SED := $(shell sed --version >/dev/null 2>&1 && echo "yes" || echo "no")
+ifeq ($(GNU_SED),yes)
+SED=sed -i
+else
+SED=sed -i ''
+endif
 
 # ====================================================================================================
 # ROOT Options:
@@ -34,11 +41,15 @@ ifeq ($(origin OUTPUT_DIR),undefined)
 OUTPUT_DIR := $(ROOT_DIR)/bin
 endif
 
+# Common Go tool command including the custom -modfile flag for tools dependencies
+GO_TOOL = go tool -modfile=$(ROOT_DIR)/tools/go.mod
+
 # REV is the short git sha of latest commit.
 REV=$(shell git rev-parse --short HEAD)
 
 # Supported Platforms for building multiarch binaries.
-PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64
+# Disabled windows_arm64 due to lack of space while building on the GH Runner
+PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 windows_amd64
 
 # Set a specific PLATFORM
 ifeq ($(origin PLATFORM), undefined)
@@ -49,12 +60,9 @@ ifeq ($(origin PLATFORM), undefined)
 		GOARCH := $(shell go env GOARCH)
 	endif
 	PLATFORM := $(GOOS)_$(GOARCH)
-	# Use linux as the default OS when building images
-	IMAGE_PLAT := linux_$(GOARCH)
 else
 	GOOS := $(word 1, $(subst _, ,$(PLATFORM)))
 	GOARCH := $(word 2, $(subst _, ,$(PLATFORM)))
-	IMAGE_PLAT := $(PLATFORM)
 endif
 
 # List commands in cmd directory for building targets
@@ -120,7 +128,7 @@ export USAGE_OPTIONS
 
 .PHONY: generate
 generate: ## Generate go code from templates and tags
-generate: kube-generate docs-api helm-generate go.generate copy-current-release-docs
+generate: kube-generate docs-api helm-generate go.generate kube-generate-examples
 
 ## help: Show this help info.
 .PHONY: help

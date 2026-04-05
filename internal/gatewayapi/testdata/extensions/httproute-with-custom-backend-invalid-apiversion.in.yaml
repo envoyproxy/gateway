@@ -1,0 +1,65 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/s3"
+      backendRefs:
+      - group: storage.example.io
+        kind: S3Backend
+        name: s3-backend
+        port: 443
+    - matches:
+      - path:
+          value: "/lambda"
+      backendRefs:
+      - group: compute.example.io
+        kind: LambdaBackend
+        name: lambda-backend
+        port: 443
+extensionRefFilters:
+- apiVersion: storage.example.io.v1alpha1
+  kind: S3Backend
+  metadata:
+    name: s3-backend
+    namespace: default
+  spec:
+    bucket: my-s3-bucket
+    region: us-west-2
+    endpoint: s3.amazonaws.com
+- apiVersion: compute.example.io.v1alpha1
+  kind: LambdaBackend
+  metadata:
+    name: lambda-backend
+    namespace: default
+  spec:
+    functionName: my-function
+    region: us-west-2
+    qualifier: $LATEST

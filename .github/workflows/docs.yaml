@@ -18,23 +18,23 @@ permissions:
 
 jobs:
   docs-lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
     - uses: ./tools/github-actions/setup-deps
 
+    - name: Install markdownlint-cli
+      run: npm install -g markdownlint-cli@v0.47.0
+
     - name: Run markdown linter
-      uses: nosborn/github-action-markdown-cli@58bcfd1af530d87a13d51b76e6713b52602e3613  # v3.4.0
-      with:
-        files: site/content/*
-        config_file: ".github/markdown_lint_config.json"
+      run: make lint.markdown
 
     - name: Install linkinator
-      run: npm install -g linkinator@6.0.4
+      run: npm install -g linkinator@7.4.0
 
     - name: Check links
       run: make docs docs-check-links
@@ -46,7 +46,7 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -60,7 +60,7 @@ jobs:
         extended: true
 
     - name: Setup Node
-      uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a  # v4.2.0
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
       with:
         node-version: '18'
 
@@ -69,7 +69,7 @@ jobs:
 
     # Upload docs for GitHub Pages
     - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa  # v3.0.1
+      uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b  # v4.0.0
       with:
         # Path of the directory containing the static assets.
         path: site/public
@@ -96,4 +96,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4.0.5
+      uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0

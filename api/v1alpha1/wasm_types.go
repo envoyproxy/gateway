@@ -48,10 +48,13 @@ type Wasm struct {
 
 	// FailOpen is a switch used to control the behavior when a fatal error occurs
 	// during the initialization or the execution of the Wasm extension.
+	//
 	// If FailOpen is set to true, the system bypasses the Wasm extension and
-	// allows the traffic to pass through. Otherwise, if it is set to false or
+	// allows the traffic to pass through. If it is set to false or
 	// not set (defaulting to false), the system blocks the traffic and returns
 	// an HTTP 5xx error.
+	//
+	// If set to true, the Wasm extension will also be bypassed if the configuration is invalid.
 	//
 	// +optional
 	// +kubebuilder:default=false
@@ -127,6 +130,10 @@ type HTTPWasmCodeSource struct {
 	// kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	// +optional
 	SHA256 *string `json:"sha256"`
+
+	// TLS configuration when connecting to the Wasm code source.
+	// +optional
+	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
 
 // ImageWasmCodeSource defines the OCI image containing the Wasm code.
@@ -145,10 +152,13 @@ type ImageWasmCodeSource struct {
 	SHA256 *string `json:"sha256"`
 
 	// PullSecretRef is a reference to the secret containing the credentials to pull the image.
-	// Only support Kubernetes Secret resource from the same namespace.
 	// +kubebuilder:validation:XValidation:message="only support Secret kind.",rule="self.kind == 'Secret'"
 	// +optional
 	PullSecretRef *gwapiv1.SecretObjectReference `json:"pullSecretRef,omitempty"`
+
+	// TLS configuration when connecting to the Wasm code source.
+	// +optional
+	TLS *WasmCodeSourceTLSConfig `json:"tls,omitempty"`
 }
 
 // ImagePullPolicy defines the policy to use when pulling an OIC image.
@@ -163,3 +173,14 @@ const (
 	// Note: EG does not update the Wasm module every time an Envoy proxy requests the Wasm module.
 	ImagePullPolicyAlways ImagePullPolicy = "Always"
 )
+
+// WasmCodeSourceTLSConfig defines the TLS configuration when connecting to the Wasm code source.
+type WasmCodeSourceTLSConfig struct {
+	// CACertificateRef contains a reference to
+	// Kubernetes objects that contain TLS certificates of
+	// the Certificate Authorities that can be used
+	// as a trust anchor to validate the certificates presented by the Wasm code source.
+	//
+	// Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported.
+	CACertificateRef gwapiv1.SecretObjectReference `json:"caCertificateRef"`
+}

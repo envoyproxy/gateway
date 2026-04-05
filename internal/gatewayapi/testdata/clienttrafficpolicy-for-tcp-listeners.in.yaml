@@ -14,7 +14,6 @@ clientTrafficPolicies:
       connectionLimit:
         value: 3
         closeDelay: 10s
-    enableProxyProtocol: true
     timeout:
       tcp:
         idleTimeout: 1200s
@@ -26,11 +25,13 @@ clientTrafficPolicies:
       ecdhCurves:
       - curve1
       ciphers:
-      - cipher1
-      - cipher2
+      - ECDHE-RSA-AES128-GCM-SHA256
+
       signatureAlgorithms:
       - sig1
       - sig2
+    proxyProtocol:
+      optional: false
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

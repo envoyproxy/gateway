@@ -1,0 +1,26 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - address_prefix: 192.168.0.0
+            prefix_len:
+              value: 16
+        descriptor_key: masked_remote_address
+        descriptor_value: 192.168.0.0/16
+  - ActionSpecifier:
+      RemoteAddressMatch:
+        address_matcher:
+          ranges:
+          - address_prefix: 192.168.0.0
+            prefix_len:
+              value: 16
+        descriptor_key: remote_address
+        descriptor_value: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+routeName: first-route

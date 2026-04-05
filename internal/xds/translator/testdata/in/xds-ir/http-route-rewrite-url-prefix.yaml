@@ -1,4 +1,3 @@
-name: "http-route"
 http:
 - name: "first-listener"
   address: "::"
@@ -22,6 +21,28 @@ http:
       - endpoints:
         - host: "1.2.3.4"
           port: 50000
+        name: "rewrite-route-dest/backend/0"
     urlRewrite:
       path:
         prefixMatchReplace: /rewrite
+  - name: "rewrite-route-timeout"
+    pathMatch:
+      prefix: "/origin"
+    hostname: gateway.envoyproxy.io
+    headerMatches:
+    - name: ":authority"
+      exact: gateway.envoyproxy.io
+    destination:
+      name: "rewrite-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "rewrite-route-dest/backend/0"
+    urlRewrite:
+      path:
+        prefixMatchReplace: /rewrite
+    traffic:
+      timeout:
+        http:
+          requestTimeout: 5s

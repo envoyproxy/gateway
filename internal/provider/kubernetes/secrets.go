@@ -29,7 +29,7 @@ const (
 	hmacSecretKey    = "hmac-secret"
 )
 
-func newSecret(secretType corev1.SecretType, name string, namespace string, data map[string][]byte) corev1.Secret {
+func newSecret(secretType corev1.SecretType, name, namespace string, data map[string][]byte) corev1.Secret {
 	return corev1.Secret{
 		Type: secretType,
 		TypeMeta: metav1.TypeMeta{
@@ -91,8 +91,8 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 // them if they do.
 func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret, update bool) ([]corev1.Secret, error) {
 	var (
-		tidySecrets     []corev1.Secret
-		existingSecrets []string
+		tidySecrets     = make([]corev1.Secret, 0, len(secrets))
+		existingSecrets = make([]string, 0, len(secrets))
 	)
 
 	for i := range secrets {

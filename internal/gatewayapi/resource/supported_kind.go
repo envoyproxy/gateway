@@ -27,4 +27,14 @@ const (
 	KindServiceImport        = "ServiceImport"
 	KindSecret               = "Secret"
 	KindHTTPRouteFilter      = "HTTPRouteFilter"
+	KindReferenceGrant       = "ReferenceGrant"
+	KindClusterTrustBundle   = "ClusterTrustBundle"
+	KindListenerSet          = "ListenerSet"
 )
+
+type ResourceMetadata struct {
+	Group     string
+	Kind      string
+	Name      string
+	Namespace string
+}

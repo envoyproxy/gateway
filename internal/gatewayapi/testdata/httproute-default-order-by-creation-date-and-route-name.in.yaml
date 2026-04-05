@@ -1,0 +1,243 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: '*.envoyproxy.io'
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-default
+    creationTimestamp: 2025-07-12T20:47:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/'
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+    creationTimestamp: 2025-07-12T20:47:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/route3'
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+    creationTimestamp: 2025-07-12T20:47:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/route1'
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/foobar'
+      backendRefs:
+      - name: service-2
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/bar'
+      backendRefs:
+      - name: service-3
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-5
+    creationTimestamp: 2025-07-10T20:43:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/route5'
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/123'
+      backendRefs:
+      - name: service-2
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: test-ns
+    name: httproute-2
+    creationTimestamp: 2025-07-12T20:47:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/foo'
+      backendRefs:
+      - name: test-service
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/route2'
+      backendRefs:
+      - name: test-service
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: test-ns2
+    name: httproute-4
+    creationTimestamp: 2025-07-12T20:47:53Z
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/456'
+      backendRefs:
+      - name: test-service
+        port: 8080
+    - matches:
+      - path:
+          type: PathPrefix
+          value: '/route4'
+      backendRefs:
+      - name: test-service
+        port: 8080
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: test-ns
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: test-ns2
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: test-ns2
+    name: test-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: test-ns
+    name: test-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-test-service
+    namespace: test-ns
+    labels:
+      kubernetes.io/service-name: test-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-test-service
+    namespace: test-ns2
+    labels:
+      kubernetes.io/service-name: test-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true

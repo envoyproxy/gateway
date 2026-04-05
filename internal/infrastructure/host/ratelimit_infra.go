@@ -13,11 +13,12 @@ import (
 // TODO: add ratelimit support for host infra
 
 // CreateOrUpdateRateLimitInfra creates the managed host rate limit process, if it doesn't exist.
-func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
+func (i *Infra) CreateOrUpdateRateLimitInfra(_ context.Context) error {
 	return fmt.Errorf("create/update ratelimit infrastructure is not supported yet for host infrastructure")
 }
 
-// DeleteRateLimitInfra removes the managed host rate limit process, if it doesn't exist.
-func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
-	return fmt.Errorf("delete ratelimit infrastructure is not supported yet for host infrastructure")
+// DeleteRateLimitInfra is a no-op for host infrastructure since rate limiting
+// is not yet supported, so there is nothing to clean up.
+func (i *Infra) DeleteRateLimitInfra(_ context.Context) error {
+	return nil
 }
