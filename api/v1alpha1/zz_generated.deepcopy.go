@@ -2999,7 +2999,6 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		*out = new(LuaValidation)
 		**out = **in
 	}
-<<<<<<< HEAD
 	if in.DynamicModules != nil {
 		in, out := &in.DynamicModules, &out.DynamicModules
 		*out = make([]DynamicModuleEntry, len(*in))
@@ -3011,13 +3010,11 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		in, out := &in.GeoIP, &out.GeoIP
 		*out = new(EnvoyProxyGeoIP)
 		(*in).DeepCopyInto(*out)
-||||||| parent of f5678de1d (feat: Support for merged EnvoyProxy settings)
-=======
+	}
 	if in.MergeType != nil {
 		in, out := &in.MergeType, &out.MergeType
 		*out = new(MergeType)
 		**out = **in
->>>>>>> f5678de1d (feat: Support for merged EnvoyProxy settings)
 	}
 }
 
