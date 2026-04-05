@@ -69,7 +69,7 @@ export GITHUB_REMOTE=origin
     (+v1.8.x only) After updating the Envoy proxy image tag, update the dynamic module SDK and example dependencies:
 
    ```shell
-   make update-dynamic-module-deps ENVOY_VERSION=v${ENVOY_PROXY_VERSION}
+   make update-dynamic-module-deps
    ```
 
 10. Sign, commit, and push your changes to your fork.

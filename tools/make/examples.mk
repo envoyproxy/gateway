@@ -2,10 +2,6 @@ EXAMPLE_APPS := simple-extension-server extension-server envoy-ext-auth grpc-ext
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
-# Extract envoy proxy version from DefaultEnvoyProxyImage (e.g., "distroless-v1.37.0" -> "v1.37.0").
-# Empty on main branch where the image is "distroless-dev".
-ENVOY_PROXY_VERSION := $(shell grep 'DefaultEnvoyProxyImage' api/v1alpha1/shared_types.go | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+')
-
 kube-generate-examples:
 	@$(LOG_TARGET)
 	@pushd $(ROOT_DIR)/examples/extension-server; \
@@ -17,11 +13,7 @@ kube-build-examples-image:
 	@$(LOG_TARGET)
 	@for app in $(EXAMPLE_APPS); do \
 		pushd $(ROOT_DIR)/examples/$$app; \
-		if [ -n "$(ENVOY_PROXY_VERSION)" ]; then \
-			make docker-buildx ENVOY_VERSION=$(ENVOY_PROXY_VERSION); \
-		else \
-			make docker-buildx; \
-		fi; \
+		make docker-buildx; \
 		popd; \
 	done
 
@@ -44,4 +36,4 @@ go.mod.tidy.examples:
 .PHONY: update-dynamic-module-deps
 update-dynamic-module-deps: ## Update dynamic module SDK and envoy version in examples
 	@$(LOG_TARGET)
-	@tools/hack/bump-envoy-dynamic-modules.sh $(ENVOY_VERSION)
+	@tools/hack/bump-envoy-dynamic-modules.sh

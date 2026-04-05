@@ -9,6 +9,7 @@ updates:
     directories:
       - /tools/docker/envoy-gateway/
       - /site
+      - "/examples/*"
     schedule:
       interval: weekly
   - package-ecosystem: github-actions
