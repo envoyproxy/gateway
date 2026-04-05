@@ -1016,7 +1016,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `maxConcurrencyLimit` | _integer_ |  false  | 1000 | MaxConcurrencyLimit sets the upper bound on the concurrency limit.<br />Defaults to 1000. |
-| `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 100ms | ConcurrencyUpdateInterval is the period of time between<br />recalculations of the concurrency limit.<br />Defaults to 100ms. |
+| `concurrencyUpdateInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 100ms | ConcurrencyUpdateInterval is the period of time between<br />recalculations of the concurrency limit.<br />Defaults to 100ms. |
 
 
 #### ConnectConfig
@@ -3993,8 +3993,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 30s | Interval is the time interval between recalculating the minimum RTT.<br />Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling<br />(use FixedMinRTT in that case). |
-| `fixedMinRTT` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | FixedMinRTT sets a fixed minimum RTT value instead of dynamically<br />sampling it. This is required when Interval is set to 0s. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 30s | Interval is the time interval between recalculating the minimum RTT.<br />Defaults to 30s. Setting this to 0s disables dynamic minRTT sampling<br />(use FixedMinRTT in that case). |
+| `fixedMinRTT` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | FixedMinRTT sets a fixed minimum RTT value instead of dynamically<br />sampling it. This is required when Interval is set to 0s. |
 | `requestCount` | _integer_ |  false  | 50 | RequestCount is the number of requests to aggregate during the minRTT<br />recalculation window. Defaults to 50. |
 | `jitter` | _float_ |  false  | 15 | Jitter adds a randomized delay to the start of the minRTT calculation<br />window, expressed as a percentage of the interval. Defaults to 15%. |
 | `minConcurrency` | _integer_ |  false  | 3 | MinConcurrency sets the concurrency limit used while measuring the<br />minRTT. Defaults to 3. |
