@@ -63,6 +63,7 @@ bug fixes: |
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
+  Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
 
 # Enhancements that improve performance.
 performance improvements: |

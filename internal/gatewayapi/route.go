@@ -233,7 +233,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
@@ -956,7 +961,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
