@@ -4,7 +4,9 @@
 
 VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
 
-GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell cat VERSION) \
+# Use git describe to get the version from the latest tag (e.g. v1.7.1 or v1.8.0-rc.0).
+# Falls back to the abbreviated commit SHA when tags are unavailable (e.g. shallow clone).
+GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell git describe --tags --always) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT)
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
@@ -87,7 +89,7 @@ go.test.cel: manifests # Run the CEL validation tests
 .PHONY: go.test.benchmark
 go.test.benchmark: ## Run benchmark tests for translation performance
 	@$(LOG_TARGET)
-	go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./test/gobench
+	cd test && go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./gobench
 
 .PHONY: go.test.clean
 go.test.clean: # Clean go test cache

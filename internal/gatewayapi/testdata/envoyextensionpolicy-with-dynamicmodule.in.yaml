@@ -11,6 +11,12 @@ envoyProxiesForGateways:
         type: Local
         local:
           path: /usr/lib/envoy/modules/my_auth.so
+    - name: remote-auth-module
+      source:
+        type: Remote
+        remote:
+          url: https://modules.example.com/libremote_auth.so
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
     - name: ai-gateway-filter
       source:
         local:
@@ -97,6 +103,10 @@ envoyextensionpolicies:
       filterName: auth-check
       config:
         authEndpoint: https://auth.example.com
+    - name: remote-auth-module
+      filterName: remote-auth-check
+      config:
+        authEndpoint: https://remote-auth.example.com
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:

@@ -52,6 +52,7 @@ http:
               cidr: 192.168.0.0/16
               maskLen: 16
               distinct: true
+              isIPv6: false
             headerMatches:
             - name: x-user-id
               exact: two

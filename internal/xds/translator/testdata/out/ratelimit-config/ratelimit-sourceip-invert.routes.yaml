@@ -1,0 +1,18 @@
+costSpecified: false
+rateLimits:
+- actions:
+  - ActionSpecifier:
+      GenericKey:
+        descriptor_key: first-route
+        descriptor_value: first-route
+  - ActionSpecifier:
+      RemoteAddressMatch:
+        address_matcher:
+          invert_match: true
+          ranges:
+          - address_prefix: 192.168.0.0
+            prefix_len:
+              value: 24
+        descriptor_key: masked_remote_address
+        descriptor_value: invert:192.168.0.0/24
+routeName: first-route

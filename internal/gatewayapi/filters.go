@@ -210,6 +210,16 @@ func (t *Translator) ProcessGRPCFilters(
 		}
 	}
 
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorDirectResponseConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
+	}
+
 	return httpFiltersContext, errs.GetAllErrors()
 }
 
@@ -887,6 +897,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 								Host: hm,
 							}
 						}
+					}
+
+					if hrf.Spec.URLRewrite.AppendXForwardedHost != nil {
+						if filterContext.URLRewrite == nil {
+							filterContext.URLRewrite = &ir.URLRewrite{}
+						}
+						filterContext.URLRewrite.AppendXForwardedHost = hrf.Spec.URLRewrite.AppendXForwardedHost
 					}
 
 				}

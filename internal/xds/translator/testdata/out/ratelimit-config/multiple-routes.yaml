@@ -15,9 +15,15 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false
   - key: second-route
     value: second-route
     rate_limit: null
@@ -32,6 +38,12 @@ descriptors:
           replaces: []
         descriptors: []
         shadow_mode: false
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false

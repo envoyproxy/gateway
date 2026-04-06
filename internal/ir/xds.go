@@ -312,6 +312,8 @@ type HTTPListener struct {
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
 	ClientIPDetection *ClientIPDetectionSettings `json:"clientIPDetection,omitempty" yaml:"clientIPDetection,omitempty"`
+	// GeoIPProvider holds the shared GeoIP provider configuration used by request-time GeoIP filters.
+	GeoIPProvider *GeoIPProvider `json:"geoIPProvider,omitempty" yaml:"geoIPProvider,omitempty"`
 	// Path contains settings for path URI manipulations
 	Path PathSettings `json:"path,omitempty"`
 	// HTTP1 provides HTTP/1 configuration on the listener
@@ -430,6 +432,12 @@ type TLSConfig struct {
 	CACertificate *TLSCACertificate `json:"caCertificate,omitempty" yaml:"caCertificate,omitempty"`
 	// RequireClientCertificate to enforce client certificate
 	RequireClientCertificate bool `json:"requireClientCertificate,omitempty" yaml:"requireClientCertificate,omitempty"`
+	// ClientValidationEnabled indicates downstream client-certificate request/validation must be configured
+	// even when CACertificate is nil (e.g. Request/RequireAny modes).
+	ClientValidationEnabled bool `json:"clientValidationEnabled,omitempty" yaml:"clientValidationEnabled,omitempty"`
+	// AcceptUntrusted permits the connection even when client certificate verification fails.
+	// This maps to Envoy CertificateValidationContext.trust_chain_verification=ACCEPT_UNTRUSTED.
+	AcceptUntrusted bool `json:"acceptUntrusted,omitempty" yaml:"acceptUntrusted,omitempty"`
 	// A list of allowed base64-encoded SHA-256 hashes of the DER-encoded Subject Public Key Information (SPKI)
 	VerifyCertificateSpki []string `json:"verifyCertificateSpki,omitempty" yaml:"verifyCertificateSpki,omitempty"`
 	// A list of allowed hex-encoded SHA-256 hashes of the DER-encoded certificate
@@ -607,6 +615,7 @@ type HTTP1Settings struct {
 	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -628,6 +637,21 @@ type HTTP2Settings struct {
 	MaxConcurrentStreams *uint32 `json:"maxConcurrentStreams,omitempty" yaml:"maxConcurrentStreams,omitempty"`
 	// ResetStreamOnError determines if a stream or connection is reset on messaging error.
 	ResetStreamOnError *bool `json:"resetStreamOnError,omitempty" yaml:"resetStreamOnError,omitempty"`
+	// ConnectionKeepalive configures HTTP/2 PING-based keepalive settings.
+	ConnectionKeepalive *HTTP2KeepaliveSettings `json:"connectionKeepalive,omitempty" yaml:"connectionKeepalive,omitempty"`
+}
+
+// HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+// +k8s:deepcopy-gen=true
+type HTTP2KeepaliveSettings struct {
+	// Interval specifies how often to send HTTP/2 PING frames.
+	Interval *metav1.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// Timeout specifies how long to wait for a PING response.
+	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// IntervalJitter specifies a random jitter percentage added to each interval (0-100).
+	IntervalJitter *uint32 `json:"intervalJitter,omitempty" yaml:"intervalJitter,omitempty"`
+	// IdleInterval specifies idle time before sending a PING.
+	IdleInterval *metav1.Duration `json:"idleInterval,omitempty" yaml:"idleInterval,omitempty"`
 }
 
 // GRPCSettings provides gRPC configuration on the listener.
@@ -1461,6 +1485,11 @@ type ExtAuth struct {
 	// context in the filter chain.
 	// +optional
 	ContextExtensions []*ContextExtention `json:"contextExtensions,omitempty"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// +optional
+	StatusOnError *int32 `json:"statusOnError,omitempty" yaml:"statusOnError,omitempty"`
 }
 
 // BodyToExtAuth defines the Body to Ext Auth configuration
@@ -1534,6 +1563,43 @@ type Authorization struct {
 	DefaultAction egv1a1.AuthorizationAction `json:"defaultAction"`
 }
 
+func (a *Authorization) UsesClientIPGeoLocations() bool {
+	if a == nil {
+		return false
+	}
+
+	for _, rule := range a.Rules {
+		if rule != nil && len(rule.Principal.ClientIPGeoLocations) > 0 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (a *Authorization) GeoIPRequirements() (country, region, city, asn, isp, anonymous bool) {
+	if a == nil {
+		return false, false, false, false, false, false
+	}
+
+	for _, rule := range a.Rules {
+		if rule == nil {
+			continue
+		}
+
+		for _, geo := range rule.Principal.ClientIPGeoLocations {
+			country = country || geo.Country != nil
+			region = region || geo.Region != nil
+			city = city || geo.City != nil
+			asn = asn || geo.ASN != nil
+			isp = isp || geo.ISP != nil
+			anonymous = anonymous || geo.Anonymous != nil
+		}
+	}
+
+	return country, region, city, asn, isp, anonymous
+}
+
 // AuthorizationRule defines the schema for the authorization rule.
 //
 // +k8s:deepcopy-gen=true
@@ -1562,6 +1628,8 @@ type Principal struct {
 	JWT *egv1a1.JWTPrincipal `json:"jwt,omitempty"`
 	// Headers defines the headers to be matched.
 	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
+	// ClientIPGeoLocations defines the geolocation metadata to be matched.
+	ClientIPGeoLocations []egv1a1.ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.
@@ -1969,6 +2037,10 @@ type URLRewrite struct {
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Host configures the replacement of the request's host header.
 	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
+	// AppendXForwardedHost controls whether the original Host value is appended
+	// to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true when nil.
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty" yaml:"appendXForwardedHost,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -2404,6 +2476,23 @@ type GlobalResources struct {
 	// HMACSecret PrivateBytes
 }
 
+// GeoIPProvider holds the shared GeoIP provider configuration used by request-time GeoIP filters.
+// +k8s:deepcopy-gen=true
+type GeoIPProvider struct {
+	// MaxMind holds MaxMind-specific provider settings.
+	MaxMind *GeoIPMaxMindProvider `json:"maxMind,omitempty" yaml:"maxMind,omitempty"`
+}
+
+// GeoIPMaxMindProvider holds MaxMind database file paths.
+// +k8s:deepcopy-gen=true
+type GeoIPMaxMindProvider struct {
+	CityDBPath        *string `json:"cityDbPath,omitempty" yaml:"cityDbPath,omitempty"`
+	CountryDBPath     *string `json:"countryDbPath,omitempty" yaml:"countryDbPath,omitempty"`
+	ASNDBPath         *string `json:"asnDbPath,omitempty" yaml:"asnDbPath,omitempty"`
+	ISPDBPath         *string `json:"ispDbPath,omitempty" yaml:"ispDbPath,omitempty"`
+	AnonymousIPDBPath *string `json:"anonymousIpDbPath,omitempty" yaml:"anonymousIpDbPath,omitempty"`
+}
+
 // LocalRateLimit holds the local rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type LocalRateLimit struct {
@@ -2457,14 +2546,34 @@ type RateLimitCost struct {
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
+// CIDRMatch defines the match conditions on the source IP's CIDR for rate limiting.
+// +k8s:deepcopy-gen=true
 type CIDRMatch struct {
-	CIDR    string `json:"cidr" yaml:"cidr"`
-	IP      string `json:"ip" yaml:"ip"`
+	// CIDR is the full CIDR string (e.g. "192.168.0.0/24") from the API source match.
+	CIDR string `json:"cidr" yaml:"cidr"`
+	// MaskLen is the prefix length in bits (e.g. 24 for /24).
 	MaskLen uint32 `json:"maskLen" yaml:"maskLen"`
-	IsIPv6  bool   `json:"isIPv6" yaml:"isIPv6"`
+	// IsIPv6 is true when the CIDR is an IPv6 range.
+	IsIPv6 bool `json:"isIPv6" yaml:"isIPv6"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert when true matches when the client IP is not in the specified range(s).
+	Invert bool `json:"invert" yaml:"invert"`
+}
+
+// AddressPrefix returns the network/base IP address derived from CIDR.
+func (c *CIDRMatch) AddressPrefix() string {
+	if c == nil {
+		return ""
+	}
+
+	prefix, err := netip.ParsePrefix(c.CIDR)
+	if err != nil {
+		return ""
+	}
+
+	return prefix.Masked().Addr().String()
 }
 
 // QueryParamMatch defines the match attributes within the query parameters of the request.
@@ -2496,6 +2605,7 @@ type ProxyAccessLogType egv1a1.ProxyAccessLogType
 const (
 	ProxyAccessLogTypeRoute    = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeRoute)
 	ProxyAccessLogTypeListener = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeListener)
+	ProxyAccessLogTypeUpstream = ProxyAccessLogType(egv1a1.ProxyAccessLogTypeUpstream)
 )
 
 // ReadyListener holds the configuration for ready listener.
@@ -2744,6 +2854,8 @@ type LoadBalancer struct {
 	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
 	// ConsistentHash load balancer policy
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+	// BackendUtilization load balancer policy
+	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty" yaml:"backendUtilization,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// WeightedZones defines explicit weight-based traffic distribution across locality zones.
@@ -2769,6 +2881,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if l.BackendUtilization != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -2797,6 +2912,18 @@ type LeastRequest struct {
 // Random load balancer settings
 // +k8s:deepcopy-gen=true
 type Random struct{}
+
+// BackendUtilization load balancer settings
+// +k8s:deepcopy-gen=true
+type BackendUtilization struct {
+	BlackoutPeriod                     *metav1.Duration `json:"blackoutPeriod,omitempty" yaml:"blackoutPeriod,omitempty"`
+	WeightExpirationPeriod             *metav1.Duration `json:"weightExpirationPeriod,omitempty" yaml:"weightExpirationPeriod,omitempty"`
+	WeightUpdatePeriod                 *metav1.Duration `json:"weightUpdatePeriod,omitempty" yaml:"weightUpdatePeriod,omitempty"`
+	ErrorUtilizationPenaltyPercent     *uint32          `json:"errorUtilizationPenaltyPercent,omitempty" yaml:"errorUtilizationPenaltyPercent,omitempty"`
+	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
+	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
+	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+}
 
 // ConsistentHash load balancer settings
 // +k8s:deepcopy-gen=true
@@ -2852,6 +2979,9 @@ type CircuitBreaker struct {
 
 	// PerEndpoint defines per-endpoint Circuit Breakers
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+
+	// RetryBudget defines the retry budget configuration.
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.
@@ -3168,6 +3298,10 @@ type HTTPTimeout struct {
 
 	// The maximum duration of an HTTP stream.
 	MaxStreamDuration *metav1.Duration `json:"maxStreamDuration,omitempty" yaml:"maxStreamDuration,omitempty"`
+
+	// The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+	// If not specified, StreamIdleTimeout is inherited from the listener-level setting.
+	StreamIdleTimeout *metav1.Duration `json:"streamIdleTimeout,omitempty" yaml:"streamIdleTimeout,omitempty"`
 }
 
 // Retry define the retry policy configuration.
@@ -3186,6 +3320,15 @@ type Retry struct {
 
 	// PerRetry is the retry policy to be applied per retry attempt.
 	PerRetry *PerRetryPolicy `json:"perRetry,omitempty"`
+}
+
+// RetryBudget defines the retry budget configuration.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// Percent is the percentage of requests that can be retried within a given time window.
+	Percent float64 `json:"percent"`
+	// MinRetryConcurrency is the minimum number of requests that can be retried concurrently.
+	MinRetryConcurrency uint32 `json:"minRetryConcurrency"`
 }
 
 type TriggerEnum egv1a1.TriggerEnum
@@ -3390,8 +3533,7 @@ type ExtProc struct {
 // Lua holds the information associated with Lua extensions
 // +k8s:deepcopy-gen=true
 type Lua struct {
-	// Name is a unique name for the LUa configuration.
-	// The xds translator only generates one Lua filter for each unique name
+	// Name is a unique name for the Lua configuration.
 	Name string
 	// Code is the Lua source code
 	Code *string
@@ -3456,7 +3598,10 @@ type DynamicModule struct {
 	Name string `json:"name"`
 
 	// Path is the absolute filesystem path to the dynamic module shared library.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// Remote is the remote source of the dynamic module shared library.
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
@@ -3472,6 +3617,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// RemoteDynamicModuleSource holds the remote source information for a dynamic module.
+// +k8s:deepcopy-gen=true
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP(S) URL of the dynamic module shared library.
+	URL string `json:"url"`
+
+	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.
@@ -3582,4 +3737,6 @@ const (
 	RandomLoadBalancer LoadBalancerType = "Random"
 	// ConsistentHashLoadBalancer is the consistent hash load balancer type.
 	ConsistentHashLoadBalancer LoadBalancerType = "ConsistentHash"
+	// BackendUtilizationLoadBalancer is the backend utilization load balancer type.
+	BackendUtilizationLoadBalancer LoadBalancerType = "BackendUtilization"
 )

@@ -544,7 +544,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "leastRequest with SlowStar is set",
+			desc: "leastRequest with SlowStart is set",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -618,7 +618,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.",
 			},
 		},
 		{
@@ -646,8 +646,136 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": Currently SlowStart is only supported for RoundRobin and LeastRequest load balancers.",
+				": Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.",
 			},
+		},
+		{
+			desc: "backendUtilization all fields set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{
+								BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
+								WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("10s")),
+								WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("10s")),
+								ErrorUtilizationPenaltyPercent:     ptr.To[uint32](50),
+								MetricNamesForComputingUtilization: []string{"metric1", "metric2"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendUtilization field nil when type is BackendUtilization",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type: egv1a1.BackendUtilizationLoadBalancerType,
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value:",
+				": If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set.",
+			},
+		},
+		{
+			desc: "backendUtilization with SlowStart is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{},
+							SlowStart:          &egv1a1.SlowStart{Window: ptr.To(gwapiv1.Duration("10ms"))},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "backendUtilization with ZoneAware is set",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{},
+							ZoneAware:          &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.loadBalancer: Invalid value:",
+				": ZoneAware routing is not supported for BackendUtilization load balancers. BackendUtilization only handles picking endpoints within a single locality.",
+			},
+		},
+		{
+			desc: "backendUtilization with zero penalty is valid",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClusterSettings: egv1a1.ClusterSettings{
+						LoadBalancer: &egv1a1.LoadBalancer{
+							Type:               egv1a1.BackendUtilizationLoadBalancerType,
+							BackendUtilization: &egv1a1.BackendUtilization{ErrorUtilizationPenaltyPercent: ptr.To[uint32](0)},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "Using both httpStatus and grpcStatus in abort fault injection",
@@ -1301,7 +1429,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 		{
 			desc: "invalid count of Global rate limit rules items",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				rules := make([]egv1a1.RateLimitRule, 129)
+				rules := make([]egv1a1.RateLimitRule, 257)
 				rule := egv1a1.RateLimitRule{
 					Limit: egv1a1.RateLimitValue{
 						Requests: 10,
@@ -1330,7 +1458,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{
-				`[spec.rateLimit.global.rules: Too many: 129: must have at most 128 items, <nil>: Invalid value:`,
+				`[spec.rateLimit.global.rules: Too many: 257: must have at most 256 items, <nil>: Invalid value:`,
 				`null`,
 				`some validation rules were not checked because the object was invalid; correct the existing errors to complete validation]`,
 			},
@@ -2289,6 +2417,106 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "request buffer without http upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "http upgrade without request buffer",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "request buffer with websocket upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "websocket",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
+		},
+		{
+			desc: "request buffer with connect upgrade",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: "gateway.networking.k8s.io",
+									Kind:  "Gateway",
+									Name:  "eg",
+								},
+							},
+						},
+					},
+					RequestBuffer: &egv1a1.RequestBuffer{
+						Limit: resource.MustParse("1Mi"),
+					},
+					HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
+						{
+							Type: "CONNECT",
+						},
+					},
+				}
+			},
+			wantErrors: []string{"requestBuffer cannot be used together with httpUpgrade"},
 		},
 		{
 			desc: "http with connect config",
