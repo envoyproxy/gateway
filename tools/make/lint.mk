@@ -96,8 +96,8 @@ latest-release-check: ## Check if latest release and tag are created properly.
 	sh tools/hack/check-latest-release.sh
 
 .PHONY: lint.markdown
-lint.markdown:
-	markdownlint -c .github/markdown_lint_config.json site/content/* \
+lint.markdown: $(tools/markdownlint)
+	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/* \
 	    --ignore site/content/en/news/releases/notes/ \
 		--ignore site/content/en/*/api \
 		--ignore site/content/en/v0.3/ \
