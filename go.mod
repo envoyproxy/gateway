@@ -74,7 +74,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/gateway-api v1.5.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09
-	sigs.k8s.io/mcs-api v0.4.0
+	sigs.k8s.io/mcs-api v0.4.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
