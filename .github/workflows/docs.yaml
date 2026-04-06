@@ -27,14 +27,8 @@ jobs:
 
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Install markdownlint-cli
-      run: npm install -g markdownlint-cli@v0.47.0
-
     - name: Run markdown linter
       run: make lint.markdown
-
-    - name: Install linkinator
-      run: npm install -g linkinator@7.4.0
 
     - name: Check links
       run: make docs docs-check-links
