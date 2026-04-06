@@ -22,12 +22,12 @@ An Add-ons Helm chart for Envoy Gateway
 | Repository | Name | Version |
 |------------|------|---------|
 | https://fluent.github.io/helm-charts | fluent-bit | 0.56.0 |
-| https://grafana.github.io/helm-charts | alloy | 1.6.2 |
+| https://grafana.github.io/helm-charts | alloy | 1.7.0 |
 | https://grafana.github.io/helm-charts | grafana | 10.5.15 |
 | https://grafana.github.io/helm-charts | loki | 6.55.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.147.1 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 28.14.1 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 28.16.0 |
 
 ## Usage
 
