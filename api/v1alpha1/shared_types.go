@@ -217,7 +217,7 @@ type KubernetesPodSpec struct {
 	// domains. Scheduler will schedule pods in a way which abides by the constraints.
 	// All topologySpreadConstraints are ANDed.
 	//
-	// +patchMergeKey=name
+	// +patchMergeKey=topologyKey
 	// +patchStrategy=merge
 	// +optional
 	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty" patchStrategy:"merge" patchMergeKey:"name"`

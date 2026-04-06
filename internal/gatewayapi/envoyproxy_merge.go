@@ -49,12 +49,6 @@ func MergeEnvoyProxyConfigs(
 		return nil, fmt.Errorf("failed to merge Gateway EnvoyProxy with GatewayClass config: %w", err)
 	}
 
-	// If neither gatewayClassProxy nor gatewayProxy defined an EnvoyProxy, there is
-	// nothing to apply defaults to — return nil regardless of defaultSpec.
-	if gatewayMerged == nil {
-		return nil, nil
-	}
-
 	// Step 2: Merge Step 1 result over EnvoyGateway defaults. GatewayClass's MergeType controls
 	// this step, falling back to the Gateway's MergeType so a non-nil value propagates upward.
 	merged, err := mergeEnvoyProxies(defaultProxy, gatewayMerged, mergeTypeOf(gatewayClassProxy, gatewayProxy))

@@ -32,7 +32,9 @@ func TestMergeEnvoyProxyConfigs(t *testing.T) {
 			defaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: ptr.To[int32](4),
 			},
-			expectedSpec: nil,
+			expectedSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: ptr.To[int32](4),
+			},
 		},
 		{
 			name: "replace mode - gatewayclass overrides default",

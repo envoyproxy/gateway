@@ -439,9 +439,9 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			// TODO - Add error to envoy proxy status message.
 		} else if gCtx.envoyProxy != nil {
 			// Debug logging to inspect the final merged EnvoyProxy configuration
-			if configJSON, jsonErr := json.Marshal(gCtx.envoyProxy.Spec); jsonErr == nil {
-				t.Logger.V(1).Info("Merged EnvoyProxy configuration",
-					append(logKeysAndValues, "merged_config", string(configJSON))...)
+			if logV := t.Logger.V(1); logV.Enabled() {
+				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
+				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...))
 			}
 		}
 
