@@ -34,8 +34,11 @@ var overwriteControlPlaneCerts bool
 
 var disableTopologyInjector bool
 
+var topologyWebhookName string
+
 const (
-	topologyWebhookNamePrefix = "envoy-gateway-topology-injector"
+	topologyInjectorComponentLabel = "app.kubernetes.io/component"
+	topologyInjectorComponentValue = "topology-injector"
 )
 
 // GetCertGenCommand returns the certGen cobra command to be executed.
@@ -61,6 +64,8 @@ func GetCertGenCommand() *cobra.Command {
 		"Updates the secrets containing the control plane certs.")
 	cmd.PersistentFlags().BoolVar(&disableTopologyInjector, "disable-topology-injector", false,
 		"Disables patching caBundle for injector MutatingWebhookConfiguration.")
+	cmd.PersistentFlags().StringVar(&topologyWebhookName, "topology-webhook-name", "",
+		"Name of the topology injector MutatingWebhookConfiguration to patch. If unset, the webhook is located by label selector.")
 	return cmd
 }
 
@@ -141,32 +146,66 @@ func patchTopologyInjectorWebhook(ctx context.Context, cli client.Client, cfg *c
 		return nil
 	}
 
-	webhookConfigName := fmt.Sprintf("%s.%s", topologyWebhookNamePrefix, cfg.ControllerNamespace)
-	webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
-	if err := cli.Get(ctx, client.ObjectKey{Name: webhookConfigName}, webhookCfg); err != nil {
-		return fmt.Errorf("failed to get mutating webhook configuration: %w", err)
+	webhookCfgList := &admissionregistrationv1.MutatingWebhookConfigurationList{}
+	if topologyWebhookName != "" {
+		webhookCfg := &admissionregistrationv1.MutatingWebhookConfiguration{}
+		if err := cli.Get(ctx, client.ObjectKey{Name: topologyWebhookName}, webhookCfg); err != nil {
+			return fmt.Errorf("failed to get mutating webhook configuration %q: %w", topologyWebhookName, err)
+		}
+		webhookCfgList.Items = []admissionregistrationv1.MutatingWebhookConfiguration{*webhookCfg}
+	} else {
+		if err := cli.List(ctx, webhookCfgList, client.MatchingLabels{topologyInjectorComponentLabel: topologyInjectorComponentValue}); err != nil {
+			return fmt.Errorf("failed to list mutating webhook configurations: %w", err)
+		}
+		// Filter to only webhooks whose service targets this controller's namespace,
+		// preventing cross-patching in multi-install clusters.
+		filtered := webhookCfgList.Items[:0]
+		for i := range webhookCfgList.Items {
+			if webhookTargetsNamespace(&webhookCfgList.Items[i], cfg.ControllerNamespace) {
+				filtered = append(filtered, webhookCfgList.Items[i])
+			}
+		}
+		webhookCfgList.Items = filtered
+		if len(webhookCfgList.Items) == 0 {
+			return fmt.Errorf("no mutating webhook configurations found with label %s=%s targeting namespace %s",
+				topologyInjectorComponentLabel, topologyInjectorComponentValue, cfg.ControllerNamespace)
+		}
 	}
 
 	secretName := types.NamespacedName{Name: "envoy-gateway", Namespace: cfg.ControllerNamespace}
 	current := &corev1.Secret{}
 	if err := cli.Get(ctx, secretName, current); err != nil {
-		return fmt.Errorf("failed to get secret %s/%s: %w", current.Namespace, current.Name, err)
+		return fmt.Errorf("failed to get secret %s/%s: %w", cfg.ControllerNamespace, "envoy-gateway", err)
 	}
 
-	var updated bool
 	desiredBundle := current.Data["ca.crt"]
-	for i := range webhookCfg.Webhooks {
-		if !bytes.Equal(desiredBundle, webhookCfg.Webhooks[i].ClientConfig.CABundle) {
-			webhookCfg.Webhooks[i].ClientConfig.CABundle = desiredBundle
-			updated = true
+	for i := range webhookCfgList.Items {
+		webhookCfg := &webhookCfgList.Items[i]
+		var updated bool
+		for j := range webhookCfg.Webhooks {
+			if !bytes.Equal(desiredBundle, webhookCfg.Webhooks[j].ClientConfig.CABundle) {
+				webhookCfg.Webhooks[j].ClientConfig.CABundle = desiredBundle
+				updated = true
+			}
 		}
-	}
-	if updated {
-		if err := cli.Update(ctx, webhookCfg); err != nil {
-			return fmt.Errorf("failed to update mutating webhook configuration: %w", err)
+		if updated {
+			if err := cli.Update(ctx, webhookCfg); err != nil {
+				return fmt.Errorf("failed to update mutating webhook configuration: %w", err)
+			}
 		}
 	}
 	return nil
+}
+
+// webhookTargetsNamespace returns true if any webhook in the configuration
+// has a clientConfig.service targeting the given namespace.
+func webhookTargetsNamespace(cfg *admissionregistrationv1.MutatingWebhookConfiguration, namespace string) bool {
+	for i := range cfg.Webhooks {
+		if svc := cfg.Webhooks[i].ClientConfig.Service; svc != nil && svc.Namespace == namespace {
+			return true
+		}
+	}
+	return false
 }
 
 // outputCertsForLocal outputs the provided certs to the local directory as files.
