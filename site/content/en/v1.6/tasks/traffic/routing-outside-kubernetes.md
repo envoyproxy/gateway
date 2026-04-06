@@ -161,6 +161,11 @@ Send a request and view the response:
 curl -I -HHost:httpbin.org --resolve "httpbin.org:443:${GATEWAY_HOST}" https://httpbin.org/
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
+
 [EndpointSlice]: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
 [Backend]: ../../api/extension_types#backend
 [Backend Task]: ./backend.md

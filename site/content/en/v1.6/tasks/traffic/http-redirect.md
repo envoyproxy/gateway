@@ -602,6 +602,11 @@ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}/get"
 
 You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
+
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httproutefilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/

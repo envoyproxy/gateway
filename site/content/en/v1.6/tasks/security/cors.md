@@ -265,6 +265,9 @@ kubectl delete securitypolicy/cors-example
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../api/gateway_api/httproute)
+
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [cors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

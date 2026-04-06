@@ -1075,6 +1075,11 @@ curl --header "Host: www.merged3.com" http://$GATEWAY_HOST:8082/example3
 }
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../../api/gateway_api/gateway)
+
 [Quickstart]: ../quickstart.md
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/

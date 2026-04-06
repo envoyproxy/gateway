@@ -283,6 +283,11 @@ spec:
       requestTimeout: 0s
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [GRPCRoute API reference](../../../api/gateway_api/grpcroute)
+
 [BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/

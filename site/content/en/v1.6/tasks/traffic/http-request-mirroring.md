@@ -437,6 +437,10 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../../api/gateway_api/httproute)
 
 [Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/

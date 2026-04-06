@@ -178,6 +178,9 @@ kubectl delete secret/apikey-secret
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../api/gateway_api/httproute)
+
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

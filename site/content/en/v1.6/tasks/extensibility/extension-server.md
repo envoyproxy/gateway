@@ -316,6 +316,10 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 ...
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [EnvoyExtensionPolicy API reference](../../../api/extension_types#envoyextensionpolicy)
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [design documentation]: /contributions/design/extending-envoy-gateway

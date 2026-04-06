@@ -211,6 +211,9 @@ kubectl delete secret/example-cert
 
 Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
 
+- See the full list of supported configuration fields in the
+  [HTTPRoute API reference](../../api/gateway_api/httproute)
+
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [http Basic authentication]: https://tools.ietf.org/html/rfc2617
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

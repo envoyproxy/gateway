@@ -139,7 +139,12 @@ Response time histogram:
 
 With the new circuit breaker settings, and due to the slowness of the backend, only the first 10 concurrent requests were proxied, while the other 90 overflowed.   
 * Overflowing Requests failed fast, reducing proxy resource consumption. 
-* Upstream traffic was limited, alleviating the pressure on the degraded service. 
+* Upstream traffic was limited, alleviating the pressure on the degraded service.
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTrafficPolicy API reference](../../../api/extension_types#backendtrafficpolicy)
 
 [Envoy Circuit Breakers]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/circuit_breaking
 [BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy

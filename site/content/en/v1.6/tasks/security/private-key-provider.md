@@ -651,3 +651,8 @@ All done 93983 calls (plus 128 warmup) 40.880 ms avg, 3130.5 qps
 {{% /tab %}}
 
 {{< /tabpane >}}
+
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [Gateway API reference](../../api/gateway_api/gateway)

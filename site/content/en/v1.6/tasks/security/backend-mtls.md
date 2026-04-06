@@ -347,6 +347,11 @@ The response now contains a "peerCertificates" attribute that reflects the clien
  }
 ```
 
+## Next steps
+
+- See the full list of supported configuration fields in the
+  [BackendTLSPolicy API reference](../../api/extension_types#backendtlspolicy)
+
 [Backend TLS]: ./backend-tls
 [BackendTLSPolicy]: https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/
 [EnvoyProxy]: ../../api/extension_types#envoyproxy
