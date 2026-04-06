@@ -9,7 +9,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.3.0+incompatible
+	github.com/docker/cli v29.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
@@ -40,7 +40,7 @@ require (
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.4.0
 	github.com/tsaarni/certyaml v0.11.0
-	github.com/yuin/gopher-lua v1.1.1
+	github.com/yuin/gopher-lua v1.1.2
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.42.0
@@ -131,7 +131,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/analysis v0.24.3 // indirect

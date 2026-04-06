@@ -12203,9 +12203,6 @@ spec:
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
 
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
-
                                                       Must be non-negative.
                                                     format: int32
                                                     minimum: 0
@@ -12553,7 +12550,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -13685,9 +13682,6 @@ spec:
                                                       - 120 => 1.2x
                                                       - 200 => 2.0x
 
-                                                      Note: In the internal IR/XDS configuration this value is converted back to a
-                                                      floating point multiplier (value / 100.0).
-
                                                       Must be non-negative.
                                                     format: int32
                                                     minimum: 0
@@ -14035,7 +14029,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -15326,9 +15320,6 @@ spec:
                                                 - 120 => 1.2x
                                                 - 200 => 2.0x
 
-                                                Note: In the internal IR/XDS configuration this value is converted back to a
-                                                floating point multiplier (value / 100.0).
-
                                                 Must be non-negative.
                                               format: int32
                                               minimum: 0
@@ -15664,7 +15655,7 @@ spec:
                                       properties:
                                         version:
                                           description: |-
-                                            Version of ProxyProtol
+                                            Version of ProxyProtocol
                                             Valid ProxyProtocolVersion values are
                                             "V1"
                                             "V2"
@@ -16882,9 +16873,6 @@ spec:
                                           - 120 => 1.2x
                                           - 200 => 2.0x
 
-                                          Note: In the internal IR/XDS configuration this value is converted back to a
-                                          floating point multiplier (value / 100.0).
-
                                           Must be non-negative.
                                         format: int32
                                         minimum: 0
@@ -17209,7 +17197,7 @@ spec:
                                 properties:
                                   version:
                                     description: |-
-                                      Version of ProxyProtol
+                                      Version of ProxyProtocol
                                       Valid ProxyProtocolVersion values are
                                       "V1"
                                       "V2"
@@ -17450,6 +17438,50 @@ spec:
                                   ResourceAttributes is a set of labels that describe the source of traces.
                                   It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
                                 type: object
+                              sampler:
+                                description: Sampler controls whether spans are exported.
+                                properties:
+                                  samplingPercentage:
+                                    description: |-
+                                      SamplingPercentage controls the percentage of traces to sample.
+                                      Defaults to 100% when not set.
+                                    properties:
+                                      denominator:
+                                        default: 100
+                                        format: int32
+                                        minimum: 1
+                                        type: integer
+                                      numerator:
+                                        format: int32
+                                        minimum: 0
+                                        type: integer
+                                    required:
+                                    - numerator
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: numerator must be less than or equal
+                                        to denominator
+                                      rule: self.numerator <= self.denominator
+                                  type:
+                                    default: AlwaysOn
+                                    description: Type is the sampler type.
+                                    enum:
+                                    - AlwaysOn
+                                    - AlwaysOff
+                                    - TraceIdRatio
+                                    - ParentBasedAlwaysOn
+                                    - ParentBasedAlwaysOff
+                                    - ParentBasedTraceIdRatio
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: samplingPercentage can only be set with
+                                    TraceIdRatio or ParentBasedTraceIdRatio
+                                  rule: 'has(self.samplingPercentage) ? (self.type
+                                    == ''TraceIdRatio'' || self.type == ''ParentBasedTraceIdRatio'')
+                                    : true'
                             type: object
                           port:
                             default: 4317
