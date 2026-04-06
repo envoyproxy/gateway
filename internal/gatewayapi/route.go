@@ -234,7 +234,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
@@ -961,7 +966,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
@@ -1302,9 +1312,15 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					irListener.GRPC = &ir.GRPCSettings{}
 				}
 
-				// Backwards compatibility: enable gRPC-Web and gRPC stats filters when a GRPCRoute is attached to the listener
+				// Backward-compatible defaulting for listeners with an attached GRPCRoute.
+				// gRPC stats may already be populated from EnvoyProxy at this point, so
+				// only default it when unset. gRPC-Web is also enabled by default here,
+				// but any explicit ClientTrafficPolicy setting is translated later and
+				// will override this value.
 				irListener.GRPC.EnableGRPCWeb = ptr.To(true)
-				irListener.GRPC.EnableGRPCStats = ptr.To(true)
+				if irListener.GRPC.EnableGRPCStats == nil {
+					irListener.GRPC.EnableGRPCStats = ptr.To(true)
+				}
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
@@ -1898,7 +1914,7 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 			Port:        parentRef.Port,
 		},
 		resources,
-		envoyProxy,
+		gatewayCtx,
 	)
 	if tlsErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(tlsErr, status.RouteReasonInvalidBackendTLS)

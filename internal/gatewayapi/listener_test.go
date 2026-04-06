@@ -450,7 +450,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -459,7 +461,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"bar.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -474,7 +478,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -483,7 +489,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -513,7 +521,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -522,7 +532,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     8443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{},
@@ -537,7 +549,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"*.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"*.example.com"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -546,7 +560,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"foo.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -576,7 +592,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 0,
-					certDNSNames:      []string{"foo.example.com", "bar.example.org"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"foo.example.com", "bar.example.org"},
+					},
 				},
 				{
 					Listener: &gwapiv1.Listener{
@@ -585,7 +603,9 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						Port:     443,
 					},
 					listenerStatusIdx: 1,
-					certDNSNames:      []string{"bar.example.com", "*.example.org", "bar.example.com"},
+					tls: ListenerTLSConfig{
+						certDNSNames: []string{"bar.example.com", "*.example.org", "bar.example.com"},
+					},
 				},
 			},
 			expectedStatus: []expectedListenerStatus{
@@ -922,7 +942,9 @@ func TestProcessTracingServiceName(t *testing.T) {
 			translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
 			translator.TranslatorContext = translatorContext
 
-			result, err := translator.processTracing(tc.gateway, tc.envoyProxy, tc.mergeGateways, resources)
+			result, err := translator.processTracing(&GatewayContext{
+				Gateway: tc.gateway,
+			}, tc.envoyProxy, tc.mergeGateways, resources)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -1050,7 +1072,7 @@ func TestProcessAccessLog(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			translator := &Translator{}
 			resources := &resource.Resources{}
-			actual, err := translator.processAccessLog(tc.envoyProxy, resources)
+			actual, err := translator.processAccessLog(&GatewayContext{}, tc.envoyProxy, resources)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
 		})
@@ -1299,8 +1321,8 @@ func TestProcessBackendRefsSNIInference(t *testing.T) {
 					},
 				}},
 			}
-
-			ds, _, err := translator.processBackendRefsForTelemetry("test", backendCluster, ns, resources, &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}})
+			ep := &egv1a1.EnvoyProxy{ObjectMeta: metav1.ObjectMeta{Namespace: "envoy-gateway-system", Name: "test-proxy"}}
+			ds, _, err := translator.processBackendRefsForTelemetry("test", backendCluster, ns, resources, ep, &GatewayContext{})
 			require.NoError(t, err)
 			require.Len(t, ds, 1)
 
@@ -1478,7 +1500,7 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 				BackendEnabled:        true,
 				GatewayControllerName: egv1a1.GatewayControllerName,
 			}
-			ds, _, err := translator.processBackendRefsForTelemetry("test", tc.backendCluster, ns, tc.resources, envoyProxy)
+			ds, _, err := translator.processBackendRefsForTelemetry("test", tc.backendCluster, ns, tc.resources, envoyProxy, &GatewayContext{})
 			if tc.expectedErr != "" {
 				require.EqualError(t, err, tc.expectedErr)
 			} else {
