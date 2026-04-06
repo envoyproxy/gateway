@@ -48,6 +48,12 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 	if policy.Spec.TargetRef != nil {
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
+	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
+	if policy.Spec.TLS != nil &&
+		policy.Spec.TLS.ClientValidation != nil &&
+		policy.Spec.TLS.ClientValidation.Optional {
+		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+	}
 	return deprecatedFields
 }
 

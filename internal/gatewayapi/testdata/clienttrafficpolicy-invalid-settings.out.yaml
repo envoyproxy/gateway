@@ -191,6 +191,12 @@ clientTrafficPolicies:
         reason: Invalid
         status: "False"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.tls.clientValidation.optional is deprecated, use spec.tls.clientValidation.mode
+          instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
