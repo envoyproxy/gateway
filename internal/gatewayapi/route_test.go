@@ -541,7 +541,7 @@ func TestApplyServiceBackendHostname(t *testing.T) {
 				Name:      "service-1",
 				Namespace: "default",
 			},
-			Endpoints: []*ir.DestinationEndpoint{nil, &ir.DestinationEndpoint{Host: "10.0.0.1", Port: 8080}},
+			Endpoints: []*ir.DestinationEndpoint{nil, {Host: "10.0.0.1", Port: 8080}},
 		}
 
 		translator.applyServiceBackendHostname(setting)
