@@ -204,7 +204,6 @@ xds:
               resourceApiVersion: V3
             serviceName: httproute/envoy-gateway-system/routes/rule/0
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
           loadBalancingPolicy:
             policies:
             - typedExtensionConfig:

@@ -12550,7 +12550,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -14029,7 +14029,7 @@ spec:
                                             properties:
                                               version:
                                                 description: |-
-                                                  Version of ProxyProtol
+                                                  Version of ProxyProtocol
                                                   Valid ProxyProtocolVersion values are
                                                   "V1"
                                                   "V2"
@@ -14376,6 +14376,14 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableGRPCStats:
+                        description: |-
+                          EnableGRPCStats enables the gRPC stats filter on listeners.
+                          This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                          In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                          users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                          Therefore, we enable this behavior only when it is explicitly opted in.
+                        type: boolean
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
@@ -15655,7 +15663,7 @@ spec:
                                       properties:
                                         version:
                                           description: |-
-                                            Version of ProxyProtol
+                                            Version of ProxyProtocol
                                             Valid ProxyProtocolVersion values are
                                             "V1"
                                             "V2"
@@ -17197,7 +17205,7 @@ spec:
                                 properties:
                                   version:
                                     description: |-
-                                      Version of ProxyProtol
+                                      Version of ProxyProtocol
                                       Valid ProxyProtocolVersion values are
                                       "V1"
                                       "V2"
