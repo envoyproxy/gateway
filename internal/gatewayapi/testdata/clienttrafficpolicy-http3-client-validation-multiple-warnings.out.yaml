@@ -32,7 +32,7 @@ clientTrafficPolicies:
         message: HTTP/3 was disabled for listener "https" because Envoy does not support
           downstream client TLS validation over QUIC; spec.targetRef is deprecated,
           use spec.targetRefs instead
-        reason: MultipleWarnings
+        reason: Warnings
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

@@ -24,7 +24,7 @@ const (
 
 	// PolicyReasonMultipleWarnings is used with the "Warning" condition when multiple warning
 	// messages need to be surfaced on the same ancestor.
-	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "MultipleWarnings"
+	PolicyReasonMultipleWarnings gwapiv1.PolicyConditionReason = "Warnings"
 )
 
 type PolicyResolveError struct {
