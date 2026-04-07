@@ -396,7 +396,6 @@ spec:
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
       # The RouteConfiguration name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
-      # Using empty name to patch all the RouteConfiguration resources generated for this Gateway.
       name: default/eg/http
       operation:
         op: add

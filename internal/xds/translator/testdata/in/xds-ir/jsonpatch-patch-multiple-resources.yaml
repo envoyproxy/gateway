@@ -92,14 +92,14 @@ envoyPatchPolicies:
                 loadBalancingWeight: 1
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
         name:
-          exact: "first-route-dest"
+          prefix: "first-route"
         operation:
           op: "move"
           from: "/endpoints/0/load_balancing_weight"
           path: "/endpoints/1/load_balancing_weight"
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
         name:
-          exact: "first-route-dest"
+          prefix: "first-route"
         operation:
           op: copy
           from: "/endpoints/1/load_balancing_weight"
