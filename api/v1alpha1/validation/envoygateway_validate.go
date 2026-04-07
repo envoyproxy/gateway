@@ -107,6 +107,27 @@ func validateEnvoyGatewayKubernetesProvider(provider *egv1a1.EnvoyGatewayKuberne
 	return nil
 }
 
+func validateEnvoyGatewayKubernetesProviderCustom(provider *egv1a1.EnvoyGatewayKubernetesCustomProvider) error {
+	if provider == nil || provider.Watch == nil {
+		return nil
+	}
+
+	watch := provider.Watch
+	switch watch.Type {
+	case egv1a1.KubernetesWatchModeTypeNamespaces:
+		if len(watch.Namespaces) == 0 {
+			return fmt.Errorf("namespaces should be specified when envoy gateway watch mode is 'Namespaces'")
+		}
+	case egv1a1.KubernetesWatchModeTypeNamespaceSelector:
+		if watch.NamespaceSelector == nil {
+			return fmt.Errorf("namespaceSelector should be specified when envoy gateway watch mode is 'NamespaceSelector'")
+		}
+	default:
+		return fmt.Errorf("envoy gateway watch mode invalid, should be 'Namespaces' or 'NamespaceSelector'")
+	}
+	return nil
+}
+
 func validateEnvoyGatewayCustomProvider(provider *egv1a1.EnvoyGatewayCustomProvider) error {
 	if provider == nil {
 		return fmt.Errorf("empty custom provider settings")
@@ -133,6 +154,8 @@ func validateEnvoyGatewayCustomResourceProvider(resource egv1a1.EnvoyGatewayReso
 		if len(resource.File.Paths) == 0 {
 			return fmt.Errorf("no paths were assigned for file resource provider to watch")
 		}
+	case egv1a1.ResourceProviderTypeKubernetes:
+		return validateEnvoyGatewayKubernetesProviderCustom(resource.Kubernetes)
 	default:
 		return fmt.Errorf("unsupported resource provider: %s", resource.Type)
 	}
@@ -148,6 +171,11 @@ func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGateway
 	case egv1a1.InfrastructureProviderTypeHost:
 		if infra.Host == nil {
 			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
+		}
+	case egv1a1.InfrastructureProviderTypeRemote:
+		// More stuff here //
+		if infra.Remote == nil {
+			return fmt.Errorf("field 'remote' should be specified when infrastructure type is 'Remote'")
 		}
 	default:
 		return fmt.Errorf("unsupported infrastructure provider: %s", infra.Type)

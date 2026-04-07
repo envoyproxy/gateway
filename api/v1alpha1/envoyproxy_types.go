@@ -39,6 +39,7 @@ type EnvoyProxySpec struct {
 	// Provider defines the desired resource provider and provider-specific configuration.
 	// If unspecified, the "Kubernetes" resource provider is used with default configuration
 	// parameters.
+	// ZTN look here.
 	//
 	// +optional
 	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
