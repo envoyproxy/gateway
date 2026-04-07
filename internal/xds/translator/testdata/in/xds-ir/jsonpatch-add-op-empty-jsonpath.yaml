@@ -11,7 +11,7 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "second-listener"
     operation:
       op: add

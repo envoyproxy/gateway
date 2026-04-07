@@ -11,7 +11,7 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"
@@ -29,7 +29,7 @@ envoyPatchPolicies:
                 cluster_name: rate-limit-cluster
             transport_api_version: V3
   - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"

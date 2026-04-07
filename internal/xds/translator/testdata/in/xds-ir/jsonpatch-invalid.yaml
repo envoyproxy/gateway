@@ -5,7 +5,7 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"
@@ -23,7 +23,7 @@ envoyPatchPolicies:
                 cluster_name: rate-limit-cluster
             transport_api_version: V3
   - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"
@@ -32,7 +32,7 @@ envoyPatchPolicies:
       - actions:
         - remote_address: {}
   - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-    name: 
+    name:
       exact: "rate-limit-cluster"
     operation:
       op: add
@@ -53,7 +53,7 @@ envoyPatchPolicies:
                     address: ratelimit.svc.cluster.local
                     port_value: 8081
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "first-route"
     operation:
       op: "replace"

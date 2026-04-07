@@ -11,14 +11,14 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: 
+    name:
       exact: first-listener
     operation:
       op: add
       path: "/filter_chains/0/filters/0/typed_config/preserve_external_request_id"
       value: true
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"
@@ -36,7 +36,7 @@ envoyPatchPolicies:
                 cluster_name: rate-limit-cluster
             transport_api_version: V3
   - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    name: 
+    name:
       exact: "first-listener"
     operation:
       op: "add"
@@ -45,7 +45,7 @@ envoyPatchPolicies:
       - actions:
         - remote_address: {}
   - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-    name: 
+    name:
       exact: rate-limit-cluster
     operation:
       op: add
@@ -66,21 +66,21 @@ envoyPatchPolicies:
                     address: ratelimit.svc.cluster.local
                     port_value: 8081
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "first-route-dest"
     operation:
       op: "replace"
       path: "/endpoints/0/load_balancing_weight"
       value: "50"
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-    name: 
+    name:
       exact: "secret-1"
     operation:
       op: "replace"
       path: "/tls_certificate/certificate_chain/inline_bytes"
       value: "a2V5LWRhdGE="
   - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-    name: 
+    name:
       exact: "test-secret"
     operation:
       op: "add"
@@ -91,7 +91,7 @@ envoyPatchPolicies:
           certificate_chain:
             inline_bytes: Y2VydC1kYXRh
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "first-route-dest"
     operation:
       op: add
@@ -105,14 +105,14 @@ envoyPatchPolicies:
                 portValue: 50000
           loadBalancingWeight: 1
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "first-route-dest"
     operation:
       op: "move"
       from: "/endpoints/0/load_balancing_weight"
       path: "/endpoints/1/load_balancing_weight"
   - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-    name: 
+    name:
       exact: "first-route-dest"
     operation:
       op: copy

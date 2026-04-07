@@ -33,13 +33,14 @@ type typedName struct {
 
 func (t typedName) String() string {
 	name := ""
-	if t.Name.Exact != nil {
+	switch {
+	case t.Name.Exact != nil:
 		name = *t.Name.Exact
-	} else if t.Name.Prefix != nil {
+	case t.Name.Prefix != nil:
 		name = *t.Name.Prefix + "*"
-	} else if t.Name.Suffix != nil {
+	case t.Name.Suffix != nil:
 		name = "*" + *t.Name.Suffix
-	} else if t.Name.SafeRegex != nil {
+	case t.Name.SafeRegex != nil:
 		name = *t.Name.SafeRegex
 	}
 	return fmt.Sprintf("%s/%s", t.Type, name)
