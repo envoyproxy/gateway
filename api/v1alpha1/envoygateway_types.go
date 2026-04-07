@@ -365,8 +365,7 @@ type EnvoyGatewayProvider struct {
 	Custom *EnvoyGatewayCustomProvider `json:"custom,omitempty"`
 }
 
-// EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
-type EnvoyGatewayKubernetesProvider struct {
+type EnvoyGatewayKubernetesInfrastructureConfiguration struct {
 	// RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.
 	// If unspecified, default settings for the managed Envoy ratelimit deployment resource
 	// are applied.
@@ -385,26 +384,31 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
 
-	// Watch holds configuration of which input resources should be watched and reconciled.
-	// +optional
-	Watch *KubernetesWatchMode `json:"watch,omitempty"`
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
+
+	// ShutdownManager defines the configuration for the shutdown manager.
+	// +optional
+	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+
+	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
+	// +optional
+	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
+}
+
+type EnvoyGatewayKubernetesConfiguration struct {
+	// Watch holds configuration of which input resources should be watched and reconciled.
+	// +optional
+	Watch *KubernetesWatchMode `json:"watch,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
 	// +optional
 	LeaderElection *LeaderElection `json:"leaderElection,omitempty"`
 
-	// ShutdownManager defines the configuration for the shutdown manager.
-	// +optional
-	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
 	// Client holds the configuration for the Kubernetes client.
 	Client *KubernetesClient `json:"client,omitempty"`
-	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
-	// +optional
-	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
 
 	// CacheSyncPeriod determines the minimum frequency at which watched resources are synced.
 	// Note that a sync in the provider layer will not lead to a full reconciliation (including translation),
@@ -415,6 +419,15 @@ type EnvoyGatewayKubernetesProvider struct {
 	// Default: 10 hours
 	// +optional
 	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
+}
+
+// EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
+type EnvoyGatewayKubernetesProvider struct {
+	// EnvoyGatewayKubernetesInfrastructureConfiguration points to the infrastructure specific configuration.
+	EnvoyGatewayKubernetesInfrastructureConfiguration `json:",inline"`
+
+	// EnvoyGatewayKubernetesConfiguration points to how to communicate with the Kubernetes API.
+	EnvoyGatewayKubernetesConfiguration `json:",inline"`
 }
 
 const (
@@ -496,17 +509,20 @@ type EnvoyGatewayCustomProvider struct {
 
 // ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
 //
-// +kubebuilder:validation:Enum=File
+// +kubebuilder:validation:Enum=File,Kubernetes
 type ResourceProviderType string
 
 const (
 	// ResourceProviderTypeFile defines the "File" provider.
 	ResourceProviderTypeFile ResourceProviderType = "File"
+
+	// ResourceProviderTypeKubernetes defines the "Kubernetes" provider.
+	ResourceProviderTypeKubernetes ResourceProviderType = "Kubernetes"
 )
 
 // EnvoyGatewayResourceProvider defines configuration for the Custom Resource provider.
 type EnvoyGatewayResourceProvider struct {
-	// Type is the type of resource provider to use. Supported types are "File".
+	// Type is the type of resource provider to use. Supported types are "File" or "Kubernetes".
 	//
 	// +unionDiscriminator
 	Type ResourceProviderType `json:"type"`
@@ -515,6 +531,11 @@ type EnvoyGatewayResourceProvider struct {
 	//
 	// +optional
 	File *EnvoyGatewayFileResourceProvider `json:"file,omitempty"`
+
+	// Kubernetes defines the configuration of the Kubernetes provider. This provider retrieves Envoy configuration
+	// from a Kubernetes API.
+	// +optional
+	Kubernetes *EnvoyGatewayKubernetesCustomProvider `json:"kubernetes,omitempty"`
 }
 
 // EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
@@ -522,6 +543,12 @@ type EnvoyGatewayFileResourceProvider struct {
 	// Paths are the paths to a directory or file containing the resource configuration.
 	// Recursive subdirectories are not currently supported.
 	Paths []string `json:"paths"`
+}
+
+// EnvoyGatewayKubernetesCustomProvider defines configuration for the Kubernetes provider when using a Custom provider.
+type EnvoyGatewayKubernetesCustomProvider struct {
+	// EnvoyGatewayKubernetesConfiguration points to how to communicate with the Kubernetes API.
+	EnvoyGatewayKubernetesConfiguration `json:",inline"`
 }
 
 // InfrastructureProviderType defines the types of custom infrastructure providers supported by Envoy Gateway.
@@ -532,11 +559,14 @@ type InfrastructureProviderType string
 const (
 	// InfrastructureProviderTypeHost defines the "Host" provider.
 	InfrastructureProviderTypeHost InfrastructureProviderType = "Host"
+
+	// InfrastructureProviderTypeRemote defines the "Remote" provider.
+	InfrastructureProviderTypeRemote InfrastructureProviderType = "Remote"
 )
 
 // EnvoyGatewayInfrastructureProvider defines configuration for the Custom Infrastructure provider.
 type EnvoyGatewayInfrastructureProvider struct {
-	// Type is the type of infrastructure providers to use. Supported types are "Host".
+	// Type is the type of infrastructure providers to use. Supported types are "Host" or "Remote".
 	//
 	// +unionDiscriminator
 	Type InfrastructureProviderType `json:"type"`
@@ -545,6 +575,12 @@ type EnvoyGatewayInfrastructureProvider struct {
 	//
 	// +optional
 	Host *EnvoyGatewayHostInfrastructureProvider `json:"host,omitempty"`
+
+	// Remote defines the configuration of the Remote provider. Remotes defers
+	// runtime deployment of the data plane to aW remote infrastructure manager.
+	//
+	// +optional
+	Remote *EnvoyGatewayRemoteInfrastructureProvider `json:"remote,omitempty"`
 }
 
 // EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
@@ -568,6 +604,15 @@ type EnvoyGatewayHostInfrastructureProvider struct {
 	// Defaults to /tmp/envoy-gateway-${UID}
 	// +optional
 	RuntimeDir *string `json:"runtimeDir,omitempty"`
+}
+
+// EnvoyGatewayRemoteInfrastructureProvider defines configuration for the Remote Infrastructure provider.
+type EnvoyGatewayRemoteInfrastructureProvider struct {
+	// Service defines the configuration of the remote infrastructure service that the Envoy
+	// Gateway Control Plane will call through the infrastructure manager.
+	//
+	// +kubebuilder:validation:Required
+	Service *ExtensionService `json:"service,omitempty"`
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service

@@ -235,7 +235,9 @@ func TestPDB(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitPDB: tc.pdb,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitPDB: tc.pdb,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -785,7 +787,9 @@ func TestDeployment(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitDeployment: tc.deploy,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitDeployment: tc.deploy,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
@@ -891,8 +895,10 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			cfg.EnvoyGateway.Provider = &egv1a1.EnvoyGatewayProvider{
 				Type: egv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
-					RateLimitHpa:        tc.rateLimitHpa,
-					RateLimitDeployment: tc.rateLimitDeployment,
+					EnvoyGatewayKubernetesInfrastructureConfiguration: egv1a1.EnvoyGatewayKubernetesInfrastructureConfiguration{
+						RateLimitHpa:        tc.rateLimitHpa,
+						RateLimitDeployment: tc.rateLimitDeployment,
+					},
 				},
 			}
 			r := NewResourceRender(cfg.ControllerNamespace, cfg.EnvoyGateway, ownerReferenceUID)
