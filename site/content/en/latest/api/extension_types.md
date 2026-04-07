@@ -2396,21 +2396,6 @@ _Appears in:_
 | `minEndpointsInZoneThreshold` | _integer_ |  false  |  | MinEndpointsInZoneThreshold is the minimum number of upstream endpoints in the local zone required to honor the forceLocalZone<br />override. This is useful for protecting zones with fewer endpoints. |
 
 
-#### FromNamespaces
-
-_Underlying type:_ _string_
-
-
-
-_Appears in:_
-- [TargetSelectorNamespaces](#targetselectornamespaces)
-
-| Value | Description |
-| ----- | ----------- |
-| `All` | FromNamespacesAll indicates that the target selector should apply to targets from all namespaces<br /> | 
-| `Same` | FromNamespacesSame indicates that the target selector should apply to targets from the same namespace as the policy<br /> | 
-
-
 #### GRPCActiveHealthChecker
 
 
@@ -5888,6 +5873,22 @@ _Appears in:_
 | `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
+#### TargetNamespaceFrom
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [TargetSelectorNamespaces](#targetselectornamespaces)
+
+| Value | Description |
+| ----- | ----------- |
+| `Same` | TargetNamespaceFromSame limits target selection to the policy's namespace.<br /> | 
+| `All` | TargetNamespaceFromAll allows target selection from all watched namespaces.<br /> | 
+| `Selector` | TargetNamespaceFromSelector allows target selection from watched namespaces matching the selector.<br /> | 
+
+
 #### TargetSelector
 
 
@@ -5905,23 +5906,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
-| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines if the resource from all namespaces or the current namespace<br />are considered when matching by label selectors specified in MatchLabels.<br />Note: when referencing targets in a different namespace, appropriate ReferenceGrants must be<br />configured to allow the selection. |
 
 
 #### TargetSelectorNamespaces
 
 
 
-TargetSelectorNamespaces determines which namespaces are used when selecting policy targets.
+TargetSelectorNamespaces determines which namespaces are considered for target selection.
 
 _Appears in:_
 - [TargetSelector](#targetselector)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `from` | _[FromNamespaces](#fromnamespaces)_ |  true  | Same | Indicates where targets would be selected for the Policy's TargetSelector. |
+| `from` | _[TargetNamespaceFrom](#targetnamespacefrom)_ |  true  | Same | From indicates how namespaces are selected for this target selector.<br />All means all namespaces watched by Envoy Gateway.<br />Selector means namespaces watched by Envoy Gateway that match Selector. |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector selects namespaces when From is set to Selector. |
 
 
 #### Timeout
