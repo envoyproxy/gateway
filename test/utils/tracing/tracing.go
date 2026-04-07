@@ -33,7 +33,7 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 	}
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 		func(_ context.Context) (bool, error) {
-			preCount, err := queryTraceFromTempo(t, suite.Client, tags)
+			preCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 			if err != nil {
 				tlog.Logf(t, "failed to get trace count from tempo: %v", err)
 				return false, nil
@@ -43,7 +43,7 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 
 			// looks like we need almost 15 seconds to get the trace from Tempo?
 			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(_ context.Context) (done bool, err error) {
-				curCount, err := queryTraceFromTempo(t, suite.Client, tags)
+				curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 				if err != nil {
 					tlog.Logf(t, "failed to get curCount count from tempo: %v", err)
 					return false, nil
@@ -66,8 +66,8 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 	}
 }
 
-// queryTraceFromTempo queries span count from tempo
-func queryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
+// QueryTraceFromTempo queries span count from tempo
+func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",

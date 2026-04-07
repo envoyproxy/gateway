@@ -670,6 +670,45 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: false,
 		},
 		{
+			name: "valid gateway traces sink",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+						Traces: &egv1a1.EnvoyGatewayTraces{
+							Sink: egv1a1.EnvoyGatewayTraceSink{
+								Type: egv1a1.TraceSinkTypeOpenTelemetry,
+								OpenTelemetry: &egv1a1.EnvoyGatewayOpenTelemetrySink{
+									Host:     "otel-collector.monitoring.svc.cluster.local",
+									Protocol: "grpc",
+									Port:     4317,
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "invalid gateway traces sink",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					Telemetry: &egv1a1.EnvoyGatewayTelemetry{
+						Traces: &egv1a1.EnvoyGatewayTraces{
+							Sink: egv1a1.EnvoyGatewayTraceSink{
+								Type: egv1a1.TraceSinkTypeOpenTelemetry,
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "invalid gateway watch mode",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
