@@ -899,6 +899,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 					}
 
+					if hrf.Spec.URLRewrite.AppendXForwardedHost != nil {
+						if filterContext.URLRewrite == nil {
+							filterContext.URLRewrite = &ir.URLRewrite{}
+						}
+						filterContext.URLRewrite.AppendXForwardedHost = hrf.Spec.URLRewrite.AppendXForwardedHost
+					}
+
 				}
 
 				if hrf.Spec.DirectResponse != nil {
@@ -1053,6 +1060,13 @@ func (t *Translator) processRequestMirrorFilter(
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
 	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
 	if err != nil {
+		// Gateway API conformance: When backendRef Service exists but has no endpoints,
+		// the ResolvedRefs condition should NOT be set to False.
+		// so we return the custom condition error to handle this case and set the status in the caller function.
+		if err.Reason() == status.RouteReasonEndpointsNotFound {
+			return status.NewRouteStatusError(
+				fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(status.RouteConditionBackendsAvailable)
+		}
 		return err
 	}
 
