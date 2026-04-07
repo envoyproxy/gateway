@@ -116,7 +116,9 @@ spec:
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-      name: "*"
+      nameSelector:
+        type: RegularExpression
+        value: ".*"
       operation:
         op: add
         path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
