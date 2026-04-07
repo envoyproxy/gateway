@@ -218,7 +218,7 @@ func specAddressesToSlices(addrs []gwapiv1.GatewaySpecAddress) (ips, hostnames [
 			ips = append(ips, addrs[i].Value)
 		}
 	}
-	return
+	return ips, hostnames
 }
 
 func collectLoadBalancerAddresses(svc *corev1.Service) (addresses, hostnames []string) {
@@ -230,7 +230,7 @@ func collectLoadBalancerAddresses(svc *corev1.Service) (addresses, hostnames []s
 			hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 		}
 	}
-	return
+	return addresses, hostnames
 }
 
 func filterNoneClusterIPs(clusterIPs []string) []string {
