@@ -229,7 +229,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 				MergeGateways: ptr.To(true),
 				Concurrency:   ptr.To[int32](4),
 			},
-			expectedConcurrency: ptr.To[int32](4),
+			expectedConcurrency:   ptr.To[int32](4),
 			expectedMergeGateways: ptr.To(true),
 		},
 		{
