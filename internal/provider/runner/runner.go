@@ -47,6 +47,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
 
 	var p provider.Provider
+
 	switch r.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
 		p, err = r.createKubernetesProvider(ctx, errNotifier)
@@ -100,7 +101,8 @@ func (r *Runner) createCustomResourceProvider(ctx context.Context, errors messag
 			return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeCustom, err)
 		}
 		return p, err
-
+	case egv1a1.ResourceProviderTypeKubernetes:
+		return r.createKubernetesProvider(ctx, errors)
 	default:
 		return nil, fmt.Errorf("unsupported resource provider type")
 	}

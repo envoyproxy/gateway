@@ -39,6 +39,7 @@ type Manager interface {
 
 // NewManager returns a new infrastructure Manager.
 func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (mgr Manager, err error) {
+	logger.Info("Creating Infra manager for", "type", cfg.EnvoyGateway.Provider.Type)
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
 		// The kubernetes client is created in the provider runner and stored in the server config.
@@ -63,7 +64,12 @@ func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging
 	switch infra.Type {
 	case egv1a1.InfrastructureProviderTypeHost:
 		return host.NewInfra(ctx, cfg, logger, errors)
+	case egv1a1.InfrastructureProviderTypeRemote:
+		return newManagerForKubernetes(cfg, errors)
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
 	}
+}
+func newManagerForKubernetes(cfg *config.Server, errors message.RunnerErrorNotifier) (Manager, error) {
+	return kubernetes.NewInfra(nil, cfg, errors), nil
 }
