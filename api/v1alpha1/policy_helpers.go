@@ -42,7 +42,6 @@ type PolicyTargetReferences struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.group) ? self.group == 'gateway.networking.k8s.io' : true ", message="group must be gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="!has(self.namespaces) || self.namespaces.from != 'Selector' || has(self.namespaces.selector)", message="namespaces.selector must be specified when namespaces.from is Selector"
 // +kubebuilder:validation:XValidation:rule="has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)", message="at least one of namespaces, matchLabels, or matchExpressions must be specified"
 type TargetSelector struct {
 	// Group is the group that this selector targets. Defaults to gateway.networking.k8s.io
@@ -87,6 +86,7 @@ const (
 )
 
 // TargetSelectorNamespaces determines which namespaces are considered for target selection.
+// +kubebuilder:validation:XValidation:rule="self.from != 'Selector' || has(self.selector)", message="selector must be specified when from is Selector"
 type TargetSelectorNamespaces struct {
 	// From indicates how namespaces are selected for this target selector.
 	//
@@ -95,7 +95,7 @@ type TargetSelectorNamespaces struct {
 	//
 	// +kubebuilder:validation:Enum=Same;All;Selector
 	// +kubebuilder:default:=Same
-	From TargetNamespaceFrom `json:"from,omitempty"`
+	From TargetNamespaceFrom `json:"from"`
 
 	// Selector selects namespaces when From is set to Selector.
 	//
