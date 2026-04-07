@@ -1715,6 +1715,7 @@ _Appears in:_
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1810,6 +1811,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
+| `traces` | _[EnvoyGatewayTraces](#envoygatewaytraces)_ |  true  |  | Traces defines traces configuration for envoy gateway. |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1824,6 +1826,37 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `disabled` | _boolean_ |  false  |  |  |
+
+
+#### EnvoyGatewayTraceSink
+
+
+
+EnvoyGatewayTraceSink defines control plane
+trace sinks where traces are sent to.
+
+_Appears in:_
+- [EnvoyGatewayTraces](#envoygatewaytraces)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[TraceSinkType](#tracesinktype)_ |  true  | OpenTelemetry | Type defines the trace sink type.<br />EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  |  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayTraces
+
+
+
+EnvoyGatewayTraces defines control plane tracing configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
+| `samplingRate` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingRate controls the fraction of traces that are sampled.<br />The value is expressed as a Gateway API Fraction (numerator/denominator).<br />If denominator is omitted, it defaults to 100. |
 
 
 #### EnvoyJSONPatchConfig
@@ -5908,6 +5941,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
+
+
+#### TraceSinkType
+
+_Underlying type:_ _string_
+
+TraceSinkType specifies the types of trace sinks supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
+
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` | TraceSinkTypeOpenTelemetry captures traces for the OpenTelemetry sink.<br /> | 
 
 
 #### Tracing
