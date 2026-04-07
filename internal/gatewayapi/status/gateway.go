@@ -63,85 +63,114 @@ type NodeAddresses struct {
 // service and deployment or daemonset state.
 func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses NodeAddresses) {
 	var addresses, hostnames []string
-	// Update the status addresses field.
-	if svc != nil {
-		// If the addresses is explicitly set in the Gateway spec by the user, use it
-		// to populate the Status
-		if len(gw.Spec.Addresses) > 0 {
-			// Make sure the addresses have been populated into ExternalIPs/ClusterIPs
-			// and use that value
+	var lbAddressNotUsable bool
+
+	if len(gw.Spec.Addresses) > 0 {
+		// When spec.Addresses is set, always populate status addresses from spec
+		// so they are visible as soon as conditions are reconciled (even before
+		// the backing Service exists). The Programmed condition indicates whether
+		// the addresses are actually usable.
+		addresses, hostnames = specAddressesToSlices(gw.Spec.Addresses)
+		switch {
+		case svc == nil:
+			lbAddressNotUsable = true
+		case svc.Spec.Type == corev1.ServiceTypeLoadBalancer:
+			lbAddressNotUsable = !allSpecAddressesInLBIngress(gw.Spec.Addresses, svc)
+		default:
+			// For non-LB services, use the actual service addresses instead of spec.
+			addresses, hostnames = nil, nil
 			if len(svc.Spec.ExternalIPs) > 0 {
 				addresses = append(addresses, svc.Spec.ExternalIPs...)
-			} else if len(svc.Spec.ClusterIPs) > 0 {
-				// Filter out "None" values which represent headless services
-				for _, ip := range svc.Spec.ClusterIPs {
-					if ip != "" && ip != "None" {
-						addresses = append(addresses, ip)
-					}
-				}
-			}
-		} else {
-			if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
-				for i := range svc.Status.LoadBalancer.Ingress {
-					switch {
-					case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
-						addresses = append(addresses, svc.Status.LoadBalancer.Ingress[i].IP)
-					case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
-						// Remove when the following supports the hostname address type:
-						// https://github.com/kubernetes-sigs/gateway-api/blob/v0.5.0/conformance/utils/kubernetes/helpers.go#L201-L207
-						if svc.Status.LoadBalancer.Ingress[i].Hostname == "localhost" {
-							addresses = append(addresses, "127.0.0.1")
-						}
-						hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
-					}
-				}
-			}
-
-			if svc.Spec.Type == corev1.ServiceTypeClusterIP {
-				for i := range svc.Spec.ClusterIPs {
-					// Filter out "None" values which represent headless services
-					if svc.Spec.ClusterIPs[i] != "" && svc.Spec.ClusterIPs[i] != "None" {
-						addresses = append(addresses, svc.Spec.ClusterIPs[i])
-					}
-				}
-			}
-
-			if svc.Spec.Type == corev1.ServiceTypeNodePort {
-				var relevantAddresses []string
-				if slices.Contains(svc.Spec.IPFamilies, corev1.IPv4Protocol) {
-					relevantAddresses = append(relevantAddresses, nodeAddresses.IPv4...)
-				}
-				if slices.Contains(svc.Spec.IPFamilies, corev1.IPv6Protocol) {
-					relevantAddresses = append(relevantAddresses, nodeAddresses.IPv6...)
-				}
-				addresses = relevantAddresses
+			} else {
+				addresses = filterNoneClusterIPs(svc.Spec.ClusterIPs)
 			}
 		}
-
-		gwAddresses := make([]gwapiv1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
-		for i := range addresses {
-			addr := gwapiv1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1.IPAddressType),
-				Value: addresses[i],
+	} else if svc != nil {
+		// No explicit addresses — derive from the Service.
+		switch svc.Spec.Type {
+		case corev1.ServiceTypeLoadBalancer:
+			addresses, hostnames = collectLoadBalancerAddresses(svc)
+		case corev1.ServiceTypeClusterIP:
+			addresses = filterNoneClusterIPs(svc.Spec.ClusterIPs)
+		case corev1.ServiceTypeNodePort:
+			if slices.Contains(svc.Spec.IPFamilies, corev1.IPv4Protocol) {
+				addresses = append(addresses, nodeAddresses.IPv4...)
 			}
-			gwAddresses = append(gwAddresses, addr)
-		}
-
-		for i := range hostnames {
-			addr := gwapiv1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1.HostnameAddressType),
-				Value: hostnames[i],
+			if slices.Contains(svc.Spec.IPFamilies, corev1.IPv6Protocol) {
+				addresses = append(addresses, nodeAddresses.IPv6...)
 			}
-			gwAddresses = append(gwAddresses, addr)
 		}
+	}
 
+	// Build and set status addresses.
+	gwAddresses := make([]gwapiv1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
+	for i := range addresses {
+		gwAddresses = append(gwAddresses, gwapiv1.GatewayStatusAddress{
+			Type:  ptr.To(gwapiv1.IPAddressType),
+			Value: addresses[i],
+		})
+	}
+	for i := range hostnames {
+		gwAddresses = append(gwAddresses, gwapiv1.GatewayStatusAddress{
+			Type:  ptr.To(gwapiv1.HostnameAddressType),
+			Value: hostnames[i],
+		})
+	}
+	if svc != nil || len(gw.Spec.Addresses) > 0 {
 		gw.Status.Addresses = gwAddresses
 	} else {
 		gw.Status.Addresses = nil
 	}
 
+	// If the LB controller hasn't confirmed all requested addresses, report AddressNotUsable
+	// before checking deployment readiness.
+	if lbAddressNotUsable {
+		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotUsable),
+				messageAddressNotUsable, gw.Generation))
+		return
+	}
+
 	// Update the programmed condition.
 	updateGatewayProgrammedCondition(gw, envoyObj)
+}
+
+func collectLoadBalancerAddresses(svc *corev1.Service) (addresses, hostnames []string) {
+	for i := range svc.Status.LoadBalancer.Ingress {
+		switch {
+		case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
+			addresses = append(addresses, svc.Status.LoadBalancer.Ingress[i].IP)
+		case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
+			hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
+		}
+	}
+	return addresses, hostnames
+}
+
+func specAddressesToSlices(specAddresses []gwapiv1.GatewaySpecAddress) (addresses, hostnames []string) {
+	for _, specAddr := range specAddresses {
+		addrType := gwapiv1.IPAddressType
+		if specAddr.Type != nil {
+			addrType = *specAddr.Type
+		}
+		switch addrType {
+		case gwapiv1.IPAddressType:
+			addresses = append(addresses, specAddr.Value)
+		case gwapiv1.HostnameAddressType:
+			hostnames = append(hostnames, specAddr.Value)
+		}
+	}
+	return addresses, hostnames
+}
+
+func filterNoneClusterIPs(clusterIPs []string) []string {
+	var out []string
+	for _, ip := range clusterIPs {
+		if ip != "" && ip != "None" {
+			out = append(out, ip)
+		}
+	}
+	return out
 }
 
 // Important: do not use this function directly, use listener.SetCondition instead so that listeners from ListenerSet can be updated correctly
@@ -160,6 +189,7 @@ func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusI
 
 const (
 	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
+	messageAddressNotUsable    = "One or more addresses requested in spec.addresses cannot be used"
 	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway; only the first 16 are included in the status."
 	messageNoResources         = "Envoy replicas unavailable"
 	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy replicas available"
@@ -209,6 +239,23 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 		newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonNoResources),
 			messageNoResources, gw.Generation))
+}
+
+func allSpecAddressesInLBIngress(specAddresses []gwapiv1.GatewaySpecAddress, svc *corev1.Service) bool {
+	lbAddrs, lbHosts := collectLoadBalancerAddresses(svc)
+	confirmed := make(map[string]bool, len(lbAddrs)+len(lbHosts))
+	for _, a := range lbAddrs {
+		confirmed[a] = true
+	}
+	for _, h := range lbHosts {
+		confirmed[h] = true
+	}
+	for _, specAddr := range specAddresses {
+		if !confirmed[specAddr.Value] {
+			return false
+		}
+	}
+	return true
 }
 
 // GetGatewayListenerStatusConditions returns the status conditions for a specific listener in the gateway status.

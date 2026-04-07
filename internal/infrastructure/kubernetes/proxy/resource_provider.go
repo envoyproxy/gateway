@@ -256,7 +256,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(infraLabels).MatchLabels
 
-	if (*envoyServiceConfig.Type) == egv1a1.ServiceTypeClusterIP {
+	switch *envoyServiceConfig.Type {
+	case egv1a1.ServiceTypeClusterIP:
 		if len(r.infra.Addresses) > 0 {
 			// Since K8s Service requires specify no more than one IP for each IP family
 			// So we only use the first address
@@ -264,7 +265,11 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			serviceSpec.ClusterIP = r.infra.Addresses[0]
 			serviceSpec.ClusterIPs = r.infra.Addresses[0:1]
 		}
-	} else {
+	case egv1a1.ServiceTypeLoadBalancer:
+		if len(r.infra.Addresses) > 0 {
+			serviceSpec.LoadBalancerIP = r.infra.Addresses[0] //nolint:staticcheck
+		}
+	default:
 		serviceSpec.ExternalIPs = r.infra.Addresses
 	}
 
