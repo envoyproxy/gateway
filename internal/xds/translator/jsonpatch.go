@@ -28,11 +28,21 @@ import (
 
 type typedName struct {
 	Type string
-	Name string
+	Name ir.StringMatch
 }
 
 func (t typedName) String() string {
-	return fmt.Sprintf("%s/%s", t.Type, t.Name)
+	name := ""
+	if t.Name.Exact != nil {
+		name = *t.Name.Exact
+	} else if t.Name.Prefix != nil {
+		name = *t.Name.Prefix + "*"
+	} else if t.Name.Suffix != nil {
+		name = "*" + *t.Name.Suffix
+	} else if t.Name.SafeRegex != nil {
+		name = *t.Name.SafeRegex
+	}
+	return fmt.Sprintf("%s/%s", t.Type, name)
 }
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
@@ -214,24 +224,20 @@ var jsonMarshalOpts = protojson.MarshalOptions{
 	UseProtoNames: true,
 }
 
-const wildcardName = "*"
-
 // findXdsResources returns XDS resources to patch based on the patch configuration.
-// If p.Name is set to wildcard string ("*"), all resources of the specified type are returned.
-// If p.Name is specified, only resources with matching names are returned.
 func findXdsResources(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
 	var resources []cachetypes.Resource
 	switch p.Type {
 	case resourcev3.ListenerType:
-		resources = findXdsListeners(tCtx, p.Name)
+		resources = findXdsListeners(tCtx, &p.Name)
 	case resourcev3.RouteType:
-		resources = findXdsRouteConfigs(tCtx, p.Name)
+		resources = findXdsRouteConfigs(tCtx, &p.Name)
 	case resourcev3.ClusterType:
-		resources = findXdsClusters(tCtx, gResources, p.Name)
+		resources = findXdsClusters(tCtx, gResources, &p.Name)
 	case resourcev3.EndpointType:
-		resources = findXdsEndpoints(tCtx, p.Name)
+		resources = findXdsEndpoints(tCtx, gResources, &p.Name)
 	case resourcev3.SecretType:
-		resources = findXdsSecrets(tCtx, gResources, p.Name)
+		resources = findXdsSecrets(tCtx, gResources, &p.Name)
 	default:
 		return nil, fmt.Errorf("unsupported patch type %s", p.Type)
 	}

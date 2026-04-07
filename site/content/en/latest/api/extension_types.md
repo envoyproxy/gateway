@@ -1864,7 +1864,7 @@ _Appears in:_
 
 
 EnvoyJSONPatchConfig defines the configuration for patching a Envoy xDS Resource
-using JSONPatch semantic
+using JSONPatch semantics.
 
 _Appears in:_
 - [EnvoyPatchPolicySpec](#envoypatchpolicyspec)
@@ -1872,7 +1872,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[EnvoyResourceType](#envoyresourcetype)_ |  true  |  | Type is the typed URL of the Envoy xDS Resource |
-| `name` | _string_ |  true  |  | Name is the name of the resource.<br />When set to wildcard string ("*"), the patch will be applied to all resources of the specified Type.<br />When specified, the patch will only be applied to the resource with the matching name. |
+| `name` | _string_ |  false  |  | Name is the name of the resource. |
+| `nameSelector` | _[StringMatch](#stringmatch)_ |  false  |  | NameSelector is a StringMatch that is used to select the resources to patch based on their name. |
 | `operation` | _[JSONPatchOperation](#jsonpatchoperation)_ |  true  |  | Patch defines the JSON Patch Operation |
 
 
@@ -5736,6 +5737,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
 - [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)

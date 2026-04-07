@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -999,7 +1000,7 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 // findXdsListeners finds xds listeners.
 // If name is empty, returns all listeners.
 // If name is specified, returns only listeners with matching names.
-func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
+func findXdsListeners(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
@@ -1010,11 +1011,10 @@ func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetype
 		if !ok {
 			continue
 		}
-		if name == wildcardName || listener.Name == name {
-			// Skip to process ready listeners when name is wildcard.
-			if name == wildcardName && strings.HasPrefix(listener.Name, readyListenerPrefix) {
-				continue
-			}
+		if strings.HasPrefix(listener.Name, readyListenerPrefix) {
+			continue
+		}
+		if stringMatched(name, listener.Name) {
 			result = append(result, r)
 		}
 	}
@@ -1024,7 +1024,7 @@ func findXdsListeners(tCtx *types.ResourceVersionTable, name string) []cachetype
 
 // findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
 func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
-	resources := findXdsRouteConfigs(tCtx, name)
+	resources := findXdsRouteConfigs(tCtx, &ir.StringMatch{Exact: &name})
 	if len(resources) > 0 {
 		return resources[0].(*routev3.RouteConfiguration)
 	}
@@ -1034,7 +1034,7 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 // findXdsRouteConfigs finds xds route configurations.
 // If name is empty, returns all route configurations.
 // If name is specified, returns only route configurations with matching names.
-func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
+func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
 	}
@@ -1045,7 +1045,7 @@ func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachet
 		if !ok {
 			continue
 		}
-		if name == wildcardName || route.Name == name {
+		if stringMatched(name, route.Name) {
 			result = append(result, r)
 		}
 	}
@@ -1055,7 +1055,7 @@ func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name string) []cachet
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	resources := findXdsClusters(tCtx, nil, name)
+	resources := findXdsClusters(tCtx, nil, &ir.StringMatch{Exact: &name})
 	if len(resources) > 0 {
 		return resources[0].(*clusterv3.Cluster)
 	}
@@ -1065,7 +1065,7 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 // findXdsClusters finds xds clusters.
 // If name is empty, returns all clusters.
 // If name is specified, returns only clusters with matching names.
-func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name string) []cachetypes.Resource {
+func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
 	}
@@ -1081,10 +1081,10 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalReso
 		if !ok {
 			continue
 		}
-		if name == wildcardName || cluster.Name == name {
-			if name == wildcardName && skippedClusters.Has(cluster.Name) {
-				continue
-			}
+		if skippedClusters.Has(cluster.Name) {
+			continue
+		}
+		if stringMatched(name, cluster.Name) {
 			result = append(result, r)
 		}
 	}
@@ -1095,18 +1095,25 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalReso
 // findXdsEndpoints finds xds endpoints.
 // If name is empty, returns all endpoints.
 // If name is specified, returns only endpoints with matching cluster names.
-func findXdsEndpoints(tCtx *types.ResourceVersionTable, name string) []cachetypes.Resource {
+func findXdsEndpoints(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
 		return nil
 	}
-
+	skippedClusters := sets.New(getRateLimitServiceClusterName(), wasmHTTPServiceClusterName)
+	// skip. proxy service cluster
+	if gResources != nil && gResources.ProxyServiceCluster != nil {
+		skippedClusters.Insert(gResources.ProxyServiceCluster.Name)
+	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
 		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
 		if !ok {
 			continue
 		}
-		if name == wildcardName || endpoint.ClusterName == name {
+		if skippedClusters.Has(endpoint.ClusterName) {
+			continue
+		}
+		if stringMatched(name, endpoint.ClusterName) {
 			result = append(result, r)
 		}
 	}
@@ -1116,7 +1123,7 @@ func findXdsEndpoints(tCtx *types.ResourceVersionTable, name string) []cachetype
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
 func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
-	resources := findXdsSecrets(tCtx, nil, name)
+	resources := findXdsSecrets(tCtx, nil, &ir.StringMatch{Exact: &name})
 	if len(resources) > 0 {
 		return resources[0].(*tlsv3.Secret)
 	}
@@ -1126,7 +1133,7 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 // findXdsSecrets finds xds secrets.
 // If name is empty, returns all secrets.
 // If name is specified, returns only secrets with matching names.
-func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name string) []cachetypes.Resource {
+func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
 		return nil
 	}
@@ -1144,10 +1151,10 @@ func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResou
 		if !ok {
 			continue
 		}
-		if name == wildcardName || secret.Name == name {
-			if name == wildcardName && skippedSecrets.Has(secret.Name) {
-				continue
-			}
+		if skippedSecrets.Has(secret.Name) {
+			continue
+		}
+		if stringMatched(name, secret.Name) {
 			result = append(result, r)
 		}
 	}
@@ -1401,4 +1408,27 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func stringMatched(matcher *ir.StringMatch, str string) bool {
+	if matcher == nil {
+		return false
+	}
+	if matcher.Exact != nil {
+		return *matcher.Exact == str
+	}
+	if matcher.Prefix != nil {
+		return strings.HasPrefix(str, *matcher.Prefix)
+	}
+	if matcher.Suffix != nil {
+		return strings.HasSuffix(str, *matcher.Suffix)
+	}
+	if matcher.SafeRegex != nil {
+		regex, err := regexp.Compile(*matcher.SafeRegex)
+		if err != nil {
+			return false
+		}
+		return regex.MatchString(str)
+	}
+	return false
 }

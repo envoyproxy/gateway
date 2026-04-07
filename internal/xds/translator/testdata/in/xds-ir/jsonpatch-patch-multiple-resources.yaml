@@ -10,13 +10,15 @@ envoyPatchPolicies:
     namespace: "default"
     jsonPatches:
       - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-        name: "*"
+        name:
+          safeRegex: ".*"
         operation:
           op: add
           path: "/filter_chains/0/filters/0/typed_config/preserve_external_request_id"
           value: true
       - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-        name: "*"
+        name:
+          safeRegex: ".*"
         operation:
           op: "add"
           path: "/filter_chains/0/filters/0/typed_config/http_filters/0"
@@ -33,7 +35,8 @@ envoyPatchPolicies:
                     cluster_name: rate-limit-cluster
                 transport_api_version: V3
       - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-        name: "*"
+        name: 
+          safeRegex: ".*"
         operation:
           op: "add"
           path: "/virtual_hosts/0/rate_limits"
@@ -41,26 +44,30 @@ envoyPatchPolicies:
             - actions:
                 - remote_address: {}
       - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-        name: "*"
+        name: 
+          safeRegex: ".*"
         operation:
           op: add
           path: "/altStatName"
           value: altStatName
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-        name: "first-route-dest"
+        name: 
+          exact: "first-route-dest"
         operation:
           op: "replace"
           path: "/endpoints/0/load_balancing_weight"
           value: "50"
       - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-        name: "*"
+        name: 
+          safeRegex: ".*"
         operation:
           op: "replace"
           path: "/tls_certificate/certificate_chain/inline_bytes"
           # replaced-secret
           value: "cmVwbGFjZWQtc2VjcmV0"
       - type: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret"
-        name: "test-secret"
+        name: 
+          exact: "test-secret"
         operation:
           op: "add"
           path: ""
@@ -70,7 +77,8 @@ envoyPatchPolicies:
               certificate_chain:
                 inline_bytes: Y2VydC1kYXRh
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-        name: "first-route-dest"
+        name: 
+          exact: "first-route-dest"
         operation:
           op: add
           path: "/endpoints/1"
@@ -83,13 +91,15 @@ envoyPatchPolicies:
                       portValue: 50000
                 loadBalancingWeight: 1
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-        name: "first-route-dest"
+        name: 
+          exact: "first-route-dest"
         operation:
           op: "move"
           from: "/endpoints/0/load_balancing_weight"
           path: "/endpoints/1/load_balancing_weight"
       - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
-        name: "first-route-dest"
+        name: 
+          exact: "first-route-dest"
         operation:
           op: copy
           from: "/endpoints/1/load_balancing_weight"
