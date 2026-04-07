@@ -237,8 +237,16 @@ export GITHUB_REMOTE=origin
 11. Confirm that the [release workflow][] completed successfully.
 12. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 13. Confirm that the [release][] was created.
-14. Confirm that the steps in the [Quickstart][] work as expected.
-15. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+14. Update the benchmark dashboard data for the new release:
+
+    ```shell
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+    ```
+
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
+
+15. Confirm that the steps in the [Quickstart][] work as expected.
+16. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
@@ -247,7 +255,7 @@ export GITHUB_REMOTE=origin
    (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
 
-16. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+17. Update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 If you find any bugs in this process, please create an issue.
 
@@ -384,8 +392,16 @@ export GITHUB_REMOTE=origin
 12. Confirm that the [release workflow][] completed successfully.
 13. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
 14. Confirm that the [release][] was created.
-15. Confirm that the steps in the [Quickstart][] work as expected.
-16. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+15. Update the benchmark dashboard data for the new release:
+
+    ```shell
+    make sync-benchmark-dashboard VERSION=v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}
+    ```
+
+    Commit the generated benchmark dashboard changes, including the updated files under `site/static/`, open a PR against `main`, and merge it so the docs workflow publishes the new benchmark dashboard entry.
+
+16. Confirm that the steps in the [Quickstart][] work as expected.
+17. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
@@ -394,7 +410,7 @@ export GITHUB_REMOTE=origin
    (https://gateway.envoyproxy.io/news/releases/notes/v${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}.html) to learn more about the release.
    ```
 
-17. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
+18. If this patch release is the latest release, update the `lastVersionTag` in `test/e2e/tests/eg_upgrade.go` to reflect the latest prior release. Refer to [PR #4666] as an example.
 
 ### Announce the Release
 

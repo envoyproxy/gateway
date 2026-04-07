@@ -9,8 +9,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20251210132809-ee656c7534f5
 	github.com/containers/image/v5 v5.36.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/cli v29.3.0+incompatible
-	github.com/docker/docker v28.5.1+incompatible
+	github.com/docker/cli v29.3.1+incompatible
 	github.com/dominikbraun/graph v0.23.0
 	github.com/envoyproxy/go-control-plane v0.14.0
 	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
@@ -41,7 +40,7 @@ require (
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tetratelabs/func-e v1.4.0
 	github.com/tsaarni/certyaml v0.11.0
-	github.com/yuin/gopher-lua v1.1.1
+	github.com/yuin/gopher-lua v1.1.2
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.42.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.42.0
@@ -75,7 +74,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.23.3
 	sigs.k8s.io/gateway-api v1.5.1
 	sigs.k8s.io/kubectl-validate v0.0.5-0.20250915070809-d2f2d68fba09
-	sigs.k8s.io/mcs-api v0.4.0
+	sigs.k8s.io/mcs-api v0.4.1
 	sigs.k8s.io/yaml v1.6.0
 )
 
@@ -119,6 +118,7 @@ require (
 	github.com/distribution/distribution/v3 v3.0.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
+	github.com/docker/docker v28.5.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.4 // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -131,7 +131,7 @@ require (
 	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
 	github.com/go-errors/errors v1.4.2 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/analysis v0.24.3 // indirect
