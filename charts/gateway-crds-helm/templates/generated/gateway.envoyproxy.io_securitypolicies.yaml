@@ -920,6 +920,30 @@ spec:
                                     minimum: 0
                                     type: integer
                                 type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+                                  If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries).
+                                properties:
+                                  budgetPercent:
+                                    default: 20
+                                    description: |-
+                                      BudgetPercent specifies the limit on concurrent retries as a percentage of the sum
+                                      of active requests and active pending requests. For example, if there are 100 active
+                                      requests and the budget_percent is set to 25, there may be 25 active retries.
+                                    maximum: 100
+                                    minimum: 0
+                                    type: number
+                                  minRetryConcurrency:
+                                    default: 3
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      The limit on the number of active retries may never go below this number.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
                             type: object
                           connection:
                             description: Connection includes backend connection settings.
@@ -2107,6 +2131,30 @@ spec:
                                       number of connections that Envoy will establish
                                       per-endpoint to the referenced backend defined
                                       within a xRoute rule.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+                                  If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries).
+                                properties:
+                                  budgetPercent:
+                                    default: 20
+                                    description: |-
+                                      BudgetPercent specifies the limit on concurrent retries as a percentage of the sum
+                                      of active requests and active pending requests. For example, if there are 100 active
+                                      requests and the budget_percent is set to 25, there may be 25 active retries.
+                                    maximum: 100
+                                    minimum: 0
+                                    type: number
+                                  minRetryConcurrency:
+                                    default: 3
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      The limit on the number of active retries may never go below this number.
                                     format: int64
                                     maximum: 4294967295
                                     minimum: 0
@@ -3496,6 +3544,30 @@ spec:
                                             maximum number of connections that Envoy
                                             will establish per-endpoint to the referenced
                                             backend defined within a xRoute rule.
+                                          format: int64
+                                          maximum: 4294967295
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    retryBudget:
+                                      description: |-
+                                        RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+                                        If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries).
+                                      properties:
+                                        budgetPercent:
+                                          default: 20
+                                          description: |-
+                                            BudgetPercent specifies the limit on concurrent retries as a percentage of the sum
+                                            of active requests and active pending requests. For example, if there are 100 active
+                                            requests and the budget_percent is set to 25, there may be 25 active retries.
+                                          maximum: 100
+                                          minimum: 0
+                                          type: number
+                                        minRetryConcurrency:
+                                          default: 3
+                                          description: |-
+                                            MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                            The limit on the number of active retries may never go below this number.
                                           format: int64
                                           maximum: 4294967295
                                           minimum: 0
@@ -4970,6 +5042,30 @@ spec:
                                       number of connections that Envoy will establish
                                       per-endpoint to the referenced backend defined
                                       within a xRoute rule.
+                                    format: int64
+                                    maximum: 4294967295
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              retryBudget:
+                                description: |-
+                                  RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+                                  If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries).
+                                properties:
+                                  budgetPercent:
+                                    default: 20
+                                    description: |-
+                                      BudgetPercent specifies the limit on concurrent retries as a percentage of the sum
+                                      of active requests and active pending requests. For example, if there are 100 active
+                                      requests and the budget_percent is set to 25, there may be 25 active retries.
+                                    maximum: 100
+                                    minimum: 0
+                                    type: number
+                                  minRetryConcurrency:
+                                    default: 3
+                                    description: |-
+                                      MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                                      The limit on the number of active retries may never go below this number.
                                     format: int64
                                     maximum: 4294967295
                                     minimum: 0

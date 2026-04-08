@@ -675,6 +675,7 @@ _Appears in:_
 | `maxParallelRequests` | _integer_ |  false  | 1024 | The maximum number of parallel requests that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
+| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.<br />If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries). |
 | `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster |
 
 
@@ -4965,6 +4966,21 @@ _Appears in:_
 | `numAttemptsPerPriority` | _integer_ |  false  |  | NumAttemptsPerPriority defines the number of requests (initial attempt + retries)<br />that should be sent to the same priority before switching to a different one.<br />If not specified or set to 0, all requests are sent to the highest priority that is healthy. |
 | `retryOn` | _[RetryOn](#retryon)_ |  false  |  | RetryOn specifies the retry trigger condition.<br />If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
 | `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  |  | PerRetry is the retry policy to be applied per retry attempt. |
+
+
+#### RetryBudget
+
+
+
+RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+
+_Appears in:_
+- [CircuitBreaker](#circuitbreaker)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `budgetPercent` | _float_ |  false  | 20 | BudgetPercent specifies the limit on concurrent retries as a percentage of the sum<br />of active requests and active pending requests. For example, if there are 100 active<br />requests and the budget_percent is set to 25, there may be 25 active retries. |
+| `minRetryConcurrency` | _integer_ |  false  | 3 | MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.<br />The limit on the number of active retries may never go below this number. |
 
 
 #### RetryOn
