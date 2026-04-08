@@ -17,4 +17,5 @@ bin
 *.js
 */testdata/*.yaml
 ./site/public/*
-./site/node_modules/*
+node_modules
+package-lock.json
