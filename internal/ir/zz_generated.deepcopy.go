@@ -1484,6 +1484,11 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.ObservabilityMode != nil {
+		in, out := &in.ObservabilityMode, &out.ObservabilityMode
+		*out = new(bool)
+		**out = **in
+	}
 	if in.FailOpen != nil {
 		in, out := &in.FailOpen, &out.FailOpen
 		*out = new(bool)
