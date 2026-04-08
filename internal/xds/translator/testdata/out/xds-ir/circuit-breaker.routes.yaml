@@ -12,3 +12,10 @@
         cluster: first-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

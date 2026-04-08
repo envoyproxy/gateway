@@ -26,3 +26,20 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      circuitBreaker:
+        maxConnections: 5
+        maxPendingRequests: 10
+        maxParallelRequests: 10
+        retryBudget:
+          budgetPercent: 25.0
+          minRetryConcurrency: 5
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50001
+        name: "second-route-dest/backend/0"

@@ -742,6 +742,21 @@ func buildXdsClusterCircuitBreaker(circuitBreaker *ir.CircuitBreaker) *clusterv3
 			}
 		}
 
+		if circuitBreaker.RetryBudget != nil {
+			rb := &clusterv3.CircuitBreakers_Thresholds_RetryBudget{}
+			if circuitBreaker.RetryBudget.BudgetPercent != nil {
+				rb.BudgetPercent = &xdstype.Percent{
+					Value: *circuitBreaker.RetryBudget.BudgetPercent,
+				}
+			}
+			if circuitBreaker.RetryBudget.MinRetryConcurrency != nil {
+				rb.MinRetryConcurrency = &wrapperspb.UInt32Value{
+					Value: *circuitBreaker.RetryBudget.MinRetryConcurrency,
+				}
+			}
+			cbt.RetryBudget = rb
+		}
+
 		if circuitBreaker.PerEndpoint != nil {
 			if circuitBreaker.PerEndpoint.MaxConnections != nil {
 				cbtPerEndpoint = []*clusterv3.CircuitBreakers_Thresholds{

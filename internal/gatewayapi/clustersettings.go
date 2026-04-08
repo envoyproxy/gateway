@@ -282,6 +282,21 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 			}
 		}
 
+		if pcb.RetryBudget != nil {
+			rb := &ir.RetryBudget{}
+			if pcb.RetryBudget.BudgetPercent != nil {
+				rb.BudgetPercent = pcb.RetryBudget.BudgetPercent
+			}
+			if pcb.RetryBudget.MinRetryConcurrency != nil {
+				if ui32, ok := int64ToUint32(*pcb.RetryBudget.MinRetryConcurrency); ok {
+					rb.MinRetryConcurrency = &ui32
+				} else {
+					return nil, fmt.Errorf("invalid MinRetryConcurrency value %d", *pcb.RetryBudget.MinRetryConcurrency)
+				}
+			}
+			cb.RetryBudget = rb
+		}
+
 		if pcb.PerEndpoint != nil {
 			perEndpoint := &ir.PerEndpointCircuitBreakers{}
 			if pcb.PerEndpoint.MaxConnections != nil {

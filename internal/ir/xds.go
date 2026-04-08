@@ -2833,8 +2833,21 @@ type CircuitBreaker struct {
 	// The maximum number of parallel retries that Envoy will make.
 	MaxParallelRetries *uint32 `json:"maxParallelRetries,omitempty" yaml:"maxParallelRetries,omitempty"`
 
+	// RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty" yaml:"retryBudget,omitempty"`
+
 	// PerEndpoint defines per-endpoint Circuit Breakers
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+// +k8s:deepcopy-gen=true
+type RetryBudget struct {
+	// BudgetPercent specifies the limit on concurrent retries as a percentage.
+	BudgetPercent *float64 `json:"budgetPercent,omitempty" yaml:"budgetPercent,omitempty"`
+
+	// MinRetryConcurrency specifies the minimum retry concurrency allowed.
+	MinRetryConcurrency *uint32 `json:"minRetryConcurrency,omitempty" yaml:"minRetryConcurrency,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines the per-endpoint Circuit Breaker configuration.

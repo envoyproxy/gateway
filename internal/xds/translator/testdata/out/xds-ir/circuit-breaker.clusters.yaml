@@ -34,3 +34,34 @@
         maxRequestsPerConnection: 10
       explicitHttpConfig:
         httpProtocolOptions: {}
+- circuitBreakers:
+    thresholds:
+    - maxConnections: 5
+      maxPendingRequests: 10
+      maxRequests: 10
+      maxRetries: 1024
+      retryBudget:
+        budgetPercent:
+          value: 25
+        minRetryConcurrency: 5
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
+  ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: second-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

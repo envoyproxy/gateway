@@ -47,10 +47,38 @@ type CircuitBreaker struct {
 	// +optional
 	MaxRequestsPerConnection *int64 `json:"maxRequestsPerConnection,omitempty"`
 
+	// RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+	// If this field is set, the retry budget will override any configured retry circuit breaker (MaxParallelRetries).
+	//
+	// +optional
+	RetryBudget *RetryBudget `json:"retryBudget,omitempty"`
+
 	// PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster
 	//
 	// +optional
 	PerEndpoint *PerEndpointCircuitBreakers `json:"perEndpoint,omitempty"`
+}
+
+// RetryBudget specifies a limit on concurrent retries in relation to the number of active requests.
+type RetryBudget struct {
+	// BudgetPercent specifies the limit on concurrent retries as a percentage of the sum
+	// of active requests and active pending requests. For example, if there are 100 active
+	// requests and the budget_percent is set to 25, there may be 25 active retries.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20.0
+	// +optional
+	BudgetPercent *float64 `json:"budgetPercent,omitempty"`
+
+	// MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+	// The limit on the number of active retries may never go below this number.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	// +kubebuilder:default=3
+	// +optional
+	MinRetryConcurrency *int64 `json:"minRetryConcurrency,omitempty"`
 }
 
 // PerEndpointCircuitBreakers defines Circuit Breakers that will apply per-endpoint for an upstream cluster
