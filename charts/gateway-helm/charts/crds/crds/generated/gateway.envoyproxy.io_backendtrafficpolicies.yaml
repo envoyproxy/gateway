@@ -112,6 +112,44 @@ spec:
                         minimum: 0
                         type: integer
                     type: object
+                  retryBudget:
+                    description: |-
+                      RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.
+                      RetryBudget take precedence over maxParallelRetries.
+                    properties:
+                      minRetryConcurrency:
+                        description: |-
+                          MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.
+                          For example, a budget of 20% with a minimum retry concurrency of 3
+                          will allow 5 active retries while there are 25 active requests.
+                          If there are 2 active requests, there are still 3 active retries
+                          allowed because of the minimum retry concurrency.
+                          Defaults to 3.
+                        format: int32
+                        type: integer
+                      percent:
+                        description: |-
+                          Percent specifies the limit on concurrent retries as a percentage [0, 100] of
+                          the sum of active requests and active pending requests.
+                        properties:
+                          denominator:
+                            default: 100
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          numerator:
+                            format: int32
+                            minimum: 0
+                            type: integer
+                        required:
+                        - numerator
+                        type: object
+                        x-kubernetes-validations:
+                        - message: numerator must be less than or equal to denominator
+                          rule: self.numerator <= self.denominator
+                    required:
+                    - percent
+                    type: object
                 type: object
               compression:
                 description: |-
@@ -669,6 +707,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration for backend connections.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -710,7 +780,9 @@ spec:
               httpUpgrade:
                 description: |-
                   HTTPUpgrade defines the configuration for HTTP protocol upgrades.
-                  If not specified, the default upgrade configuration(websocket) will be used.
+                  If not specified, the default upgrade configuration (websocket) will be used.
+                  However, if requestBuffer is configured, the default upgrade configuration
+                  will be ignored.
                 items:
                   description: ProtocolUpgradeConfig specifies the configuration for
                     protocol upgrades.
@@ -743,6 +815,56 @@ spec:
                   LoadBalancer policy to apply when routing traffic from the gateway to
                   the backend endpoints. Defaults to `LeastRequest`.
                 properties:
+                  backendUtilization:
+                    description: |-
+                      BackendUtilization defines the configuration when the load balancer type is
+                      set to BackendUtilization.
+                    properties:
+                      blackoutPeriod:
+                        description: |-
+                          A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                          Default is 10s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      errorUtilizationPenaltyPercent:
+                        description: |-
+                          ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                          This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                          For example:
+                          - 100 => 1.0x
+                          - 120 => 1.2x
+                          - 200 => 2.0x
+
+                          Must be non-negative.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      keepResponseHeaders:
+                        default: false
+                        description: |-
+                          KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                          Defaults to false.
+                        type: boolean
+                      metricNamesForComputingUtilization:
+                        description: |-
+                          Metric names used to compute utilization if application_utilization is not set.
+                          For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                        items:
+                          type: string
+                        type: array
+                      weightExpirationPeriod:
+                        description: If a given endpoint has not reported load metrics
+                          in this long, stop using the reported weight. Defaults to
+                          3m.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      weightUpdatePeriod:
+                        description: How often endpoint weights are recalculated.
+                          Values less than 100ms are capped at 100ms. Default 1s.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
                   consistentHash:
                     description: |-
                       ConsistentHash defines the configuration when the load balancer type is
@@ -857,6 +979,40 @@ spec:
                         field must be set.
                       rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                         : !has(self.queryParams)'
+                  dynamicModule:
+                    description: |-
+                      DynamicModule defines the configuration when the load balancer type is
+                      set to DynamicModule. The referenced module must be registered in the
+                      EnvoyProxy resource's dynamicModules allowlist.
+                    properties:
+                      config:
+                        description: |-
+                          Config is optional configuration for the module's load balancer
+                          implementation. This is serialized and passed to the module's
+                          initialization function.
+                        x-kubernetes-preserve-unknown-fields: true
+                      lbPolicyName:
+                        description: |-
+                          LBPolicyName identifies a specific load balancer implementation within
+                          the dynamic module. A single shared library can contain multiple LB
+                          policy implementations. This value is passed to the module's
+                          initialization function to select the appropriate implementation.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      name:
+                        description: |-
+                          Name references a dynamic module registered in the EnvoyProxy resource's
+                          dynamicModules list. The referenced module must exist in the registry;
+                          otherwise, the policy will be rejected.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - lbPolicyName
+                    - name
+                    type: object
                   endpointOverride:
                     description: |-
                       EndpointOverride defines the configuration for endpoint override.
@@ -889,7 +1045,7 @@ spec:
                     description: |-
                       SlowStart defines the configuration related to the slow start load balancer policy.
                       If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                      Currently this is only supported for RoundRobin and LeastRequest load balancers
+                      Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                     properties:
                       window:
                         description: |-
@@ -909,12 +1065,16 @@ spec:
                       "ConsistentHash",
                       "LeastRequest",
                       "Random",
-                      "RoundRobin".
+                      "RoundRobin",
+                      "BackendUtilization",
+                      "DynamicModule".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
+                    - BackendUtilization
+                    - DynamicModule
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -990,18 +1150,34 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
-                - message: Currently SlowStart is only supported for RoundRobin and
-                    LeastRequest load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
-                    : true '
+                - message: If LoadBalancer type is BackendUtilization, backendUtilization
+                    field needs to be set.
+                  rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                    : !has(self.backendUtilization)'
+                - message: If LoadBalancer type is DynamicModule, dynamicModule field
+                    needs to be set.
+                  rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                    : !has(self.dynamicModule)'
+                - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
+                    and BackendUtilization load balancers.
+                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
+                    ? !has(self.slowStart) : true'
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware routing is not supported for BackendUtilization
+                    and DynamicModule load balancers.
+                  rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                    ? !has(self.zoneAware) : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
                     has(self.zoneAware.weightedZones)) : true'
+                - message: EndpointOverride is not supported for DynamicModule load
+                    balancers.
+                  rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                    : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -1016,7 +1192,7 @@ spec:
                 properties:
                   version:
                     description: |-
-                      Version of ProxyProtol
+                      Version of ProxyProtocol
                       Valid ProxyProtocolVersion values are
                       "V1"
                       "V2"
@@ -1218,6 +1394,12 @@ spec:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: |-
+                                          Invert specifies whether the source range match result will be inverted.
+                                          When true, the rule matches when the client IP is not in the specified range(s).
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -1581,6 +1763,12 @@ spec:
                                     description: SourceCIDR is the client IP Address
                                       range to match on.
                                     properties:
+                                      invert:
+                                        default: false
+                                        description: |-
+                                          Invert specifies whether the source range match result will be inverted.
+                                          When true, the rule matches when the client IP is not in the specified range(s).
+                                        type: boolean
                                       type:
                                         default: Exact
                                         enum:
@@ -1784,6 +1972,9 @@ spec:
 
                   When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
                   increase in memory usage for Envoy that should be accounted for in your deployment settings.
+
+                  Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
+                  on routes that need those protocols, because requests can hang instead of being forwarded upstream.
                 properties:
                   limit:
                     allOf:
@@ -2679,6 +2870,12 @@ spec:
                           response is received from the upstream.
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
+                      streamIdleTimeout:
+                        description: |2-
+                           The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                           If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
                     type: object
                   tcp:
                     description: Timeout settings for TCP.
@@ -2718,6 +2915,9 @@ spec:
                 : true '
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
+            - message: requestBuffer cannot be used together with httpUpgrade
+              rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
+                == 0'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

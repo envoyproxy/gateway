@@ -1,0 +1,134 @@
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: geoip-proxy
+      namespace: default
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: default
+    name: geoip-proxy
+  spec:
+    geoIP:
+      provider:
+        type: MaxMind
+        maxMind:
+          cityDbSource:
+            local:
+              path: /db/GeoLite2-City.mmdb
+          anonymousIpDbSource:
+            local:
+              path: /db/GeoIP2-Anonymous-IP.mmdb
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-geo
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /geo
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-plain
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /plain
+      backendRefs:
+      - name: service-1
+        port: 8080
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    clientIPDetection:
+      customHeader:
+        name: x-real-client-ip
+        failClosed: false
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: geoip-policy
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-geo
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: allow-us-seattle-proxy
+        action: Allow
+        principal:
+          clientIPGeoLocations:
+          - country: US
+            city: Seattle
+            anonymous:
+              isProxy: true
+      - name: allow-eu-non-vpn-non-hosting
+        action: Allow
+        principal:
+          clientIPGeoLocations:
+          - country: GB
+            city: London
+            anonymous:
+              isVPN: false
+              isHosting: false
+          - country: France
+            city: Paris
+            anonymous:
+              isVPN: false
+              isHosting: false

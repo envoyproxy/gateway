@@ -307,47 +307,68 @@ func TestMergePolicyStatus(t *testing.T) {
 }
 
 func TestMergeRouteStatus(t *testing.T) {
-	t.Run("nil incoming keeps existing status", func(t *testing.T) {
-		existing := &gwapiv1.RouteStatus{
-			Parents: []gwapiv1.RouteParentStatus{
-				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")}},
+	controllerName := "example.com/gateway"
+
+	t.Run("nil incoming keeps existing entry", func(t *testing.T) {
+		existing := aggregatedRouteStatus{
+			status: &gwapiv1.RouteStatus{
+				Parents: []gwapiv1.RouteParentStatus{
+					{
+						ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+						ControllerName: gwapiv1.GatewayController(controllerName),
+					},
+				},
 			},
+			generation: 2,
 		}
 
-		got := mergeRouteStatus(existing, nil)
-		require.Same(t, existing, got)
-		require.Len(t, got.Parents, 1)
+		got := mergeAggregatedRouteStatus(existing, nil, 10)
+		require.Equal(t, existing, got)
 	})
 
 	t.Run("nil existing takes incoming", func(t *testing.T) {
 		incoming := &gwapiv1.RouteStatus{
 			Parents: []gwapiv1.RouteParentStatus{
-				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")}},
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
 			},
 		}
 
-		got := mergeRouteStatus(nil, incoming)
-		require.Same(t, incoming, got)
-		require.Len(t, got.Parents, 1)
+		got := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, incoming, 7)
+		require.Same(t, incoming, got.status)
+		require.Equal(t, int64(7), got.generation)
 	})
 
-	t.Run("appends parents", func(t *testing.T) {
-		existing := &gwapiv1.RouteStatus{
+	t.Run("appends parents and tracks max generation", func(t *testing.T) {
+		first := &gwapiv1.RouteStatus{
 			Parents: []gwapiv1.RouteParentStatus{
-				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")}},
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
 			},
 		}
-		other := &gwapiv1.RouteStatus{
+		second := &gwapiv1.RouteStatus{
 			Parents: []gwapiv1.RouteParentStatus{
-				{ParentRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")}},
+				{
+					ParentRef:      gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")},
+					ControllerName: gwapiv1.GatewayController(controllerName),
+				},
 			},
 		}
 
-		got := mergeRouteStatus(existing, other)
-		require.Same(t, existing, got)
-		require.Len(t, got.Parents, 2)
-		require.Equal(t, gwapiv1.ObjectName("gw-a"), got.Parents[0].ParentRef.Name)
-		require.Equal(t, gwapiv1.ObjectName("gw-b"), got.Parents[1].ParentRef.Name)
+		entry := mergeAggregatedRouteStatus(aggregatedRouteStatus{}, first, 3)
+		entry = mergeAggregatedRouteStatus(entry, second, 9)
+
+		require.Len(t, entry.status.Parents, 2)
+		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Parents[0].ParentRef.Name)
+		require.Equal(t, gwapiv1.ObjectName("gw-b"), entry.status.Parents[1].ParentRef.Name)
+		require.Equal(t, int64(9), entry.generation)
+
+		entry = mergeAggregatedRouteStatus(entry, &gwapiv1.RouteStatus{}, 4)
+		require.Equal(t, int64(9), entry.generation)
 	})
 }
 

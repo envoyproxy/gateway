@@ -48,6 +48,12 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 	if policy.Spec.TargetRef != nil {
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
+	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
+	if policy.Spec.TLS != nil &&
+		policy.Spec.TLS.ClientValidation != nil &&
+		policy.Spec.TLS.ClientValidation.Optional {
+		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+	}
 	return deprecatedFields
 }
 
@@ -720,9 +726,14 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	if http1Settings == nil {
 		return nil
 	}
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoredUpgradeTypes))
+	for _, match := range http1Settings.IgnoredUpgradeTypes {
+		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
+	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
-		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
+		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		IgnoredUpgradeTypes: ignoreUpgrade,
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
@@ -871,6 +882,18 @@ func (t *Translator) buildListenerTLSParameters(
 			namespace: policy.Namespace,
 		}
 
+		// Determine the effective client validation mode.
+		mode := egv1a1.ClientValidationRequireAndVerify
+		if tlsParams.ClientValidation.Mode != nil {
+			mode = *tlsParams.ClientValidation.Mode
+		} else if tlsParams.ClientValidation.Optional {
+			// Legacy mapping: Optional=true means VerifyIfGiven.
+			mode = egv1a1.ClientValidationVerifyIfGiven
+		}
+
+		irTLSConfig.ClientValidationEnabled = true
+		convertClientValidationModeType(mode, irTLSConfig)
+
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
 		}
@@ -894,11 +917,20 @@ func (t *Translator) buildListenerTLSParameters(
 			}
 			irCACert.Certificate = append(irCACert.Certificate, validCaCertBytes...)
 		}
+
+		// CA certificates are required for verification modes.
+		if (mode == egv1a1.ClientValidationVerifyIfGiven || mode == egv1a1.ClientValidationRequireAndVerify) && len(irCACert.Certificate) == 0 {
+			if tlsParams.ClientValidation.Mode == nil && tlsParams.ClientValidation.Optional {
+				return irTLSConfig, fmt.Errorf(`tls.clientValidation.optional=true requires caCertificateRefs (maps to mode %q)`, mode)
+			}
+			return irTLSConfig, fmt.Errorf(`tls.clientValidation.mode %q requires caCertificateRefs`, mode)
+		}
 		if len(irCACert.Certificate) > 0 {
 			irTLSConfig.CACertificate = irCACert
-			irTLSConfig.RequireClientCertificate = !tlsParams.ClientValidation.Optional
-			setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 		}
+
+		// Apply additional validation context fields (SPKI/cert hashes and SAN matchers) regardless of CA presence.
+		setTLSClientValidationContext(tlsParams.ClientValidation, irTLSConfig)
 
 		irCrl := &ir.TLSCrl{
 			Name: irTLSCrlName(policy.Namespace, policy.Name),
@@ -1031,7 +1063,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxConnectionDuration value %s", *connection.ConnectionLimit.MaxConnectionDuration)
 			}
-			irConnectionLimit.MaxConnectionDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxConnectionDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		if connection.ConnectionLimit.MaxRequestsPerConnection != nil {
@@ -1043,7 +1075,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			if err != nil {
 				return nil, fmt.Errorf("invalid MaxStreamDuration value %s", *connection.ConnectionLimit.MaxStreamDuration)
 			}
-			irConnectionLimit.MaxStreamDuration = ptr.To(metav1.Duration{Duration: d})
+			irConnectionLimit.MaxStreamDuration = ir.MetaV1DurationPtr(d)
 		}
 
 		irConnection.ConnectionLimit = irConnectionLimit

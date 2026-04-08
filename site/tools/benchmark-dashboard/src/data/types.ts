@@ -9,10 +9,10 @@ export interface TestConfiguration {
 }
 
 export interface LatencyMetrics {
-  min: number; // microseconds
-  mean: number; // microseconds
-  max: number; // microseconds
-  pstdev: number; // microseconds
+  min: number; // milliseconds
+  mean: number; // milliseconds
+  max: number; // milliseconds
+  pstdev: number; // milliseconds
   percentiles: {
     p50: number;
     p75: number;
