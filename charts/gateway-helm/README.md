@@ -33,7 +33,7 @@ Please refer to Helm's [documentation](https://helm.sh/docs) to get started.
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-helm/tags)
 
@@ -52,7 +52,7 @@ make kube-deploy TAG=latest
 You can install the eg chart along without Gateway API CRDs and Envoy Gateway CRDs, make sure CRDs exist in Cluster first if you want to skip to install them, otherwise EG may fail to start:
 
 ``` shell
-helm install eg --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
+helm install envoy-gateway --create-namespace oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --skip-crds
 ```
 
 To uninstall the chart:

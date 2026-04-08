@@ -20,7 +20,7 @@ so the `Gateway` resource has an Address associated with it. We recommend using 
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:

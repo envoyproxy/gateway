@@ -30,7 +30,7 @@ You can visit [Envoy Gateway Helm Chart](https://hub.docker.com/r/envoyproxy/gat
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -85,7 +85,7 @@ related to large CRDs in the `templates/` directory.
 Once the CRDs are installed, you can install the main Envoy Gateway Helm chart without re-applying CRDs by using the `--skip-crds` flag:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm \
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm \
   --version {{< helm-version >}} \
   -n envoy-gateway-system \
   --create-namespace \
@@ -113,7 +113,7 @@ If you want to know all the available fields inside the values.yaml file, please
 The Backend API is not enabled by default. Enable it via Helm values:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set config.envoyGateway.extensionApis.enableBackend=true
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set config.envoyGateway.extensionApis.enableBackend=true
 ```
 
 Or with a `values.yaml` file:
@@ -128,13 +128,13 @@ config:
 Then install using the file:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
 ### Increase the replicas
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set deployment.replicas=2
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set deployment.replicas=2
 ```
 
 ### Change the kubernetesClusterDomain name
@@ -142,7 +142,7 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-versi
 If you have installed your cluster with different domain name you can use below command.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace --set kubernetesClusterDomain=<domain name>
 ```
 
 **Note**: Above are some of the ways we can directly use for customization of our installation. But if you are looking for more complex changes [values.yaml](https://helm.sh/docs/chart_template_guide/values_files/) comes to rescue.
@@ -179,7 +179,7 @@ Here we have made three changes to our values.yaml file. Increase the resources 
 You can use the below command to install the envoy gateway using values.yaml file.
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
+helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace -f values.yaml
 ```
 
 {{< boilerplate open-ports >}}

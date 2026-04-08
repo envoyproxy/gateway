@@ -14,12 +14,12 @@ The documentation for the add-ons chart can be found
 Follow the instructions below to install the add-ons Helm chart.
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --create-namespace
+helm install envoy-gateway-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} -n monitoring --create-namespace
 ```
 
 By default, the [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) is **disabled.**
 To install add-ons with OpenTelemetry Collector enabled, use the following command.
 
 ```shell
-helm install eg-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
+helm install envoy-gateway-addons oci://docker.io/envoyproxy/gateway-addons-helm --version {{< helm-version >}} --set opentelemetry-collector.enabled=true -n monitoring --create-namespace
 ```
