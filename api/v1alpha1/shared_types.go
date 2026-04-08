@@ -220,7 +220,7 @@ type KubernetesPodSpec struct {
 	// +patchMergeKey=topologyKey
 	// +patchStrategy=merge
 	// +optional
-	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty" patchStrategy:"merge" patchMergeKey:"topologyKey"`
 
 	// PriorityClassName indicates the importance of a Pod relative to other Pods.
 	// If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.
