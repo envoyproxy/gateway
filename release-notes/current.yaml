@@ -65,6 +65,7 @@ bug fixes: |
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
+  Fixed `ws` and `wss` Backend appProtocols to force HTTP/1.1 upstream connections instead of negotiating HTTP/2, avoiding compatibility issues with WebSocket backends that do not support RFC 8441 extended CONNECT.
 
 # Enhancements that improve performance.
 performance improvements: |

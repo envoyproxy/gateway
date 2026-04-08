@@ -247,11 +247,15 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	// influence transport socket specific settings
 	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
+	requiresExplicitHTTP1Config := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
+		}
+		if ds.ForceHTTP1Upstream {
+			requiresExplicitHTTP1Config = true
 		}
 
 		if ds.Protocol == ir.TCP {
@@ -316,7 +320,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, requiresExplicitHTTP1Config)
 	if err != nil {
 		return nil, err
 	}
@@ -1041,7 +1045,7 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 	return *ep.Hostname
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, requiresExplicitHTTP1Config bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
@@ -1087,6 +1091,14 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1Opts,
 				Http2ProtocolOptions: http2Opts,
+			},
+		}
+	case requiresExplicitHTTP1Config:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1Opts,
+				},
 			},
 		}
 	case requiresHTTP2Options:

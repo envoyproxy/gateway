@@ -1901,8 +1901,11 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// ForceHTTP1Upstream requires Envoy to use explicit HTTP/1.1 upstream protocol selection.
+	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
+	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
+	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
