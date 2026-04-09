@@ -5,17 +5,23 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // LoadBalancer defines the load balancer policy to be applied.
 // +union
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' ? has(self.backendUtilization) : !has(self.backendUtilization)",message="If LoadBalancer type is BackendUtilization, backendUtilization field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStart) : true ",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? has(self.dynamicModule) : !has(self.dynamicModule)",message="If LoadBalancer type is DynamicModule, dynamicModule field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'DynamicModule'] ? !has(self.slowStart) : true",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not supported for ConsistentHash load balancers. Use weightedZones instead."
 // +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not currently supported for BackendUtilization load balancers. Only WeightedZones can be used with BackendUtilization."
+// +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.zoneAware) : true",message="ZoneAware routing is not supported for DynamicModule load balancers."
 // +kubebuilder:validation:XValidation:rule="has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) && has(self.zoneAware.weightedZones)) : true",message="ZoneAware PreferLocal and WeightedZones cannot be specified together."
+// +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.endpointOverride) : true",message="EndpointOverride is not supported for DynamicModule load balancers."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid LoadBalancerType values are
@@ -23,7 +29,8 @@ type LoadBalancer struct {
 	// "LeastRequest",
 	// "Random",
 	// "RoundRobin",
-	// "BackendUtilization".
+	// "BackendUtilization",
+	// "DynamicModule".
 	//
 	// +unionDiscriminator
 	Type LoadBalancerType `json:"type"`
@@ -38,6 +45,14 @@ type LoadBalancer struct {
 	//
 	// +optional
 	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty"`
+
+	// DynamicModule defines the configuration when the load balancer type is
+	// set to DynamicModule. The referenced module must be registered in the
+	// EnvoyProxy resource's dynamicModules allowlist.
+	//
+	// +optional
+	// +notImplementedHide
+	DynamicModule *DynamicModuleLBPolicy `json:"dynamicModule,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
 	// When specified, the load balancer will attempt to route requests to endpoints
@@ -61,7 +76,7 @@ type LoadBalancer struct {
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
-// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization
+// +kubebuilder:validation:Enum=ConsistentHash;LeastRequest;Random;RoundRobin;BackendUtilization;DynamicModule
 type LoadBalancerType string
 
 const (
@@ -75,6 +90,9 @@ const (
 	RoundRobinLoadBalancerType LoadBalancerType = "RoundRobin"
 	// BackendUtilizationLoadBalancerType load balancer policy.
 	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
+	// DynamicModuleLoadBalancerType load balancer policy.
+	// +notImplementedHide
+	DynamicModuleLoadBalancerType LoadBalancerType = "DynamicModule"
 )
 
 // ConsistentHash defines the configuration related to the consistent hash
@@ -211,6 +229,40 @@ type BackendUtilization struct {
 	// +optional
 	// +kubebuilder:default=false
 	KeepResponseHeaders *bool `json:"keepResponseHeaders,omitempty"`
+}
+
+// DynamicModuleLBPolicy configures a custom load balancing algorithm
+// implemented as a dynamic module (runtime-loaded shared library).
+// The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
+//
+// See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
+//
+// +notImplementedHide
+type DynamicModuleLBPolicy struct {
+	// Name references a dynamic module registered in the EnvoyProxy resource's
+	// dynamicModules list. The referenced module must exist in the registry;
+	// otherwise, the policy will be rejected.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// LBPolicyName identifies a specific load balancer implementation within
+	// the dynamic module. A single shared library can contain multiple LB
+	// policy implementations. This value is passed to the module's
+	// initialization function to select the appropriate implementation.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	LBPolicyName string `json:"lbPolicyName"`
+
+	// Config is optional configuration for the module's load balancer
+	// implementation. This is serialized and passed to the module's
+	// initialization function.
+	//
+	// +optional
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
 }
 
 // ConsistentHashType defines the type of input to hash on.
