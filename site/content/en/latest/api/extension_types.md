@@ -3755,6 +3755,7 @@ _Appears in:_
 | `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
+| `dynamicModule` | _[DynamicModuleLBPolicy](#dynamicmodulelbpolicy)_ |  false  |  | DynamicModule defines the configuration when the load balancer type is<br />set to DynamicModule. The referenced module must be registered in the<br />EnvoyProxy resource's dynamicModules allowlist. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
@@ -3776,7 +3777,7 @@ _Appears in:_
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 | `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
-| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
+| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalDynamicModuleSource

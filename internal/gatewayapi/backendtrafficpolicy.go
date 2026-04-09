@@ -452,6 +452,15 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		}
 	}
 
+	// Extract envoyProxy from the route's parent gateway context for use in policy translation.
+	var envoyProxy *egv1a1.EnvoyProxy
+	for _, pCtx := range parentRefCtxs {
+		if gw := pCtx.GetGateway(); gw != nil {
+			envoyProxy = gw.envoyProxy
+			break
+		}
+	}
+
 	// Set conditions for resolve error, then skip current xroute
 	if resolveErr != nil {
 		status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -465,7 +474,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 	if policy.Spec.MergeType == nil {
 		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil); err != nil {
+		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, envoyProxy); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -493,7 +502,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				gwPolicy := gatewayPolicyMap[gwMapKey]
 				if gwPolicy == nil && listenerPolicy == nil {
 					// not found, fall back to the current policy
-					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name, envoyProxy); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -513,7 +522,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
 					policy, parentPolicy, currTarget, gwNN, &listener.Name,
-					targetedRoute, xdsIR,
+					targetedRoute, xdsIR, envoyProxy,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -793,8 +802,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	xdsIR resource.XdsIRMap,
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, envoyProxy)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -818,6 +828,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
+	envoyProxy *egv1a1.EnvoyProxy,
 ) error {
 	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
@@ -825,7 +836,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	}
 
 	// Build traffic features from the merged policy
-	tf, errs := t.buildTrafficFeatures(mergedPolicy)
+	tf, errs := t.buildTrafficFeatures(mergedPolicy, envoyProxy)
 	if tf == nil {
 		// should not happen
 		return nil
@@ -840,8 +851,8 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
 	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
-		tfRoute, _ := t.buildTrafficFeatures(policy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, envoyProxy)
+		tfRoute, _ := t.buildTrafficFeatures(policy, envoyProxy)
 
 		if tfGW != nil && tfRoute != nil &&
 			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
@@ -855,7 +866,7 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		}
 	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy)
+		tfGW, _ := t.buildTrafficFeatures(parentPolicy, envoyProxy)
 		if tfGW != nil && tfGW.RateLimit != nil {
 			// Use the gateway policy's rate limit with its original rule names
 			tf.RateLimit = tfGW.RateLimit
@@ -1026,7 +1037,7 @@ func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.Bac
 }
 
 // buildTrafficFeatures builds IR traffic features from a BackendTrafficPolicy.
-func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
+func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy, envoyProxy *egv1a1.EnvoyProxy) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
 		lb          *ir.LoadBalancer
@@ -1053,7 +1064,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 			errs = errors.Join(errs, err)
 		}
 	}
-	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings); err != nil {
+	if lb, err = buildLoadBalancer(&policy.Spec.ClusterSettings, envoyProxy); err != nil {
 		err = perr.WithMessage(err, "LoadBalancer")
 		errs = errors.Join(errs, err)
 	}
@@ -1172,7 +1183,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 	policy *egv1a1.BackendTrafficPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	gateway *GatewayContext, xdsIR resource.XdsIRMap,
 ) error {
-	tf, errs := t.buildTrafficFeatures(policy)
+	tf, errs := t.buildTrafficFeatures(policy, gateway.envoyProxy)
 	if tf == nil {
 		// should not happen
 		return errs

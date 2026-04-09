@@ -17,11 +17,13 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	dfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	commondfpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/common/dynamic_forward_proxy/v3"
+	dmconfigv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/dynamic_modules/v3"
 	codecv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/upstream_codec/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
+	dmlbv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/dynamic_modules/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
 	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
@@ -472,6 +474,50 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 				TypedExtensionConfig: &corev3.TypedExtensionConfig{
 					Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
 					TypedConfig: typedCSWRR,
+				},
+			}},
+		}
+	case args.loadBalancer.DynamicModuleLB != nil:
+		dm := args.loadBalancer.DynamicModuleLB
+
+		// Only local module sources are supported for LB policies.
+		// Remote sources are rejected at the gateway API validation layer.
+		moduleSource := &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Local{
+				Local: &corev3.DataSource{
+					Specifier: &corev3.DataSource_Filename{
+						Filename: dm.Path,
+					},
+				},
+			},
+		}
+
+		dmlbConfig := &dmlbv3.DynamicModulesLoadBalancerConfig{
+			DynamicModuleConfig: &dmconfigv3.DynamicModuleConfig{
+				Module:       moduleSource,
+				DoNotClose:   dm.DoNotClose,
+				LoadGlobally: dm.LoadGlobally,
+			},
+			LbPolicyName: dm.LBPolicyName,
+		}
+
+		if dm.Config != nil && dm.Config.Raw != nil {
+			configAny, err := anypb.New(wrapperspb.String(string(dm.Config.Raw)))
+			if err != nil {
+				return nil, err
+			}
+			dmlbConfig.LbPolicyConfig = configAny
+		}
+
+		typedDMLB, err := proto.ToAnyWithValidation(dmlbConfig)
+		if err != nil {
+			return nil, err
+		}
+		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
+			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+				TypedExtensionConfig: &corev3.TypedExtensionConfig{
+					Name:        "envoy.load_balancing_policies.dynamic_modules",
+					TypedConfig: typedDMLB,
 				},
 			}},
 		}

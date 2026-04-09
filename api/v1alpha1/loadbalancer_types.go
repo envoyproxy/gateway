@@ -50,7 +50,6 @@ type LoadBalancer struct {
 	// EnvoyProxy resource's dynamicModules allowlist.
 	//
 	// +optional
-	// +notImplementedHide
 	DynamicModule *DynamicModuleLBPolicy `json:"dynamicModule,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
@@ -90,7 +89,6 @@ const (
 	// BackendUtilizationLoadBalancerType load balancer policy.
 	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
 	// DynamicModuleLoadBalancerType load balancer policy.
-	// +notImplementedHide
 	DynamicModuleLoadBalancerType LoadBalancerType = "DynamicModule"
 )
 
@@ -236,7 +234,6 @@ type BackendUtilization struct {
 //
 // See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
 //
-// +notImplementedHide
 type DynamicModuleLBPolicy struct {
 	// Name references a dynamic module registered in the EnvoyProxy resource's
 	// dynamicModules list. The referenced module must exist in the registry;

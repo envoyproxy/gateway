@@ -55,7 +55,9 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.CircuitBreaker = cb
 	}
 
-	if lb, err := buildLoadBalancer(policy); err != nil {
+	// envoyProxy is nil here because translateTrafficFeatures is used by non-BTP callers
+	// (SecurityPolicy, EnvoyExtensionPolicy, Listener) where DynamicModule LB is not applicable.
+	if lb, err := buildLoadBalancer(policy, nil); err != nil {
 		return nil, err
 	} else {
 		ret.LoadBalancer = lb
@@ -312,7 +314,7 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	return cb, nil
 }
 
-func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyProxy) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -400,6 +402,49 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 			lb.BackendUtilization.SlowStart = &ir.SlowStart{
 				Window: ir.MetaV1DurationPtr(d),
 			}
+		}
+	case egv1a1.DynamicModuleLoadBalancerType:
+		dm := policy.LoadBalancer.DynamicModule
+		if dm == nil {
+			return nil, fmt.Errorf("DynamicModule field is required when type is DynamicModule")
+		}
+		if envoyProxy == nil {
+			return nil, fmt.Errorf("EnvoyProxy is required for DynamicModule load balancer policy")
+		}
+
+		var entry *egv1a1.DynamicModuleEntry
+		for i := range envoyProxy.Spec.DynamicModules {
+			if envoyProxy.Spec.DynamicModules[i].Name == dm.Name {
+				entry = &envoyProxy.Spec.DynamicModules[i]
+				break
+			}
+		}
+		if entry == nil {
+			return nil, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", dm.Name)
+		}
+
+		irDM := &ir.DynamicModuleLB{
+			Name:         dm.Name,
+			LBPolicyName: dm.LBPolicyName,
+			Config:       dm.Config,
+			DoNotClose:   ptr.Deref(entry.DoNotClose, false),
+			LoadGlobally: ptr.Deref(entry.LoadGlobally, false),
+		}
+
+		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
+		case egv1a1.RemoteDynamicModuleSourceType:
+			return nil, fmt.Errorf("dynamic module %q: remote source is not yet supported for load balancer policies", dm.Name)
+		case egv1a1.LocalDynamicModuleSourceType:
+			if entry.Source.Local == nil || entry.Source.Local.Path == "" {
+				return nil, fmt.Errorf("dynamic module %q has no local source path configured", dm.Name)
+			}
+			irDM.Path = entry.Source.Local.Path
+		default:
+			return nil, fmt.Errorf("dynamic module %q has unsupported source type %q", dm.Name, sourceType)
+		}
+
+		lb = &ir.LoadBalancer{
+			DynamicModuleLB: irDM,
 		}
 	}
 
