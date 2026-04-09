@@ -274,7 +274,13 @@ spec:
                             clientIPGeoLocations:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+                                This field is supported for HTTPRoute and GRPCRoute authorization.
+                                It is not supported for TCPRoute targets.
+
                                 If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+
+                                The client IP is inferred from the X-Forwarded-For header or a custom header.
+                                You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
                               items:
                                 description: ClientIPGeoLocation specifies geolocation-based
                                   match criteria for authorization.
@@ -1520,6 +1526,57 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -1641,6 +1698,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -1674,7 +1765,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -1694,12 +1785,16 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -1779,26 +1874,42 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -1953,6 +2064,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -2805,6 +2922,57 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -2926,6 +3094,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -2959,7 +3161,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -2979,12 +3181,16 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -3064,26 +3270,42 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -3238,6 +3460,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object
@@ -4347,6 +4575,58 @@ spec:
                                     LoadBalancer policy to apply when routing traffic from the gateway to
                                     the backend endpoints. Defaults to `LeastRequest`.
                                   properties:
+                                    backendUtilization:
+                                      description: |-
+                                        BackendUtilization defines the configuration when the load balancer type is
+                                        set to BackendUtilization.
+                                      properties:
+                                        blackoutPeriod:
+                                          description: |-
+                                            A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                            Default is 10s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        errorUtilizationPenaltyPercent:
+                                          description: |-
+                                            ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                            This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                            For example:
+                                            - 100 => 1.0x
+                                            - 120 => 1.2x
+                                            - 200 => 2.0x
+
+                                            Must be non-negative.
+                                          format: int32
+                                          minimum: 0
+                                          type: integer
+                                        keepResponseHeaders:
+                                          default: false
+                                          description: |-
+                                            KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                            Defaults to false.
+                                          type: boolean
+                                        metricNamesForComputingUtilization:
+                                          description: |-
+                                            Metric names used to compute utilization if application_utilization is not set.
+                                            For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                          items:
+                                            type: string
+                                          type: array
+                                        weightExpirationPeriod:
+                                          description: If a given endpoint has not
+                                            reported load metrics in this long, stop
+                                            using the reported weight. Defaults to
+                                            3m.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        weightUpdatePeriod:
+                                          description: How often endpoint weights
+                                            are recalculated. Values less than 100ms
+                                            are capped at 100ms. Default 1s.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
                                     consistentHash:
                                       description: |-
                                         ConsistentHash defines the configuration when the load balancer type is
@@ -4470,6 +4750,40 @@ spec:
                                           the queryParams field must be set.
                                         rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                           : !has(self.queryParams)'
+                                    dynamicModule:
+                                      description: |-
+                                        DynamicModule defines the configuration when the load balancer type is
+                                        set to DynamicModule. The referenced module must be registered in the
+                                        EnvoyProxy resource's dynamicModules allowlist.
+                                      properties:
+                                        config:
+                                          description: |-
+                                            Config is optional configuration for the module's load balancer
+                                            implementation. This is serialized and passed to the module's
+                                            initialization function.
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        lbPolicyName:
+                                          description: |-
+                                            LBPolicyName identifies a specific load balancer implementation within
+                                            the dynamic module. A single shared library can contain multiple LB
+                                            policy implementations. This value is passed to the module's
+                                            initialization function to select the appropriate implementation.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        name:
+                                          description: |-
+                                            Name references a dynamic module registered in the EnvoyProxy resource's
+                                            dynamicModules list. The referenced module must exist in the registry;
+                                            otherwise, the policy will be rejected.
+                                          maxLength: 253
+                                          minLength: 1
+                                          pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                          type: string
+                                      required:
+                                      - lbPolicyName
+                                      - name
+                                      type: object
                                     endpointOverride:
                                       description: |-
                                         EndpointOverride defines the configuration for endpoint override.
@@ -4504,7 +4818,7 @@ spec:
                                       description: |-
                                         SlowStart defines the configuration related to the slow start load balancer policy.
                                         If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                        Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                        Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                       properties:
                                         window:
                                           description: |-
@@ -4524,12 +4838,16 @@ spec:
                                         "ConsistentHash",
                                         "LeastRequest",
                                         "Random",
-                                        "RoundRobin".
+                                        "RoundRobin",
+                                        "BackendUtilization",
+                                        "DynamicModule".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
+                                      - BackendUtilization
+                                      - DynamicModule
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -4610,26 +4928,44 @@ spec:
                                       consistentHash field needs to be set.
                                     rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                       : !has(self.consistentHash)'
+                                  - message: If LoadBalancer type is BackendUtilization,
+                                      backendUtilization field needs to be set.
+                                    rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                      : !has(self.backendUtilization)'
+                                  - message: If LoadBalancer type is DynamicModule,
+                                      dynamicModule field needs to be set.
+                                    rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                      : !has(self.dynamicModule)'
                                   - message: Currently SlowStart is only supported
-                                      for RoundRobin and LeastRequest load balancers.
-                                    rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                      ? !has(self.slowStart) : true '
+                                      for RoundRobin, LeastRequest, and BackendUtilization
+                                      load balancers.
+                                    rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                      ''DynamicModule''] ? !has(self.slowStart) :
+                                      true'
                                   - message: PreferLocal zone-aware routing is not
                                       supported for ConsistentHash load balancers.
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: ZoneAware routing is not supported for
+                                      BackendUtilization and DynamicModule load balancers.
+                                    rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                      ? !has(self.zoneAware) : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                       && has(self.zoneAware.weightedZones)) : true'
+                                  - message: EndpointOverride is not supported for
+                                      DynamicModule load balancers.
+                                    rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                      : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
                                   properties:
                                     version:
                                       description: |-
-                                        Version of ProxyProtol
+                                        Version of ProxyProtocol
                                         Valid ProxyProtocolVersion values are
                                         "V1"
                                         "V2"
@@ -4787,6 +5123,12 @@ spec:
                                             from the upstream.
                                           pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                           type: string
+                                        streamIdleTimeout:
+                                          description: |2-
+                                             The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                             If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
                                       type: object
                                     tcp:
                                       description: Timeout settings for TCP.
@@ -4845,7 +5187,7 @@ spec:
                         rule: has(self.remoteJWKS) || has(self.localJWKS)
                       - message: remoteJWKS and localJWKS cannot both be specified.
                         rule: '!(has(self.remoteJWKS) && has(self.localJWKS))'
-                    maxItems: 4
+                    maxItems: 16
                     minItems: 1
                     type: array
                 required:
@@ -5908,6 +6250,57 @@ spec:
                               LoadBalancer policy to apply when routing traffic from the gateway to
                               the backend endpoints. Defaults to `LeastRequest`.
                             properties:
+                              backendUtilization:
+                                description: |-
+                                  BackendUtilization defines the configuration when the load balancer type is
+                                  set to BackendUtilization.
+                                properties:
+                                  blackoutPeriod:
+                                    description: |-
+                                      A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.
+                                      Default is 10s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  errorUtilizationPenaltyPercent:
+                                    description: |-
+                                      ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).
+                                      This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.
+
+                                      For example:
+                                      - 100 => 1.0x
+                                      - 120 => 1.2x
+                                      - 200 => 2.0x
+
+                                      Must be non-negative.
+                                    format: int32
+                                    minimum: 0
+                                    type: integer
+                                  keepResponseHeaders:
+                                    default: false
+                                    description: |-
+                                      KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.
+                                      Defaults to false.
+                                    type: boolean
+                                  metricNamesForComputingUtilization:
+                                    description: |-
+                                      Metric names used to compute utilization if application_utilization is not set.
+                                      For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo".
+                                    items:
+                                      type: string
+                                    type: array
+                                  weightExpirationPeriod:
+                                    description: If a given endpoint has not reported
+                                      load metrics in this long, stop using the reported
+                                      weight. Defaults to 3m.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  weightUpdatePeriod:
+                                    description: How often endpoint weights are recalculated.
+                                      Values less than 100ms are capped at 100ms.
+                                      Default 1s.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                type: object
                               consistentHash:
                                 description: |-
                                   ConsistentHash defines the configuration when the load balancer type is
@@ -6029,6 +6422,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -6062,7 +6489,7 @@ spec:
                                 description: |-
                                   SlowStart defines the configuration related to the slow start load balancer policy.
                                   If set, during slow start window, traffic sent to the newly added hosts will gradually increase.
-                                  Currently this is only supported for RoundRobin and LeastRequest load balancers
+                                  Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers.
                                 properties:
                                   window:
                                     description: |-
@@ -6082,12 +6509,16 @@ spec:
                                   "ConsistentHash",
                                   "LeastRequest",
                                   "Random",
-                                  "RoundRobin".
+                                  "RoundRobin",
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
+                                - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -6167,26 +6598,42 @@ spec:
                                 field needs to be set.
                               rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                                 : !has(self.consistentHash)'
-                            - message: Currently SlowStart is only supported for RoundRobin
-                                and LeastRequest load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                            - message: If LoadBalancer type is BackendUtilization,
+                                backendUtilization field needs to be set.
+                              rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
+                                : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
+                            - message: Currently SlowStart is only supported for RoundRobin,
+                                LeastRequest, and BackendUtilization load balancers.
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for BackendUtilization
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
                             properties:
                               version:
                                 description: |-
-                                  Version of ProxyProtol
+                                  Version of ProxyProtocol
                                   Valid ProxyProtocolVersion values are
                                   "V1"
                                   "V2"
@@ -6341,6 +6788,12 @@ spec:
                                   requestTimeout:
                                     description: RequestTimeout is the time until
                                       which entire response is received from the upstream.
+                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                    type: string
+                                  streamIdleTimeout:
+                                    description: |2-
+                                       The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                       If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
                                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                                     type: string
                                 type: object

@@ -274,6 +274,7 @@ In this example, the route-level policy merges with the gateway-level policy, re
 - [Basic Authentication](../../tasks/security/basic-auth.md)
 - [CORS](../../tasks/security/cors.md)
 - [External Authorization](../../tasks/security/ext-auth.md)
+- [GeoIP Authorization](../../tasks/security/geoip-authorization.md)
 - [IP Allowlist/Denylist](../../tasks/security/restrict-ip-access.md)
 - [JWT Authentication](../../tasks/security/jwt-authentication.md)
 - [JWT Claim Based Authorization](../../tasks/security/jwt-claim-authorization.md)

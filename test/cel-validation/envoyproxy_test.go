@@ -1675,6 +1675,232 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			},
 		},
 		{
+			desc: "valid-sampler-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{Type: egv1a1.OTelSamplerTypeAlwaysOn},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "valid-sampler-trace-id-ratio-with-sampling-percentage",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeTraceIDRatio,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "valid-sampler-parent-based-trace-id-ratio-with-sampling-percentage",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedTraceIDRatio,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeAlwaysOn,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-always-off",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeAlwaysOff,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-parent-based-always-on",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedAlwaysOn,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
+			},
+		},
+		{
+			desc: "invalid-sampler-sampling-percentage-with-parent-based-always-off",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Tracing: &egv1a1.ProxyTracing{
+							Provider: egv1a1.TracingProvider{
+								Type: egv1a1.TracingProviderTypeOpenTelemetry,
+								BackendCluster: egv1a1.BackendCluster{
+									BackendRefs: []egv1a1.BackendRef{
+										{
+											BackendObjectReference: gwapiv1.BackendObjectReference{
+												Name: "otel-collector",
+												Kind: ptr.To(gwapiv1.Kind("Service")),
+												Port: ptr.To(gwapiv1.PortNumber(4317)),
+											},
+										},
+									},
+								},
+								OpenTelemetry: &egv1a1.OpenTelemetryTracingProvider{
+									Sampler: &egv1a1.OTelSampler{
+										Type:               egv1a1.OTelSamplerTypeParentBasedAlwaysOff,
+										SamplingPercentage: &gwapiv1.Fraction{Numerator: 50},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"samplingPercentage can only be set with TraceIdRatio or ParentBasedTraceIdRatio",
+			},
+		},
+		{
 			desc: "backendRefs-backend",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -2087,6 +2313,26 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "valid: dynamicModules with remote source",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "remote-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https://modules.example.com/libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid: dynamicModules with empty name",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{
@@ -2160,6 +2406,68 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"If type is Remote, remote field needs to be set"},
+		},
+		{
+			desc: "invalid: dynamicModules remote source missing sha256",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL: "https://modules.example.com/libremote.so",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.remote.sha256 in body should match"},
+		},
+		{
+			desc: "invalid: dynamicModules remote source without hostname",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https:///libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"spec.dynamicModules[0].source.remote.url in body should match"},
+		},
+		{
+			desc: "invalid: dynamicModules source type Remote with local field",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					DynamicModules: []egv1a1.DynamicModuleEntry{
+						{
+							Name: "my-module",
+							Source: egv1a1.DynamicModuleSource{
+								Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+								Local: &egv1a1.LocalDynamicModuleSource{
+									Path: "/opt/modules/my_module.so",
+								},
+								Remote: &egv1a1.RemoteDynamicModuleSource{
+									URL:    "https://modules.example.com/libremote.so",
+									SHA256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"If type is Remote, local field must not be set"},
 		},
 	}
 

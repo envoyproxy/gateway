@@ -149,7 +149,17 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
 			} else {
-				msd = ptr.To(metav1.Duration{Duration: d})
+				msd = ir.MetaV1DurationPtr(d)
+			}
+		}
+
+		var sit *metav1.Duration
+		if pto.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamIdleTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
+			} else {
+				sit = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
@@ -158,6 +168,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
 			MaxStreamDuration:     msd,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs
@@ -343,6 +354,50 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				return nil, err
 			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
+				Window: ir.MetaV1DurationPtr(d),
+			}
+		}
+	case egv1a1.BackendUtilizationLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			BackendUtilization: &ir.BackendUtilization{},
+		}
+		backendUtilization := policy.LoadBalancer.BackendUtilization
+		if backendUtilization != nil {
+			if backendUtilization.BlackoutPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid BlackoutPeriod value %s: %w", *backendUtilization.BlackoutPeriod, err)
+				}
+				lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightExpirationPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightExpirationPeriod value %s: %w", *backendUtilization.WeightExpirationPeriod, err)
+				}
+				lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightUpdatePeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightUpdatePeriod value %s: %w", *backendUtilization.WeightUpdatePeriod, err)
+				}
+				lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
+				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
+			}
+			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
+				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
+			}
+			lb.BackendUtilization.KeepResponseHeaders = ptr.To(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
+		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
+			lb.BackendUtilization.SlowStart = &ir.SlowStart{
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
