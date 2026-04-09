@@ -2478,7 +2478,9 @@ func (t *Translator) processBackendDestinationSetting(
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
-		forceHTTP1Upstream = forceHTTP1Upstream || backendAppProtocolRequiresHTTP1Upstream(ap)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketBackendAppProtocol(ap)
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
@@ -2572,11 +2574,8 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	}
 }
 
-func backendAppProtocolRequiresHTTP1Upstream(ap egv1a1.AppProtocolType) bool {
+func isWebSocketBackendAppProtocol(ap egv1a1.AppProtocolType) bool {
 	switch ap {
-	// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
-	// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
-	//
 	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
 		return true
 	default:
