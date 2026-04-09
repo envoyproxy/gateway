@@ -1391,6 +1391,14 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 		}
 	}
 
+	// Pre-build listener name lookup to avoid repeated linear scans via GetHTTPListener.
+	listenerByName := make(map[string]*ir.HTTPListener)
+	for _, xds := range xdsIR {
+		for _, hl := range xds.HTTP {
+			listenerByName[hl.Name] = hl
+		}
+	}
+
 	// Set the Overlap warning condition only on parentRefs whose listeners
 	// match an IR listener where the overlap was detected.
 	for rKey, info := range routeByKey {
@@ -1398,8 +1406,7 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 		for _, parentRef := range info.parentRefs {
 			var conflicts map[string]struct{}
 			for _, listener := range parentRef.listeners {
-				irKey := t.getIRKey(listener.gateway.Gateway)
-				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				irListener := listenerByName[irListenerName(listener)]
 				if irListener == nil {
 					continue
 				}
