@@ -206,6 +206,15 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+
+	// XDSTLSCAPath overrides the default CA certificate path (/certs/ca.crt) used for
+	// xDS mTLS between the Envoy proxy and the Envoy Gateway controller.
+	// When set, the SDS trusted CA config will reference this path instead of the default.
+	// This allows using a separately managed CA bundle (e.g. from trust-manager) that
+	// updates independently of the leaf certificate secret, enabling non-disruptive CA rotation.
+	//
+	// +optional
+	XDSTLSCAPath *string `json:"xdsTLSCAPath,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.

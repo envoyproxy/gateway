@@ -320,8 +320,13 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
+	caPath := XdsTLSCaFilepath
+	if p := r.infra.GetProxyConfig().Spec.XDSTLSCAPath; p != nil {
+		caPath = *p
+	}
+
 	data := map[string]string{
-		common.SdsCAFilename:   common.GetSdsCAConfigMapData(XdsTLSCaFilepath),
+		common.SdsCAFilename:   common.GetSdsCAConfigMapData(caPath),
 		common.SdsCertFilename: common.GetSdsCertConfigMapData(XdsTLSCertFilepath, XdsTLSKeyFilepath),
 	}
 

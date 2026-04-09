@@ -82,10 +82,9 @@ type Config struct {
 	ExtensionManager  extension.Manager
 	ProviderResources *message.ProviderResources
 	RunnerErrors      *message.RunnerErrors
-	// Test-configurable TLS paths
-	TLSCertPath string
-	TLSKeyPath  string
-	TLSCaPath   string
+	TLSCertPath       string // test override
+	TLSKeyPath        string // test override
+	TLSCaPath         string // CLI flag --xds-tls-ca-path or test override
 }
 
 type Runner struct {
@@ -391,38 +390,37 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 func (r *Runner) loadTLSConfig() (*tls.Config, error) {
 	var certPath, keyPath, caPath string
 
-	// Use test-configurable paths if provided
-	if r.TLSCertPath != "" && r.TLSKeyPath != "" && r.TLSCaPath != "" {
+	switch {
+	case r.TLSCertPath != "" && r.TLSKeyPath != "" && r.TLSCaPath != "":
 		certPath = r.TLSCertPath
 		keyPath = r.TLSKeyPath
 		caPath = r.TLSCaPath
-	} else {
-		// Use default paths based on provider type
-		switch {
-		case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
-			certPath = xdsTLSCertFilepath
-			keyPath = xdsTLSKeyFilepath
-			caPath = xdsTLSCaFilepath
-		case r.EnvoyGateway.Provider.IsRunningOnHost():
-			// Get config
-			var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
-			if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
-				p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
-				hostCfg = p.Custom.Infrastructure.Host
-			}
-
-			paths, err := host.GetPaths(hostCfg)
-			if err != nil {
-				return nil, fmt.Errorf("failed to determine paths: %w", err)
-			}
-
-			certDir := paths.CertDir("envoy-gateway")
-			certPath = filepath.Join(certDir, "tls.crt")
-			keyPath = filepath.Join(certDir, "tls.key")
-			caPath = filepath.Join(certDir, "ca.crt")
-		default:
-			return nil, fmt.Errorf("no valid tls certificates")
+	case r.EnvoyGateway.Provider.IsRunningOnKubernetes():
+		certPath = xdsTLSCertFilepath
+		keyPath = xdsTLSKeyFilepath
+		caPath = xdsTLSCaFilepath
+	case r.EnvoyGateway.Provider.IsRunningOnHost():
+		var hostCfg *egv1a1.EnvoyGatewayHostInfrastructureProvider
+		if p := r.EnvoyGateway.Provider; p != nil && p.Custom != nil &&
+			p.Custom.Infrastructure != nil && p.Custom.Infrastructure.Host != nil {
+			hostCfg = p.Custom.Infrastructure.Host
 		}
+
+		paths, err := host.GetPaths(hostCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to determine paths: %w", err)
+		}
+
+		certDir := paths.CertDir("envoy-gateway")
+		certPath = filepath.Join(certDir, "tls.crt")
+		keyPath = filepath.Join(certDir, "tls.key")
+		caPath = filepath.Join(certDir, "ca.crt")
+	default:
+		return nil, fmt.Errorf("no valid tls certificates")
+	}
+
+	if r.TLSCaPath != "" {
+		caPath = r.TLSCaPath
 	}
 
 	tlsConfig, err := crypto.LoadTLSConfig(certPath, keyPath, caPath)
