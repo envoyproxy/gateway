@@ -85,6 +85,10 @@
               address: primary.foo.com
               portValue: 9000
         loadBalancingWeight: 1
+        metadata:
+          filterMetadata:
+            envoy.transport_socket_match:
+              name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/tls/0
       loadBalancingWeight: 1
       locality:
         region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/0
@@ -99,6 +103,37 @@
   name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
+  transportSocket:
+    name: dummy.transport_socket
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext: {}
+  transportSocketMatches:
+  - match:
+      name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/tls/0
+    name: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/tls/0
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        commonTlsContext:
+          combinedValidationContext:
+            defaultValidationContext:
+              matchTypedSubjectAltNames:
+              - matcher:
+                  exact: primary.foo.com
+                sanType: DNS
+            validationContextSdsSecretConfig:
+              name: backend-fqdn/default-ca
+              sdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: default/authz-tls
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+        sni: primary.foo.com
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:

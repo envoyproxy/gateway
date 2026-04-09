@@ -428,15 +428,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, cert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&cert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 		}
@@ -828,15 +821,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, clientCert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&clientCert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 			if err := t.addXdsTCPFilterChain(
@@ -1408,6 +1394,21 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting) error {
+	var errs error
+	for _, st := range settings {
+		if st.TLS != nil {
+			for _, c := range st.TLS.ClientCertificates {
+				secret := buildXdsTLSCertSecret(&c)
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					errs = errors.Join(errs, err)
+				}
+			}
+		}
+	}
+	return errs
 }
 
 func stringMatched(matcher *ir.StringMatch, str string) bool {
