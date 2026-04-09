@@ -1817,7 +1817,8 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1850,6 +1851,27 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 		}
 	}
 	return false
+}
+
+// HasMixedUpstreamProtocolRequirements returns true if destination settings require
+// mutually exclusive cluster-level upstream protocol configuration.
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+	hasForceHTTP1Upstream := false
+	hasHTTP2Upstream := false
+
+	for _, setting := range r.Settings {
+		if setting == nil {
+			continue
+		}
+		if setting.ForceHTTP1Upstream {
+			hasForceHTTP1Upstream = true
+		}
+		if setting.Protocol == HTTP2 || setting.Protocol == GRPC {
+			hasHTTP2Upstream = true
+		}
+	}
+
+	return hasForceHTTP1Upstream && hasHTTP2Upstream
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
