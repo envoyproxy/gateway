@@ -58,7 +58,7 @@ func TestRouteMatchesOverlap(t *testing.T) {
 			overlap: false,
 		},
 		{
-			name: "prefix paths are not detected as overlap",
+			name: "identical prefix paths are detected as overlap",
 			a: &ir.HTTPRoute{
 				Hostname:  "example.com",
 				PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
@@ -67,17 +67,17 @@ func TestRouteMatchesOverlap(t *testing.T) {
 				Hostname:  "example.com",
 				PathMatch: &ir.StringMatch{Prefix: ptr.To("/api")},
 			},
-			overlap: false,
+			overlap: true,
 		},
 		{
-			name: "nil path matches are not detected as overlap",
+			name: "nil path matches are detected as overlap",
 			a: &ir.HTTPRoute{
 				Hostname: "example.com",
 			},
 			b: &ir.HTTPRoute{
 				Hostname: "example.com",
 			},
-			overlap: false,
+			overlap: true,
 		},
 		{
 			name: "exact vs prefix same value not overlap",
@@ -161,7 +161,7 @@ func TestRouteMatchesOverlap(t *testing.T) {
 			overlap: true,
 		},
 		{
-			name: "regex path matches are not detected as overlap",
+			name: "identical regex path matches are detected as overlap",
 			a: &ir.HTTPRoute{
 				Hostname:  "example.com",
 				PathMatch: &ir.StringMatch{SafeRegex: ptr.To("/foo.*")},
@@ -170,7 +170,7 @@ func TestRouteMatchesOverlap(t *testing.T) {
 				Hostname:  "example.com",
 				PathMatch: &ir.StringMatch{SafeRegex: ptr.To("/foo.*")},
 			},
-			overlap: false,
+			overlap: true,
 		},
 	}
 
@@ -223,6 +223,18 @@ func TestStringMatchEqual(t *testing.T) {
 			a:     &ir.StringMatch{Name: "h", Distinct: true},
 			b:     &ir.StringMatch{Name: "h", Distinct: false},
 			equal: false,
+		},
+		{
+			name:  "different invert",
+			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
+			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v")},
+			equal: false,
+		},
+		{
+			name:  "same invert",
+			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
+			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
+			equal: true,
 		},
 	}
 

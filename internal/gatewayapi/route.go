@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1327,8 +1328,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-// checkRouteOverlaps detects overlapping route matches across all IR listeners
-// and sets a warning Overlap condition on the affected HTTPRoutes.
 // routeKey returns a "namespace/name" key for a route resource metadata.
 func routeKey(namespace, name string) string {
 	return namespace + "/" + name
@@ -1358,17 +1357,19 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 	for _, xds := range xdsIR {
 		for _, httpListener := range xds.HTTP {
 			routes := httpListener.Routes
+			// Pre-compute route keys
+			keys := make([]string, len(routes))
+			for i, r := range routes {
+				if r.Metadata != nil {
+					keys[i] = routeKey(r.Metadata.Namespace, r.Metadata.Name)
+				}
+			}
 			for i := 0; i < len(routes); i++ {
-				if routes[i].Metadata == nil {
+				if keys[i] == "" {
 					continue
 				}
-				aKey := routeKey(routes[i].Metadata.Namespace, routes[i].Metadata.Name)
 				for j := i + 1; j < len(routes); j++ {
-					if routes[j].Metadata == nil {
-						continue
-					}
-					bKey := routeKey(routes[j].Metadata.Namespace, routes[j].Metadata.Name)
-					if aKey == bKey {
+					if keys[j] == "" || keys[i] == keys[j] {
 						continue
 					}
 					if routeMatchesOverlap(routes[i], routes[j]) {
@@ -1376,14 +1377,14 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 							overlaps[httpListener.Name] = make(listenerOverlaps)
 						}
 						lo := overlaps[httpListener.Name]
-						if lo[aKey] == nil {
-							lo[aKey] = make(map[string]struct{})
+						if lo[keys[i]] == nil {
+							lo[keys[i]] = make(map[string]struct{})
 						}
-						if lo[bKey] == nil {
-							lo[bKey] = make(map[string]struct{})
+						if lo[keys[j]] == nil {
+							lo[keys[j]] = make(map[string]struct{})
 						}
-						lo[aKey][bKey] = struct{}{}
-						lo[bKey][aKey] = struct{}{}
+						lo[keys[i]][keys[j]] = struct{}{}
+						lo[keys[j]][keys[i]] = struct{}{}
 					}
 				}
 			}
@@ -1444,19 +1445,10 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 
 // routeMatchesOverlap checks if two IR HTTP routes have identical match conditions,
 // indicating that they match the same set of requests.
-// This detects routes with the same hostname and identical exact path, header, query param,
-// and cookie match conditions. Only routes with explicit exact path matches are checked;
-// prefix path matches can intentionally overlap across HTTPRoute resources
-// and are resolved through precedence ordering.
+// This detects routes with the same hostname and identical path, header, query param,
+// and cookie match conditions across all path match types (exact, prefix, regex).
 func routeMatchesOverlap(a, b *ir.HTTPRoute) bool {
 	if a.Hostname != b.Hostname {
-		return false
-	}
-	// Only detect overlap for routes with explicit exact path matches.
-	if a.PathMatch == nil || b.PathMatch == nil {
-		return false
-	}
-	if a.PathMatch.Exact == nil || b.PathMatch.Exact == nil {
 		return false
 	}
 	if !stringMatchEqual(a.PathMatch, b.PathMatch) {
@@ -1481,47 +1473,17 @@ func stringMatchEqual(a, b *ir.StringMatch) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	if !ptrStringEqual(a.Exact, b.Exact) {
-		return false
-	}
-	if !ptrStringEqual(a.Prefix, b.Prefix) {
-		return false
-	}
-	if !ptrStringEqual(a.Suffix, b.Suffix) {
-		return false
-	}
-	if !ptrStringEqual(a.SafeRegex, b.SafeRegex) {
-		return false
-	}
-	if a.Name != b.Name {
-		return false
-	}
-	if a.Distinct != b.Distinct {
-		return false
-	}
-	return true
+	return a.Name == b.Name &&
+		a.Distinct == b.Distinct &&
+		ptr.Equal(a.Exact, b.Exact) &&
+		ptr.Equal(a.Prefix, b.Prefix) &&
+		ptr.Equal(a.Suffix, b.Suffix) &&
+		ptr.Equal(a.SafeRegex, b.SafeRegex) &&
+		ptr.Equal(a.Invert, b.Invert)
 }
 
 func stringMatchSliceEqual(a, b []*ir.StringMatch) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if !stringMatchEqual(a[i], b[i]) {
-			return false
-		}
-	}
-	return true
-}
-
-func ptrStringEqual(a, b *string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
+	return slices.EqualFunc(a, b, stringMatchEqual)
 }
 
 func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {

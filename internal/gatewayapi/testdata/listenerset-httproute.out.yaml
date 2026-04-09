@@ -107,6 +107,11 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/route-entire-xls'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io
@@ -143,6 +148,11 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/route-entire-xls'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io
@@ -178,6 +188,12 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/route-extra-http-one,
+          default/route-extra-http-two'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         group: gateway.networking.k8s.io

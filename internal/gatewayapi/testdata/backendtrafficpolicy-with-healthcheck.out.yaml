@@ -505,6 +505,12 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/grpcroute-2,
+          default/grpcroute-3'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -537,6 +543,12 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/grpcroute-1,
+          default/grpcroute-2'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -569,6 +581,12 @@ grpcRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/grpcroute-1,
+          default/grpcroute-3'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -644,6 +662,11 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-4'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -718,6 +741,11 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-2'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2

@@ -178,6 +178,11 @@ httpRoutes:
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): envoy-gateway/http-route-3'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         kind: Gateway
@@ -211,6 +216,11 @@ httpRoutes:
         reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): envoy-gateway/http-route-2'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         kind: Gateway
