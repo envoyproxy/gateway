@@ -59,3 +59,10 @@ name = "cyphar.com/go-pathrs"
 ecosystem = "Go"
 license.ignore = true
 reason = "https://github.com/cncf/foundation/issues/1154"
+
+# Remove this once go-control-plane/contrib gets a proper release tag
+[[PackageOverrides]]
+name = "github.com/envoyproxy/go-control-plane/contrib"
+ecosystem = "Go"
+license.override = ["Apache-2.0"]
+reason = "go-control-plane is Apache-2.0 licensed, but the pseudo-version prevents license detection"
