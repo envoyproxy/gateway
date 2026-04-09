@@ -274,7 +274,7 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) bool {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
@@ -287,7 +287,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
 				"No conflicts detected")
 		}
-		return
+		return true
 	}
 
 	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
@@ -298,7 +298,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		return
+		return true
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
@@ -334,11 +334,50 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			)
 		}
 		// skip computing IR
-		return
+		return false
 	}
+
+	return true
 }
 
-func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
+// hasInvalidCondition checks if a listener has been marked as invalid during per-listener validation.
+// A listener is considered invalid if it has Programmed=False, Accepted=False, or ResolvedRefs=False
+// (except for the special case of PartiallyInvalidCertificateRef which is allowed).
+// This is used during conflict resolution to skip invalid listeners so they don't block valid ones.
+func hasInvalidCondition(listener *ListenerContext) bool {
+	conditions := listener.GetConditions()
+	for _, cond := range conditions {
+		if cond.Type == string(gwapiv1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+		if cond.Type == string(gwapiv1.ListenerConditionAccepted) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+		// ResolvedRefs=False is invalid except for PartiallyInvalidCertificateRef which allows
+		// the listener to still be programmed with valid certificates
+		if cond.Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
+			cond.Status == metav1.ConditionFalse &&
+			cond.Reason != string(status.ListenerReasonPartiallyInvalidCertificateRef) {
+			return true
+		}
+	}
+	return false
+}
+
+// isSpecValidForConflictChecks returns whether a listener should participate in
+// conflict detection. In the normal translation flow this is driven by
+// listener.specValid. The fallback keeps direct unit tests meaningful when they
+// invoke conflict checks without running per-listener spec validation first.
+func isSpecValidForConflictChecks(listener *ListenerContext) bool {
+	if listener.specValid {
+		return true
+	}
+	return !hasInvalidCondition(listener)
+}
+
+// validateAllowedNamespaces validates namespace selector configuration.
+// Returns true if the namespace spec is valid, false otherwise.
+func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) bool {
 	if listener.AllowedRoutes != nil &&
 		listener.AllowedRoutes.Namespaces != nil &&
 		listener.AllowedRoutes.Namespaces.From != nil &&
@@ -350,26 +389,28 @@ func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
 				gwapiv1.ListenerReasonInvalid,
 				"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
 			)
-		} else {
-			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-			if err != nil {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionProgrammed,
-					metav1.ConditionFalse,
-					gwapiv1.ListenerReasonInvalid,
-					fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
-				)
-			}
-
-			listener.namespaceSelector = selector
+			return false
 		}
+		selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+		if err != nil {
+			listener.SetCondition(
+				gwapiv1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				gwapiv1.ListenerReasonInvalid,
+				fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
+			)
+			return false
+		}
+
+		listener.namespaceSelector = selector
 	}
+	return true
 }
 
 func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 	listener *ListenerContext,
 	resources *resource.Resources,
-) ([]*corev1.Secret, []*x509.Certificate) {
+) ([]*corev1.Secret, []*x509.Certificate, bool) {
 	if len(listener.TLS.CertificateRefs) == 0 {
 		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
@@ -377,7 +418,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			gwapiv1.ListenerReasonInvalid,
 			"Listener must have at least 1 TLS certificate ref",
 		)
-		return nil, nil
+		return nil, nil, false
 	}
 
 	var errs []status.ListenerError
@@ -487,7 +528,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fmt.Sprintf("No valid secrets exist: %v", errors.Join(errList...)),
 		)
 
-		return nil, nil
+		return nil, nil, false
 	}
 
 	validSecrets, certs, err := parseCertsFromTLSSecretsData(secrets)
@@ -499,7 +540,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				err.Reason(),
 				fmt.Sprintf("No valid secrets exist: %v.", err.Error()),
 			)
-			return nil, nil
+			return nil, nil, false
 		} else {
 			errs = append(errs, err)
 		}
@@ -518,13 +559,17 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 			fmt.Sprintf("Some secrets are invalid: %v", errors.Join(errList...)),
 		)
 	}
-	return validSecrets, certs
+	return validSecrets, certs, true
 }
 
+// validateTLSConfiguration validates TLS configuration per protocol.
+// Returns true if the TLS spec is valid, false otherwise.
 func (t *Translator) validateTLSConfiguration(
 	listener *ListenerContext,
 	resources *resource.Resources,
-) {
+) bool {
+	specValid := true
+
 	switch listener.Protocol {
 	case gwapiv1.HTTPProtocolType, gwapiv1.UDPProtocolType, gwapiv1.TCPProtocolType:
 		if listener.TLS != nil {
@@ -534,6 +579,7 @@ func (t *Translator) validateTLSConfiguration(
 				gwapiv1.ListenerReasonInvalid,
 				fmt.Sprintf("Listener must not have TLS set when protocol is %s.", listener.Protocol),
 			)
+			specValid = false
 		}
 	case gwapiv1.HTTPSProtocolType:
 		if listener.TLS == nil {
@@ -543,25 +589,29 @@ func (t *Translator) validateTLSConfiguration(
 				gwapiv1.ListenerReasonInvalid,
 				fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
 			)
-			break
-		}
+			specValid = false
+		} else {
+			if listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
+				listener.SetCondition(
+					gwapiv1.ListenerConditionProgrammed,
+					metav1.ConditionFalse,
+					"UnsupportedTLSMode",
+					fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
+				)
+				specValid = false
+			} else {
+				secrets, certs, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+				listener.SetTLSSecrets(secrets)
 
-		if listener.TLS.Mode != nil && *listener.TLS.Mode != gwapiv1.TLSModeTerminate {
-			listener.SetCondition(
-				gwapiv1.ListenerConditionProgrammed,
-				metav1.ConditionFalse,
-				"UnsupportedTLSMode",
-				fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
-			)
-			break
-		}
+				if !ok {
+					specValid = false
+				}
 
-		secrets, certs := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
-		listener.SetTLSSecrets(secrets)
-
-		listener.tls.certDNSNames = make([]string, 0)
-		for _, cert := range certs {
-			listener.tls.certDNSNames = append(listener.tls.certDNSNames, cert.DNSNames...)
+				listener.tls.certDNSNames = make([]string, 0)
+				for _, cert := range certs {
+					listener.tls.certDNSNames = append(listener.tls.certDNSNames, cert.DNSNames...)
+				}
+			}
 		}
 	case gwapiv1.TLSProtocolType:
 		if listener.TLS == nil {
@@ -571,33 +621,38 @@ func (t *Translator) validateTLSConfiguration(
 				gwapiv1.ListenerReasonInvalid,
 				fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
 			)
-			break
-		}
-
-		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough {
-			if len(listener.TLS.CertificateRefs) > 0 {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionProgrammed,
-					metav1.ConditionFalse,
-					gwapiv1.ListenerReasonInvalid,
-					"Listener must not have TLS certificate refs set for TLS mode Passthrough.",
-				)
-				break
+			specValid = false
+		} else {
+			if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModePassthrough {
+				if len(listener.TLS.CertificateRefs) > 0 {
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonInvalid,
+						"Listener must not have TLS certificate refs set for TLS mode Passthrough.",
+					)
+					specValid = false
+				}
 			}
-		}
 
-		if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModeTerminate {
-			if len(listener.TLS.CertificateRefs) == 0 {
-				listener.SetCondition(
-					gwapiv1.ListenerConditionProgrammed,
-					metav1.ConditionFalse,
-					gwapiv1.ListenerReasonInvalid,
-					"Listener must have TLS certificate refs set for TLS mode Terminate.",
-				)
-				break
+			if listener.TLS.Mode != nil && *listener.TLS.Mode == gwapiv1.TLSModeTerminate {
+				if len(listener.TLS.CertificateRefs) == 0 {
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonInvalid,
+						"Listener must have TLS certificate refs set for TLS mode Terminate.",
+					)
+					specValid = false
+				} else {
+					secrets, _, ok := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
+					listener.SetTLSSecrets(secrets)
+
+					if !ok {
+						specValid = false
+					}
+				}
 			}
-			secrets, _ := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
-			listener.SetTLSSecrets(secrets)
 		}
 	}
 
@@ -631,9 +686,13 @@ func (t *Translator) validateTLSConfiguration(
 			"Listener has invalid CA certificate for frontend TLS validation.",
 		)
 	}
+
+	return specValid
 }
 
-func (t *Translator) validateHostName(listener *ListenerContext) {
+// validateHostName validates hostname configuration per protocol.
+// Returns true if the hostname spec is valid, false otherwise.
+func (t *Translator) validateHostName(listener *ListenerContext) bool {
 	if listener.Protocol == gwapiv1.UDPProtocolType || listener.Protocol == gwapiv1.TCPProtocolType {
 		if listener.Hostname != nil {
 			listener.SetCondition(
@@ -642,26 +701,30 @@ func (t *Translator) validateHostName(listener *ListenerContext) {
 				gwapiv1.ListenerReasonInvalid,
 				fmt.Sprintf("Listener must not have hostname set when protocol is %s.", listener.Protocol),
 			)
+			return false
 		}
 	}
+	return true
 }
 
-func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds ...gwapiv1.Kind) {
+// validateAllowedRoutes validates allowed route kinds configuration.
+// Returns true if the allowed routes spec is valid, false otherwise.
+func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds ...gwapiv1.Kind) bool {
 	canSupportKinds := make([]gwapiv1.RouteGroupKind, len(routeKinds))
 	for i, routeKind := range routeKinds {
 		canSupportKinds[i] = gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: routeKind}
 	}
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		listener.SetSupportedKinds(canSupportKinds...)
-		return
+		return true
 	}
 
+	specValid := true
 	supportedRouteKinds := make([]gwapiv1.Kind, 0)
 	supportedKinds := make([]gwapiv1.RouteGroupKind, 0)
 	unSupportedKinds := make([]gwapiv1.RouteGroupKind, 0)
 
 	for _, kind := range listener.AllowedRoutes.Kinds {
-
 		// if there is a group it must match `gateway.networking.k8s.io`
 		if kind.Group != nil && string(*kind.Group) != gwapiv1.GroupName {
 			listener.SetCondition(
@@ -670,6 +733,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 				gwapiv1.ListenerReasonInvalidRouteKinds,
 				fmt.Sprintf("Group is not supported, group must be %s", gwapiv1.GroupName),
 			)
+			specValid = false
 			continue
 		}
 
@@ -701,14 +765,21 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 			gwapiv1.ListenerReasonInvalidRouteKinds,
 			fmt.Sprintf("%s is not supported, kind must be one of %v", string(kind.Kind), printRouteKinds),
 		)
+		specValid = false
 	}
 
-	listener.SetSupportedKinds(supportedKinds...)
+	// If no kinds were explicitly specified but there were no errors, set default supported kinds
+	if len(supportedKinds) == 0 && specValid {
+		listener.SetSupportedKinds(canSupportKinds...)
+	} else {
+		listener.SetSupportedKinds(supportedKinds...)
+	}
+	return specValid
 }
 
 type portListeners struct {
 	listeners []*ListenerContext
-	protocols sets.Set[string]
+	protocols map[string]bool
 	hostnames map[string]int
 }
 
@@ -717,6 +788,11 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	listenerSets := sets.Set[string]{}
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if !isSpecValidForConflictChecks(listener) {
+				continue
+			}
 			hostname := new(gwapiv1.Hostname)
 			if listener.Hostname != nil {
 				hostname = listener.Hostname
@@ -735,6 +811,106 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	}
 }
 
+// validateConflictedProtocolsListeners checks for listeners that have conflicting protocols on the same port and sets the Conflicted condition on those listeners.
+func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayContext) {
+	// Per-gateway check: within each gateway, listeners on the same port must use compatible protocols.
+	// HTTPS and TLS are considered compatible with each other but not with HTTP or TCP.
+	for _, gateway := range gateways {
+		portListenerInfo := collectPortListeners(gateway.listeners)
+		markProtocolConflicts(portListenerInfo)
+	}
+
+	// In merge mode, also check for protocol conflicts across all gateways that share
+	// the same infra port, since they share the same IR key. A Gateway with HTTP/80
+	// and another with TCP/80 would each pass the per-gateway check above (single
+	// listener per gateway), but must still be flagged as conflicted in merge mode.
+	if t.MergeGateways {
+		var allListeners []*ListenerContext
+		for _, gateway := range gateways {
+			allListeners = append(allListeners, gateway.listeners...)
+		}
+		portListenerInfo := collectPortListeners(allListeners)
+		markProtocolConflicts(portListenerInfo)
+	}
+}
+
+// collectPortListeners groups the provided listeners by port, skipping any with unsupported protocols.
+func collectPortListeners(listeners []*ListenerContext) map[gwapiv1.PortNumber]*portListeners {
+	portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
+	for _, listener := range listeners {
+		// Skip listeners that already failed per-listener validation.
+		// This avoids invalid listeners blocking valid listeners in conflict checks.
+		if !isSpecValidForConflictChecks(listener) {
+			continue
+		}
+		if !isSupportedListenerProtocol(listener.Protocol) {
+			continue
+		}
+		if portListenerInfo[listener.Port] == nil {
+			portListenerInfo[listener.Port] = &portListeners{
+				hostnames: map[string]int{},
+				protocols: map[string]bool{},
+			}
+		}
+		portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
+		protocol := getProtocolForListener(listener)
+		portListenerInfo[listener.Port].protocols[protocol] = true
+	}
+	return portListenerInfo
+}
+
+// markProtocolConflicts iterates portListenerInfo and marks any listeners whose protocol
+// is incompatible with the first non-UDP listener on the same port.
+func markProtocolConflicts(portListenerInfo map[gwapiv1.PortNumber]*portListeners) {
+	for _, info := range portListenerInfo {
+		// For protocol conflict detection, the first listener on a port wins.
+		// Subsequent listeners with incompatible protocols are marked as conflicted.
+		// UDP can coexist with TCP/HTTP/HTTPS/TLS, but TCP/HTTP/HTTPS/TLS cannot mix.
+		var firstNonUDPProtocol string
+		seenNonUDPProtocol := false
+
+		for _, listener := range info.listeners {
+			protocol := getProtocolForListener(listener)
+
+			// UDP listeners can coexist with any other protocol
+			if protocol == "UDP" {
+				continue
+			}
+
+			// This is the first non-UDP listener we've seen on this port
+			if !seenNonUDPProtocol {
+				firstNonUDPProtocol = protocol
+				seenNonUDPProtocol = true
+				continue
+			}
+
+			// This is a subsequent non-UDP listener - check if it conflicts
+			if protocol != firstNonUDPProtocol {
+				listener.SetCondition(
+					gwapiv1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+				// TODO: remove following once https://github.com/kubernetes-sigs/gateway-api/pull/4692 landed,
+				// we may want to have similar logic when protocol conflict happened.
+				listener.SetCondition(
+					gwapiv1.ListenerConditionAccepted,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+				listener.SetCondition(
+					gwapiv1.ListenerConditionProgrammed,
+					metav1.ConditionFalse,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+			}
+		}
+	}
+}
+
 func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
 	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
 	// and hostnames per port.
@@ -744,24 +920,19 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 			if listener.Protocol == gwapiv1.UDPProtocolType || listener.Protocol == gwapiv1.TCPProtocolType {
 				continue
 			}
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if !isSpecValidForConflictChecks(listener) {
+				continue
+			}
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
-					protocols: sets.Set[string]{},
 					hostnames: map[string]int{},
+					protocols: map[string]bool{},
 				}
 			}
 
 			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			var protocol string
-			switch listener.Protocol {
-			// HTTPS and TLS can co-exist on the same port
-			case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
-				protocol = "https/tls"
-			default:
-				protocol = string(listener.Protocol)
-			}
-			portListenerInfo[listener.Port].protocols.Insert(protocol)
 
 			var hostname string
 			if listener.Hostname != nil {
@@ -773,25 +944,37 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 
 		// Set Conflicted conditions for any listeners with conflicting specs.
 		for _, info := range portListenerInfo {
+			perHostnameListenerFound := map[string]bool{}
 			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
-					listener.SetCondition(
-						gwapiv1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-				}
 
 				var hostname string
 				if listener.Hostname != nil {
 					hostname = string(*listener.Hostname)
 				}
 
+				// the first listener with a given hostname on a given port is allowed to be non-conflicted,
+				// but any additional listener with the same hostname and port is a conflict
+				if found := perHostnameListenerFound[hostname]; !found {
+					perHostnameListenerFound[hostname] = true
+					continue
+				}
 				if info.hostnames[hostname] > 1 {
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					// TODO: remove following once https://github.com/kubernetes-sigs/gateway-api/pull/4692 landed.
+					listener.SetCondition(
+						gwapiv1.ListenerConditionAccepted,
+						metav1.ConditionFalse,
+						gwapiv1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+					listener.SetCondition(
+						gwapiv1.ListenerConditionProgrammed,
+						metav1.ConditionFalse,
 						gwapiv1.ListenerReasonHostnameConflict,
 						"All listeners for a given port must use a unique hostname",
 					)
@@ -806,6 +989,11 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 	for _, gateway := range gateways {
 		portListenerInfo := map[gwapiv1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
+			// Skip listeners that are already marked as invalid from per-listener validation.
+			// This prevents an invalid first listener from blocking valid subsequent listeners.
+			if !isSpecValidForConflictChecks(listener) {
+				continue
+			}
 			for _, protocol := range protocols {
 				if listener.Protocol == protocol {
 					if portListenerInfo[listener.Port] == nil {
@@ -829,6 +1017,26 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 				}
 			}
 		}
+	}
+}
+
+func getProtocolForListener(listener *ListenerContext) string {
+	switch listener.Protocol {
+	// HTTPS and TLS can co-exist on the same port.
+	case gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType:
+		return "https/tls"
+	default:
+		return string(listener.Protocol)
+	}
+}
+
+func isSupportedListenerProtocol(protocol gwapiv1.ProtocolType) bool {
+	switch protocol {
+	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType,
+		gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType:
+		return true
+	default:
+		return false
 	}
 }
 
