@@ -1542,6 +1542,40 @@ spec:
                         field must be set.
                       rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                         : !has(self.queryParams)'
+                  dynamicModule:
+                    description: |-
+                      DynamicModule defines the configuration when the load balancer type is
+                      set to DynamicModule. The referenced module must be registered in the
+                      EnvoyProxy resource's dynamicModules allowlist.
+                    properties:
+                      config:
+                        description: |-
+                          Config is optional configuration for the module's load balancer
+                          implementation. This is serialized and passed to the module's
+                          initialization function.
+                        x-kubernetes-preserve-unknown-fields: true
+                      lbPolicyName:
+                        description: |-
+                          LBPolicyName identifies a specific load balancer implementation within
+                          the dynamic module. A single shared library can contain multiple LB
+                          policy implementations. This value is passed to the module's
+                          initialization function to select the appropriate implementation.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      name:
+                        description: |-
+                          Name references a dynamic module registered in the EnvoyProxy resource's
+                          dynamicModules list. The referenced module must exist in the registry;
+                          otherwise, the policy will be rejected.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - lbPolicyName
+                    - name
+                    type: object
                   endpointOverride:
                     description: |-
                       EndpointOverride defines the configuration for endpoint override.
@@ -1595,13 +1629,15 @@ spec:
                       "LeastRequest",
                       "Random",
                       "RoundRobin",
-                      "BackendUtilization".
+                      "BackendUtilization",
+                      "DynamicModule".
                     enum:
                     - ConsistentHash
                     - LeastRequest
                     - Random
                     - RoundRobin
                     - BackendUtilization
+                    - DynamicModule
                     type: string
                   zoneAware:
                     description: ZoneAware defines the configuration related to the
@@ -1681,23 +1717,30 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                     : !has(self.backendUtilization)'
+                - message: If LoadBalancer type is DynamicModule, dynamicModule field
+                    needs to be set.
+                  rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                    : !has(self.dynamicModule)'
                 - message: Currently SlowStart is only supported for RoundRobin, LeastRequest,
                     and BackendUtilization load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStart)
-                    : true '
+                  rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
+                    ? !has(self.slowStart) : true'
                 - message: PreferLocal zone-aware routing is not supported for ConsistentHash
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
                 - message: ZoneAware routing is not supported for BackendUtilization
-                    load balancers. BackendUtilization only handles picking endpoints
-                    within a single locality.
-                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                    : true'
+                    and DynamicModule load balancers.
+                  rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                    ? !has(self.zoneAware) : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
                     has(self.zoneAware.weightedZones)) : true'
+                - message: EndpointOverride is not supported for DynamicModule load
+                    balancers.
+                  rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                    : true'
               mergeType:
                 description: |-
                   MergeType determines how this configuration is merged with existing BackendTrafficPolicy
@@ -6909,6 +6952,40 @@ spec:
                                   queryParams field must be set.
                                 rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                   : !has(self.queryParams)'
+                            dynamicModule:
+                              description: |-
+                                DynamicModule defines the configuration when the load balancer type is
+                                set to DynamicModule. The referenced module must be registered in the
+                                EnvoyProxy resource's dynamicModules allowlist.
+                              properties:
+                                config:
+                                  description: |-
+                                    Config is optional configuration for the module's load balancer
+                                    implementation. This is serialized and passed to the module's
+                                    initialization function.
+                                  x-kubernetes-preserve-unknown-fields: true
+                                lbPolicyName:
+                                  description: |-
+                                    LBPolicyName identifies a specific load balancer implementation within
+                                    the dynamic module. A single shared library can contain multiple LB
+                                    policy implementations. This value is passed to the module's
+                                    initialization function to select the appropriate implementation.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                name:
+                                  description: |-
+                                    Name references a dynamic module registered in the EnvoyProxy resource's
+                                    dynamicModules list. The referenced module must exist in the registry;
+                                    otherwise, the policy will be rejected.
+                                  maxLength: 253
+                                  minLength: 1
+                                  pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                  type: string
+                              required:
+                              - lbPolicyName
+                              - name
+                              type: object
                             endpointOverride:
                               description: |-
                                 EndpointOverride defines the configuration for endpoint override.
@@ -6963,13 +7040,15 @@ spec:
                                 "LeastRequest",
                                 "Random",
                                 "RoundRobin",
-                                "BackendUtilization".
+                                "BackendUtilization",
+                                "DynamicModule".
                               enum:
                               - ConsistentHash
                               - LeastRequest
                               - Random
                               - RoundRobin
                               - BackendUtilization
+                              - DynamicModule
                               type: string
                             zoneAware:
                               description: ZoneAware defines the configuration related
@@ -7051,24 +7130,31 @@ spec:
                               field needs to be set.
                             rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                               : !has(self.backendUtilization)'
+                          - message: If LoadBalancer type is DynamicModule, dynamicModule
+                              field needs to be set.
+                            rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                              : !has(self.dynamicModule)'
                           - message: Currently SlowStart is only supported for RoundRobin,
                               LeastRequest, and BackendUtilization load balancers.
-                            rule: 'self.type in [''Random'', ''ConsistentHash''] ?
-                              !has(self.slowStart) : true '
+                            rule: 'self.type in [''Random'', ''ConsistentHash'', ''DynamicModule'']
+                              ? !has(self.slowStart) : true'
                           - message: PreferLocal zone-aware routing is not supported
                               for ConsistentHash load balancers. Use weightedZones
                               instead.
                             rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                               ? !has(self.zoneAware.preferLocal) : true'
                           - message: ZoneAware routing is not supported for BackendUtilization
-                              load balancers. BackendUtilization only handles picking
-                              endpoints within a single locality.
-                            rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                              : true'
+                              and DynamicModule load balancers.
+                            rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                              ? !has(self.zoneAware) : true'
                           - message: ZoneAware PreferLocal and WeightedZones cannot
                               be specified together.
                             rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                               && has(self.zoneAware.weightedZones)) : true'
+                          - message: EndpointOverride is not supported for DynamicModule
+                              load balancers.
+                            rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                              : true'
                         proxyProtocol:
                           description: ProxyProtocol enables the Proxy Protocol when
                             communicating with the backend.
@@ -9076,8 +9162,9 @@ spec:
               dynamicModules:
                 description: |-
                   DynamicModules defines the set of dynamic modules that are allowed to be
-                  used by EnvoyExtensionPolicy resources. Each entry registers a module by
-                  a logical name and specifies the shared library that Envoy will load.
+                  used by EnvoyExtensionPolicy resources and dynamic module load balancer
+                  policies. Each entry registers a module by a logical name and specifies
+                  the shared library that Envoy will load.
 
                   The EnvoyProxy owner is responsible for ensuring the module .so files are available
                   on the proxy container's filesystem (e.g., via init containers, custom images,
@@ -21151,6 +21238,40 @@ spec:
                                                     field must be set.
                                                   rule: 'self.type == ''QueryParams''
                                                     ? has(self.queryParams) : !has(self.queryParams)'
+                                              dynamicModule:
+                                                description: |-
+                                                  DynamicModule defines the configuration when the load balancer type is
+                                                  set to DynamicModule. The referenced module must be registered in the
+                                                  EnvoyProxy resource's dynamicModules allowlist.
+                                                properties:
+                                                  config:
+                                                    description: |-
+                                                      Config is optional configuration for the module's load balancer
+                                                      implementation. This is serialized and passed to the module's
+                                                      initialization function.
+                                                    x-kubernetes-preserve-unknown-fields: true
+                                                  lbPolicyName:
+                                                    description: |-
+                                                      LBPolicyName identifies a specific load balancer implementation within
+                                                      the dynamic module. A single shared library can contain multiple LB
+                                                      policy implementations. This value is passed to the module's
+                                                      initialization function to select the appropriate implementation.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    description: |-
+                                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                                      dynamicModules list. The referenced module must exist in the registry;
+                                                      otherwise, the policy will be rejected.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                                    type: string
+                                                required:
+                                                - lbPolicyName
+                                                - name
+                                                type: object
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -21207,13 +21328,15 @@ spec:
                                                   "LeastRequest",
                                                   "Random",
                                                   "RoundRobin",
-                                                  "BackendUtilization".
+                                                  "BackendUtilization",
+                                                  "DynamicModule".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
                                                 - BackendUtilization
+                                                - DynamicModule
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -21303,11 +21426,16 @@ spec:
                                                 be set.
                                               rule: 'self.type == ''BackendUtilization''
                                                 ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                            - message: If LoadBalancer type is DynamicModule,
+                                                dynamicModule field needs to be set.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? has(self.dynamicModule) : !has(self.dynamicModule)'
                                             - message: Currently SlowStart is only
                                                 supported for RoundRobin, LeastRequest,
                                                 and BackendUtilization load balancers.
-                                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                                ? !has(self.slowStart) : true '
+                                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                                ''DynamicModule''] ? !has(self.slowStart)
+                                                : true'
                                             - message: PreferLocal zone-aware routing
                                                 is not supported for ConsistentHash
                                                 load balancers. Use weightedZones
@@ -21316,16 +21444,20 @@ spec:
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
                                             - message: ZoneAware routing is not supported
-                                                for BackendUtilization load balancers.
-                                                BackendUtilization only handles picking
-                                                endpoints within a single locality.
-                                              rule: 'self.type == ''BackendUtilization''
-                                                ? !has(self.zoneAware) : true'
+                                                for BackendUtilization and DynamicModule
+                                                load balancers.
+                                              rule: 'self.type in [''BackendUtilization'',
+                                                ''DynamicModule''] ? !has(self.zoneAware)
+                                                : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                                 && has(self.zoneAware.weightedZones))
                                                 : true'
+                                            - message: EndpointOverride is not supported
+                                                for DynamicModule load balancers.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? !has(self.endpointOverride) : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -22630,6 +22762,40 @@ spec:
                                                     field must be set.
                                                   rule: 'self.type == ''QueryParams''
                                                     ? has(self.queryParams) : !has(self.queryParams)'
+                                              dynamicModule:
+                                                description: |-
+                                                  DynamicModule defines the configuration when the load balancer type is
+                                                  set to DynamicModule. The referenced module must be registered in the
+                                                  EnvoyProxy resource's dynamicModules allowlist.
+                                                properties:
+                                                  config:
+                                                    description: |-
+                                                      Config is optional configuration for the module's load balancer
+                                                      implementation. This is serialized and passed to the module's
+                                                      initialization function.
+                                                    x-kubernetes-preserve-unknown-fields: true
+                                                  lbPolicyName:
+                                                    description: |-
+                                                      LBPolicyName identifies a specific load balancer implementation within
+                                                      the dynamic module. A single shared library can contain multiple LB
+                                                      policy implementations. This value is passed to the module's
+                                                      initialization function to select the appropriate implementation.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    description: |-
+                                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                                      dynamicModules list. The referenced module must exist in the registry;
+                                                      otherwise, the policy will be rejected.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                                    type: string
+                                                required:
+                                                - lbPolicyName
+                                                - name
+                                                type: object
                                               endpointOverride:
                                                 description: |-
                                                   EndpointOverride defines the configuration for endpoint override.
@@ -22686,13 +22852,15 @@ spec:
                                                   "LeastRequest",
                                                   "Random",
                                                   "RoundRobin",
-                                                  "BackendUtilization".
+                                                  "BackendUtilization",
+                                                  "DynamicModule".
                                                 enum:
                                                 - ConsistentHash
                                                 - LeastRequest
                                                 - Random
                                                 - RoundRobin
                                                 - BackendUtilization
+                                                - DynamicModule
                                                 type: string
                                               zoneAware:
                                                 description: ZoneAware defines the
@@ -22782,11 +22950,16 @@ spec:
                                                 be set.
                                               rule: 'self.type == ''BackendUtilization''
                                                 ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                            - message: If LoadBalancer type is DynamicModule,
+                                                dynamicModule field needs to be set.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? has(self.dynamicModule) : !has(self.dynamicModule)'
                                             - message: Currently SlowStart is only
                                                 supported for RoundRobin, LeastRequest,
                                                 and BackendUtilization load balancers.
-                                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                                ? !has(self.slowStart) : true '
+                                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                                ''DynamicModule''] ? !has(self.slowStart)
+                                                : true'
                                             - message: PreferLocal zone-aware routing
                                                 is not supported for ConsistentHash
                                                 load balancers. Use weightedZones
@@ -22795,16 +22968,20 @@ spec:
                                                 && has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                                 : true'
                                             - message: ZoneAware routing is not supported
-                                                for BackendUtilization load balancers.
-                                                BackendUtilization only handles picking
-                                                endpoints within a single locality.
-                                              rule: 'self.type == ''BackendUtilization''
-                                                ? !has(self.zoneAware) : true'
+                                                for BackendUtilization and DynamicModule
+                                                load balancers.
+                                              rule: 'self.type in [''BackendUtilization'',
+                                                ''DynamicModule''] ? !has(self.zoneAware)
+                                                : true'
                                             - message: ZoneAware PreferLocal and WeightedZones
                                                 cannot be specified together.
                                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                                 && has(self.zoneAware.weightedZones))
                                                 : true'
+                                            - message: EndpointOverride is not supported
+                                                for DynamicModule load balancers.
+                                              rule: 'self.type == ''DynamicModule''
+                                                ? !has(self.endpointOverride) : true'
                                           proxyProtocol:
                                             description: ProxyProtocol enables the
                                               Proxy Protocol when communicating with
@@ -23159,6 +23336,14 @@ spec:
                           Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
                           Example: `httproute/my-ns/my-route/rule/0`
                         type: string
+                      enableGRPCStats:
+                        description: |-
+                          EnableGRPCStats enables the gRPC stats filter on listeners.
+                          This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+                          In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+                          users want to route gRPC using HTTPRoute for its richer matching capabilities.
+                          Therefore, we enable this behavior only when it is explicitly opted in.
+                        type: boolean
                       enablePerEndpointStats:
                         description: |-
                           EnablePerEndpointStats enables per endpoint envoy stats metrics.
@@ -24261,6 +24446,40 @@ spec:
                                               the queryParams field must be set.
                                             rule: 'self.type == ''QueryParams'' ?
                                               has(self.queryParams) : !has(self.queryParams)'
+                                        dynamicModule:
+                                          description: |-
+                                            DynamicModule defines the configuration when the load balancer type is
+                                            set to DynamicModule. The referenced module must be registered in the
+                                            EnvoyProxy resource's dynamicModules allowlist.
+                                          properties:
+                                            config:
+                                              description: |-
+                                                Config is optional configuration for the module's load balancer
+                                                implementation. This is serialized and passed to the module's
+                                                initialization function.
+                                              x-kubernetes-preserve-unknown-fields: true
+                                            lbPolicyName:
+                                              description: |-
+                                                LBPolicyName identifies a specific load balancer implementation within
+                                                the dynamic module. A single shared library can contain multiple LB
+                                                policy implementations. This value is passed to the module's
+                                                initialization function to select the appropriate implementation.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              description: |-
+                                                Name references a dynamic module registered in the EnvoyProxy resource's
+                                                dynamicModules list. The referenced module must exist in the registry;
+                                                otherwise, the policy will be rejected.
+                                              maxLength: 253
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                              type: string
+                                          required:
+                                          - lbPolicyName
+                                          - name
+                                          type: object
                                         endpointOverride:
                                           description: |-
                                             EndpointOverride defines the configuration for endpoint override.
@@ -24316,13 +24535,15 @@ spec:
                                             "LeastRequest",
                                             "Random",
                                             "RoundRobin",
-                                            "BackendUtilization".
+                                            "BackendUtilization",
+                                            "DynamicModule".
                                           enum:
                                           - ConsistentHash
                                           - LeastRequest
                                           - Random
                                           - RoundRobin
                                           - BackendUtilization
+                                          - DynamicModule
                                           type: string
                                         zoneAware:
                                           description: ZoneAware defines the configuration
@@ -24410,11 +24631,16 @@ spec:
                                           backendUtilization field needs to be set.
                                         rule: 'self.type == ''BackendUtilization''
                                           ? has(self.backendUtilization) : !has(self.backendUtilization)'
+                                      - message: If LoadBalancer type is DynamicModule,
+                                          dynamicModule field needs to be set.
+                                        rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                          : !has(self.dynamicModule)'
                                       - message: Currently SlowStart is only supported
                                           for RoundRobin, LeastRequest, and BackendUtilization
                                           load balancers.
-                                        rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                          ? !has(self.slowStart) : true '
+                                        rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                          ''DynamicModule''] ? !has(self.slowStart)
+                                          : true'
                                       - message: PreferLocal zone-aware routing is
                                           not supported for ConsistentHash load balancers.
                                           Use weightedZones instead.
@@ -24422,16 +24648,20 @@ spec:
                                           has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
                                           : true'
                                       - message: ZoneAware routing is not supported
-                                          for BackendUtilization load balancers. BackendUtilization
-                                          only handles picking endpoints within a
-                                          single locality.
-                                        rule: 'self.type == ''BackendUtilization''
-                                          ? !has(self.zoneAware) : true'
+                                          for BackendUtilization and DynamicModule
+                                          load balancers.
+                                        rule: 'self.type in [''BackendUtilization'',
+                                          ''DynamicModule''] ? !has(self.zoneAware)
+                                          : true'
                                       - message: ZoneAware PreferLocal and WeightedZones
                                           cannot be specified together.
                                         rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                           && has(self.zoneAware.weightedZones)) :
                                           true'
+                                      - message: EndpointOverride is not supported
+                                          for DynamicModule load balancers.
+                                        rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                          : true'
                                     proxyProtocol:
                                       description: ProxyProtocol enables the Proxy
                                         Protocol when communicating with the backend.
@@ -25808,6 +26038,40 @@ spec:
                                         the queryParams field must be set.
                                       rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                         : !has(self.queryParams)'
+                                  dynamicModule:
+                                    description: |-
+                                      DynamicModule defines the configuration when the load balancer type is
+                                      set to DynamicModule. The referenced module must be registered in the
+                                      EnvoyProxy resource's dynamicModules allowlist.
+                                    properties:
+                                      config:
+                                        description: |-
+                                          Config is optional configuration for the module's load balancer
+                                          implementation. This is serialized and passed to the module's
+                                          initialization function.
+                                        x-kubernetes-preserve-unknown-fields: true
+                                      lbPolicyName:
+                                        description: |-
+                                          LBPolicyName identifies a specific load balancer implementation within
+                                          the dynamic module. A single shared library can contain multiple LB
+                                          policy implementations. This value is passed to the module's
+                                          initialization function to select the appropriate implementation.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: |-
+                                          Name references a dynamic module registered in the EnvoyProxy resource's
+                                          dynamicModules list. The referenced module must exist in the registry;
+                                          otherwise, the policy will be rejected.
+                                        maxLength: 253
+                                        minLength: 1
+                                        pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                        type: string
+                                    required:
+                                    - lbPolicyName
+                                    - name
+                                    type: object
                                   endpointOverride:
                                     description: |-
                                       EndpointOverride defines the configuration for endpoint override.
@@ -25863,13 +26127,15 @@ spec:
                                       "LeastRequest",
                                       "Random",
                                       "RoundRobin",
-                                      "BackendUtilization".
+                                      "BackendUtilization",
+                                      "DynamicModule".
                                     enum:
                                     - ConsistentHash
                                     - LeastRequest
                                     - Random
                                     - RoundRobin
                                     - BackendUtilization
+                                    - DynamicModule
                                     type: string
                                   zoneAware:
                                     description: ZoneAware defines the configuration
@@ -25954,26 +26220,32 @@ spec:
                                     backendUtilization field needs to be set.
                                   rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                     : !has(self.backendUtilization)'
+                                - message: If LoadBalancer type is DynamicModule,
+                                    dynamicModule field needs to be set.
+                                  rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                    : !has(self.dynamicModule)'
                                 - message: Currently SlowStart is only supported for
                                     RoundRobin, LeastRequest, and BackendUtilization
                                     load balancers.
-                                  rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                    ? !has(self.slowStart) : true '
+                                  rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                    ''DynamicModule''] ? !has(self.slowStart) : true'
                                 - message: PreferLocal zone-aware routing is not supported
                                     for ConsistentHash load balancers. Use weightedZones
                                     instead.
                                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                     ? !has(self.zoneAware.preferLocal) : true'
                                 - message: ZoneAware routing is not supported for
-                                    BackendUtilization load balancers. BackendUtilization
-                                    only handles picking endpoints within a single
-                                    locality.
-                                  rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                    : true'
+                                    BackendUtilization and DynamicModule load balancers.
+                                  rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                    ? !has(self.zoneAware) : true'
                                 - message: ZoneAware PreferLocal and WeightedZones
                                     cannot be specified together.
                                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                     && has(self.zoneAware.weightedZones)) : true'
+                                - message: EndpointOverride is not supported for DynamicModule
+                                    load balancers.
+                                  rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                    : true'
                               proxyProtocol:
                                 description: ProxyProtocol enables the Proxy Protocol
                                   when communicating with the backend.
@@ -28817,6 +29089,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -28871,13 +29177,15 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "BackendUtilization".
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -28961,24 +29269,31 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -30170,6 +30485,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -30224,13 +30573,15 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "BackendUtilization".
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -30314,24 +30665,31 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
@@ -31783,6 +32141,40 @@ spec:
                                           the queryParams field must be set.
                                         rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                           : !has(self.queryParams)'
+                                    dynamicModule:
+                                      description: |-
+                                        DynamicModule defines the configuration when the load balancer type is
+                                        set to DynamicModule. The referenced module must be registered in the
+                                        EnvoyProxy resource's dynamicModules allowlist.
+                                      properties:
+                                        config:
+                                          description: |-
+                                            Config is optional configuration for the module's load balancer
+                                            implementation. This is serialized and passed to the module's
+                                            initialization function.
+                                          x-kubernetes-preserve-unknown-fields: true
+                                        lbPolicyName:
+                                          description: |-
+                                            LBPolicyName identifies a specific load balancer implementation within
+                                            the dynamic module. A single shared library can contain multiple LB
+                                            policy implementations. This value is passed to the module's
+                                            initialization function to select the appropriate implementation.
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        name:
+                                          description: |-
+                                            Name references a dynamic module registered in the EnvoyProxy resource's
+                                            dynamicModules list. The referenced module must exist in the registry;
+                                            otherwise, the policy will be rejected.
+                                          maxLength: 253
+                                          minLength: 1
+                                          pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                          type: string
+                                      required:
+                                      - lbPolicyName
+                                      - name
+                                      type: object
                                     endpointOverride:
                                       description: |-
                                         EndpointOverride defines the configuration for endpoint override.
@@ -31838,13 +32230,15 @@ spec:
                                         "LeastRequest",
                                         "Random",
                                         "RoundRobin",
-                                        "BackendUtilization".
+                                        "BackendUtilization",
+                                        "DynamicModule".
                                       enum:
                                       - ConsistentHash
                                       - LeastRequest
                                       - Random
                                       - RoundRobin
                                       - BackendUtilization
+                                      - DynamicModule
                                       type: string
                                     zoneAware:
                                       description: ZoneAware defines the configuration
@@ -31929,26 +32323,33 @@ spec:
                                       backendUtilization field needs to be set.
                                     rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                       : !has(self.backendUtilization)'
+                                  - message: If LoadBalancer type is DynamicModule,
+                                      dynamicModule field needs to be set.
+                                    rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                      : !has(self.dynamicModule)'
                                   - message: Currently SlowStart is only supported
                                       for RoundRobin, LeastRequest, and BackendUtilization
                                       load balancers.
-                                    rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                      ? !has(self.slowStart) : true '
+                                    rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                      ''DynamicModule''] ? !has(self.slowStart) :
+                                      true'
                                   - message: PreferLocal zone-aware routing is not
                                       supported for ConsistentHash load balancers.
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
                                   - message: ZoneAware routing is not supported for
-                                      BackendUtilization load balancers. BackendUtilization
-                                      only handles picking endpoints within a single
-                                      locality.
-                                    rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                      : true'
+                                      BackendUtilization and DynamicModule load balancers.
+                                    rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                      ? !has(self.zoneAware) : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                       && has(self.zoneAware.weightedZones)) : true'
+                                  - message: EndpointOverride is not supported for
+                                      DynamicModule load balancers.
+                                    rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                      : true'
                                 proxyProtocol:
                                   description: ProxyProtocol enables the Proxy Protocol
                                     when communicating with the backend.
@@ -33412,6 +33813,40 @@ spec:
                                     the queryParams field must be set.
                                   rule: 'self.type == ''QueryParams'' ? has(self.queryParams)
                                     : !has(self.queryParams)'
+                              dynamicModule:
+                                description: |-
+                                  DynamicModule defines the configuration when the load balancer type is
+                                  set to DynamicModule. The referenced module must be registered in the
+                                  EnvoyProxy resource's dynamicModules allowlist.
+                                properties:
+                                  config:
+                                    description: |-
+                                      Config is optional configuration for the module's load balancer
+                                      implementation. This is serialized and passed to the module's
+                                      initialization function.
+                                    x-kubernetes-preserve-unknown-fields: true
+                                  lbPolicyName:
+                                    description: |-
+                                      LBPolicyName identifies a specific load balancer implementation within
+                                      the dynamic module. A single shared library can contain multiple LB
+                                      policy implementations. This value is passed to the module's
+                                      initialization function to select the appropriate implementation.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: |-
+                                      Name references a dynamic module registered in the EnvoyProxy resource's
+                                      dynamicModules list. The referenced module must exist in the registry;
+                                      otherwise, the policy will be rejected.
+                                    maxLength: 253
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                required:
+                                - lbPolicyName
+                                - name
+                                type: object
                               endpointOverride:
                                 description: |-
                                   EndpointOverride defines the configuration for endpoint override.
@@ -33466,13 +33901,15 @@ spec:
                                   "LeastRequest",
                                   "Random",
                                   "RoundRobin",
-                                  "BackendUtilization".
+                                  "BackendUtilization",
+                                  "DynamicModule".
                                 enum:
                                 - ConsistentHash
                                 - LeastRequest
                                 - Random
                                 - RoundRobin
                                 - BackendUtilization
+                                - DynamicModule
                                 type: string
                               zoneAware:
                                 description: ZoneAware defines the configuration related
@@ -33556,24 +33993,31 @@ spec:
                                 backendUtilization field needs to be set.
                               rule: 'self.type == ''BackendUtilization'' ? has(self.backendUtilization)
                                 : !has(self.backendUtilization)'
+                            - message: If LoadBalancer type is DynamicModule, dynamicModule
+                                field needs to be set.
+                              rule: 'self.type == ''DynamicModule'' ? has(self.dynamicModule)
+                                : !has(self.dynamicModule)'
                             - message: Currently SlowStart is only supported for RoundRobin,
                                 LeastRequest, and BackendUtilization load balancers.
-                              rule: 'self.type in [''Random'', ''ConsistentHash'']
-                                ? !has(self.slowStart) : true '
+                              rule: 'self.type in [''Random'', ''ConsistentHash'',
+                                ''DynamicModule''] ? !has(self.slowStart) : true'
                             - message: PreferLocal zone-aware routing is not supported
                                 for ConsistentHash load balancers. Use weightedZones
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
                             - message: ZoneAware routing is not supported for BackendUtilization
-                                load balancers. BackendUtilization only handles picking
-                                endpoints within a single locality.
-                              rule: 'self.type == ''BackendUtilization'' ? !has(self.zoneAware)
-                                : true'
+                                and DynamicModule load balancers.
+                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
+                                ? !has(self.zoneAware) : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
                                 && has(self.zoneAware.weightedZones)) : true'
+                            - message: EndpointOverride is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.endpointOverride)
+                                : true'
                           proxyProtocol:
                             description: ProxyProtocol enables the Proxy Protocol
                               when communicating with the backend.
