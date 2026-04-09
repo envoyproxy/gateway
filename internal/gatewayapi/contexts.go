@@ -138,6 +138,10 @@ type ListenerContext struct {
 
 	namespaceSelector labels.Selector
 
+	// specValid indicates whether per-listener spec validation succeeded.
+	// Conflict detection should only consider listeners with specValid=true.
+	specValid bool
+
 	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
