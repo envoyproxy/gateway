@@ -22,6 +22,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils/fractionalpercent"
 )
 
 func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatures, error) {
@@ -148,7 +149,17 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid MaxStreamDuration value %s", *pto.HTTP.MaxStreamDuration))
 			} else {
-				msd = ptr.To(metav1.Duration{Duration: d})
+				msd = ir.MetaV1DurationPtr(d)
+			}
+		}
+
+		var sit *metav1.Duration
+		if pto.HTTP.StreamIdleTimeout != nil {
+			d, err := time.ParseDuration(string(*pto.HTTP.StreamIdleTimeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
+			} else {
+				sit = ptr.To(metav1.Duration{Duration: d})
 			}
 		}
 
@@ -157,6 +168,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			MaxConnectionDuration: mcd,
 			RequestTimeout:        rt,
 			MaxStreamDuration:     msd,
+			StreamIdleTimeout:     sit,
 		}
 	}
 	return to, errs
@@ -239,59 +251,63 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	var cb *ir.CircuitBreaker
 	pcb := policy.CircuitBreaker
 
-	if pcb != nil {
-		cb = &ir.CircuitBreaker{}
+	if pcb == nil {
+		return nil, nil
+	}
 
-		if pcb.MaxConnections != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
-				cb.MaxConnections = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
-			}
-		}
+	cb = &ir.CircuitBreaker{}
 
-		if pcb.MaxParallelRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
-				cb.MaxParallelRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
-			}
-		}
-
-		if pcb.MaxPendingRequests != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
-				cb.MaxPendingRequests = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
-			}
-		}
-
-		if pcb.MaxParallelRetries != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
-				cb.MaxParallelRetries = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
-			}
-		}
-
-		if pcb.MaxRequestsPerConnection != nil {
-			if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
-				cb.MaxRequestsPerConnection = &ui32
-			} else {
-				return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
-			}
-		}
-
-		if pcb.PerEndpoint != nil {
-			perEndpoint := &ir.PerEndpointCircuitBreakers{}
-			if pcb.PerEndpoint.MaxConnections != nil {
-				if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
-					perEndpoint.MaxConnections = &ui32
-				}
-			}
-			cb.PerEndpoint = perEndpoint
+	if pcb.MaxConnections != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxConnections); ok {
+			cb.MaxConnections = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxConnections value %d", *pcb.MaxConnections)
 		}
 	}
+
+	if pcb.MaxParallelRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRequests); ok {
+			cb.MaxParallelRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRequests value %d", *pcb.MaxParallelRequests)
+		}
+	}
+
+	if pcb.MaxPendingRequests != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxPendingRequests); ok {
+			cb.MaxPendingRequests = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxPendingRequests value %d", *pcb.MaxPendingRequests)
+		}
+	}
+
+	if pcb.MaxParallelRetries != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxParallelRetries); ok {
+			cb.MaxParallelRetries = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxParallelRetries value %d", *pcb.MaxParallelRetries)
+		}
+	}
+
+	if pcb.MaxRequestsPerConnection != nil {
+		if ui32, ok := int64ToUint32(*pcb.MaxRequestsPerConnection); ok {
+			cb.MaxRequestsPerConnection = &ui32
+		} else {
+			return nil, fmt.Errorf("invalid MaxRequestsPerConnection value %d", *pcb.MaxRequestsPerConnection)
+		}
+	}
+
+	if pcb.PerEndpoint != nil {
+		perEndpoint := &ir.PerEndpointCircuitBreakers{}
+		if pcb.PerEndpoint.MaxConnections != nil {
+			if ui32, ok := int64ToUint32(*pcb.PerEndpoint.MaxConnections); ok {
+				perEndpoint.MaxConnections = &ui32
+			}
+		}
+		cb.PerEndpoint = perEndpoint
+	}
+
+	cb.RetryBudget = buildRetryBudget(policy.CircuitBreaker.RetryBudget)
 
 	return cb, nil
 }
@@ -338,6 +354,50 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				return nil, err
 			}
 			lb.RoundRobin.SlowStart = &ir.SlowStart{
+				Window: ir.MetaV1DurationPtr(d),
+			}
+		}
+	case egv1a1.BackendUtilizationLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			BackendUtilization: &ir.BackendUtilization{},
+		}
+		backendUtilization := policy.LoadBalancer.BackendUtilization
+		if backendUtilization != nil {
+			if backendUtilization.BlackoutPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.BlackoutPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid BlackoutPeriod value %s: %w", *backendUtilization.BlackoutPeriod, err)
+				}
+				lb.BackendUtilization.BlackoutPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightExpirationPeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightExpirationPeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightExpirationPeriod value %s: %w", *backendUtilization.WeightExpirationPeriod, err)
+				}
+				lb.BackendUtilization.WeightExpirationPeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.WeightUpdatePeriod != nil {
+				d, err := time.ParseDuration(string(*backendUtilization.WeightUpdatePeriod))
+				if err != nil {
+					return nil, fmt.Errorf("invalid WeightUpdatePeriod value %s: %w", *backendUtilization.WeightUpdatePeriod, err)
+				}
+				lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
+			}
+			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
+				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
+			}
+			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
+				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
+			}
+			lb.BackendUtilization.KeepResponseHeaders = ptr.To(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
+		}
+		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
+			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
+			if err != nil {
+				return nil, err
+			}
+			lb.BackendUtilization.SlowStart = &ir.SlowStart{
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
@@ -731,4 +791,16 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	}
 
 	return rt, nil
+}
+
+func buildRetryBudget(r *egv1a1.RetryBudget) *ir.RetryBudget {
+	if r == nil {
+		return nil
+	}
+
+	rb := &ir.RetryBudget{
+		Percent:             fractionalpercent.ToPercent(&r.Percent),
+		MinRetryConcurrency: ptr.Deref(r.MinRetryConcurrency, 3),
+	}
+	return rb
 }

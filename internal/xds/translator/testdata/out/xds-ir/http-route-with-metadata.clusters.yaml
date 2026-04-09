@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -44,7 +43,6 @@
       resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

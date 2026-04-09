@@ -18,23 +18,17 @@ permissions:
 
 jobs:
   docs-lint:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Install markdownlint-cli
-      run: npm install -g markdownlint-cli@v0.47.0
-
     - name: Run markdown linter
       run: make lint.markdown
-
-    - name: Install linkinator
-      run: npm install -g linkinator@7.4.0
 
     - name: Check links
       run: make docs docs-check-links
@@ -46,7 +40,7 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
@@ -96,4 +90,4 @@ jobs:
     steps:
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4.0.5
+      uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0

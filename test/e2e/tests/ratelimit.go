@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,9 +32,19 @@ import (
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
 
+func prometheusVectorHasSamples(v model.Value) bool {
+	if v == nil || v.Type() != model.ValVector {
+		return false
+	}
+
+	return len(v.(model.Vector)) > 0
+}
+
 func init() {
 	ConformanceTests = append(ConformanceTests,
 		RateLimitCIDRMatchTest,
+		RateLimitCIDRInvertMatchAlwaysEnforceTest,
+		RateLimitCIDRInvertAlwaysExemptTest,
 		RateLimitHeaderMatchTest,
 		RateLimitMethodMatchTest,
 		RateLimitPathMatchTest,
@@ -83,6 +94,61 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+
+			// fire the rest of the requests, and expect 429 at the end
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{429},
+				},
+				Namespace: ns,
+			})
+			// make sure that metric worked as expected.
+			if err := wait.PollUntilContextTimeout(t.Context(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
+				if err != nil {
+					tlog.Logf(t, "failed to query prometheus: %v", err)
+					return false, err
+				}
+				if prometheusVectorHasSamples(v) {
+					tlog.Logf(t, "got expected value: %v", v)
+					return true, nil
+				}
+				return false, nil
+			}); err != nil {
+				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitCIDRInvertMatchAlwaysEnforceTest = suite.ConformanceTest{
+	ShortName:   "RateLimitCIDRInvertMatchAlwaysEnforce",
+	Description: "Rate limit all IPs except a defined CIDR (invert match)",
+	Manifests:   []string{"testdata/ratelimit-cidr-invert-match-always-enforce.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("rate limit all IPs except CIDR", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-invert-ratelimit", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			ratelimitHeader := make(map[string]string)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+					Headers:     ratelimitHeader,
+				},
+				Namespace: ns,
+			}
+			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "2, 2;w=3600"
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
 			expectLimitResp := http.ExpectedResponse{
@@ -96,32 +162,63 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			}
 			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
 
-			// should just send exactly 4 requests, and expect 429
-
+			// Limit is 2/hour. With invert: true, client IP is not in 192.0.2.0/24 (TEST-NET-1), so the rule applies. Expect 2 OK then 429.
 			// keep sending requests till get 200 first, that will cost one 200
 			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
 
-			// fire the rest of requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
+			// fire the rest of the requests
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("failed to get expected response for the first two requests: %v", err)
 			}
 			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+				t.Errorf("failed to get expected response for the last (third) request: %v", err)
 			}
+			// key2 comes from the sanitized stat segment: ":" and IPv4 "." become "_", while "/" is preserved.
 			// make sure that metric worked as expected.
 			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_invert_192_0_2_0/24"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
 					return false, err
 				}
-				if v != nil {
+				if prometheusVectorHasSamples(v) {
 					tlog.Logf(t, "got expected value: %v", v)
 					return true, nil
 				}
 				return false, nil
 			}); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
+				t.Errorf("failed to get expected response for the last (third) request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitCIDRInvertAlwaysExemptTest = suite.ConformanceTest{
+	ShortName:   "RateLimitCIDRInvertAlwaysExempt",
+	Description: "With invert and exempt CIDR 0.0.0.0/0, all clients are exempt so we never see rate limit",
+	Manifests:   []string{"testdata/ratelimit-cidr-invert-always-exempt.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("never rate limited when exempt range is all IPv4", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-invert-always-exempt", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/never-limited",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+
+			// Exempt CIDR is 0.0.0.0/0 (all IPv4). With invert: true, the rule applies when client IP is *not* in that range.
+			// Every IPv4 client is in 0.0.0.0/0, so the rule never applies — we should never get 429.
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("expected all requests to succeed (no rate limit): %v", err)
 			}
 		})
 	},
@@ -161,9 +258,11 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
 
-			expectLimitResp := http.ExpectedResponse{
+			// fire the rest of the requests, and expect 429 at the end
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/get",
 					Method: "POST",
@@ -172,10 +271,11 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 					StatusCodes: []int{429},
 				},
 				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+			})
 
-			expectLimitDeleteReq := http.ExpectedResponse{
+			// Since POST method already consumed the rate limit quota,
+			// DELETE request should be immediately rate limited (both methods share the same counter).
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/get",
 					Method: "DELETE",
@@ -184,26 +284,7 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 					StatusCodes: []int{429},
 				},
 				Namespace: ns,
-			}
-			expectLimitDeleteResp := http.MakeRequest(t, &expectLimitDeleteReq, gwAddr, "HTTP", "http")
-
-			// should just send exactly 4 requests, and expect 429
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of the requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
-			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
-			// Since POST method already consumed the rate limit quota,
-			// DELETE request should be immediately rate limited (both methods share the same counter).
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitDeleteResp, expectLimitDeleteReq); err != nil {
-				t.Errorf("failed to get expected response for the limited delete request: %v", err)
-			}
+			})
 		})
 
 		t.Run("not matched method cannot got limited", func(t *testing.T) {
@@ -389,9 +470,12 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-			expectLimitResp := http.ExpectedResponse{
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+
+			// fire the rest of the requests, and expect 429 for the last one
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
 				Request: http.Request{
 					Path:    "/get",
 					Headers: requestHeaders,
@@ -400,21 +484,7 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 					StatusCodes: []int{429},
 				},
 				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-			// should just send exactly 4 requests, and expect 429
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of the requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
-			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
+			})
 		})
 
 		t.Run("only one matched header cannot got limited", func(t *testing.T) {
@@ -434,9 +504,6 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			// should just send exactly 4 requests, and expect 429
-
 			// keep sending requests till get 200 first, that will cost one 200
 			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
 
@@ -1071,7 +1138,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				})
 
 			ratelimitHeader := make(map[string]string)
-			expectOkResp1 := http.ExpectedResponse{
+			expectOkRespFoo := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/foo", // First route path
 				},
@@ -1081,9 +1148,9 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp1.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkRespFoo.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 
-			expectOkResp2 := http.ExpectedResponse{
+			expectOkRespBar := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/bar", // Second route path
 				},
@@ -1093,7 +1160,7 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			expectOkResp2.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
+			expectOkRespBar.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
 
 			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -1104,49 +1171,19 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-
-			// Create requests for the first route (path: /foo)
-			expectOkReq1 := http.MakeRequest(t, &expectOkResp1, gwAddr1, "HTTP", "http")
-
-			// Create requests for the second route (path: /bar)
-			expectOkReq2 := http.MakeRequest(t, &expectOkResp2, gwAddr2, "HTTP", "http")
-			expectLimitReq2 := http.MakeRequest(t, &expectLimitResp, gwAddr2, "HTTP", "http")
-
 			// Ensure the first route is available
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkResp1)
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespFoo)
 
 			// Send 1 more request to the first route with /foo path (total: 2 requests)
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectOkReq1, expectOkResp1); err != nil {
-				t.Errorf("failed to get expected response for the request to first route (/foo): %v", err)
-			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespFoo)
 
 			// Send a request to the second route with /bar path (total: 3 requests)
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectOkReq2, expectOkResp2); err != nil {
-				t.Errorf("failed to get expected response for the request to second route (/bar): %v", err)
-			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkRespBar)
 
 			// At this point, 3 requests have been sent in total (2 to /foo, 1 to /bar)
 			// Since the rate limit is shared and set to 3, the next request should be rate limited
 			// even though it's going to a different path
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq2, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected rate limit response for the second request to /bar: %v", err)
-			}
-
-			// Make sure that metric worked as expected.
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_0_0_0_0/0"}`)
-				if err != nil {
-					tlog.Logf(t, "failed to query prometheus: %v", err)
-					return false, err
-				}
-				if v != nil {
-					tlog.Logf(t, "got expected value: %v", v)
-					return true, nil
-				}
-				return false, nil
-			}); err != nil {
-				t.Errorf("failed to get expected metric for rate limit: %v", err)
-			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr2, &expectLimitResp)
 		})
 	},
 }
@@ -1553,9 +1590,10 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			expectLimitResp := http.ExpectedResponse{
+			// keep sending requests till get 200 first, that will cost one 200
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
+			// keep sending requests till get 429.
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/get?user=alice",
 				},
@@ -1563,21 +1601,7 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 					StatusCodes: []int{429},
 				},
 				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-			// send exactly 4 requests, and still expect 200
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
-			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
+			})
 			// make sure that metric worked as expected.
 			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
 				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="user"}`)
@@ -1606,8 +1630,6 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			// send exactly 4 requests, and still expect 200
 
 			// keep sending requests till get 200 first, that will cost one 200
 			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)

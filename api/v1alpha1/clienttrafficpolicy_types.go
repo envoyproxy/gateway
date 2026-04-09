@@ -371,6 +371,17 @@ type HTTP1Settings struct {
 	//
 	// +optional
 	DisableSafeMaxConnectionDuration *bool `json:"disableSafeMaxConnectionDuration,omitempty"`
+	// IgnoredUpgradeTypes specifies a list of upgrade types for which
+	// HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
+	// rejected with a 403 response. When a client sends an HTTP/1.1 request
+	// with Connection: Upgrade and an Upgrade header matching one of these
+	// matchers, Envoy will strip the upgrade headers and process the request
+	// as a normal HTTP/1.1 request.
+	//
+	// Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
+	//
+	// +optional
+	IgnoredUpgradeTypes []StringMatch `json:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.

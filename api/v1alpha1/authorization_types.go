@@ -111,30 +111,17 @@ type Principal struct {
 	// +kubebuilder:validation:MaxItems=256
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
 
-	// SourceCIDRs are the IP CIDR ranges of the source (L4 peer IP).
-	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
-	//
-	// If multiple CIDR ranges are specified, one of the CIDR ranges must match
-	// the source IP for the rule to match.
-	//
-	// The source IP is the IP address of the peer that connected to Envoy.
-	// This IP is obtained from the TCP connection's peer address and is not
-	// affected by X-Forwarded-For or other IP detection headers.
-	// If intermediaries (load balancers, NAT) terminate or proxy TCP,
-	// the original client IP will only be available if the intermediary
-	// preserves the source address (for example by enabling the PROXY protocol
-	// or avoiding SNAT).
-	// +optional
-	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
-	SourceCIDRs []CIDR `json:"sourceCIDRs,omitempty"`
-
 	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// This field is supported for HTTPRoute and GRPCRoute authorization.
+	// It is not supported for TCPRoute targets.
+	//
 	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
 	//
+	// The client IP is inferred from the X-Forwarded-For header or a custom header.
+	// You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
+	//
 	// +optional
 	// +kubebuilder:validation:MinItems=1
-	// +notImplementedHide
 	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
 }
 

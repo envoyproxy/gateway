@@ -61,7 +61,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `logName` | _string_ |  false  |  | LogName defines the friendly name of the access log to be returned in<br />StreamAccessLogsMessage.Identifier. This allows the access log server<br />to differentiate between different access logs coming from the same Envoy. |
@@ -111,7 +111,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference) array_ |  true  |  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
+| `credentialRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference) array_ |  true  |  | CredentialRefs is the Kubernetes secret which contains the API keys.<br />This is an Opaque secret.<br />Each API key is stored in the key representing the client id.<br />If the secrets have a key for a duplicated client, the first one will be used. |
 | `extractFrom` | _[ExtractFrom](#extractfrom) array_ |  true  |  | ExtractFrom is where to fetch the key from the coming request.<br />The value from the first source that has a key will be used. |
 | `forwardClientIDHeader` | _string_ |  false  |  | ForwardClientIDHeader is the name of the header to forward the client identity to the backend<br />service. The header will be added to the request with the client id as the value. |
 | `sanitize` | _boolean_ |  false  |  | Sanitize indicates whether to remove the API key from the request before forwarding it to the backend service. |
@@ -129,9 +129,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 3s | Interval defines the time between active health checks. |
-| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 1s | Timeout defines the time to wait for a health check response. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 3s | Interval defines the time between active health checks. |
+| `initialJitter` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | InitialJitter defines the maximum time Envoy will wait before the first health check.<br />Envoy will randomly select a value between 0 and the initial jitter value. |
 | `unhealthyThreshold` | _integer_ |  false  | 3 | UnhealthyThreshold defines the number of unhealthy health checks required before a backend host is marked unhealthy.<br />Without RetriableStatuses configured, any health check failure results in the host being immediately<br />considered unhealthy. When RetriableStatuses is set, health checks returning those statuses are retried<br />up to this threshold before the host is marked unhealthy. |
 | `healthyThreshold` | _integer_ |  false  | 1 | HealthyThreshold defines the number of healthy health checks required before a backend host is marked healthy. |
 | `type` | _[ActiveHealthCheckerType](#activehealthcheckertype)_ |  true  |  | Type defines the type of health checker. |
@@ -281,8 +281,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `baseInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | BaseInterval is the base interval between retries. |
-| `maxInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
+| `baseInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | BaseInterval is the base interval between retries. |
+| `maxInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.<br />The default is 10 times the base_interval |
 
 
 #### Backend
@@ -298,7 +298,7 @@ the behavior of the connection from Envoy Proxy to the backend.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`Backend`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendSpec](#backendspec)_ |  true  |  | Spec defines the desired state of Backend. |
 | `status` | _[BackendStatus](#backendstatus)_ |  true  |  | Status defines the current status of Backend. |
 
@@ -324,7 +324,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 
@@ -345,7 +345,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
+| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | BufferLimit Soft limit on size of the cluster’s connections read and write buffers.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />If unspecified, an implementation defined default is applied (32768 bytes).<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note: that when the suffix is not provided, the value is interpreted as bytes. |
 | `preconnect` | _[PreconnectPolicy](#preconnectpolicy)_ |  false  |  | Preconnect configures proactive upstream connections to reduce latency by establishing<br />connections before they’re needed and avoiding connection establishment overhead.<br />If unset, Envoy will fetch connections as needed to serve in-flight requests. |
 
 
@@ -441,7 +441,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#condition-v1-meta) array_ |  false  |  | Conditions describe the current conditions of the Backend. |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ |  false  |  | Conditions describe the current conditions of the Backend. |
 
 
 #### BackendTLSConfig
@@ -456,7 +456,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef defines the reference to a Kubernetes Secret that contains<br />the client certificate and private key for Envoy to use when connecting to<br />backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.<br />This secret should be located within the same namespace as the Envoy proxy resource that references it. |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef defines the reference to a Kubernetes Secret that contains<br />the client certificate and private key for Envoy to use when connecting to<br />backend services and external services, such as ExtAuth, ALS, OpenTelemetry, etc.<br />This secret should be located within the same namespace as the Envoy proxy resource that references it. |
 | `minVersion` | _[TLSVersion](#tlsversion)_ |  false  |  | Min specifies the minimal TLS protocol version to allow.<br />The default is TLS 1.2 if this is not specified. |
 | `maxVersion` | _[TLSVersion](#tlsversion)_ |  false  |  | Max specifies the maximal TLS protocol version to allow<br />The default is TLS 1.3 if this is not specified. |
 | `ciphers` | _string array_ |  false  |  | Ciphers specifies the set of cipher suites supported when<br />negotiating TLS 1.0 - 1.2. This setting has no effect for TLS 1.3.<br />For the list of supported ciphers, please refer to the Envoy documentation:<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlsparameters<br />In non-FIPS Envoy Proxy builds the default cipher list is:<br />- [ECDHE-ECDSA-AES128-GCM-SHA256\|ECDHE-ECDSA-CHACHA20-POLY1305]<br />- [ECDHE-RSA-AES128-GCM-SHA256\|ECDHE-RSA-CHACHA20-POLY1305]<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384<br />In builds using BoringSSL FIPS the default cipher list is:<br />- ECDHE-ECDSA-AES128-GCM-SHA256<br />- ECDHE-RSA-AES128-GCM-SHA256<br />- ECDHE-ECDSA-AES256-GCM-SHA384<br />- ECDHE-RSA-AES256-GCM-SHA384 |
@@ -511,9 +511,9 @@ between the Envoy Proxy listener and the backend service.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`BackendTrafficPolicy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ |  true  |  | spec defines the desired state of BackendTrafficPolicy. |
-| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus)_ |  true  |  | status defines the current status of BackendTrafficPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus)_ |  true  |  | status defines the current status of BackendTrafficPolicy. |
 
 
 #### BackendTrafficPolicySpec
@@ -547,8 +547,8 @@ _Appears in:_
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
-| `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
-| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
+| `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration (websocket) will be used.<br />However, if requestBuffer is configured, the default upgrade configuration<br />will be ignored. |
+| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings.<br />Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option<br />on routes that need those protocols, because requests can hang instead of being forwarded upstream. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing.<br />When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.<br />If not specified, the EnvoyProxy-level setting is used. |
 
@@ -568,6 +568,38 @@ _Appears in:_
 | `DynamicResolver` | BackendTypeDynamicResolver defines the type of the backend as DynamicResolver.<br />When a backend is of type DynamicResolver, the Envoy will resolve the upstream<br />ip address and port from the host header of the incoming request. If the ip address<br />is directly set in the host header, the Envoy will use the ip address and port as the<br />upstream address. If the hostname is set in the host header, the Envoy will resolve the<br />ip address and port from the hostname using the DNS resolver.<br /> | 
 
 
+#### BackendUtilization
+
+
+
+BackendUtilization defines configuration for Envoy's Backend Utilization policy.
+It uses Open Resource Cost Application (ORCA) load metrics reported by endpoints to make load balancing decisions.
+These metrics are typically sent by the backend service in response headers or trailers.
+
+The backend should report these metrics in header/trailer as one of the following formats:
+- Binary: `endpoint-load-metrics-bin` with base64-encoded serialized `OrcaLoadReport` proto.
+- JSON: `endpoint-load-metrics` with JSON-encoded `OrcaLoadReport` proto, e.g., `JSON {"cpu_utilization": 0.3}`.
+- TEXT: `endpoint-load-metrics` with comma-separated key-value pairs, e.g., `TEXT cpu=0.3,mem=0.8`.
+
+By default, Envoy Gateway removes these ORCA response headers/trailers before sending the response to the client
+(see KeepResponseHeaders). If you need the downstream client to see them, set KeepResponseHeaders to true.
+
+See Envoy proto: envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+See ORCA Load Report proto: xds.data.orca.v3.orca_load_report.proto
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `blackoutPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | A given endpoint must report load metrics continuously for at least this long before the endpoint weight will be used.<br />Default is 10s. |
+| `weightExpirationPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | If a given endpoint has not reported load metrics in this long, stop using the reported weight. Defaults to 3m. |
+| `weightUpdatePeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | How often endpoint weights are recalculated. Values less than 100ms are capped at 100ms. Default 1s. |
+| `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
+| `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
+| `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
+
+
 #### BasicAuth
 
 
@@ -579,7 +611,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
+| `users` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the username-password pairs in<br />htpasswd format, used to verify user credentials in the "Authorization"<br />header.<br />This is an Opaque secret. The username-password pairs should be stored in<br />the key ".htpasswd". As the key name indicates, the value needs to be the<br />htpasswd format, for example: "user1:\{SHA\}hashed_user1_password".<br />Right now, only SHA hash algorithm is supported.<br />Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html<br />for more details. |
 | `forwardUsernameHeader` | _string_ |  false  |  | This field specifies the header name to forward a successfully authenticated user to<br />the backend. The header will be added to the request with the username as the value.<br />If it is not specified, the username will not be forwarded. |
 
 
@@ -654,7 +686,7 @@ _Appears in:_
 | `allowMethods` | _string array_ |  false  |  | AllowMethods defines the methods that are allowed to make requests.<br />It specifies the allowed methods in the Access-Control-Allow-Methods CORS response header..<br />The value "*" allows any method to be used. |
 | `allowHeaders` | _string array_ |  false  |  | AllowHeaders defines the headers that are allowed to be sent with requests.<br />It specifies the allowed headers in the Access-Control-Allow-Headers CORS response header..<br />The value "*" allows any header to be sent. |
 | `exposeHeaders` | _string array_ |  false  |  | ExposeHeaders defines which response headers should be made accessible to<br />scripts running in the browser.<br />It specifies the headers in the Access-Control-Expose-Headers CORS response header..<br />The value "*" allows any header to be exposed. |
-| `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
+| `maxAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxAge defines how long the results of a preflight request can be cached.<br />It specifies the value in the Access-Control-Max-Age CORS response header.. |
 | `allowCredentials` | _boolean_ |  false  |  | AllowCredentials indicates whether a request can include user credentials<br />like cookies, authentication headers, or TLS client certificates.<br />It specifies the value in the Access-Control-Allow-Credentials CORS response header. |
 
 
@@ -676,6 +708,7 @@ _Appears in:_
 | `maxParallelRetries` | _integer_ |  false  | 1024 | The maximum number of parallel retries that Envoy will make to the referenced backend defined within a xRoute rule. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | The maximum number of requests that Envoy will make over a single connection to the referenced backend defined within a xRoute rule.<br />Default: unlimited. |
 | `perEndpoint` | _[PerEndpointCircuitBreakers](#perendpointcircuitbreakers)_ |  false  |  | PerEndpoint defines Circuit Breakers that will apply per-endpoint for an upstream cluster |
+| `retryBudget` | _[RetryBudget](#retrybudget)_ |  false  |  | RetryBudget provides settings for retry budget, which limits the number of retries in a given percentage.<br />RetryBudget take precedence over maxParallelRetries. |
 
 
 #### ClaimToHeader
@@ -705,7 +738,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `connectionLimit` | _[ConnectionLimit](#connectionlimit)_ |  false  |  | ConnectionLimit defines limits related to connections |
-| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
+| `bufferLimit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | BufferLimit provides configuration for the maximum buffer size in bytes for each incoming connection.<br />BufferLimit applies to connection streaming (maybe non-streaming) channel between processes, it's in user space.<br />For example, 20Mi, 1Gi, 256Ki etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 32768 bytes. |
 | `maxAcceptPerSocketEvent` | _integer_ |  false  | 1 | MaxAcceptPerSocketEvent provides configuration for the maximum number of connections to accept from the kernel<br />per socket event. If there are more than MaxAcceptPerSocketEvent connections pending accept, connections over<br />this threshold will be accepted in later event loop iterations.<br />Defaults to 1 and can be disabled by setting to 0 for allowing unlimited accepted connections. |
 
 
@@ -793,9 +826,9 @@ between the downstream client and Envoy Proxy listener.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`ClientTrafficPolicy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ |  true  |  | Spec defines the desired state of ClientTrafficPolicy. |
-| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus)_ |  true  |  | Status defines the current status of ClientTrafficPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus)_ |  true  |  | Status defines the current status of ClientTrafficPolicy. |
 
 
 #### ClientTrafficPolicySpec
@@ -842,12 +875,30 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `optional` | _boolean_ |  false  |  | Optional set to true accepts connections even when a client doesn't present a certificate.<br />Defaults to false, which rejects connections without a valid client certificate. |
-| `caCertificateRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the client.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the certificate<br />to be attached. |
+| `optional` | _boolean_ |  false  |  | Optional set to true accepts connections even when a client doesn't present a certificate.<br />Defaults to false, which rejects connections without a valid client certificate.<br />Deprecated: Use Mode instead. |
+| `mode` | _[ClientValidationModeType](#clientvalidationmodetype)_ |  false  |  | Mode defines how the Gateway or Listener validates client certificates.<br />If not specified, defaults to RequireAndVerify. |
+| `caCertificateRefs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference) array_ |  false  |  | CACertificateRefs contains one or more references to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the client.<br />A single reference to a Kubernetes ConfigMap or a Kubernetes Secret,<br />with the CA certificate in a key named `ca.crt` is currently supported.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the certificate<br />to be attached. |
 | `spkiHashes` | _string array_ |  false  |  | An optional list of base64-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded Subject Public Key Information<br />(SPKI) of the presented certificate matches one of the specified values. |
 | `certificateHashes` | _string array_ |  false  |  | An optional list of hex-encoded SHA-256 hashes. If specified, Envoy will<br />verify that the SHA-256 of the DER-encoded presented certificate matches<br />one of the specified values. |
 | `subjectAltNames` | _[SubjectAltNames](#subjectaltnames)_ |  false  |  | An optional list of Subject Alternative name matchers. If specified, Envoy<br />will verify that the Subject Alternative Name of the presented certificate<br />matches one of the specified matchers |
 | `crl` | _[CrlContext](#crlcontext)_ |  false  |  | Crl specifies the crl configuration that can be used to validate the client initiating the TLS connection |
+
+
+#### ClientValidationModeType
+
+_Underlying type:_ _string_
+
+ClientValidationModeType defines how a Gateway or Listener validates client certificates.
+
+_Appears in:_
+- [ClientValidationContext](#clientvalidationcontext)
+
+| Value | Description |
+| ----- | ----------- |
+| `Request` | Request indicates that a client certificate is requested<br />during the TLS handshake but does not require one.<br /> | 
+| `RequireAny` | RequireAny indicates that a client certificate is required during<br />the handshake, but the connection is permitted even when the<br />client certificate verification fails.<br /> | 
+| `VerifyIfGiven` | VerifyIfGiven indicates that a client certificate is requested<br />but not required. If presented, the certificate must be valid.<br /> | 
+| `RequireAndVerify` | RequireAndVerify indicates that a valid client certificate must be<br />presented during the handshake and validated<br />using CA certificates defined in CACertificateRefs.<br /> | 
 
 
 #### ClusterSettings
@@ -915,7 +966,7 @@ _Appears in:_
 | `brotli` | _[BrotliCompressor](#brotlicompressor)_ |  false  |  | The configuration for Brotli compressor. |
 | `gzip` | _[GzipCompressor](#gzipcompressor)_ |  false  |  | The configuration for GZIP compressor. |
 | `zstd` | _[ZstdCompressor](#zstdcompressor)_ |  false  |  | The configuration for Zstd compressor. |
-| `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
+| `minContentLength` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MinContentLength defines the minimum response size in bytes to apply compression.<br />Responses smaller than this threshold will not be compressed.<br />Must be at least 30 bytes as enforced by Envoy Proxy.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />Default: 30 bytes |
 
 
 #### CompressorType
@@ -959,11 +1010,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `value` | _integer_ |  true  |  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
-| `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
-| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionDuration is the maximum amount of time a connection can remain established<br />(usually via TCP/HTTP Keepalive packets) before being drained and/or closed.<br />If not specified, there is no limit. |
+| `value` | _integer_ |  false  |  | Value of the maximum concurrent connections limit.<br />When the limit is reached, incoming connections will be closed after the CloseDelay duration. |
+| `closeDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | CloseDelay defines the delay to use before closing connections that are rejected<br />once the limit value is reached.<br />Default: none. |
+| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxConnectionDuration is the maximum amount of time a connection can remain established<br />(usually via TCP/HTTP Keepalive packets) before being drained and/or closed.<br />If not specified, there is no limit. |
 | `maxRequestsPerConnection` | _integer_ |  false  |  | MaxRequestsPerConnection defines the maximum number of requests allowed over a single connection.<br />If not specified, there is no limit. Setting this parameter to 1 will effectively disable keep alive. |
-| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached<br />the stream will be reset independent of any other timeouts. If not specified, no value is set. |
+| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum amount of time to keep alive an http stream. When the limit is reached<br />the stream will be reset independent of any other timeouts. If not specified, no value is set. |
 
 
 #### ConsistentHash
@@ -1053,7 +1104,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name of the cookie to hash.<br />If this cookie does not exist in the request, Envoy will generate a cookie and set<br />the TTL on the response back to the client based on Layer 4<br />attributes of the backend endpoint, to ensure that these future requests<br />go to the same backend endpoint. Make sure to set the TTL field for this case. |
-| `ttl` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
+| `ttl` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | TTL of the generated cookie if the cookie is not present. This value sets the<br />Max-Age attribute value. |
 | `attributes` | _object (keys:string, values:string)_ |  false  |  | Additional Attributes to set for the generated cookie. |
 
 
@@ -1084,7 +1135,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `refs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference) array_ |  true  |  | Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,<br />containing the certificate revocation list in PEM format<br />Expects the content in a key named `ca.crl`.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the crl<br />to be attached. |
+| `refs` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference) array_ |  true  |  | Refs contains one or more references to a Kubernetes ConfigMap or a Kubernetes Secret,<br />containing the certificate revocation list in PEM format<br />Expects the content in a key named `ca.crl`.<br />References to a resource in different namespace are invalid UNLESS there<br />is a ReferenceGrant in the target namespace that allows the crl<br />to be attached. |
 | `onlyVerifyLeafCertificate` | _boolean_ |  false  |  | If this option is set to true,  Envoy will only verify the certificate at the end of the certificate chain against the CRL.<br />Defaults to false, which will verify the entire certificate chain against the CRL. |
 
 
@@ -1218,7 +1269,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `dnsRefreshRate` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
+| `dnsRefreshRate` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DNSRefreshRate specifies the rate at which DNS records should be refreshed.<br />Defaults to 30 seconds. |
 | `respectDnsTtl` | _boolean_ |  false  |  | RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.<br />If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.<br />Defaults to true. |
 | `lookupFamily` | _[DNSLookupFamily](#dnslookupfamily)_ |  false  |  | LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).<br />If set, this configuration overrides other defaults. |
 
@@ -1256,7 +1307,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
 | `filterName` | _string_ |  false  |  | FilterName identifies a specific filter implementation within the dynamic<br />module. A single shared library can contain multiple filter implementations.<br />This value is passed to the module's HTTP filter config init function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
-| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module filter.<br />This is serialized as JSON and passed to the module's initialization function. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module filter.<br />This is serialized as JSON and passed to the module's initialization function. |
 | `terminalFilter` | _boolean_ |  false  | false | TerminalFilter indicates that this dynamic module handles requests without<br />requiring an upstream backend. The module is responsible for generating and<br />sending the response to downstream directly.<br />Defaults to false. |
 
 
@@ -1278,6 +1329,26 @@ _Appears in:_
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
 
 
+#### DynamicModuleLBPolicy
+
+
+
+DynamicModuleLBPolicy configures a custom load balancing algorithm
+implemented as a dynamic module (runtime-loaded shared library).
+The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
+
+See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
+| `lbPolicyName` | _string_ |  true  |  | LBPolicyName identifies a specific load balancer implementation within<br />the dynamic module. A single shared library can contain multiple LB<br />policy implementations. This value is passed to the module's<br />initialization function to select the appropriate implementation. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
+
+
 #### DynamicModuleSource
 
 
@@ -1291,6 +1362,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[DynamicModuleSourceType](#dynamicmodulesourcetype)_ |  false  | Local | Type is the type of the source of the dynamic module code.<br />Defaults to Local. |
 | `local` | _[LocalDynamicModuleSource](#localdynamicmodulesource)_ |  false  |  | Local specifies a module loaded from the proxy's local filesystem<br />by absolute path. |
+| `remote` | _[RemoteDynamicModuleSource](#remotedynamicmodulesource)_ |  false  |  | Remote specifies a module fetched from a remote source.<br />The module binary is downloaded and cached by Envoy. |
 
 
 #### DynamicModuleSourceType
@@ -1366,9 +1438,9 @@ EnvoyExtensionPolicy allows the user to configure various envoy extensibility op
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`EnvoyExtensionPolicy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyExtensionPolicySpec](#envoyextensionpolicyspec)_ |  true  |  | Spec defines the desired state of EnvoyExtensionPolicy. |
-| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus)_ |  true  |  | Status defines the current status of EnvoyExtensionPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus)_ |  true  |  | Status defines the current status of EnvoyExtensionPolicy. |
 
 
 #### EnvoyExtensionPolicySpec
@@ -1418,6 +1490,7 @@ _Appears in:_
 | `envoy.filters.http.ext_proc` | EnvoyFilterExtProc defines the Envoy HTTP external process filter.<br /> | 
 | `envoy.filters.http.wasm` | EnvoyFilterWasm defines the Envoy HTTP WebAssembly filter.<br /> | 
 | `envoy.filters.http.dynamic_modules` | EnvoyFilterDynamicModules defines the Envoy HTTP dynamic modules filter.<br /> | 
+| `envoy.filters.http.geoip` | EnvoyFilterGeoIP defines the Envoy HTTP GeoIP filter.<br /> | 
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
@@ -1568,7 +1641,7 @@ _Appears in:_
 | `shutdownManager` | _[ShutdownManager](#shutdownmanager)_ |  false  |  | ShutdownManager defines the configuration for the shutdown manager. |
 | `client` | _[KubernetesClient](#kubernetesclient)_ |  true  |  | Client holds the configuration for the Kubernetes client. |
 | `proxyTopologyInjector` | _[EnvoyGatewayTopologyInjector](#envoygatewaytopologyinjector)_ |  false  |  | TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration |
-| `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
+| `cacheSyncPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | CacheSyncPeriod determines the minimum frequency at which watched resources are synced.<br />Note that a sync in the provider layer will not lead to a full reconciliation (including translation),<br />unless there are actual changes in the provider resources.<br />This option can be used to protect against missed events or issues in Envoy Gateway where resources<br />are not requeued when they should be, at the cost of increased resource consumption.<br />Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options<br />Default: 10 hours |
 
 
 #### EnvoyGatewayLogComponent
@@ -1662,14 +1735,15 @@ _Appears in:_
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `host` | _string_ |  true  |  | Host define the sink service hostname. |
 | `protocol` | _string_ |  true  |  | Protocol define the sink service protocol. |
 | `port` | _integer_ |  false  | 4317 | Port defines the port the sink service is exposed on. |
-| `exportInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  true  |  | ExportInterval configures the intervening time between exports for a<br />Sink. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_INTERVAL environment variable.<br />If ExportInterval is less than or equal to zero, 60 seconds<br />is used as the default. |
-| `exportTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  true  |  | ExportTimeout configures the time a Sink waits for an export to<br />complete before canceling it. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_TIMEOUT environment variable.<br />If ExportTimeout is less than or equal to zero, 30 seconds<br />is used as the default. |
+| `exportInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | ExportInterval configures the intervening time between exports for a<br />Sink. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_INTERVAL environment variable.<br />If ExportInterval is less than or equal to zero, 60 seconds<br />is used as the default. |
+| `exportTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | ExportTimeout configures the time a Sink waits for an export to<br />complete before canceling it. This option overrides any value set for the<br />OTEL_METRIC_EXPORT_TIMEOUT environment variable.<br />If ExportTimeout is less than or equal to zero, 30 seconds<br />is used as the default. |
 
 
 #### EnvoyGatewayPrometheusProvider
@@ -1757,6 +1831,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
+| `traces` | _[EnvoyGatewayTraces](#envoygatewaytraces)_ |  true  |  | Traces defines traces configuration for envoy gateway. |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1771,6 +1846,37 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `disabled` | _boolean_ |  false  |  |  |
+
+
+#### EnvoyGatewayTraceSink
+
+
+
+EnvoyGatewayTraceSink defines control plane
+trace sinks where traces are sent to.
+
+_Appears in:_
+- [EnvoyGatewayTraces](#envoygatewaytraces)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[TraceSinkType](#tracesinktype)_ |  true  | OpenTelemetry | Type defines the trace sink type.<br />EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  |  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayTraces
+
+
+
+EnvoyGatewayTraces defines control plane tracing configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
+| `samplingRate` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingRate controls the fraction of traces that are sampled.<br />The value is expressed as a Gateway API Fraction (numerator/denominator).<br />If denominator is omitted, it defaults to 100. |
 
 
 #### EnvoyJSONPatchConfig
@@ -1803,9 +1909,9 @@ resources by Envoy Gateway using this patch API
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`EnvoyPatchPolicy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ |  true  |  | Spec defines the desired state of EnvoyPatchPolicy. |
-| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus)_ |  true  |  | Status defines the current status of EnvoyPatchPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus)_ |  true  |  | Status defines the current status of EnvoyPatchPolicy. |
 
 
 #### EnvoyPatchPolicySpec
@@ -1821,7 +1927,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[EnvoyPatchType](#envoypatchtype)_ |  true  |  | Type decides the type of patch.<br />Valid EnvoyPatchType values are "JSONPatch". |
 | `jsonPatches` | _[EnvoyJSONPatchConfig](#envoyjsonpatchconfig) array_ |  false  |  | JSONPatch defines the JSONPatch configuration. |
-| `targetRef` | _[LocalPolicyTargetReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#localpolicytargetreference)_ |  true  |  | TargetRef is the name of the Gateway API resource this policy<br />is being attached to.<br />By default, attaching to Gateway is supported and<br />when mergeGateways is enabled it should attach to GatewayClass.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway<br />TargetRef |
+| `targetRef` | _[LocalPolicyTargetReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localpolicytargetreference)_ |  true  |  | TargetRef is the name of the Gateway API resource this policy<br />is being attached to.<br />By default, attaching to Gateway is supported and<br />when mergeGateways is enabled it should attach to GatewayClass.<br />This Policy and the TargetRef MUST be in the same namespace<br />for this Policy to have effect and be applied to the Gateway<br />TargetRef |
 | `priority` | _integer_ |  true  |  | Priority of the EnvoyPatchPolicy.<br />If multiple EnvoyPatchPolicies are applied to the same<br />TargetRef, they will be applied in the ascending order of<br />the priority i.e. int32.min has the highest priority and<br />int32.max has the lowest priority.<br />Defaults to 0. |
 
 
@@ -1851,7 +1957,7 @@ EnvoyProxy is the schema for the envoyproxies API.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`EnvoyProxy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[EnvoyProxySpec](#envoyproxyspec)_ |  true  |  | EnvoyProxySpec defines the desired state of EnvoyProxy. |
 | `status` | _[EnvoyProxyStatus](#envoyproxystatus)_ |  false  |  | EnvoyProxyStatus defines the actual state of EnvoyProxy. |
 
@@ -1867,7 +1973,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#condition-v1-meta) array_ |  false  |  | Conditions describes the status of the Policy with respect to the given Ancestor. |
+| `conditions` | _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#condition-v1-meta) array_ |  false  |  | Conditions describes the status of the Policy with respect to the given Ancestor. |
 | `ancestorRef` | _[ParentReference](#parentreference)_ |  true  |  | AncestorRef corresponds a GatewayClass or Gateway use this EnvoyProxy with ParametersReference. |
 
 
@@ -1977,12 +2083,13 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
-| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 
 
 #### EnvoyProxyStatus
@@ -2031,10 +2138,11 @@ _Appears in:_
 | `http` | _[HTTPExtAuthService](#httpextauthservice)_ |  true  |  | HTTP defines the HTTP External Authorization service.<br />Either GRPCService or HTTPService must be specified,<br />and only one of them can be provided. |
 | `headersToExtAuth` | _string array_ |  false  |  | HeadersToExtAuth defines the client request headers that will be included<br />in the request to the external authorization service.<br />Note: If not specified, the default behavior for gRPC and HTTP external<br />authorization services is different due to backward compatibility reasons.<br />All headers will be included in the check request to a gRPC authorization server.<br />Only the following headers will be included in the check request to an HTTP<br />authorization server: Host, Method, Path, Content-Length, and Authorization.<br />And these headers will always be included to the check request to an HTTP<br />authorization server by default, no matter whether they are specified<br />in HeadersToExtAuth or not. |
 | `bodyToExtAuth` | _[BodyToExtAuth](#bodytoextauth)_ |  false  |  | BodyToExtAuth defines the Body to Ext Auth configuration. |
-| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
 | `contextExtensions` | _[ContextExtension](#contextextension) array_ |  false  |  | ContextExtensions are analogous to http_request.headers, however these<br />contents will not be sent to the upstream server. This provides an<br />extension mechanism for sending additional information to the auth server<br />without modifying the proto definition. It maps to the internal opaque<br />context in the filter chain. |
+| `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned when the authorization service returns an error<br />or cannot be reached. Defaults to 403 Forbidden.<br />Only 4xx and 5xx status codes are supported. |
 
 
 #### ExtProc
@@ -2048,10 +2156,10 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
-| `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
+| `messageTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MessageTimeout is the timeout for a response to be returned from the external processor<br />Default: 200ms |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when failing to call the external processor.<br />If FailOpen is set to true, the system bypasses the ExtProc extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the ExtProc extension will also be bypassed if the configuration is invalid. |
 | `processingMode` | _[ExtProcProcessingMode](#extprocprocessingmode)_ |  false  |  | ProcessingMode defines how request and response body is processed<br />Default: header and body are not sent to the external processor |
 | `metadata` | _[ExtProcMetadata](#extprocmetadata)_ |  false  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
@@ -2157,7 +2265,7 @@ _Appears in:_
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
 | `failOpen` | _boolean_ |  false  |  | FailOpen defines if Envoy Gateway should ignore errors returned from the Extension Service hooks.<br />When set to false, Envoy Gateway does not ignore extension Service hook errors. As a result,<br />xDS updates are skipped for the relevant envoy proxy fleet and the previous state is preserved.<br />When set to true, if the Extension Service hooks return an error, no changes will be applied to the<br />source of the configuration which was sent to the extension server. The errors are ignored and the resulting<br />xDS configuration is updated in the xDS snapshot.<br />Default: false |
-| `maxMessageSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | MaxMessageSize defines the maximum message size in bytes that can be<br />sent to or received from the Extension Service.<br />Default: 4M |
+| `maxMessageSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxMessageSize defines the maximum message size in bytes that can be<br />sent to or received from the Extension Service.<br />Default: 4M |
 
 
 #### ExtensionService
@@ -2194,9 +2302,9 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `maxAttempts` | _integer_ |  false  |  | MaxAttempts defines the maximum number of retry attempts.<br />Default: 4 |
-| `initialBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.<br />Default: 0.1s |
-| `maxBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxBackoff defines the maximum backoff in seconds for retries.<br />Default: 1s |
-| `backoffMultiplier` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | BackoffMultiplier defines the multiplier to use for exponential backoff for retries.<br />Default: 2.0 |
+| `initialBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | InitialBackoff defines the initial backoff in seconds for retries, details: https://github.com/grpc/proposal/blob/master/A6-client-retries.md#integration-with-service-config.<br />Default: 0.1s |
+| `maxBackoff` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxBackoff defines the maximum backoff in seconds for retries.<br />Default: 1s |
+| `backoffMultiplier` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | BackoffMultiplier defines the multiplier to use for exponential backoff for retries.<br />Default: 2.0 |
 | `RetryableStatusCodes` | _[RetryableGRPCStatusCode](#retryablegrpcstatuscode) array_ |  false  |  | RetryableStatusCodes defines the grpc status code for which retries will be attempted.<br />Default: [ "UNAVAILABLE" ] |
 
 
@@ -2211,8 +2319,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
-| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mTLS authentication. If not specified, only server certificate validation is performed. |
+| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  true  |  | CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".<br />The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server. |
+| `clientCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  false  |  | ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key<br />for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.<br />When specified, Envoy Gateway will present this client certificate to the extension server<br />for mTLS authentication. If not specified, only server certificate validation is performed. |
 
 
 #### ExtractFrom
@@ -2292,7 +2400,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `fixedDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  true  |  | FixedDelay specifies the fixed delay duration |
+| `fixedDelay` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | FixedDelay specifies the fixed delay duration |
 | `percentage` | _float_ |  false  | 100 | Percentage specifies the percentage of requests to be delayed. Default 100%, if set 0, no requests will be delayed. Accuracy to 0.0001%. |
 
 
@@ -2368,7 +2476,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 
@@ -2586,6 +2694,24 @@ _Appears in:_
 | `preserveHeaderCase` | _boolean_ |  false  |  | PreserveHeaderCase defines if Envoy should preserve the letter case of headers.<br />By default, Envoy will lowercase all the headers. |
 | `http10` | _[HTTP10Settings](#http10settings)_ |  false  |  | HTTP10 turns on support for HTTP/1.0 and HTTP/0.9 requests. |
 | `disableSafeMaxConnectionDuration` | _boolean_ |  false  |  | DisableSafeMaxConnectionDuration controls the close behavior for HTTP/1 connections.<br />By default, connection closure is delayed until the next request arrives after maxConnectionDuration is exceeded.<br />It then adds a Connection: close header and gracefully closes the connection after the response completes.<br />When set to true (disabled), Envoy uses its default drain behavior, closing the connection shortly after maxConnectionDuration elapses.<br />Has no effect unless maxConnectionDuration is set. |
+| `ignoredUpgradeTypes` | _[StringMatch](#stringmatch) array_ |  false  |  | IgnoredUpgradeTypes specifies a list of upgrade types for which<br />HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being<br />rejected with a 403 response. When a client sends an HTTP/1.1 request<br />with Connection: Upgrade and an Upgrade header matching one of these<br />matchers, Envoy will strip the upgrade headers and process the request<br />as a normal HTTP/1.1 request.<br />Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/". |
+
+
+#### HTTP2KeepaliveSettings
+
+
+
+HTTP2KeepaliveSettings configures HTTP/2 PING-based keepalive settings.
+
+_Appears in:_
+- [HTTP2Settings](#http2settings)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Interval specifies how often to send HTTP/2 PING frames to keep the connection alive. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Timeout specifies how long to wait for a PING response before considering the connection dead. |
+| `intervalJitter` | _integer_ |  false  |  | IntervalJitter specifies a random jitter percentage added to each interval.<br />Defaults to 15% if not specified. |
+| `idleInterval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | IdleInterval specifies how long a connection must be idle before a PING is sent. |
 
 
 #### HTTP2Settings
@@ -2601,10 +2727,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
-| `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  false  |  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
+| `initialStreamWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | InitialStreamWindowSize sets the initial window size for HTTP/2 streams.<br />If not set, the default value is 64 KiB(64*1024). |
+| `initialConnectionWindowSize` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | InitialConnectionWindowSize sets the initial window size for HTTP/2 connections.<br />If not set, the default value is 1 MiB. |
 | `maxConcurrentStreams` | _integer_ |  false  |  | MaxConcurrentStreams sets the maximum number of concurrent streams allowed per connection.<br />If not set, the default value is 100. |
 | `onInvalidMessage` | _[InvalidMessageAction](#invalidmessageaction)_ |  false  |  | OnInvalidMessage determines if Envoy will terminate the connection or just the offending stream in the event of HTTP messaging error<br />It's recommended for L2 Envoy deployments to set this value to TerminateStream.<br />https://www.envoyproxy.io/docs/envoy/latest/configuration/best_practices/level_two<br />Default: TerminateConnection |
+| `connectionKeepalive` | _[HTTP2KeepaliveSettings](#http2keepalivesettings)_ |  false  |  | ConnectionKeepalive configures HTTP/2 connection keepalive using PING frames. |
 
 
 #### HTTP3Settings
@@ -2648,9 +2775,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
-| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
-| `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
+| `requestReceivedTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | RequestReceivedTimeout is the duration envoy waits for the complete request reception. This timer starts upon request<br />initiation and stops when either the last byte of the request is sent upstream or when the response begins. |
+| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | IdleTimeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> Default: 5 minutes. |
 
 
 #### HTTPCookieMatch
@@ -2716,7 +2843,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello". |
@@ -2818,7 +2945,7 @@ traffic processing options such as path regex rewrite, direct response and more.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`HTTPRouteFilter`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[HTTPRouteFilterSpec](#httproutefilterspec)_ |  true  |  | Spec defines the desired state of HTTPRouteFilter. |
 
 
@@ -2877,10 +3004,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
-| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
-| `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | RequestTimeout is the time until which entire response is received from the upstream. |
-| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time<br />from when the request is sent until the response stream is fully consumed and does not apply to<br />non-streaming requests.<br />When set to "0s", no max duration is applied and streams can run indefinitely. |
+| `connectionIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.<br />Default: 1 hour. |
+| `maxConnectionDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | The maximum duration of an HTTP connection.<br />Default: unlimited. |
+| `requestTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | RequestTimeout is the time until which entire response is received from the upstream. |
+| `maxStreamDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time<br />from when the request is sent until the response stream is fully consumed and does not apply to<br />non-streaming requests.<br />When set to "0s", no max duration is applied and streams can run indefinitely. |
+| `streamIdleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  |  The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.<br /> If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy. |
 
 
 #### HTTPURLRewriteFilter
@@ -2896,6 +3024,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `hostname` | _[HTTPHostnameModifier](#httphostnamemodifier)_ |  false  |  | Hostname is the value to be used to replace the Host header value during<br />forwarding. |
 | `path` | _[HTTPPathModifier](#httppathmodifier)_ |  false  |  | Path defines a path rewrite. |
+| `appendXForwardedHost` | _boolean_ |  false  |  | AppendXForwardedHost controls whether the original Host header value is<br />appended to the X-Forwarded-Host header when hostname rewriting is configured.<br />Defaults to true for backward compatibility. |
 
 
 #### HTTPWasmCodeSource
@@ -3091,7 +3220,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the URL of the OCI image.<br />URL can be in the format of `registry/image:tag` or `registry/image@sha256:digest`. |
 | `sha256` | _string_ |  false  |  | SHA256 checksum that will be used to verify the OCI image.<br />It must match the digest of the OCI image.<br />If not specified, Envoy Gateway will not verify the downloaded OCI image.<br />kubebuilder:validation:Pattern=`^[a-f0-9]\{64\}$` |
-| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
+| `pullSecretRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  false  |  | PullSecretRef is a reference to the secret containing the credentials to pull the image. |
 | `tls` | _[WasmCodeSourceTLSConfig](#wasmcodesourcetlsconfig)_ |  false  |  | TLS configuration when connecting to the Wasm code source. |
 
 
@@ -3120,7 +3249,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
+| `valueRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  true  |  | ValueRef is a reference to the secret containing the credentials to be injected.<br />This is an Opaque secret. The credential should be stored in the key<br />"credential", and the value should be the credential to be injected.<br />For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".<br />for bearer token, the value should be "Bearer <token>". |
 
 
 #### InvalidMessageAction
@@ -3155,7 +3284,7 @@ _Appears in:_
 | `path` | _string_ |  false  |  | Path is a JSONPointer expression. Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.<br />It specifies the location of the target document/field where the operation will be performed |
 | `jsonPath` | _string_ |  false  |  | JSONPath is a JSONPath expression. Refer to https://datatracker.ietf.org/doc/rfc9535/ for more details.<br />It produces one or more JSONPointer expressions based on the given JSON document.<br />If no JSONPointer is found, it will result in an error.<br />If the 'Path' property is also set, it will be appended to the resulting JSONPointer expressions from the JSONPath evaluation.<br />This is useful when creating a property that does not yet exist in the JSON document.<br />The final JSONPointer expressions specifies the locations in the target document/field where the operation will be applied. |
 | `from` | _string_ |  false  |  | From is the source location of the value to be copied or moved. Only valid<br />for move or copy operations<br />Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Value is the new value of the path location. The value is only used by<br />the `add` and `replace` operations. |
+| `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Value is the new value of the path location. The value is only used by<br />the `add` and `replace` operations. |
 
 
 #### JSONPatchOperationType
@@ -3339,12 +3468,12 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `env` | _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#envvar-v1-core) array_ |  false  |  | List of environment variables to set in the container. |
-| `resources` | _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#resourcerequirements-v1-core)_ |  false  |  | Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
-| `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core)_ |  false  |  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
+| `env` | _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core) array_ |  false  |  | List of environment variables to set in the container. |
+| `resources` | _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#resourcerequirements-v1-core)_ |  false  |  | Resources required by this container.<br />More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
+| `securityContext` | _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#securitycontext-v1-core)_ |  false  |  | SecurityContext defines the security options the container should be run with.<br />If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.<br />More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` | _string_ |  false  |  | Image specifies the EnvoyProxy container image to be used including a tag, instead of the default image.<br />This field is mutually exclusive with ImageRepository. |
 | `imageRepository` | _string_ |  false  |  | ImageRepository specifies the container image repository to be used without specifying a tag.<br />The default tag will be used.<br />This field is mutually exclusive with Image. |
-| `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
+| `volumeMounts` | _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core) array_ |  false  |  | VolumeMounts are volumes to mount into the container's filesystem.<br />Cannot be updated. |
 
 
 #### KubernetesDaemonSetSpec
@@ -3359,7 +3488,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to daemonset |
-| `strategy` | _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#daemonsetupdatestrategy-v1-apps)_ |  false  |  | The daemonset strategy to use to replace existing pods with new ones. |
+| `strategy` | _[DaemonSetUpdateStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#daemonsetupdatestrategy-v1-apps)_ |  false  |  | The daemonset strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  |  | Pod defines the desired specification of pod. |
 | `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  |  | Container defines the desired specification of main container. |
 | `name` | _string_ |  false  |  | Name of the daemonSet.<br />When unset, this defaults to an autogenerated name. |
@@ -3409,10 +3538,10 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to deployment |
 | `replicas` | _integer_ |  false  |  | Replicas is the number of desired pods. Defaults to 1. |
-| `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#deploymentstrategy-v1-apps)_ |  false  |  | The deployment strategy to use to replace existing pods with new ones. |
+| `strategy` | _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#deploymentstrategy-v1-apps)_ |  false  |  | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` | _[KubernetesPodSpec](#kubernetespodspec)_ |  false  |  | Pod defines the desired specification of pod. |
 | `container` | _[KubernetesContainerSpec](#kubernetescontainerspec)_ |  false  |  | Container defines the desired specification of main container. |
-| `initContainers` | _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#container-v1-core) array_ |  false  |  | List of initialization containers belonging to the pod.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
+| `initContainers` | _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#container-v1-core) array_ |  false  |  | List of initialization containers belonging to the pod.<br />More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
 | `name` | _string_ |  false  |  | Name of the deployment.<br />When unset, this defaults to an autogenerated name. |
 
 
@@ -3433,8 +3562,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `minReplicas` | _integer_ |  false  |  | minReplicas is the lower limit for the number of replicas to which the autoscaler<br />can scale down. It defaults to 1 replica. |
 | `maxReplicas` | _integer_ |  true  |  | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.<br />It cannot be less that minReplicas. |
-| `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#metricspec-v2-autoscaling) array_ |  false  |  | metrics contains the specifications for which to use to calculate the<br />desired replica count (the maximum replica count across all metrics will<br />be used).<br />If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
-| `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  |  | behavior configures the scaling behavior of the target<br />in both Up and Down directions (scaleUp and scaleDown fields respectively).<br />If not set, the default HPAScalingRules for scale up and scale down are used.<br />See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
+| `metrics` | _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#metricspec-v2-autoscaling) array_ |  false  |  | metrics contains the specifications for which to use to calculate the<br />desired replica count (the maximum replica count across all metrics will<br />be used).<br />If left empty, it defaults to being based on CPU utilization with average on 80% usage. |
+| `behavior` | _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#horizontalpodautoscalerbehavior-v2-autoscaling)_ |  false  |  | behavior configures the scaling behavior of the target<br />in both Up and Down directions (scaleUp and scaleDown fields respectively).<br />If not set, the default HPAScalingRules for scale up and scale down are used.<br />See k8s.io.autoscaling.v2.HorizontalPodAutoScalerBehavior. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to the HorizontalPodAutoscaler |
 | `name` | _string_ |  false  |  | Name of the horizontalPodAutoScaler.<br />When unset, this defaults to an autogenerated name. |
 
@@ -3457,7 +3586,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[MergeType](#mergetype)_ |  false  |  | Type is the type of merge operation to perform<br />By default, StrategicMerge is used as the patch type. |
-| `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  true  |  | Object contains the raw configuration for merged object |
+| `value` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  true  |  | Object contains the raw configuration for merged object |
 
 
 #### KubernetesPodDisruptionBudgetSpec
@@ -3472,8 +3601,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `minAvailable` | _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#intorstring-intstr-util)_ |  false  |  | MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with maxUnavailable. |
-| `maxUnavailable` | _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#intorstring-intstr-util)_ |  false  |  | MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with minAvailable. |
+| `minAvailable` | _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#intorstring-intstr-util)_ |  false  |  | MinAvailable specifies the minimum amount of pods (can be expressed as integers or as a percentage) that must be available at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with maxUnavailable. |
+| `maxUnavailable` | _[IntOrString](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#intorstring-intstr-util)_ |  false  |  | MaxUnavailable specifies the maximum amount of pods (can be expressed as integers or as a percentage) that can be unavailable at all times during voluntary disruptions,<br />such as node drains or updates. This setting ensures that your envoy proxy maintains a certain level of availability<br />and resilience during maintenance operations. Cannot be combined with minAvailable. |
 | `patch` | _[KubernetesPatchSpec](#kubernetespatchspec)_ |  false  |  | Patch defines how to perform the patch operation to the PodDisruptionBudget |
 | `name` | _string_ |  false  |  | Name of the podDisruptionBudget.<br />When unset, this defaults to an autogenerated name. |
 
@@ -3492,13 +3621,13 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `annotations` | _object (keys:string, values:string)_ |  false  |  | Annotations are the annotations that should be appended to the pods.<br />By default, no pod annotations are appended. |
 | `labels` | _object (keys:string, values:string)_ |  false  |  | Labels are the additional labels that should be tagged to the pods.<br />By default, no additional pod labels are tagged. |
-| `securityContext` | _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#podsecuritycontext-v1-core)_ |  false  |  | SecurityContext holds pod-level security attributes and common container settings.<br />Optional: Defaults to empty.  See type description for default values of each field. |
-| `affinity` | _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#affinity-v1-core)_ |  false  |  | If specified, the pod's scheduling constraints. |
-| `tolerations` | _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#toleration-v1-core) array_ |  false  |  | If specified, the pod's tolerations. |
-| `volumes` | _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#volume-v1-core) array_ |  false  |  | Volumes that can be mounted by containers belonging to the pod.<br />More info: https://kubernetes.io/docs/concepts/storage/volumes |
-| `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#localobjectreference-v1-core) array_ |  false  |  | ImagePullSecrets is an optional list of references to secrets<br />in the same namespace to use for pulling any of the images used by this PodSpec.<br />If specified, these secrets will be passed to individual puller implementations for them to use.<br />More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
+| `securityContext` | _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#podsecuritycontext-v1-core)_ |  false  |  | SecurityContext holds pod-level security attributes and common container settings.<br />Optional: Defaults to empty.  See type description for default values of each field. |
+| `affinity` | _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#affinity-v1-core)_ |  false  |  | If specified, the pod's scheduling constraints. |
+| `tolerations` | _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#toleration-v1-core) array_ |  false  |  | If specified, the pod's tolerations. |
+| `volumes` | _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core) array_ |  false  |  | Volumes that can be mounted by containers belonging to the pod.<br />More info: https://kubernetes.io/docs/concepts/storage/volumes |
+| `imagePullSecrets` | _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#localobjectreference-v1-core) array_ |  false  |  | ImagePullSecrets is an optional list of references to secrets<br />in the same namespace to use for pulling any of the images used by this PodSpec.<br />If specified, these secrets will be passed to individual puller implementations for them to use.<br />More info: https://kubernetes.io/docs/concepts/containers/images#specifying-imagepullsecrets-on-a-pod |
 | `nodeSelector` | _object (keys:string, values:string)_ |  false  |  | NodeSelector is a selector which must be true for the pod to fit on a node.<br />Selector which must match a node's labels for the pod to be scheduled on that node.<br />More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/ |
-| `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#topologyspreadconstraint-v1-core) array_ |  false  |  | TopologySpreadConstraints describes how a group of pods ought to spread across topology<br />domains. Scheduler will schedule pods in a way which abides by the constraints.<br />All topologySpreadConstraints are ANDed. |
+| `topologySpreadConstraints` | _[TopologySpreadConstraint](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#topologyspreadconstraint-v1-core) array_ |  false  |  | TopologySpreadConstraints describes how a group of pods ought to spread across topology<br />domains. Scheduler will schedule pods in a way which abides by the constraints.<br />All topologySpreadConstraints are ANDed. |
 | `priorityClassName` | _string_ |  false  |  | PriorityClassName indicates the importance of a Pod relative to other Pods.<br />If a PriorityClassName is not specified, the pod priority will be default or zero if there is no default.<br />More info: https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/ |
 
 
@@ -3552,7 +3681,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ |  true  |  | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and<br />KubernetesWatchModeTypeNamespaceSelector are currently supported<br />By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources<br />from all namespaces. |
 | `namespaces` | _string array_ |  true  |  | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped<br />resources such as Gateway, HTTPRoute and Service.<br />Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as<br />GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelector must be set. |
-| `namespaceSelector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#labelselector-v1-meta)_ |  true  |  | NamespaceSelector holds the label selector used to dynamically select namespaces.<br />Envoy Gateway will watch for namespaces matching the specified label selector.<br />Precisely one of Namespaces and NamespaceSelector must be set. |
+| `namespaceSelector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  true  |  | NamespaceSelector holds the label selector used to dynamically select namespaces.<br />Envoy Gateway will watch for namespaces matching the specified label selector.<br />Precisely one of Namespaces and NamespaceSelector must be set. |
 
 
 #### KubernetesWatchModeType
@@ -3577,9 +3706,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `leaseDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal.<br />The default setting is 15 seconds. |
-| `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position.<br />The default setting is 10 seconds. |
-| `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
+| `leaseDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.<br />It's based on the timestamp of the last acknowledged signal.<br />The default setting is 15 seconds. |
+| `renewDeadline` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership<br />status before relinquishing its position.<br />The default setting is 10 seconds. |
+| `retryPeriod` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.<br />The default setting is 2 seconds. |
 | `disable` | _boolean_ |  true  |  | Disable provides the option to turn off leader election, which is enabled by default. |
 
 
@@ -3623,10 +3752,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin". |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
+| `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
-| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently this is only supported for RoundRobin and LeastRequest load balancers |
+| `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
 
 
@@ -3645,6 +3775,8 @@ _Appears in:_
 | `LeastRequest` | LeastRequestLoadBalancerType load balancer policy.<br /> | 
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
+| `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
+| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
 
 
 #### LocalDynamicModuleSource
@@ -3864,8 +3996,8 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `provider` | _[OIDCProvider](#oidcprovider)_ |  true  |  | The OIDC Provider configuration. |
 | `clientID` | _string_ |  false  |  | The client ID to be used in the OIDC<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Only one of clientID or clientIDRef must be set. |
-| `clientIDRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | The Kubernetes secret which contains the client ID to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Exactly one of clientID or clientIDRef must be set.<br />This is an Opaque secret. The client ID should be stored in the key "client-id".<br />Only one of clientID or clientIDRef must be set. |
-| `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
+| `clientIDRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  false  |  | The Kubernetes secret which contains the client ID to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />Exactly one of clientID or clientIDRef must be set.<br />This is an Opaque secret. The client ID should be stored in the key "client-id".<br />Only one of clientID or clientIDRef must be set. |
+| `clientSecret` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  true  |  | The Kubernetes secret which contains the OIDC client secret to be used in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />This is an Opaque secret. The client secret should be stored in the key<br />"client-secret". |
 | `cookieNames` | _[OIDCCookieNames](#oidccookienames)_ |  false  |  | The optional cookie name overrides to be used for Bearer and IdToken cookies in the<br />[Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).<br />If not specified, uses a randomly generated suffix |
 | `cookieConfig` | _[OIDCCookieConfig](#oidccookieconfig)_ |  false  |  | CookieConfigs allows setting the SameSite attribute for OIDC cookies.<br />By default, its unset. |
 | `cookieDomain` | _string_ |  false  |  | The optional domain to set the access and ID token cookies on.<br />If not set, the cookies will default to the host of the request, not including the subdomains.<br />If set, the cookies will be set on the specified domain and all subdomains.<br />This means that requests to any subdomain will not require reauthentication after users log in to the parent domain. |
@@ -3875,10 +4007,10 @@ _Appears in:_
 | `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
-| `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
+| `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
 | `refreshToken` | _boolean_ |  false  | true | RefreshToken indicates whether the Envoy should automatically refresh the<br />id token and access token when they expire.<br />When set to true, the Envoy will use the refresh token to get a new id token<br />and access token when they expire.<br />If not specified, defaults to true. |
-| `defaultRefreshTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
-| `csrfTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.<br />This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token<br />in the "state" parameter when the provider redirects back to the callback endpoint.<br />If omitted, Envoy Gateway defaults the token expiration to 10 minutes. |
+| `defaultRefreshTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
+| `csrfTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | CSRFTokenTTL defines how long the CSRF token generated during the OAuth2 authorization flow remains valid.<br />This duration determines the lifetime of the CSRF cookie, which is validated against the CSRF token<br />in the "state" parameter when the provider redirects back to the callback endpoint.<br />If omitted, Envoy Gateway defaults the token expiration to 10 minutes. |
 | `disableTokenEncryption` | _boolean_ |  false  |  | Disable token encryption. When set to true, both the access token and the ID token will be stored in plain text.<br />This option should only be used in secure environments where token encryption is not required.<br />Default is false (tokens are encrypted). |
 | `passThroughAuthHeader` | _boolean_ |  false  |  | Skips OIDC authentication when the request contains a header that will be extracted by the JWT filter. Unless<br />explicitly stated otherwise in the extractFrom field, this will be the "Authorization: Bearer ..." header.<br />The passThroughAuthHeader option is typically used for non-browser clients that may not be able to handle OIDC<br />redirects and wish to directly supply a token instead.<br />If not specified, defaults to false. |
 
@@ -3961,13 +4093,49 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `issuer` | _string_ |  true  |  | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).<br />Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST<br />be https, a host component, and optionally, port and path components and<br />no query or fragment components. |
 | `authorizationEndpoint` | _string_ |  false  |  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  |  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
+
+
+#### OTelSampler
+
+
+
+OTelSampler configures the OpenTelemetry sampler.
+Type maps to OTEL_TRACES_SAMPLER.
+
+_Appears in:_
+- [OpenTelemetryTracingProvider](#opentelemetrytracingprovider)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[OTelSamplerType](#otelsamplertype)_ |  true  | AlwaysOn | Type is the sampler type. |
+| `samplingPercentage` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingPercentage controls the percentage of traces to sample.<br />Defaults to 100% when not set. |
+
+
+#### OTelSamplerType
+
+_Underlying type:_ _string_
+
+OTelSamplerType specifies the sampler type.
+Values correspond to the OTEL_TRACES_SAMPLER environment variable.
+
+_Appears in:_
+- [OTelSampler](#otelsampler)
+
+| Value | Description |
+| ----- | ----------- |
+| `AlwaysOn` | OTelSamplerTypeAlwaysOn exports all spans.<br /> | 
+| `AlwaysOff` | OTelSamplerTypeAlwaysOff drops all spans.<br /> | 
+| `TraceIdRatio` | OTelSamplerTypeTraceIDRatio exports a percentage of spans based on trace ID.<br /> | 
+| `ParentBasedAlwaysOn` | OTelSamplerTypeParentBasedAlwaysOn respects the parent span's sampling decision, sampling when no parent exists.<br /> | 
+| `ParentBasedAlwaysOff` | OTelSamplerTypeParentBasedAlwaysOff respects the parent span's sampling decision, dropping when no parent exists.<br /> | 
+| `ParentBasedTraceIdRatio` | OTelSamplerTypeParentBasedTraceIDRatio respects the parent span's sampling decision, using trace ID ratio when no parent exists.<br /> | 
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
@@ -3981,7 +4149,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the extension service hostname.<br />Deprecated: Use BackendRefs instead. |
@@ -4004,6 +4172,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `headers` | _[HTTPHeader](#httpheader) array_ |  false  |  | Headers is a list of additional headers to send with OTLP export requests.<br />These headers are added as gRPC initial metadata for the OTLP gRPC service. |
 | `resourceAttributes` | _object (keys:string, values:string)_ |  false  |  | ResourceAttributes is a set of labels that describe the source of traces.<br />It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/ |
+| `sampler` | _[OTelSampler](#otelsampler)_ |  false  |  | Sampler controls whether spans are exported. |
 
 
 #### Operation
@@ -4072,11 +4241,11 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `splitExternalLocalOriginErrors` | _boolean_ |  false  | false | SplitExternalLocalOriginErrors enables splitting of errors between external and local origin. |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 3s | Interval defines the time between passive health checks. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 3s | Interval defines the time between passive health checks. |
 | `consecutiveLocalOriginFailures` | _integer_ |  false  | 5 | ConsecutiveLocalOriginFailures sets the number of consecutive local origin failures triggering ejection.<br />Parameter takes effect only when split_external_local_origin_errors is set to true. |
 | `consecutiveGatewayErrors` | _integer_ |  false  |  | ConsecutiveGatewayErrors sets the number of consecutive gateway errors triggering ejection. |
 | `consecutive5XxErrors` | _integer_ |  false  | 5 | Consecutive5xxErrors sets the number of consecutive 5xx errors triggering ejection. |
-| `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
+| `baseEjectionTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 30s | BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures. |
 | `maxEjectionPercent` | _integer_ |  false  | 10 | MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected. |
 | `failurePercentageThreshold` | _integer_ |  false  |  | FailurePercentageThreshold sets the failure percentage threshold for outlier detection.<br />If the failure percentage of a given host is greater than or equal to this value, it will be ejected.<br />Defaults to 85. |
 | `alwaysEjectOneEndpoint` | _boolean_ |  false  | false | AlwaysEjectOneEndpoint defines whether at least one host should be ejected,<br />regardless of MaxEjectionPercent. |
@@ -4156,7 +4325,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout is the timeout per retry attempt. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Timeout is the timeout per retry attempt. |
 | `backOff` | _[BackOffPolicy](#backoffpolicy)_ |  false  |  | Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential<br />back-off algorithm for retries. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries |
 
 
@@ -4228,6 +4397,7 @@ _Appears in:_
 | `clientCIDRs` | _[CIDR](#cidr) array_ |  false  |  | ClientCIDRs are the IP CIDR ranges of the client.<br />Valid examples are "192.168.1.0/24" or "2001:db8::/64"<br />If multiple CIDR ranges are specified, one of the CIDR ranges must match<br />the client IP for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header, a custom header,<br />or the proxy protocol.<br />You can use the `ClientIPDetection` or the `ProxyProtocol` field in<br />the `ClientTrafficPolicy` to configure how the client IP is detected.<br />For TCPRoute targets (raw TCP connections), HTTP headers such as<br />X-Forwarded-For are not available. The client IP is obtained from the<br />TCP connection's peer address. If intermediaries (load balancers, NAT)<br />terminate or proxy TCP, the original client IP will only be available<br />if the intermediary preserves the source address (for example by<br />enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is<br />configured to preserve the source IP to enable correct client-IP<br />matching for TCPRoute targets. |
 | `jwt` | _[JWTPrincipal](#jwtprincipal)_ |  false  |  | JWT authorize the request based on the JWT claims and scopes.<br />Note: in order to use JWT claims for authorization, you must configure the<br />JWT authentication in the same `SecurityPolicy`. |
 | `headers` | _[AuthorizationHeaderMatch](#authorizationheadermatch) array_ |  false  |  | Headers authorize the request based on user identity extracted from custom headers.<br />If multiple headers are specified, all headers must match for the rule to match. |
+| `clientIPGeoLocations` | _[ClientIPGeoLocation](#clientipgeolocation) array_ |  false  |  | ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.<br />This field is supported for HTTPRoute and GRPCRoute authorization.<br />It is not supported for TCPRoute targets.<br />If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.<br />The client IP is inferred from the X-Forwarded-For header or a custom header.<br />You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection. |
 
 
 #### ProcessingModeOptions
@@ -4296,7 +4466,7 @@ _Appears in:_
 
 
 ProxyAccessLogFormat defines the format of accesslog.
-By default accesslogs are written to standard output.
+By default, accesslogs are written to standard output.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -4386,6 +4556,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Listener` | ProxyAccessLogTypeListener defines the accesslog for Listeners.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-access-log<br /> | 
 | `Route` | ProxyAccessLogTypeRoute defines the accesslog for HTTP, GRPC, UDP and TCP Routes.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-field-extensions-filters-udp-udp-proxy-v3-udpproxyconfig-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log<br /> | 
+| `Upstream` | ProxyAccessLogTypeUpstream defines the accesslog for upstream.<br /> | 
 
 
 #### ProxyBootstrap
@@ -4474,6 +4645,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
+| `enableGRPCStats` | _boolean_ |  false  |  | EnableGRPCStats enables the gRPC stats filter on listeners.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 | `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
 
@@ -4488,7 +4660,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `host` | _string_ |  false  |  | Host define the service hostname.<br />Deprecated: Use BackendRefs instead. |
@@ -4527,7 +4699,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  |  | Version of ProxyProtol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
+| `version` | _[ProxyProtocolVersion](#proxyprotocolversion)_ |  true  |  | Version of ProxyProtocol<br />Valid ProxyProtocolVersion values are<br />"V1"<br />"V2" |
 
 
 #### ProxyProtocolSettings
@@ -4590,7 +4762,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
 | `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
@@ -4661,7 +4833,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `backend` | _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ |  true  |  | Backend holds the configuration associated with the<br />database backend used by the rate limit service to store<br />state associated with global ratelimiting. |
-| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
+| `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Timeout specifies the timeout period for the proxy to access the ratelimit server<br />If not set, timeout is 20ms. |
 | `failClosed` | _boolean_ |  true  |  | FailClosed is a switch used to control the flow of traffic<br />when the response from the ratelimit server cannot be obtained.<br />If FailClosed is false, let the traffic pass,<br />otherwise, don't let the traffic pass and return 500.<br />If not set, FailClosed is False. |
 | `telemetry` | _[RateLimitTelemetry](#ratelimittelemetry)_ |  false  |  | Telemetry defines telemetry configuration for RateLimit. |
 
@@ -4976,18 +5148,22 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
+| `certificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  false  |  | CertificateRef defines the client certificate reference for TLS connections.<br />Currently only a Kubernetes Secret of type TLS is supported. |
 
 
 #### RemoteDynamicModuleSource
 
 
 
-RemoteDynamicModuleSource defines a dynamic module fetched from a remote source.
+RemoteDynamicModuleSource defines a dynamic module fetched from a remote HTTP source.
 
 _Appears in:_
 - [DynamicModuleSource](#dynamicmodulesource)
 
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `url` | _string_ |  true  |  | URL is the HTTP or HTTPS URL of the dynamic module shared library (.so file). |
+| `sha256` | _string_ |  true  |  | SHA256 checksum that Envoy will use to verify the downloaded module binary. |
 
 
 #### RemoteJWKS
@@ -5008,11 +5184,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `uri` | _string_ |  true  |  | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate.<br />If a custom trust bundle is needed, it can be specified in a BackendTLSConfig resource and target the BackendRefs. |
-| `cacheDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  | 300s |  |
+| `cacheDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  | 300s |  |
 
 
 #### ReplaceRegexMatch
@@ -5041,7 +5217,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#quantity-resource-api)_ |  true  |  | Limit specifies the maximum allowed size in bytes for each incoming request buffer.<br />If exceeded, the request will be rejected with HTTP 413 Content Too Large.<br />Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki"). |
+| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the maximum allowed size in bytes for each incoming request buffer.<br />If exceeded, the request will be rejected with HTTP 413 Content Too Large.<br />Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki"). |
 
 
 #### RequestHeaderCustomTag
@@ -5171,6 +5347,22 @@ _Appears in:_
 | `numAttemptsPerPriority` | _integer_ |  false  |  | NumAttemptsPerPriority defines the number of requests (initial attempt + retries)<br />that should be sent to the same priority before switching to a different one.<br />If not specified or set to 0, all requests are sent to the highest priority that is healthy. |
 | `retryOn` | _[RetryOn](#retryon)_ |  false  |  | RetryOn specifies the retry trigger condition.<br />If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503). |
 | `perRetry` | _[PerRetryPolicy](#perretrypolicy)_ |  false  |  | PerRetry is the retry policy to be applied per retry attempt. |
+
+
+#### RetryBudget
+
+
+
+RetryBudget specifies the details of the retry budget configuration, like
+the percentage of requests in the budget, and the min retry concurrency.
+
+_Appears in:_
+- [CircuitBreaker](#circuitbreaker)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `percent` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  true  |  | Percent specifies the limit on concurrent retries as a percentage [0, 100] of<br />the sum of active requests and active pending requests. |
+| `minRetryConcurrency` | _integer_ |  false  |  | MinRetryConcurrency specifies the minimum retry concurrency allowed for the retry budget.<br />For example, a budget of 20% with a minimum retry concurrency of 3<br />will allow 5 active retries while there are 25 active requests.<br />If there are 2 active requests, there are still 3 active retries<br />allowed because of the minimum retry concurrency.<br />Defaults to 3. |
 
 
 #### RetryOn
@@ -5307,9 +5499,9 @@ Gateway.
 | ---   | ---  | ---      | ---     | ---         |
 | `apiVersion` | _string_ | |`gateway.envoyproxy.io/v1alpha1`
 | `kind` | _string_ | |`SecurityPolicy`
-| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` | _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#objectmeta-v1-meta)_ |  true  |  | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` | _[SecurityPolicySpec](#securitypolicyspec)_ |  true  |  | Spec defines the desired state of SecurityPolicy. |
-| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#policystatus)_ |  true  |  | Status defines the current status of SecurityPolicy. |
+| `status` | _[PolicyStatus](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus)_ |  true  |  | Status defines the current status of SecurityPolicy. |
 
 
 #### SecurityPolicySpec
@@ -5319,10 +5511,11 @@ Gateway.
 SecurityPolicySpec defines the desired state of SecurityPolicy.
 
 NOTE: SecurityPolicy can target Gateway, HTTPRoute, GRPCRoute, and TCPRoute.
-When a SecurityPolicy targets a TCPRoute, only client-IP based authorization
+When a SecurityPolicy targets a TCPRoute, only client-IP CIDR based authorization
 (Authorization rules that use Principal.ClientCIDRs) is applied. Other
 authentication/authorization features such as JWT, API Key, Basic Auth,
-OIDC, or External Authorization are not applicable to TCPRoute targets.
+OIDC, External Authorization, or GeoIP based authorization are not applicable
+to TCPRoute targets.
 
 _Appears in:_
 - [SecurityPolicy](#securitypolicy)
@@ -5415,8 +5608,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
-| `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
+| `drainTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DrainTimeout defines the graceful drain timeout. This should be less than the pod's terminationGracePeriodSeconds.<br />If unspecified, defaults to 60 seconds. |
+| `minDrainDuration` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MinDrainDuration defines the minimum drain duration allowing time for endpoint deprogramming to complete.<br />If unspecified, defaults to 10 seconds. |
 
 
 #### ShutdownManager
@@ -5444,7 +5637,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `window` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
+| `window` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
 
 
 #### SourceMatch
@@ -5460,6 +5653,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[SourceMatchType](#sourcematchtype)_ |  false  | Exact |  |
 | `value` | _string_ |  true  |  | Value is the IP CIDR that represents the range of Source IP Addresses of the client.<br />These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.<br />For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
+| `invert` | _boolean_ |  false  | false | Invert specifies whether the source range match result will be inverted.<br />When true, the rule matches when the client IP is not in the specified range(s). |
 
 
 #### SourceMatchType
@@ -5563,6 +5757,7 @@ This is a general purpose match condition that can be used by other EG APIs
 that need to match against a string.
 
 _Appears in:_
+- [HTTP1Settings](#http1settings)
 - [HTTPHeaderFilter](#httpheaderfilter)
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
@@ -5639,7 +5834,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
+| `idleTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | IdleTimeout for a TCP connection. Idle time is defined as a period in which there are no<br />bytes sent or received on either the upstream or downstream connection.<br />Default: 1 hour. |
 
 
 #### TCPKeepalive
@@ -5656,8 +5851,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `probes` | _integer_ |  false  |  | The total number of unacknowledged probes to send before deciding<br />the connection is dead.<br />Defaults to 9. |
-| `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
-| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The duration between keep-alive probes.<br />Defaults to `75s`. |
+| `idleTime` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | The duration a connection needs to be idle before keep-alive<br />probes start being sent.<br />The duration format is<br />Defaults to `7200s`. |
+| `interval` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | The duration between keep-alive probes.<br />Defaults to `75s`. |
 
 
 #### TCPTimeout
@@ -5671,7 +5866,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
+| `connectTimeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | The timeout for network connection establishment, including TCP and TLS handshakes.<br />Default: 10 seconds. |
 
 
 #### TLSFingerprintType
@@ -5750,7 +5945,7 @@ _Appears in:_
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
 | `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
-| `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
+| `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
 
 
 #### Timeout
@@ -5769,6 +5964,20 @@ _Appears in:_
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
 
 
+#### TraceSinkType
+
+_Underlying type:_ _string_
+
+TraceSinkType specifies the types of trace sinks supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
+
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` | TraceSinkTypeOpenTelemetry captures traces for the OpenTelemetry sink.<br /> | 
+
+
 #### Tracing
 
 
@@ -5781,7 +5990,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
+| `samplingFraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingFraction represents the fraction of requests that should be<br />selected for tracing if no prior sampling decision has been made. |
 | `customTags` | _object (keys:string, values:[CustomTag](#customtag))_ |  false  |  | CustomTags defines the custom tags to add to each span.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Deprecated: Use Tags instead. |
 | `tags` | _object (keys:string, values:string)_ |  false  |  | Tags defines the custom tags to add to each span.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If provider is kubernetes, pod name and namespace are added by default.<br />Same keys take precedence over CustomTags. |
 | `spanName` | _[TracingSpanName](#tracingspanname)_ |  false  |  | SpanName defines the name of the span which will be used for tracing.<br />Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the value.<br />The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.<br />If not set, the span name is provider specific.<br />e.g. Datadog use `ingress` as the default client span name,<br />and `router <UPSTREAM_CLUSTER> egress` as the server span name. |
@@ -5798,7 +6007,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
 | `type` | _[TracingProviderType](#tracingprovidertype)_ |  true  | OpenTelemetry | Type defines the tracing provider type. |
@@ -5918,7 +6127,7 @@ _Appears in:_
 | `name` | _string_ |  false  |  | Name is a unique name for this Wasm extension. It is used to identify the<br />Wasm extension if multiple extensions are handled by the same vm_id and root_id.<br />It's also used for logging/debugging.<br />If not specified, EG will generate a unique name for the Wasm extension. |
 | `rootID` | _string_ |  true  |  | RootID is a unique ID for a set of extensions in a VM which will share a<br />RootContext and Contexts if applicable (e.g., an Wasm HttpFilter and an Wasm AccessLog).<br />If left blank, all extensions with a blank root_id with the same vm_id will share Context(s).<br />Note: RootID must match the root_id parameter used to register the Context in the Wasm code. |
 | `code` | _[WasmCodeSource](#wasmcodesource)_ |  true  |  | Code is the Wasm code for the extension. |
-| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the Wasm extension.<br />This configuration will be passed as a JSON string to the Wasm extension. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a fatal error occurs<br />during the initialization or the execution of the Wasm extension.<br />If FailOpen is set to true, the system bypasses the Wasm extension and<br />allows the traffic to pass through. If it is set to false or<br />not set (defaulting to false), the system blocks the traffic and returns<br />an HTTP 5xx error.<br />If set to true, the Wasm extension will also be bypassed if the configuration is invalid. |
 | `env` | _[WasmEnv](#wasmenv)_ |  false  |  | Env configures the environment for the Wasm extension |
 
@@ -5952,7 +6161,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported. |
+| `caCertificateRef` | _[SecretObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference)_ |  true  |  | CACertificateRef contains a reference to<br />Kubernetes objects that contain TLS certificates of<br />the Certificate Authorities that can be used<br />as a trust anchor to validate the certificates presented by the Wasm code source.<br />Kubernetes ConfigMap, Kubernetes Secret, and Kubernetes ClusterTrustBundle are supported. |
 
 
 #### WasmCodeSourceType
@@ -6028,8 +6237,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `maxConnectionAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.<br />If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas. |
-| `maxConnectionAgeGrace` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | MaxConnectionAgeGrace is the grace period granted after reaching MaxConnectionAge before the connection is forcibly closed.<br />The default grace period is 2m. |
+| `maxConnectionAge` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.<br />If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas. |
+| `maxConnectionAgeGrace` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | MaxConnectionAgeGrace is the grace period granted after reaching MaxConnectionAge before the connection is forcibly closed.<br />The default grace period is 2m. |
 
 
 #### XDSTranslatorHook
@@ -6047,8 +6256,9 @@ _Appears in:_
 | `VirtualHost` |  | 
 | `Route` |  | 
 | `HTTPListener` |  | 
-| `Translation` |  | 
 | `Cluster` |  | 
+| `Endpoints` |  | 
+| `Translation` |  | 
 
 
 #### XDSTranslatorHooks
