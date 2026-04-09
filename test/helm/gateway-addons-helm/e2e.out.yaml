@@ -3728,7 +3728,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3745,8 +3745,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "sum by(kind) (rate(status_update_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(status_update_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3810,7 +3810,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3827,8 +3827,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(status_update_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3839,7 +3839,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Duration",
+            "title": "p99 Duration",
             "type": "bargauge"
           },
           {
@@ -3892,7 +3892,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3909,8 +3909,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(status_update_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3921,7 +3921,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Duration",
+            "title": "p50 Duration",
             "type": "bargauge"
           },
           {
@@ -4781,7 +4781,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4798,8 +4798,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "sum by(kind) (rate(resource_apply_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(resource_apply_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4860,7 +4860,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4877,8 +4877,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(resource_apply_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4888,7 +4888,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Apply Duration",
+            "title": "p99 Apply Duration",
             "type": "bargauge"
           },
           {
@@ -4939,7 +4939,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4956,8 +4956,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(resource_apply_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4967,7 +4967,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Apply Duration",
+            "title": "p50 Apply Duration",
             "type": "bargauge"
           },
           {
@@ -5393,7 +5393,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5411,7 +5411,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "sum by(kind) (rate(resource_delete_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(resource_delete_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5472,7 +5472,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5490,7 +5490,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(resource_delete_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5500,7 +5500,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Delete Duration",
+            "title": "p99 Delete Duration",
             "type": "bargauge"
           },
           {
@@ -5551,7 +5551,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5569,7 +5569,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(resource_delete_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5579,7 +5579,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Delete Duration",
+            "title": "p50 Delete Duration",
             "type": "bargauge"
           },
           {
@@ -10418,6 +10418,7 @@ spec:
   selector:
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
+  internalTrafficPolicy: Cluster
   ports:
     - name: http-metrics
       port: 12345
@@ -10663,6 +10664,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
+  minReadySeconds: 10
   selector:
     matchLabels:
       app.kubernetes.io/name: alloy
@@ -10993,6 +10995,10 @@ spec:
       partition: 0
   serviceName: loki-headless
   revisionHistoryLimit: 10
+  
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: loki
@@ -11016,6 +11022,7 @@ spec:
       
       securityContext:
         fsGroup: 10001
+        fsGroupChangePolicy: OnRootMismatch
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
