@@ -984,8 +984,6 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 }
 
 // findXdsListeners finds xds listeners.
-// If name is empty, returns all listeners.
-// If name is specified, returns only listeners with matching names.
 func findXdsListeners(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
@@ -1018,8 +1016,6 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 }
 
 // findXdsRouteConfigs finds xds route configurations.
-// If name is empty, returns all route configurations.
-// If name is specified, returns only route configurations with matching names.
 func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
@@ -1049,8 +1045,6 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 }
 
 // findXdsClusters finds xds clusters.
-// If name is empty, returns all clusters.
-// If name is specified, returns only clusters with matching names.
 func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
@@ -1079,8 +1073,6 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalReso
 }
 
 // findXdsEndpoints finds xds endpoints.
-// If name is empty, returns all endpoints.
-// If name is specified, returns only endpoints with matching cluster names.
 func findXdsEndpoints(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
 		return nil
@@ -1117,8 +1109,6 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 }
 
 // findXdsSecrets finds xds secrets.
-// If name is empty, returns all secrets.
-// If name is specified, returns only secrets with matching names.
 func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
 		return nil
