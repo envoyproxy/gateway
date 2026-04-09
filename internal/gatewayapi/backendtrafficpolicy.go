@@ -452,7 +452,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		}
 	}
 
-	// Extract envoyProxy from the route's parent gateway context for use in policy translation.
 	var envoyProxy *egv1a1.EnvoyProxy
 	for _, pCtx := range parentRefCtxs {
 		if gw := pCtx.GetGateway(); gw != nil {

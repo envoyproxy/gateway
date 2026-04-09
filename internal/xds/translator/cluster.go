@@ -23,8 +23,8 @@ import (
 	preservecasev3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/header_formatters/preserve_case/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
 	cluster_providedv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/cluster_provided/v3"
-	dmlbv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/dynamic_modules/v3"
 	commonv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/common/v3"
+	dmlbv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/dynamic_modules/v3"
 	least_requestv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/least_request/v3"
 	maglevv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/maglev/v3"
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
@@ -480,25 +480,27 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	case args.loadBalancer.DynamicModuleLB != nil:
 		dm := args.loadBalancer.DynamicModuleLB
 
-		// Only local module sources are supported for LB policies.
-		// Remote sources are rejected at the gateway API validation layer.
-		moduleSource := &corev3.AsyncDataSource{
-			Specifier: &corev3.AsyncDataSource_Local{
-				Local: &corev3.DataSource{
-					Specifier: &corev3.DataSource_Filename{
-						Filename: dm.Path,
-					},
-				},
-			},
+		// The LB policy factory in Envoy uses DynamicModuleConfig.Name (not Module)
+		// to load the shared library via newDynamicModuleByName. It constructs the
+		// filename as lib${name}.so and searches ENVOY_DYNAMIC_MODULES_SEARCH_PATH,
+		// then falls back to standard dlopen paths.
+		dmConfig := &dmconfigv3.DynamicModuleConfig{
+			Name:         dm.Name,
+			DoNotClose:   dm.DoNotClose,
+			LoadGlobally: dm.LoadGlobally,
+		}
+
+		if dm.Remote != nil || dm.Path != "" {
+			moduleSource, err := dynamicModuleAsyncDataSource(dm.Remote, dm.Path)
+			if err != nil {
+				return nil, err
+			}
+			dmConfig.Module = moduleSource
 		}
 
 		dmlbConfig := &dmlbv3.DynamicModulesLoadBalancerConfig{
-			DynamicModuleConfig: &dmconfigv3.DynamicModuleConfig{
-				Module:       moduleSource,
-				DoNotClose:   dm.DoNotClose,
-				LoadGlobally: dm.LoadGlobally,
-			},
-			LbPolicyName: dm.LBPolicyName,
+			DynamicModuleConfig: dmConfig,
+			LbPolicyName:        dm.LBPolicyName,
 		}
 
 		if dm.Config != nil && dm.Config.Raw != nil {

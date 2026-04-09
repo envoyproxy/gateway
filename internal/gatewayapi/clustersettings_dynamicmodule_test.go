@@ -101,7 +101,7 @@ func TestBuildLoadBalancer_DynamicModule_NilEnvoyProxy(t *testing.T) {
 	require.Contains(t, err.Error(), "EnvoyProxy")
 }
 
-func TestBuildLoadBalancer_DynamicModule_RemoteNotSupported(t *testing.T) {
+func TestBuildLoadBalancer_DynamicModule_Remote(t *testing.T) {
 	envoyProxy := &egv1a1.EnvoyProxy{
 		Spec: egv1a1.EnvoyProxySpec{
 			DynamicModules: []egv1a1.DynamicModuleEntry{
@@ -129,7 +129,11 @@ func TestBuildLoadBalancer_DynamicModule_RemoteNotSupported(t *testing.T) {
 		},
 	}
 
-	_, err := buildLoadBalancer(policy, envoyProxy)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "remote source is not yet supported")
+	lb, err := buildLoadBalancer(policy, envoyProxy)
+	require.NoError(t, err)
+	require.NotNil(t, lb)
+	require.NotNil(t, lb.DynamicModuleLB)
+	require.NotNil(t, lb.DynamicModuleLB.Remote)
+	require.Equal(t, "https://example.com/module.so", lb.DynamicModuleLB.Remote.URL)
+	require.Equal(t, "abc123def456", lb.DynamicModuleLB.Remote.SHA256)
 }

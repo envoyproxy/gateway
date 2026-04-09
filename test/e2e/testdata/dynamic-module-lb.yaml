@@ -1,0 +1,77 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: dynamic-module-lb-proxy
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          image: envoyproxy/gateway-dynamic-module-lb-test:latest
+          env:
+            - name: GODEBUG
+              value: cgocheck=0
+            - name: ENVOY_DYNAMIC_MODULES_SEARCH_PATH
+              value: /usr/local/lib
+  dynamicModules:
+    - name: first-host-lb
+      source:
+        local:
+          path: /usr/local/lib/libfirst-host-lb.so
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: dynamic-module-lb-gateway
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: dynamic-module-lb-proxy
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: dynamic-module-lb-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: dynamic-module-lb-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /dynamic-module-lb
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: dynamic-module-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: dynamic-module-lb-route
+  loadBalancer:
+    type: DynamicModule
+    dynamicModule:
+      name: first-host-lb
+      lbPolicyName: first_host

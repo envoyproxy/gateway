@@ -433,7 +433,19 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyP
 
 		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
 		case egv1a1.RemoteDynamicModuleSourceType:
-			return nil, fmt.Errorf("dynamic module %q: remote source is not yet supported for load balancer policies", dm.Name)
+			if entry.Source.Remote == nil || entry.Source.Remote.URL == "" {
+				return nil, fmt.Errorf("dynamic module %q has no remote source URL configured", dm.Name)
+			}
+			if entry.Source.Remote.SHA256 == "" {
+				return nil, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", dm.Name)
+			}
+			if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
+				return nil, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err)
+			}
+			irDM.Remote = &ir.RemoteDynamicModuleSource{
+				URL:    entry.Source.Remote.URL,
+				SHA256: entry.Source.Remote.SHA256,
+			}
 		case egv1a1.LocalDynamicModuleSourceType:
 			if entry.Source.Local == nil || entry.Source.Local.Path == "" {
 				return nil, fmt.Errorf("dynamic module %q has no local source path configured", dm.Name)

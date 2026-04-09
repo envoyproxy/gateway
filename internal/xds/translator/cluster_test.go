@@ -521,6 +521,42 @@ func TestBuildClusterWithDynamicModuleLBConfig(t *testing.T) {
 	require.Equal(t, "custom-lb", dmlbConfig.LbPolicyName)
 	require.NotNil(t, dmlbConfig.LbPolicyConfig)
 	require.NotNil(t, dmlbConfig.DynamicModuleConfig)
+	require.Equal(t, "my-module", dmlbConfig.DynamicModuleConfig.Name)
 	require.True(t, dmlbConfig.DynamicModuleConfig.DoNotClose)
 	require.True(t, dmlbConfig.DynamicModuleConfig.LoadGlobally)
+}
+
+func TestBuildClusterWithDynamicModuleLBRemote(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-dmlb-remote",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
+		}},
+		loadBalancer: &ir.LoadBalancer{DynamicModuleLB: &ir.DynamicModuleLB{
+			Name:         "my-module",
+			LBPolicyName: "remote-lb",
+			Remote: &ir.RemoteDynamicModuleSource{
+				URL:    "https://example.com/module.so",
+				SHA256: "abc123def456",
+			},
+		}},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+
+	dmlbConfig := &dmlbv3.DynamicModulesLoadBalancerConfig{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(dmlbConfig)
+	require.NoError(t, err)
+	require.Equal(t, "remote-lb", dmlbConfig.LbPolicyName)
+	require.NotNil(t, dmlbConfig.DynamicModuleConfig)
+	require.NotNil(t, dmlbConfig.DynamicModuleConfig.Module)
 }

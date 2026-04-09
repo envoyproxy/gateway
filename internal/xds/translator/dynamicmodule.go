@@ -121,8 +121,14 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 }
 
 func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
-	if dm.Remote != nil {
-		uc, err := url2Cluster(dm.Remote.URL)
+	return dynamicModuleAsyncDataSource(dm.Remote, dm.Path)
+}
+
+// dynamicModuleAsyncDataSource builds an AsyncDataSource for a dynamic module,
+// supporting both local file paths and remote HTTP sources.
+func dynamicModuleAsyncDataSource(remote *ir.RemoteDynamicModuleSource, path string) (*corev3.AsyncDataSource, error) {
+	if remote != nil {
+		uc, err := url2Cluster(remote.URL)
 		if err != nil {
 			return nil, err
 		}
@@ -131,13 +137,13 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 			Specifier: &corev3.AsyncDataSource_Remote{
 				Remote: &corev3.RemoteDataSource{
 					HttpUri: &corev3.HttpUri{
-						Uri: dm.Remote.URL,
+						Uri: remote.URL,
 						HttpUpstreamType: &corev3.HttpUri_Cluster{
 							Cluster: uc.name,
 						},
 						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
 					},
-					Sha256: dm.Remote.SHA256,
+					Sha256: remote.SHA256,
 				},
 			},
 		}, nil
@@ -147,7 +153,7 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 		Specifier: &corev3.AsyncDataSource_Local{
 			Local: &corev3.DataSource{
 				Specifier: &corev3.DataSource_Filename{
-					Filename: dm.Path,
+					Filename: path,
 				},
 			},
 		},

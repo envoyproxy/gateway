@@ -100,9 +100,9 @@ require (
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.13.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.14.0 // indirect
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989 // indirect
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097 // indirect
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989 // indirect
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260409083702-98966259b99a // indirect
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260409083702-98966259b99a // indirect
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260409083702-98966259b99a // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.3 // indirect
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect

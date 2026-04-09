@@ -149,3 +149,17 @@
         cluster: seventeenth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
+    - match:
+        prefix: /
+      name: eighteenth-route
+      route:
+        cluster: eighteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: nineteenth-route
+      route:
+        cluster: nineteenth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

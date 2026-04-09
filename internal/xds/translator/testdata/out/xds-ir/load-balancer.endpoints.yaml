@@ -202,3 +202,27 @@
     loadBalancingWeight: 1
     locality:
       region: seventeenth-route-dest/backend/0
+- clusterName: eighteenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: eighteenth-route-dest/backend/0
+- clusterName: nineteenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: nineteenth-route-dest/backend/0

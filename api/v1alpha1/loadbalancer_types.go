@@ -233,7 +233,6 @@ type BackendUtilization struct {
 // The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
 //
 // See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
-//
 type DynamicModuleLBPolicy struct {
 	// Name references a dynamic module registered in the EnvoyProxy resource's
 	// dynamicModules list. The referenced module must exist in the registry;
