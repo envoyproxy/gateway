@@ -47,16 +47,10 @@ jobs:
 
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Setup Hugo
-      uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f  # v3.0.0
-      with:
-        hugo-version: 'latest'
-        extended: true
-
     - name: Setup Node
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
       with:
-        node-version: '18'
+        node-version-file: site/.nvmrc
 
     - name: Install Site Dependencies and Build Site
       run: make docs
