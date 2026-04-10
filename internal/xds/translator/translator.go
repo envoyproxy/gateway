@@ -650,7 +650,21 @@ func (t *Translator) addRouteToRouteConfig(
 		}
 	}
 
+	// Track which TLS overlap hostnames have been patched
+	var tlsOverlapsHostnames []string
+	if len(httpListener.TLSOverlapsHostnames) > 0 {
+		tlsOverlapsHostnames = make([]string, len(httpListener.TLSOverlapsHostnames))
+		copy(tlsOverlapsHostnames, httpListener.TLSOverlapsHostnames)
+	}
+
 	for _, vHost := range vHostList {
+		// Patch virtual host for TLS overlaps if needed
+		// need to do this before calling the extension hook for virtual host,
+		// because the extension hook might depend on the existence of the TLS overlap domains in the virtual host.
+		if len(tlsOverlapsHostnames) > 0 {
+			tlsOverlapsHostnames = t.patchVirtualHostForOverlaps(vHost, tlsOverlapsHostnames)
+		}
+
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
 		if err = processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
@@ -662,8 +676,11 @@ func (t *Translator) addRouteToRouteConfig(
 				t.Logger.Error(err, "Extension Manager PostVHost failure")
 			}
 		}
+
 	}
 	xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostList...)
+	t.addCatchAllForRemainingOverlaps(xdsRouteCfg, httpListener, tlsOverlapsHostnames)
+
 	if maxDirectResponseBodySize > DefaultMaxDirectResponseBodySize {
 		// this's fine for most of the case, because EG read the body from ConfigMap/Secret,
 		// which usually has a size limit less than 1MB.
