@@ -39,7 +39,7 @@ metadata:
 - For new user-facing features, check that `test/e2e` has coverage.
 
 ### Release notes
-- Release notes should be added to `release-notes/current.yaml` for any user-facing changes.
+Release notes should be added to `release-notes/current.yaml` for any of the following changes:
 - Bug fixes should be noted as "bug fix" and include a brief description of the issue and the fix.
 - New features should be noted as "new feature" and include a brief description of the feature.
 - Any breaking changes should be noted as "breaking change" and include a clear description of the change and its impact on users.
