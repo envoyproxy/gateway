@@ -118,6 +118,9 @@ func (c *CompositeManager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorH
 	for _, nm := range c.managers {
 		client, err := nm.manager.GetPreXDSHookClient(xdsHookType)
 		if err != nil {
+			if nm.manager.FailOpen() {
+				continue
+			}
 			return nil, err
 		}
 		if client != nil {
@@ -143,6 +146,9 @@ func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslator
 	for _, nm := range c.managers {
 		client, err := nm.manager.GetPostXDSHookClient(xdsHookType)
 		if err != nil {
+			if nm.manager.FailOpen() {
+				continue
+			}
 			return nil, err
 		}
 		if client != nil {
