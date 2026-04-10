@@ -47,6 +47,7 @@ new features: |
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
+  Fixed ClientTrafficPolicy to disable HTTP/3 and surface a warning on the policy when downstream client TLS validation is configured, instead of generating a rejected QUIC listener.
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
   Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
