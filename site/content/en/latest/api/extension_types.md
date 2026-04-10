@@ -600,6 +600,64 @@ _Appears in:_
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
 
 
+#### BandwidthLimitRequestConfig
+
+
+
+BandwidthLimitRequestConfig defines the bandwidth limit configuration for the request direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-second throughput rate. |
+
+
+#### BandwidthLimitResponseConfig
+
+
+
+BandwidthLimitResponseConfig defines the bandwidth limit configuration for the response direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-second throughput rate. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers con figures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+
+
+#### BandwidthLimitResponseTrailers
+
+
+
+
+
+_Appears in:_
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name with delay metrics.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
+
+
+#### BandwidthLimitSpec
+
+
+
+BandwidthLimitSpec defines the desired state of BandwidthLimit.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures the bandwidth limit for client-to-upstream (ingress) traffic. |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures the bandwidth limit for upstream-to-client (egress) traffic. |
+
+
 #### BasicAuth
 
 

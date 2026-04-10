@@ -2956,6 +2956,118 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{"either compression or compressor can be set, not both"},
 		},
+		{
+			desc: "valid bandwidthLimit with request only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Request: &egv1a1.BandwidthLimitRequestConfig{
+							Limit: resource.MustParse("10M"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid bandwidthLimit with response only",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: resource.MustParse("100M"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid bandwidthLimit with request and response set to different limits",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Request: &egv1a1.BandwidthLimitRequestConfig{
+							Limit: resource.MustParse("10M"),
+						},
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: resource.MustParse("100M"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid bandwidthLimit with response and responseTrailers",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: resource.MustParse("10M"),
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: ptr.To("x-eg"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid bandwidthLimit with neither request nor response",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{},
+				}
+			},
+			wantErrors: []string{"at least one of request or response must be specified"},
+		},
 	}
 
 	for _, tc := range cases {
