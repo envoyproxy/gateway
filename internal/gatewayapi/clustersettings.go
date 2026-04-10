@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -331,15 +332,11 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		lb = &ir.LoadBalancer{
 			LeastRequest: &ir.LeastRequest{},
 		}
-		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
-			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
-			if err != nil {
-				return nil, err
-			}
-			lb.LeastRequest.SlowStart = &ir.SlowStart{
-				Window: ir.MetaV1DurationPtr(d),
-			}
+		slowStart, err := buildSlowStart(policy.LoadBalancer.SlowStart)
+		if err != nil {
+			return nil, err
 		}
+		lb.LeastRequest.SlowStart = slowStart
 	case egv1a1.RandomLoadBalancerType:
 		lb = &ir.LoadBalancer{
 			Random: &ir.Random{},
@@ -348,15 +345,11 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 		lb = &ir.LoadBalancer{
 			RoundRobin: &ir.RoundRobin{},
 		}
-		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
-			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
-			if err != nil {
-				return nil, err
-			}
-			lb.RoundRobin.SlowStart = &ir.SlowStart{
-				Window: ir.MetaV1DurationPtr(d),
-			}
+		slowStart, err := buildSlowStart(policy.LoadBalancer.SlowStart)
+		if err != nil {
+			return nil, err
 		}
+		lb.RoundRobin.SlowStart = slowStart
 	case egv1a1.BackendUtilizationLoadBalancerType:
 		lb = &ir.LoadBalancer{
 			BackendUtilization: &ir.BackendUtilization{},
@@ -392,15 +385,11 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 			}
 			lb.BackendUtilization.KeepResponseHeaders = new(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
 		}
-		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
-			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
-			if err != nil {
-				return nil, err
-			}
-			lb.BackendUtilization.SlowStart = &ir.SlowStart{
-				Window: ir.MetaV1DurationPtr(d),
-			}
+		slowStart, err := buildSlowStart(policy.LoadBalancer.SlowStart)
+		if err != nil {
+			return nil, err
 		}
+		lb.BackendUtilization.SlowStart = slowStart
 	}
 
 	// Add ZoneAware loadbalancer settings
@@ -434,6 +423,28 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 	}
 
 	return lb, nil
+}
+
+func buildSlowStart(slowStart *egv1a1.SlowStart) (*ir.SlowStart, error) {
+	if slowStart == nil || slowStart.Window == nil {
+		return nil, nil
+	}
+	d, err := time.ParseDuration(string(*slowStart.Window))
+	if err != nil {
+		return nil, err
+	}
+	ret := &ir.SlowStart{
+		Window:           ir.MetaV1DurationPtr(d),
+		MinWeightPercent: slowStart.MinWeightPercent,
+	}
+	if slowStart.Aggression != nil {
+		aggression, err := strconv.ParseFloat(*slowStart.Aggression, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid slowStart.aggression %q: %w", *slowStart.Aggression, err)
+		}
+		ret.Aggression = &aggression
+	}
+	return ret, nil
 }
 
 func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.ConsistentHash, error) {
