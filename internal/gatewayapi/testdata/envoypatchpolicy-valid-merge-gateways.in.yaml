@@ -14,8 +14,8 @@ envoyPatchPolicies:
     name: edit-conn-buffer-bytes
   spec:
     type: "JSONPatch"
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy-gateway-class
     jsonPatches:
@@ -32,8 +32,8 @@ envoyPatchPolicies:
     name: edit-ignore-global-limit
   spec:
     type: "JSONPatch"
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy-gateway-class
     # Higher priority

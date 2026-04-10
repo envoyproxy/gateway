@@ -11,6 +11,18 @@ envoyPatchPolicies:
       name: unknown-gateway
     type: JSONPatch
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: unknown-gateway
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Target to Gateway envoy-gateway/unknown-gateway does not exist.
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 infraIR: {}
 xdsIR: {}

@@ -25,9 +25,8 @@ envoyPatchPolicies:
         name: gateway-1
       conditions:
       - lastTransitionTime: null
-        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:Gateway
-          TargetRef.Namespace:envoy-gateway TargetRef.Name:gateway-1 not found or
-          not accepted (MergeGateways=true).
+        message: Target to gateway.networking.k8s.io/Gateway, only gateway.networking.k8s.io/GatewayClass
+          is supported.
         reason: Invalid
         status: "False"
         type: Accepted
