@@ -102,6 +102,7 @@ var DynamicResolverOriginalHostAccessLogTest = suite.ConformanceTest{
 
 			return false, nil
 		})
+		time.Sleep(5*time.Hour)
 		require.NoError(t, err, "timed out waiting for access log line for request id %s", requestID)
 
 		entry := map[string]string{}
