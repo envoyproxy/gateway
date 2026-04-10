@@ -44,6 +44,15 @@ type ProxyMetrics struct {
 	// +optional
 	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
 
+	// EnableGRPCStats enables the gRPC stats filter on listeners.
+	// This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+	// In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+	// users want to route gRPC using HTTPRoute for its richer matching capabilities.
+	// Therefore, we enable this behavior only when it is explicitly opted in.
+	//
+	// +optional
+	EnableGRPCStats *bool `json:"enableGRPCStats,omitempty"`
+
 	// ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
 	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
 	// The supported operators for this pattern are:
