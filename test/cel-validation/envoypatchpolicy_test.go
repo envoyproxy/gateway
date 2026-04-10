@@ -98,7 +98,7 @@ func TestEnvoyPatchPolicyTarget(t *testing.T) {
 		},
 		{
 			desc: "no targetRef or targetRefs",
-			mutate: func(epp *egv1a1.EnvoyPatchPolicy) {
+			mutate: func(_ *egv1a1.EnvoyPatchPolicy) {
 				// Don't set either field
 			},
 			wantErrors: []string{

@@ -19,7 +19,20 @@ envoyPatchPolicies:
       name: gateway-not-exists
     type: JSONPatch
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-not-exists
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Target to Gateway envoy-gateway/gateway-not-exists does not exist.
+        observedGeneration: 10
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyPatchPolicy
   metadata:
@@ -54,6 +67,12 @@ envoyPatchPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        observedGeneration: 10
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -144,6 +163,12 @@ xdsIR:
             reason: Accepted
             status: "True"
             type: Accepted
+          - lastTransitionTime: null
+            message: spec.targetRef is deprecated, use spec.targetRefs instead
+            observedGeneration: 10
+            reason: DeprecatedField
+            status: "True"
+            type: Warning
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:

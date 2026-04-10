@@ -103,22 +103,6 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
-    envoyPatchPolicies:
-    - name: edit-conn-buffer-bytes
-      namespace: envoy-gateway
-      status:
-        ancestors:
-        - ancestorRef:
-            group: gateway.networking.k8s.io
-            kind: GatewayClass
-            name: envoy-gateway-class
-          conditions:
-          - lastTransitionTime: null
-            message: EnvoyPatchPolicy is disabled in the EnvoyGateway configuration
-            reason: Disabled
-            status: "False"
-            type: Accepted
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:
