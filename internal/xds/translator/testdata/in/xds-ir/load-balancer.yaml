@@ -254,3 +254,37 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "seventeenth-route-dest/backend/0"
+  - name: "eighteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        dynamicModuleLB:
+          name: custom-lb-module
+          implementationName: first-host
+          path: /usr/local/lib/custom_lb.so
+    destination:
+      name: "eighteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "eighteenth-route-dest/backend/0"
+  - name: "nineteenth-route"
+    hostname: "*"
+    traffic:
+      loadBalancer:
+        dynamicModuleLB:
+          name: custom-lb-module-with-config
+          implementationName: weighted-random
+          path: /usr/local/lib/custom_lb.so
+          doNotClose: true
+          loadGlobally: true
+          config:
+            key: value
+    destination:
+      name: "nineteenth-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "nineteenth-route-dest/backend/0"

@@ -795,9 +795,11 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.DynamicModuleLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
-								Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+									Config:             &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+								},
 							},
 						},
 					},
@@ -822,8 +824,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.DynamicModuleLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+								},
 							},
 						},
 					},
@@ -873,8 +877,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+								},
 							},
 						},
 					},
@@ -902,8 +908,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.DynamicModuleLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+								},
 							},
 							SlowStart: &egv1a1.SlowStart{Window: ptr.To(gwapiv1.Duration("10ms"))},
 						},
@@ -932,8 +940,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.DynamicModuleLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+								},
 							},
 							ZoneAware: &egv1a1.ZoneAware{PreferLocal: &egv1a1.PreferLocalZone{}},
 						},
@@ -962,8 +972,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.DynamicModuleLoadBalancerType,
 							DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-								Name:         "my-module",
-								LBPolicyName: "round-robin-v2",
+								DynamicModuleRef: egv1a1.DynamicModuleRef{
+									Name:               "my-module",
+									ImplementationName: ptr.To("round-robin-v2"),
+								},
 							},
 							EndpointOverride: &egv1a1.EndpointOverride{
 								ExtractFrom: []egv1a1.EndpointOverrideExtractFrom{

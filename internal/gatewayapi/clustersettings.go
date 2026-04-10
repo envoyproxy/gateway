@@ -55,7 +55,9 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.CircuitBreaker = cb
 	}
 
-	if lb, err := buildLoadBalancer(policy); err != nil {
+	// envoyProxy is nil here because translateTrafficFeatures is used by non-BTP callers
+	// (SecurityPolicy, EnvoyExtensionPolicy, Listener) where DynamicModule LB is not applicable.
+	if lb, err := buildLoadBalancer(policy, nil); err != nil {
 		return nil, err
 	} else {
 		ret.LoadBalancer = lb
@@ -312,7 +314,7 @@ func buildCircuitBreaker(policy *egv1a1.ClusterSettings) (*ir.CircuitBreaker, er
 	return cb, nil
 }
 
-func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error) {
+func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyProxy) (*ir.LoadBalancer, error) {
 	if policy.LoadBalancer == nil {
 		return nil, nil
 	}
@@ -401,6 +403,31 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 				Window: ir.MetaV1DurationPtr(d),
 			}
 		}
+	case egv1a1.DynamicModuleLoadBalancerType:
+		dm := policy.LoadBalancer.DynamicModule
+		if dm == nil {
+			return nil, fmt.Errorf("DynamicModule field is required when type is DynamicModule")
+		}
+		if envoyProxy == nil {
+			return nil, fmt.Errorf("EnvoyProxy is required for DynamicModule load balancer policy")
+		}
+
+		resolved, err := resolveDynamicModuleEntry(dm.Name, envoyProxy)
+		if err != nil {
+			return nil, err
+		}
+
+		lb = &ir.LoadBalancer{
+			DynamicModuleLB: &ir.DynamicModuleLB{
+				Name:               dm.Name,
+				ImplementationName: ptr.Deref(dm.ImplementationName, ""),
+				Config:             dm.Config,
+				DoNotClose:         resolved.DoNotClose,
+				LoadGlobally:       resolved.LoadGlobally,
+				Path:               resolved.Path,
+				Remote:             resolved.Remote,
+			},
+		}
 	}
 
 	// Add ZoneAware loadbalancer settings
@@ -434,6 +461,62 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings) (*ir.LoadBalancer, error)
 	}
 
 	return lb, nil
+}
+
+// resolvedDynamicModuleSource holds the resolved source information for a dynamic module entry.
+type resolvedDynamicModuleSource struct {
+	Path         string
+	Remote       *ir.RemoteDynamicModuleSource
+	DoNotClose   bool
+	LoadGlobally bool
+}
+
+// resolveDynamicModuleEntry looks up a dynamic module by name from the EnvoyProxy's
+// dynamicModules allowlist and validates/resolves its source configuration.
+func resolveDynamicModuleEntry(name string, envoyProxy *egv1a1.EnvoyProxy) (*resolvedDynamicModuleSource, error) {
+	var entry *egv1a1.DynamicModuleEntry
+	if envoyProxy != nil {
+		for i := range envoyProxy.Spec.DynamicModules {
+			if envoyProxy.Spec.DynamicModules[i].Name == name {
+				entry = &envoyProxy.Spec.DynamicModules[i]
+				break
+			}
+		}
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", name)
+	}
+
+	resolved := &resolvedDynamicModuleSource{
+		DoNotClose:   ptr.Deref(entry.DoNotClose, false),
+		LoadGlobally: ptr.Deref(entry.LoadGlobally, false),
+	}
+
+	switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
+	case egv1a1.RemoteDynamicModuleSourceType:
+		if entry.Source.Remote == nil || entry.Source.Remote.URL == "" {
+			return nil, fmt.Errorf("dynamic module %q has no remote source URL configured", name)
+		}
+		if entry.Source.Remote.SHA256 == "" {
+			return nil, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", name)
+		}
+		if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
+			return nil, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", name, entry.Source.Remote.URL, err)
+		}
+		resolved.Remote = &ir.RemoteDynamicModuleSource{
+			URL:    entry.Source.Remote.URL,
+			SHA256: entry.Source.Remote.SHA256,
+		}
+	case egv1a1.LocalDynamicModuleSourceType:
+		if entry.Source.Local == nil || entry.Source.Local.Path == "" {
+			return nil, fmt.Errorf("dynamic module %q has no local source path configured", name)
+		}
+		resolved.Path = entry.Source.Local.Path
+	default:
+		return nil, fmt.Errorf("dynamic module %q has unsupported source type %q", name, sourceType)
+	}
+
+	return resolved, nil
 }
 
 func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.ConsistentHash, error) {

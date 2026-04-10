@@ -1306,8 +1306,8 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
-| `filterName` | _string_ |  false  |  | FilterName identifies a specific filter implementation within the dynamic<br />module. A single shared library can contain multiple filter implementations.<br />This value is passed to the module's HTTP filter config init function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
-| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module filter.<br />This is serialized as JSON and passed to the module's initialization function. |
+| `implementationName` | _string_ |  false  |  | ImplementationName identifies a specific implementation within the dynamic<br />module. A single shared library can contain multiple implementations<br />(e.g. multiple HTTP filters or LB policies).<br />This value is passed to the module's initialization function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module.<br />This is serialized as JSON and passed to the module's initialization function. |
 | `terminalFilter` | _boolean_ |  false  | false | TerminalFilter indicates that this dynamic module handles requests without<br />requiring an upstream backend. The module is responsible for generating and<br />sending the response to downstream directly.<br />Defaults to false. |
 
 
@@ -1345,8 +1345,27 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
-| `lbPolicyName` | _string_ |  true  |  | LBPolicyName identifies a specific load balancer implementation within<br />the dynamic module. A single shared library can contain multiple LB<br />policy implementations. This value is passed to the module's<br />initialization function to select the appropriate implementation. |
-| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
+| `implementationName` | _string_ |  false  |  | ImplementationName identifies a specific implementation within the dynamic<br />module. A single shared library can contain multiple implementations<br />(e.g. multiple HTTP filters or LB policies).<br />This value is passed to the module's initialization function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module.<br />This is serialized as JSON and passed to the module's initialization function. |
+
+
+#### DynamicModuleRef
+
+
+
+DynamicModuleRef identifies a dynamic module registered in the EnvoyProxy
+resource's dynamicModules allowlist and selects a specific implementation
+within it.
+
+_Appears in:_
+- [DynamicModule](#dynamicmodule)
+- [DynamicModuleLBPolicy](#dynamicmodulelbpolicy)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
+| `implementationName` | _string_ |  false  |  | ImplementationName identifies a specific implementation within the dynamic<br />module. A single shared library can contain multiple implementations<br />(e.g. multiple HTTP filters or LB policies).<br />This value is passed to the module's initialization function to<br />select the appropriate implementation.<br />If not specified, defaults to an empty string. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is the configuration for the dynamic module.<br />This is serialized as JSON and passed to the module's initialization function. |
 
 
 #### DynamicModuleSource
@@ -3755,6 +3774,7 @@ _Appears in:_
 | `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
+| `dynamicModule` | _[DynamicModuleLBPolicy](#dynamicmodulelbpolicy)_ |  false  |  | DynamicModule defines the configuration when the load balancer type is<br />set to DynamicModule. The referenced module must be registered in the<br />EnvoyProxy resource's dynamicModules allowlist. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
 | `slowStart` | _[SlowStart](#slowstart)_ |  false  |  | SlowStart defines the configuration related to the slow start load balancer policy.<br />If set, during slow start window, traffic sent to the newly added hosts will gradually increase.<br />Supported for RoundRobin, LeastRequest, and BackendUtilization load balancers. |
 | `zoneAware` | _[ZoneAware](#zoneaware)_ |  false  |  | ZoneAware defines the configuration related to the distribution of requests between locality zones. |
@@ -3776,7 +3796,7 @@ _Appears in:_
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 | `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
-| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
+| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br /> | 
 
 
 #### LocalDynamicModuleSource

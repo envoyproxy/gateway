@@ -988,18 +988,18 @@ spec:
                     properties:
                       config:
                         description: |-
-                          Config is optional configuration for the module's load balancer
-                          implementation. This is serialized and passed to the module's
-                          initialization function.
+                          Config is the configuration for the dynamic module.
+                          This is serialized as JSON and passed to the module's initialization function.
                         x-kubernetes-preserve-unknown-fields: true
-                      lbPolicyName:
+                      implementationName:
                         description: |-
-                          LBPolicyName identifies a specific load balancer implementation within
-                          the dynamic module. A single shared library can contain multiple LB
-                          policy implementations. This value is passed to the module's
-                          initialization function to select the appropriate implementation.
+                          ImplementationName identifies a specific implementation within the dynamic
+                          module. A single shared library can contain multiple implementations
+                          (e.g. multiple HTTP filters or LB policies).
+                          This value is passed to the module's initialization function to
+                          select the appropriate implementation.
+                          If not specified, defaults to an empty string.
                         maxLength: 253
-                        minLength: 1
                         type: string
                       name:
                         description: |-
@@ -1011,7 +1011,6 @@ spec:
                         pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                         type: string
                     required:
-                    - lbPolicyName
                     - name
                     type: object
                   endpointOverride:

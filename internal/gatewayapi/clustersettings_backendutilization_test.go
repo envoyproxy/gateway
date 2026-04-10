@@ -33,7 +33,7 @@ func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 		},
 	}
 
-	lb, err := buildLoadBalancer(policy)
+	lb, err := buildLoadBalancer(policy, nil)
 	require.NoError(t, err)
 	require.NotNil(t, lb)
 	require.NotNil(t, lb.BackendUtilization)

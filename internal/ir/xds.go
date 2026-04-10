@@ -2847,6 +2847,8 @@ type LoadBalancer struct {
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
 	// BackendUtilization load balancer policy
 	BackendUtilization *BackendUtilization `json:"backendUtilization,omitempty" yaml:"backendUtilization,omitempty"`
+	// DynamicModuleLB load balancer policy
+	DynamicModuleLB *DynamicModuleLB `json:"dynamicModuleLB,omitempty" yaml:"dynamicModuleLB,omitempty"`
 	// PreferLocal defines the configuration related to the distribution of requests between locality zones.
 	PreferLocal *PreferLocalZone `json:"preferLocal,omitempty" yaml:"preferLocal,omitempty"`
 	// WeightedZones defines explicit weight-based traffic distribution across locality zones.
@@ -2875,6 +2877,9 @@ func (l *LoadBalancer) Validate() error {
 		matchCount++
 	}
 	if l.BackendUtilization != nil {
+		matchCount++
+	}
+	if l.DynamicModuleLB != nil {
 		matchCount++
 	}
 	if matchCount != 1 {
@@ -2914,6 +2919,18 @@ type BackendUtilization struct {
 	MetricNamesForComputingUtilization []string         `json:"metricNamesForComputingUtilization,omitempty" yaml:"metricNamesForComputingUtilization,omitempty"`
 	SlowStart                          *SlowStart       `json:"slowStart,omitempty" yaml:"slowStart,omitempty"`
 	KeepResponseHeaders                *bool            `json:"keepResponseHeaders,omitempty" yaml:"keepResponseHeaders,omitempty"`
+}
+
+// DynamicModuleLB holds the configuration for a dynamic module load balancer policy.
+// +k8s:deepcopy-gen=true
+type DynamicModuleLB struct {
+	Name               string                     `json:"name" yaml:"name"`
+	ImplementationName string                     `json:"implementationName" yaml:"implementationName"`
+	Config             *apiextensionsv1.JSON      `json:"config,omitempty" yaml:"config,omitempty"`
+	Path               string                     `json:"path,omitempty" yaml:"path,omitempty"`
+	Remote             *RemoteDynamicModuleSource `json:"remote,omitempty" yaml:"remote,omitempty"`
+	DoNotClose         bool                       `json:"doNotClose" yaml:"doNotClose"`
+	LoadGlobally       bool                       `json:"loadGlobally" yaml:"loadGlobally"`
 }
 
 // ConsistentHash load balancer settings
@@ -3594,8 +3611,8 @@ type DynamicModule struct {
 	// Remote is the remote source of the dynamic module shared library.
 	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
-	// FilterName identifies the filter implementation within the module.
-	FilterName string `json:"filterName,omitempty"`
+	// ImplementationName identifies the implementation within the module.
+	ImplementationName string `json:"implementationName,omitempty"`
 
 	// Config is the JSON configuration for the filter.
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
