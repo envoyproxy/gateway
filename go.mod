@@ -11,10 +11,10 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.4.0+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.14.0
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260115164926-066cbd5b3989
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260304210048-a81710db7097
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260115164926-066cbd5b3989
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260409050421-3f47accd6e14
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
