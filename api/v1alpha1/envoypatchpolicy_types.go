@@ -40,6 +40,7 @@ type EnvoyPatchPolicy struct {
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
 // +union
+// +kubebuilder:validation:XValidation:rule="(has(self.targetRef) && (!has(self.targetRefs) || size(self.targetRefs) == 0)) || (!has(self.targetRef) && has(self.targetRefs) && size(self.targetRefs) > 0)",message="exactly one of targetRef or targetRefs must be set"
 type EnvoyPatchPolicySpec struct {
 	// Type decides the type of patch.
 	// Valid EnvoyPatchType values are "JSONPatch".
@@ -57,7 +58,21 @@ type EnvoyPatchPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef
-	TargetRef gwapiv1.LocalPolicyTargetReference `json:"targetRef"`
+	//
+	// Deprecated: TargetRef is deprecated in favor of TargetRefs to support attaching to multiple resources.
+	//
+	// +optional
+	TargetRef *gwapiv1.LocalPolicyTargetReference `json:"targetRef"`
+	// TargetRefs is the names of the Gateway API resources this policy
+	// is being attached to.
+	// By default, attaching to Gateway is supported and
+	// when mergeGateways is enabled it should attach to GatewayClass.
+	// This Policy and the TargetRef MUST be in the same namespace
+	// for this Policy to have effect and be applied to the Gateway
+	// TargetRefs.
+	//
+	// +optional
+	TargetRefs []gwapiv1.LocalPolicyTargetReference `json:"targetRefs,omitempty"`
 	// Priority of the EnvoyPatchPolicy.
 	// If multiple EnvoyPatchPolicies are applied to the same
 	// TargetRef, they will be applied in the ascending order of
