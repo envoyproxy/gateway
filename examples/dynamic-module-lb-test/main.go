@@ -18,9 +18,20 @@ typedef struct {
 	uintptr_t ptr;
 	size_t length;
 } envoy_dynamic_module_type_envoy_buffer;
+
+// Matches the return type expected by Envoy for the program init callback.
+typedef const void* envoy_dynamic_module_type_abi_version_module_ptr;
 */
 import "C"
 import "unsafe"
+
+// abiVersion must match the Envoy dynamic modules ABI version.
+var abiVersion = "v0.1.0\x00"
+
+//export envoy_dynamic_module_on_program_init
+func envoy_dynamic_module_on_program_init() C.envoy_dynamic_module_type_abi_version_module_ptr {
+	return C.envoy_dynamic_module_type_abi_version_module_ptr(unsafe.Pointer(unsafe.StringData(abiVersion)))
+}
 
 //export envoy_dynamic_module_on_lb_config_new
 func envoy_dynamic_module_on_lb_config_new(

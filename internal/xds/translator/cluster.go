@@ -480,10 +480,8 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	case args.loadBalancer.DynamicModuleLB != nil:
 		dm := args.loadBalancer.DynamicModuleLB
 
-		// The LB policy factory in Envoy uses DynamicModuleConfig.Name (not Module)
-		// to load the shared library via newDynamicModuleByName. It constructs the
-		// filename as lib${name}.so and searches ENVOY_DYNAMIC_MODULES_SEARCH_PATH,
-		// then falls back to standard dlopen paths.
+		// Name is the dlopen identifier; Module provides the binary source and
+		// overrides the default path-based resolution.
 		dmConfig := &dmconfigv3.DynamicModuleConfig{
 			Name:         dm.Name,
 			DoNotClose:   dm.DoNotClose,

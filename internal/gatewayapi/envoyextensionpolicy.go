@@ -1195,69 +1195,26 @@ func (t *Translator) buildDynamicModules(
 		return nil, nil
 	}
 
-	// Build registry lookup map from EnvoyProxy
-	registry := make(map[string]*egv1a1.DynamicModuleEntry)
-	if envoyProxy != nil {
-		for i := range envoyProxy.Spec.DynamicModules {
-			entry := &envoyProxy.Spec.DynamicModules[i]
-			registry[entry.Name] = entry
-		}
-	}
-
 	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModule))
 
 	for idx, dm := range policy.Spec.DynamicModule {
 		name := irConfigNameForDynamicModule(policy, idx)
 
-		// Validate module exists in registry
-		entry, ok := registry[dm.Name]
-		if !ok {
-			errs = errors.Join(errs, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", dm.Name))
+		resolved, err := resolveDynamicModuleEntry(dm.Name, envoyProxy)
+		if err != nil {
+			errs = errors.Join(errs, err)
 			continue
 		}
-
-		filterName := ptr.Deref(dm.FilterName, "")
 
 		dmIR := ir.DynamicModule{
 			Name:           name,
-			FilterName:     filterName,
+			FilterName:     ptr.Deref(dm.FilterName, ""),
 			Config:         dm.Config,
-			DoNotClose:     ptr.Deref(entry.DoNotClose, false),
-			LoadGlobally:   ptr.Deref(entry.LoadGlobally, false),
+			DoNotClose:     resolved.DoNotClose,
+			LoadGlobally:   resolved.LoadGlobally,
 			TerminalFilter: ptr.Deref(dm.TerminalFilter, false),
-		}
-
-		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
-		case egv1a1.RemoteDynamicModuleSourceType:
-			if entry.Source.Remote == nil {
-				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source configured", dm.Name))
-				continue
-			}
-			if entry.Source.Remote.URL == "" {
-				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source URL configured", dm.Name))
-				continue
-			}
-			if entry.Source.Remote.SHA256 == "" {
-				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", dm.Name))
-				continue
-			}
-			if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
-				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err))
-				continue
-			}
-			dmIR.Remote = &ir.RemoteDynamicModuleSource{
-				URL:    entry.Source.Remote.URL,
-				SHA256: entry.Source.Remote.SHA256,
-			}
-		case egv1a1.LocalDynamicModuleSourceType:
-			if entry.Source.Local == nil {
-				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
-				continue
-			}
-			dmIR.Path = entry.Source.Local.Path
-		default:
-			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has unsupported source type %q", dm.Name, sourceType))
-			continue
+			Path:           resolved.Path,
+			Remote:         resolved.Remote,
 		}
 
 		dmIRList = append(dmIRList, dmIR)

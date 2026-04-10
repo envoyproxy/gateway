@@ -412,51 +412,21 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyP
 			return nil, fmt.Errorf("EnvoyProxy is required for DynamicModule load balancer policy")
 		}
 
-		var entry *egv1a1.DynamicModuleEntry
-		for i := range envoyProxy.Spec.DynamicModules {
-			if envoyProxy.Spec.DynamicModules[i].Name == dm.Name {
-				entry = &envoyProxy.Spec.DynamicModules[i]
-				break
-			}
-		}
-		if entry == nil {
-			return nil, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", dm.Name)
-		}
-
-		irDM := &ir.DynamicModuleLB{
-			Name:         dm.Name,
-			LBPolicyName: dm.LBPolicyName,
-			Config:       dm.Config,
-			DoNotClose:   ptr.Deref(entry.DoNotClose, false),
-			LoadGlobally: ptr.Deref(entry.LoadGlobally, false),
-		}
-
-		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
-		case egv1a1.RemoteDynamicModuleSourceType:
-			if entry.Source.Remote == nil || entry.Source.Remote.URL == "" {
-				return nil, fmt.Errorf("dynamic module %q has no remote source URL configured", dm.Name)
-			}
-			if entry.Source.Remote.SHA256 == "" {
-				return nil, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", dm.Name)
-			}
-			if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
-				return nil, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err)
-			}
-			irDM.Remote = &ir.RemoteDynamicModuleSource{
-				URL:    entry.Source.Remote.URL,
-				SHA256: entry.Source.Remote.SHA256,
-			}
-		case egv1a1.LocalDynamicModuleSourceType:
-			if entry.Source.Local == nil || entry.Source.Local.Path == "" {
-				return nil, fmt.Errorf("dynamic module %q has no local source path configured", dm.Name)
-			}
-			irDM.Path = entry.Source.Local.Path
-		default:
-			return nil, fmt.Errorf("dynamic module %q has unsupported source type %q", dm.Name, sourceType)
+		resolved, err := resolveDynamicModuleEntry(dm.Name, envoyProxy)
+		if err != nil {
+			return nil, err
 		}
 
 		lb = &ir.LoadBalancer{
-			DynamicModuleLB: irDM,
+			DynamicModuleLB: &ir.DynamicModuleLB{
+				Name:         dm.Name,
+				LBPolicyName: dm.LBPolicyName,
+				Config:       dm.Config,
+				DoNotClose:   resolved.DoNotClose,
+				LoadGlobally: resolved.LoadGlobally,
+				Path:         resolved.Path,
+				Remote:       resolved.Remote,
+			},
 		}
 	}
 
@@ -491,6 +461,62 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyP
 	}
 
 	return lb, nil
+}
+
+// resolvedDynamicModuleSource holds the resolved source information for a dynamic module entry.
+type resolvedDynamicModuleSource struct {
+	Path         string
+	Remote       *ir.RemoteDynamicModuleSource
+	DoNotClose   bool
+	LoadGlobally bool
+}
+
+// resolveDynamicModuleEntry looks up a dynamic module by name from the EnvoyProxy's
+// dynamicModules allowlist and validates/resolves its source configuration.
+func resolveDynamicModuleEntry(name string, envoyProxy *egv1a1.EnvoyProxy) (*resolvedDynamicModuleSource, error) {
+	var entry *egv1a1.DynamicModuleEntry
+	if envoyProxy != nil {
+		for i := range envoyProxy.Spec.DynamicModules {
+			if envoyProxy.Spec.DynamicModules[i].Name == name {
+				entry = &envoyProxy.Spec.DynamicModules[i]
+				break
+			}
+		}
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", name)
+	}
+
+	resolved := &resolvedDynamicModuleSource{
+		DoNotClose:   ptr.Deref(entry.DoNotClose, false),
+		LoadGlobally: ptr.Deref(entry.LoadGlobally, false),
+	}
+
+	switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
+	case egv1a1.RemoteDynamicModuleSourceType:
+		if entry.Source.Remote == nil || entry.Source.Remote.URL == "" {
+			return nil, fmt.Errorf("dynamic module %q has no remote source URL configured", name)
+		}
+		if entry.Source.Remote.SHA256 == "" {
+			return nil, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", name)
+		}
+		if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
+			return nil, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", name, entry.Source.Remote.URL, err)
+		}
+		resolved.Remote = &ir.RemoteDynamicModuleSource{
+			URL:    entry.Source.Remote.URL,
+			SHA256: entry.Source.Remote.SHA256,
+		}
+	case egv1a1.LocalDynamicModuleSourceType:
+		if entry.Source.Local == nil || entry.Source.Local.Path == "" {
+			return nil, fmt.Errorf("dynamic module %q has no local source path configured", name)
+		}
+		resolved.Path = entry.Source.Local.Path
+	default:
+		return nil, fmt.Errorf("dynamic module %q has unsupported source type %q", name, sourceType)
+	}
+
+	return resolved, nil
 }
 
 func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.ConsistentHash, error) {
