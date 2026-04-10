@@ -1,0 +1,37 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: backend-utilization-weighted-zones-endpoint-override-dest/backend/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.override_host
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.override_host.v3.OverrideHost
+          fallbackPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.wrr_locality
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.wrr_locality.v3.WrrLocality
+                  endpointPickingPolicy:
+                    policies:
+                    - typedExtensionConfig:
+                        name: envoy.load_balancing_policies.client_side_weighted_round_robin
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+                          blackoutPeriod: 10s
+                          weightExpirationPeriod: 60s
+          overrideHostSources:
+          - header: x-fallback-host
+  name: backend-utilization-weighted-zones-endpoint-override-dest/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
