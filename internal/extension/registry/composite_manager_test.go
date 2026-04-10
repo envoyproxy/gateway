@@ -226,6 +226,32 @@ func TestCompositeManager_GetPreXDSHookClient(t *testing.T) {
 		assert.Nil(t, client)
 		assert.Contains(t, err.Error(), "connection failed")
 	})
+
+	t.Run("skips erroring child when failOpen is true", func(t *testing.T) {
+		mockClient := &mockXDSHookClient{}
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{preHookErr: fmt.Errorf("connection failed"), failOpen: true}},
+			{name: "mgr2", manager: &mockManager{preHookClient: mockClient}},
+		})
+		client, err := composite.GetPreXDSHookClient(egv1a1.XDSRoute)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+		compositeClient, ok := client.(*compositeXDSHookClient)
+		assert.True(t, ok)
+		require.Len(t, compositeClient.entries, 1)
+		assert.Equal(t, "mgr2", compositeClient.entries[0].name)
+	})
+
+	t.Run("returns error when failOpen is false", func(t *testing.T) {
+		mockClient := &mockXDSHookClient{}
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{preHookErr: fmt.Errorf("connection failed"), failOpen: false}},
+			{name: "mgr2", manager: &mockManager{preHookClient: mockClient}},
+		})
+		client, err := composite.GetPreXDSHookClient(egv1a1.XDSRoute)
+		require.Error(t, err)
+		assert.Nil(t, client)
+	})
 }
 
 func TestCompositeManager_GetPostXDSHookClient(t *testing.T) {
@@ -254,13 +280,30 @@ func TestCompositeManager_GetPostXDSHookClient(t *testing.T) {
 }
 
 func TestCompositeManager_GetPostXDSHookClient_Error(t *testing.T) {
-	composite := NewCompositeManager([]namedManager{
-		{name: "mgr1", manager: &mockManager{postHookErr: fmt.Errorf("connection failed")}},
+	t.Run("returns error when failOpen is false", func(t *testing.T) {
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{postHookErr: fmt.Errorf("connection failed")}},
+		})
+		client, err := composite.GetPostXDSHookClient(egv1a1.XDSRoute)
+		require.Error(t, err)
+		assert.Nil(t, client)
+		assert.Contains(t, err.Error(), "connection failed")
 	})
-	client, err := composite.GetPostXDSHookClient(egv1a1.XDSRoute)
-	require.Error(t, err)
-	assert.Nil(t, client)
-	assert.Contains(t, err.Error(), "connection failed")
+
+	t.Run("skips erroring child when failOpen is true", func(t *testing.T) {
+		mockClient := &mockXDSHookClient{}
+		composite := NewCompositeManager([]namedManager{
+			{name: "mgr1", manager: &mockManager{postHookErr: fmt.Errorf("connection failed"), failOpen: true}},
+			{name: "mgr2", manager: &mockManager{postHookClient: mockClient}},
+		})
+		client, err := composite.GetPostXDSHookClient(egv1a1.XDSRoute)
+		require.NoError(t, err)
+		require.NotNil(t, client)
+		compositeClient, ok := client.(*compositeXDSHookClient)
+		assert.True(t, ok)
+		require.Len(t, compositeClient.entries, 1)
+		assert.Equal(t, "mgr2", compositeClient.entries[0].name)
+	})
 }
 
 func TestCompositeManager_CleanupHookConns(t *testing.T) {
