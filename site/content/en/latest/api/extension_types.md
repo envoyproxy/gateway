@@ -5927,6 +5927,22 @@ _Appears in:_
 | `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
+#### TargetNamespaceFrom
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [TargetSelectorNamespaces](#targetselectornamespaces)
+
+| Value | Description |
+| ----- | ----------- |
+| `Same` | TargetNamespaceFromSame limits target selection to the policy's namespace.<br /> | 
+| `All` | TargetNamespaceFromAll allows target selection from all watched namespaces.<br /> | 
+| `Selector` | TargetNamespaceFromSelector allows target selection from watched namespaces matching the selector.<br /> | 
+
+
 #### TargetSelector
 
 
@@ -5944,8 +5960,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
+
+
+#### TargetSelectorNamespaces
+
+
+
+TargetSelectorNamespaces determines which namespaces are considered for target selection.
+
+_Appears in:_
+- [TargetSelector](#targetselector)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `from` | _[TargetNamespaceFrom](#targetnamespacefrom)_ |  true  | Same | From indicates how namespaces are selected for this target selector.<br />All means all namespaces watched by Envoy Gateway.<br />Selector means namespaces watched by Envoy Gateway that match Selector. |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector selects namespaces when From is set to Selector. |
 
 
 #### Timeout
