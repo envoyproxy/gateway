@@ -30463,6 +30463,8 @@ spec:
                   This Policy and the TargetRef MUST be in the same namespace
                   for this Policy to have effect and be applied to the Gateway
                   TargetRef
+
+                  Deprecated: TargetRef is deprecated in favor of TargetRefs to support attaching to multiple resources.
                 properties:
                   group:
                     description: Group is the group of the target resource.
@@ -30485,6 +30487,45 @@ spec:
                 - kind
                 - name
                 type: object
+              targetRefs:
+                description: |-
+                  TargetRefs is the names of the Gateway API resources this policy
+                  is being attached to.
+                  By default, attaching to Gateway is supported and
+                  when mergeGateways is enabled it should attach to GatewayClass.
+                  This Policy and the TargetRef MUST be in the same namespace
+                  for this Policy to have effect and be applied to the Gateway
+                  TargetRefs.
+                items:
+                  description: |-
+                    LocalPolicyTargetReference identifies an API object to apply a direct or
+                    inherited policy to. This should be used as part of Policy resources
+                    that can target Gateway API resources. For more information on how this
+                    policy attachment model works, and a sample Policy resource, refer to
+                    the policy attachment documentation for Gateway API.
+                  properties:
+                    group:
+                      description: Group is the group of the target resource.
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is kind of the target resource.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: Name is the name of the target resource.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - name
+                  type: object
+                type: array
               type:
                 description: |-
                   Type decides the type of patch.
@@ -30493,9 +30534,13 @@ spec:
                 - JSONPatch
                 type: string
             required:
-            - targetRef
             - type
             type: object
+            x-kubernetes-validations:
+            - message: exactly one of targetRef or targetRefs must be set
+              rule: (has(self.targetRef) && (!has(self.targetRefs) || size(self.targetRefs)
+                == 0)) || (!has(self.targetRef) && has(self.targetRefs) && size(self.targetRefs)
+                > 0)
           status:
             description: Status defines the current status of EnvoyPatchPolicy.
             properties:
