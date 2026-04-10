@@ -37,6 +37,7 @@ metadata:
 
 ### Feature coverage
 - For new user-facing features, check that `test/e2e` has coverage.
+- For bug fixes, check that `test/e2e` has coverage if the bug is in user-facing code or has user-facing impact. 
 
 ### Release notes
 Release notes should be added to `release-notes/current.yaml` for any of the following changes:
