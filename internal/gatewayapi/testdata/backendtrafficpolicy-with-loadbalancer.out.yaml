@@ -42,6 +42,8 @@ backendTrafficPolicies:
   spec:
     loadBalancer:
       slowStart:
+        aggression: "1.5"
+        minWeightPercent: 25
         window: 300s
       type: LeastRequest
     targetRef:
@@ -755,6 +757,8 @@ xdsIR:
           loadBalancer:
             leastRequest:
               slowStart:
+                aggression: 1.5
+                minWeightPercent: 25
                 window: 5m0s
       - destination:
           metadata:

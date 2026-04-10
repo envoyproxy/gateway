@@ -2948,6 +2948,12 @@ type ProxyProtocol struct {
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
 	Window *metav1.Duration `json:"window" yaml:"window"`
+	// Aggression is the parameter that controls the speed of the endpoint weight
+	// ramp-up during the slow start window. If nil, Envoy's default (1.0) is used.
+	Aggression *float64 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
+	// MinWeightPercent is the minimum percent of origin weight used while an
+	// endpoint is in the slow start window. If nil, Envoy's default (10%) is used.
+	MinWeightPercent *uint32 `json:"minWeightPercent,omitempty" yaml:"minWeightPercent,omitempty"`
 }
 
 // Backend CircuitBreaker settings for the DEFAULT routing priority

@@ -22,6 +22,7 @@ new features: |
   Support for configuring weights for locality zones.
   Added support for settings of gRPC web in ClientTrafficPolicy.
   Added support for Envoy Dynamic Modules.
+  Added support for `aggression` and `minWeightPercent` in BackendTrafficPolicy slow start configuration.
   Added support for weight in BackendRef API to enable traffic splitting for non-x-route resources.
   Added support for removing headers based on matching criteria (Exact, Prefix, Suffix, RegularExpression) in ClientTrafficPolicy EarlyRequestHeaders and LateResponseHeaders.
   Added support for priorityClassName in KubernetesPodSpec for Envoy Proxy pods.

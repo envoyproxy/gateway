@@ -5637,7 +5637,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `window` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />Currently only supports linear growth of traffic. For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
+| `window` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  true  |  | Window defines the duration of the warm up period for newly added host.<br />During slow start window, traffic sent to the newly added hosts will gradually increase.<br />For additional details,<br />see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig |
+| `aggression` | _string_ |  false  |  | Aggression controls the speed at which the endpoint weight ramps up during the<br />slow start window. The endpoint weight is scaled by the time factor raised to<br />the power of (1 / aggression). Values greater than 1.0 result in a faster<br />initial ramp-up followed by a slower approach to the full weight (exponential),<br />while values less than 1.0 result in a slower initial ramp-up followed by a<br />faster approach to the full weight (logarithmic).<br />Must be a positive decimal number (e.g. "1.0", "1.5", "2.0"). If unset,<br />Envoy uses its default of 1.0, which produces a linear ramp-up. |
+| `minWeightPercent` | _integer_ |  false  |  | MinWeightPercent specifies the minimum percent of origin weight that avoids<br />too small new weight when an endpoint is in slow start window. This ensures<br />that the EDF scheduler has a reasonable deadline. If unset, Envoy uses its<br />default of 10%. |
 
 
 #### SourceMatch
