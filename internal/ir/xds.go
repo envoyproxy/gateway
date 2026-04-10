@@ -2924,13 +2924,13 @@ type BackendUtilization struct {
 // DynamicModuleLB holds the configuration for a dynamic module load balancer policy.
 // +k8s:deepcopy-gen=true
 type DynamicModuleLB struct {
-	Name         string                     `json:"name" yaml:"name"`
-	LBPolicyName string                     `json:"lbPolicyName" yaml:"lbPolicyName"`
-	Config       *apiextensionsv1.JSON      `json:"config,omitempty" yaml:"config,omitempty"`
-	Path         string                     `json:"path,omitempty" yaml:"path,omitempty"`
-	Remote       *RemoteDynamicModuleSource `json:"remote,omitempty" yaml:"remote,omitempty"`
-	DoNotClose   bool                       `json:"doNotClose" yaml:"doNotClose"`
-	LoadGlobally bool                       `json:"loadGlobally" yaml:"loadGlobally"`
+	Name               string                     `json:"name" yaml:"name"`
+	ImplementationName string                     `json:"implementationName" yaml:"implementationName"`
+	Config             *apiextensionsv1.JSON      `json:"config,omitempty" yaml:"config,omitempty"`
+	Path               string                     `json:"path,omitempty" yaml:"path,omitempty"`
+	Remote             *RemoteDynamicModuleSource `json:"remote,omitempty" yaml:"remote,omitempty"`
+	DoNotClose         bool                       `json:"doNotClose" yaml:"doNotClose"`
+	LoadGlobally       bool                       `json:"loadGlobally" yaml:"loadGlobally"`
 }
 
 // ConsistentHash load balancer settings
@@ -3611,8 +3611,8 @@ type DynamicModule struct {
 	// Remote is the remote source of the dynamic module shared library.
 	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
-	// FilterName identifies the filter implementation within the module.
-	FilterName string `json:"filterName,omitempty"`
+	// ImplementationName identifies the implementation within the module.
+	ImplementationName string `json:"implementationName,omitempty"`
 
 	// Config is the JSON configuration for the filter.
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`

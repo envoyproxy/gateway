@@ -74,4 +74,4 @@ spec:
     type: DynamicModule
     dynamicModule:
       name: first-host-lb
-      lbPolicyName: first_host
+      implementationName: first_host

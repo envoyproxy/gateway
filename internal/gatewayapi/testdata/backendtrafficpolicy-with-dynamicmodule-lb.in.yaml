@@ -66,6 +66,6 @@ backendTrafficPolicies:
       type: DynamicModule
       dynamicModule:
         name: custom-lb-module
-        lbPolicyName: weighted-random
+        implementationName: weighted-random
         config:
           key: value

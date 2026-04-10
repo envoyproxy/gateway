@@ -9,7 +9,7 @@ backendTrafficPolicies:
       dynamicModule:
         config:
           key: value
-        lbPolicyName: weighted-random
+        implementationName: weighted-random
         name: custom-lb-module
       type: DynamicModule
     targetRef:
@@ -235,7 +235,7 @@ xdsIR:
               config:
                 key: value
               doNotClose: false
-              lbPolicyName: weighted-random
+              implementationName: weighted-random
               loadGlobally: false
               name: custom-lb-module
               path: /usr/local/lib/custom_lb.so

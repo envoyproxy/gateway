@@ -419,13 +419,13 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyP
 
 		lb = &ir.LoadBalancer{
 			DynamicModuleLB: &ir.DynamicModuleLB{
-				Name:         dm.Name,
-				LBPolicyName: dm.LBPolicyName,
-				Config:       dm.Config,
-				DoNotClose:   resolved.DoNotClose,
-				LoadGlobally: resolved.LoadGlobally,
-				Path:         resolved.Path,
-				Remote:       resolved.Remote,
+				Name:               dm.Name,
+				ImplementationName: ptr.Deref(dm.ImplementationName, ""),
+				Config:             dm.Config,
+				DoNotClose:         resolved.DoNotClose,
+				LoadGlobally:       resolved.LoadGlobally,
+				Path:               resolved.Path,
+				Remote:             resolved.Remote,
 			},
 		}
 	}

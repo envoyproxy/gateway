@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -234,30 +233,7 @@ type BackendUtilization struct {
 //
 // See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
 type DynamicModuleLBPolicy struct {
-	// Name references a dynamic module registered in the EnvoyProxy resource's
-	// dynamicModules list. The referenced module must exist in the registry;
-	// otherwise, the policy will be rejected.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
-	Name string `json:"name"`
-
-	// LBPolicyName identifies a specific load balancer implementation within
-	// the dynamic module. A single shared library can contain multiple LB
-	// policy implementations. This value is passed to the module's
-	// initialization function to select the appropriate implementation.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	LBPolicyName string `json:"lbPolicyName"`
-
-	// Config is optional configuration for the module's load balancer
-	// implementation. This is serialized and passed to the module's
-	// initialization function.
-	//
-	// +optional
-	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+	DynamicModuleRef `json:",inline"`
 }
 
 // ConsistentHashType defines the type of input to hash on.

@@ -465,9 +465,9 @@ func TestBuildClusterWithDynamicModuleLB(t *testing.T) {
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
 		loadBalancer: &ir.LoadBalancer{DynamicModuleLB: &ir.DynamicModuleLB{
-			Name:         "my-module",
-			LBPolicyName: "round-robin-v2",
-			Path:         "/usr/local/lib/my-module.so",
+			Name:               "my-module",
+			ImplementationName: "round-robin-v2",
+			Path:               "/usr/local/lib/my-module.so",
 		}},
 	}
 
@@ -496,9 +496,9 @@ func TestBuildClusterWithDynamicModuleLBConfig(t *testing.T) {
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
 		loadBalancer: &ir.LoadBalancer{DynamicModuleLB: &ir.DynamicModuleLB{
-			Name:         "my-module",
-			LBPolicyName: "custom-lb",
-			Path:         "/usr/local/lib/my-module.so",
+			Name:               "my-module",
+			ImplementationName: "custom-lb",
+			Path:               "/usr/local/lib/my-module.so",
 			Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
 			DoNotClose:   true,
 			LoadGlobally: true,
@@ -534,8 +534,8 @@ func TestBuildClusterWithDynamicModuleLBRemote(t *testing.T) {
 			Endpoints: []*ir.DestinationEndpoint{{Host: "127.0.0.1", Port: 8080}},
 		}},
 		loadBalancer: &ir.LoadBalancer{DynamicModuleLB: &ir.DynamicModuleLB{
-			Name:         "my-module",
-			LBPolicyName: "remote-lb",
+			Name:               "my-module",
+			ImplementationName: "remote-lb",
 			Remote: &ir.RemoteDynamicModuleSource{
 				URL:    "https://example.com/module.so",
 				SHA256: "abc123def456",
