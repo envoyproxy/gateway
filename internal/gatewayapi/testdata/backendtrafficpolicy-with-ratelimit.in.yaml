@@ -13,6 +13,18 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8081
+      protocol: HTTP
+      port: 8081
+      allowedRoutes:
+        namespaces:
+          from: All
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
@@ -51,7 +63,6 @@ grpcRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http
     rules:
     - backendRefs:
       - name: service-1
