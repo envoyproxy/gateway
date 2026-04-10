@@ -431,6 +431,13 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-2,
+          default/httproute-3, default/httproute-4, default/httproute-5, default/httproute-6,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -465,6 +472,13 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-3, default/httproute-4, default/httproute-5, default/httproute-6,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -499,6 +513,13 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-2, default/httproute-4, default/httproute-5, default/httproute-6,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -534,6 +555,13 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-2, default/httproute-3, default/httproute-5, default/httproute-6,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -570,6 +598,13 @@ httpRoutes:
         reason: InvalidBackendRef
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-2, default/httproute-3, default/httproute-4, default/httproute-6,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -607,6 +642,13 @@ httpRoutes:
         reason: InvalidBackendRef
         status: "False"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-2, default/httproute-3, default/httproute-4, default/httproute-5,
+          envoy-gateway/httproute-7-override-client-tls-settings'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -642,6 +684,13 @@ httpRoutes:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      - lastTransitionTime: null
+        message: 'Overlapping match conditions with route(s): default/httproute-1,
+          default/httproute-2, default/httproute-3, default/httproute-4, default/httproute-5,
+          default/httproute-6'
+        reason: Overlap
+        status: "True"
+        type: Overlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
