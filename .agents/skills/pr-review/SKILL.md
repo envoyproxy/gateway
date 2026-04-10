@@ -13,7 +13,7 @@ metadata:
 - A local diff between commits (e.g. review change: git diff 4927877a HEAD)
 
 ## Review
-- Check correctness, API compatibility, status behavior, and test coverage.
+- Check API changes, implementation changes, feature coverage, and release notes as applicable.
 - Keep findings concise and actionable, with file references when possible.
 
 ## API Changes
