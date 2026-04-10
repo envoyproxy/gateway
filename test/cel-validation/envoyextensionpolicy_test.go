@@ -1074,7 +1074,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							Name:           "terminal-module",
+							DynamicModuleRef: egv1a1.DynamicModuleRef{
+								Name: "terminal-module",
+							},
 							TerminalFilter: ptr.To(true),
 						},
 					},

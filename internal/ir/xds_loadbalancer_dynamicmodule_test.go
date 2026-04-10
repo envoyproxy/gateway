@@ -15,7 +15,7 @@ import (
 func TestLoadBalancerValidate_DynamicModuleLB(t *testing.T) {
 	lb := LoadBalancer{
 		DynamicModuleLB: &DynamicModuleLB{
-			Name:         "my-module",
+			Name:               "my-module",
 			ImplementationName: "my-lb-policy",
 		},
 	}
@@ -25,7 +25,7 @@ func TestLoadBalancerValidate_DynamicModuleLB(t *testing.T) {
 func TestLoadBalancerValidate_DynamicModuleLB_WithOther(t *testing.T) {
 	lb := LoadBalancer{
 		DynamicModuleLB: &DynamicModuleLB{
-			Name:         "my-module",
+			Name:               "my-module",
 			ImplementationName: "my-lb-policy",
 		},
 		Random: &Random{},
@@ -36,9 +36,9 @@ func TestLoadBalancerValidate_DynamicModuleLB_WithOther(t *testing.T) {
 func TestDynamicModuleLB_WithConfig(t *testing.T) {
 	lb := LoadBalancer{
 		DynamicModuleLB: &DynamicModuleLB{
-			Name:         "my-module",
+			Name:               "my-module",
 			ImplementationName: "my-lb-policy",
-			Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+			Config:             &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
 		},
 	}
 	require.NoError(t, lb.Validate())
@@ -47,7 +47,7 @@ func TestDynamicModuleLB_WithConfig(t *testing.T) {
 func TestDynamicModuleLB_WithRemote(t *testing.T) {
 	lb := LoadBalancer{
 		DynamicModuleLB: &DynamicModuleLB{
-			Name:         "my-module",
+			Name:               "my-module",
 			ImplementationName: "my-lb-policy",
 			Remote: &RemoteDynamicModuleSource{
 				URL:    "https://example.com/module.so",

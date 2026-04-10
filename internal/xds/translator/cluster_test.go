@@ -499,9 +499,9 @@ func TestBuildClusterWithDynamicModuleLBConfig(t *testing.T) {
 			Name:               "my-module",
 			ImplementationName: "custom-lb",
 			Path:               "/usr/local/lib/my-module.so",
-			Config:       &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
-			DoNotClose:   true,
-			LoadGlobally: true,
+			Config:             &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
+			DoNotClose:         true,
+			LoadGlobally:       true,
 		}},
 	}
 
