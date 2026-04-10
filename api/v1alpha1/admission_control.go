@@ -14,36 +14,30 @@ import (
 // of previous requests in a configurable sliding time window.
 // All fields are optional and will use Envoy's defaults when not specified.
 type AdmissionControl struct {
-	// Enabled enables or disables the admission control filter.
-	// Defaults to true if not specified.
-	//
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
-
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	// Defaults to 30s if not specified.
 	//
 	// +optional
 	SamplingWindow *gwapiv1.Duration `json:"samplingWindow,omitempty"`
 
-	// SuccessRateThreshold defines the lowest request success rate at which the filter
-	// will not reject requests. The value should be in the range [0.0, 1.0].
-	// Defaults to 0.95 (95%) if not specified.
+	// SuccessRateThreshold is the lowest request success rate, as a percentage in the
+	// range [1, 100], at which the filter will not reject requests. Defaults to 95 if
+	// not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0.0
-	// +kubebuilder:validation:Maximum=1.0
-	SuccessRateThreshold *float64 `json:"successRateThreshold,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	SuccessRateThreshold *uint32 `json:"successRateThreshold,omitempty"`
 
-	// Aggression controls the rejection probability curve. A value of 1.0 means a linear
+	// Aggression controls the rejection probability curve. A value of 1 means a linear
 	// increase in rejection probability as the success rate decreases. Higher values
 	// result in more aggressive rejection at higher success rates.
-	// Envoy clamps values below 1.0 to 1.0.
-	// Defaults to 1.0 if not specified.
+	// Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.
+	// Defaults to 1 if not specified.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=1.0
-	Aggression *float64 `json:"aggression,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	Aggression *uint32 `json:"aggression,omitempty"`
 
 	// RPSThreshold defines the minimum requests per second below which requests will
 	// pass through the filter without rejection. Defaults to 0 if not specified.
@@ -52,13 +46,13 @@ type AdmissionControl struct {
 	// +kubebuilder:validation:Minimum=0
 	RPSThreshold *uint32 `json:"rpsThreshold,omitempty"`
 
-	// MaxRejectionProbability represents the upper limit of the rejection probability.
-	// The value should be in the range [0.0, 1.0]. Defaults to 0.80 (80%) if not specified.
+	// MaxRejectionProbability represents the upper limit of the rejection probability,
+	// expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified.
 	//
 	// +optional
-	// +kubebuilder:validation:Minimum=0.0
-	// +kubebuilder:validation:Maximum=1.0
-	MaxRejectionProbability *float64 `json:"maxRejectionProbability,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	MaxRejectionProbability *uint32 `json:"maxRejectionProbability,omitempty"`
 
 	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
 	//

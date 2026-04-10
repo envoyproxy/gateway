@@ -1709,7 +1709,6 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 	}
 
 	ac := &ir.AdmissionControl{
-		Enabled:                 policy.Spec.AdmissionControl.Enabled,
 		SamplingWindow:          parseSamplingWindow(policy.Spec.AdmissionControl.SamplingWindow),
 		SuccessRateThreshold:    policy.Spec.AdmissionControl.SuccessRateThreshold,
 		Aggression:              policy.Spec.AdmissionControl.Aggression,

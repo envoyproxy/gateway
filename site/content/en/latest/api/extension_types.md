@@ -203,12 +203,11 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `enabled` | _boolean_ |  false  |  | Enabled enables or disables the admission control filter.<br />Defaults to true if not specified. |
 | `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 30s if not specified. |
-| `successRateThreshold` | _float_ |  false  |  | SuccessRateThreshold defines the lowest request success rate at which the filter<br />will not reject requests. The value should be in the range [0.0, 1.0].<br />Defaults to 0.95 (95%) if not specified. |
-| `aggression` | _float_ |  false  |  | Aggression controls the rejection probability curve. A value of 1.0 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Envoy clamps values below 1.0 to 1.0.<br />Defaults to 1.0 if not specified. |
+| `successRateThreshold` | _integer_ |  false  |  | SuccessRateThreshold is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
+| `aggression` | _integer_ |  false  |  | Aggression controls the rejection probability curve. A value of 1 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.<br />Defaults to 1 if not specified. |
 | `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
-| `maxRejectionProbability` | _float_ |  false  |  | MaxRejectionProbability represents the upper limit of the rejection probability.<br />The value should be in the range [0.0, 1.0]. Defaults to 0.80 (80%) if not specified. |
+| `maxRejectionProbability` | _integer_ |  false  |  | MaxRejectionProbability represents the upper limit of the rejection probability,<br />expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified. |
 | `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC. |
 
 

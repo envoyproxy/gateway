@@ -15,12 +15,11 @@ spec:
     name: example-route
     namespace: default
   admissionControl:
-    enabled: true
     samplingWindow: 30s
-    srThreshold: 0.95
-    aggression: 1.0
-    rpsThreshold: 5.0
-    maxRejectionProbability: 0.8
+    successRateThreshold: 95
+    aggression: 1
+    rpsThreshold: 5
+    maxRejectionProbability: 80
     successCriteria:
       http:
         httpSuccessStatus:

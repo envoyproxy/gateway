@@ -1660,20 +1660,19 @@ type FaultInjectionAbort struct {
 //
 // +k8s:deepcopy-gen=true
 type AdmissionControl struct {
-	// Enabled enables or disables the admission control filter.
-	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty" yaml:"samplingWindow,omitempty"`
-	// SuccessRateThreshold defines the lowest request success rate at which the filter
-	// will not reject requests. The value should be in the range [0.0, 1.0].
-	SuccessRateThreshold *float64 `json:"successRateThreshold,omitempty" yaml:"successRateThreshold,omitempty"`
+	// SuccessRateThreshold is the lowest request success rate, as a percentage in the
+	// range [1, 100], at which the filter will not reject requests.
+	SuccessRateThreshold *uint32 `json:"successRateThreshold,omitempty" yaml:"successRateThreshold,omitempty"`
 	// Aggression controls the rejection probability curve.
-	Aggression *float64 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
+	Aggression *uint32 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
 	// RPSThreshold defines the minimum requests per second below which requests will
 	// pass through the filter without rejection.
 	RPSThreshold *uint32 `json:"rpsThreshold,omitempty" yaml:"rpsThreshold,omitempty"`
-	// MaxRejectionProbability represents the upper limit of the rejection probability.
-	MaxRejectionProbability *float64 `json:"maxRejectionProbability,omitempty" yaml:"maxRejectionProbability,omitempty"`
+	// MaxRejectionProbability represents the upper limit of the rejection probability,
+	// as a percentage in the range [0, 100].
+	MaxRejectionProbability *uint32 `json:"maxRejectionProbability,omitempty" yaml:"maxRejectionProbability,omitempty"`
 	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
 	SuccessCriteria *AdmissionControlSuccessCriteria `json:"successCriteria,omitempty" yaml:"successCriteria,omitempty"`
 }

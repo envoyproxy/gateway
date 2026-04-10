@@ -25,10 +25,8 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid admission control config",
-			config: &ir.AdmissionControl{
-				Enabled: func() *bool { b := true; return &b }(),
-			},
+			name:    "valid admission control config",
+			config:  &ir.AdmissionControl{},
 			wantErr: false,
 		},
 		{
@@ -47,10 +45,10 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 				SamplingWindow: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				SuccessRateThreshold:    ptr.To(0.90),
-				Aggression:              ptr.To(2.0),
+				SuccessRateThreshold:    ptr.To(uint32(90)),
+				Aggression:              ptr.To(uint32(2)),
 				RPSThreshold:            ptr.To(uint32(10)),
-				MaxRejectionProbability: ptr.To(0.80),
+				MaxRejectionProbability: ptr.To(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
 						HTTPSuccessStatus: []int32{200, 201, 300, 301},
@@ -101,22 +99,22 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "config with zero thresholds",
+			name: "config with min thresholds",
 			config: &ir.AdmissionControl{
-				SuccessRateThreshold:    ptr.To(0.0),
-				Aggression:              ptr.To(0.0),
+				SuccessRateThreshold:    ptr.To(uint32(1)),
+				Aggression:              ptr.To(uint32(1)),
 				RPSThreshold:            ptr.To(uint32(0)),
-				MaxRejectionProbability: ptr.To(0.0),
+				MaxRejectionProbability: ptr.To(uint32(0)),
 			},
 			wantErr: false,
 		},
 		{
 			name: "config with max thresholds",
 			config: &ir.AdmissionControl{
-				SuccessRateThreshold:    ptr.To(1.0),
-				Aggression:              ptr.To(10.0),
+				SuccessRateThreshold:    ptr.To(uint32(100)),
+				Aggression:              ptr.To(uint32(10)),
 				RPSThreshold:            ptr.To(uint32(1000)),
-				MaxRejectionProbability: ptr.To(1.0),
+				MaxRejectionProbability: ptr.To(uint32(100)),
 			},
 			wantErr: false,
 		},
@@ -146,10 +144,10 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 		SamplingWindow: &metav1.Duration{
 			Duration: 45 * time.Second,
 		},
-		SuccessRateThreshold:    ptr.To(0.85),
-		Aggression:              ptr.To(1.5),
+		SuccessRateThreshold:    ptr.To(uint32(85)),
+		Aggression:              ptr.To(uint32(2)),
 		RPSThreshold:            ptr.To(uint32(20)),
-		MaxRejectionProbability: ptr.To(0.75),
+		MaxRejectionProbability: ptr.To(uint32(75)),
 		SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 			HTTP: &ir.HTTPSuccessCriteria{
 				HTTPSuccessStatus: []int32{200, 201, 202},
@@ -166,7 +164,7 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 
 	assert.Equal(t, int64(45), got.SamplingWindow.Seconds)
 	assert.Equal(t, 85.0, got.SrThreshold.DefaultValue.Value)
-	assert.Equal(t, 1.5, got.Aggression.DefaultValue)
+	assert.Equal(t, 2.0, got.Aggression.DefaultValue)
 	assert.Equal(t, uint32(20), got.RpsThreshold.DefaultValue)
 	assert.Equal(t, 75.0, got.MaxRejectionProbability.DefaultValue.Value)
 	require.NotNil(t, got.EvaluationCriteria)
@@ -211,10 +209,10 @@ func TestBuildUpstreamAdmissionControlFilter(t *testing.T) {
 				SamplingWindow: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				SuccessRateThreshold:    ptr.To(0.95),
-				Aggression:              ptr.To(1.0),
+				SuccessRateThreshold:    ptr.To(uint32(95)),
+				Aggression:              ptr.To(uint32(1)),
 				RPSThreshold:            ptr.To(uint32(5)),
-				MaxRejectionProbability: ptr.To(0.80),
+				MaxRejectionProbability: ptr.To(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
 						HTTPSuccessStatus: []int32{200, 201},

@@ -52,15 +52,11 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		return nil, errors.New("admissionControl cannot be nil")
 	}
 
-	config := &admissioncontrolv3.AdmissionControl{}
-
-	// Set enabled (defaults to true if not specified)
-	enabled := true
-	if admissionControl.Enabled != nil {
-		enabled = *admissionControl.Enabled
-	}
-	config.Enabled = &corev3.RuntimeFeatureFlag{
-		DefaultValue: &wrapperspb.BoolValue{Value: enabled},
+	// The filter is enabled whenever the policy is configured.
+	config := &admissioncontrolv3.AdmissionControl{
+		Enabled: &corev3.RuntimeFeatureFlag{
+			DefaultValue: &wrapperspb.BoolValue{Value: true},
+		},
 	}
 
 	if admissionControl.SamplingWindow != nil {
@@ -73,13 +69,13 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 
 	if admissionControl.SuccessRateThreshold != nil {
 		config.SrThreshold = &corev3.RuntimePercent{
-			DefaultValue: &typev3.Percent{Value: *admissionControl.SuccessRateThreshold * 100.0},
+			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.SuccessRateThreshold)},
 		}
 	}
 
 	if admissionControl.Aggression != nil {
 		config.Aggression = &corev3.RuntimeDouble{
-			DefaultValue: *admissionControl.Aggression,
+			DefaultValue: float64(*admissionControl.Aggression),
 		}
 	}
 
@@ -91,7 +87,7 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 
 	if admissionControl.MaxRejectionProbability != nil {
 		config.MaxRejectionProbability = &corev3.RuntimePercent{
-			DefaultValue: &typev3.Percent{Value: *admissionControl.MaxRejectionProbability * 100.0},
+			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.MaxRejectionProbability)},
 		}
 	}
 
