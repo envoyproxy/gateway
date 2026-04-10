@@ -1687,6 +1687,9 @@ spec:
                   This field cannot be set when targeting a parent resource (Gateway).
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for BackendTrafficPolicySpec
+                  rule: self != 'Replace'
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -9553,6 +9556,17 @@ spec:
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
                 type: boolean
+              mergeType:
+                description: |-
+                  MergeType controls how this EnvoyProxy merges with less specific configurations
+                  in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
+                  If unset, this EnvoyProxy completely replaces less specific settings.
+                  Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
+                enum:
+                - Replace
+                - StrategicMerge
+                - JSONMerge
+                type: string
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
@@ -32530,6 +32544,9 @@ spec:
                   This field cannot be set when targeting a parent resource (Gateway).
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for SecurityPolicy
+                  rule: self != 'Replace'
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
