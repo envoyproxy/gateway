@@ -2472,11 +2472,15 @@ func (t *Translator) processBackendDestinationSetting(
 	protocol ir.AppProtocol,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
+	forceHTTP1Upstream := false
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
 	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
+		// For WebSocket backends, force HTTP/1.1 upstream to ensure Envoy can establish a successful connection,
+		// as WebSocket over HTTP/2 is not widely supported by upstreams and can lead to connection failures.
+		forceHTTP1Upstream = forceHTTP1Upstream || isWebSocketBackendAppProtocol(ap)
 	}
 
 	ds := &ir.DestinationSetting{Name: name}
@@ -2485,6 +2489,7 @@ func (t *Translator) processBackendDestinationSetting(
 	if backend.Spec.Type != nil && *backend.Spec.Type == egv1a1.BackendTypeDynamicResolver {
 		ds.IsDynamicResolver = true
 		ds.Protocol = protocol
+		ds.ForceHTTP1Upstream = forceHTTP1Upstream
 		return ds
 	}
 
@@ -2527,6 +2532,7 @@ func (t *Translator) processBackendDestinationSetting(
 	ds.Endpoints = dstEndpoints
 	ds.AddressType = dstAddrType
 	ds.Protocol = protocol
+	ds.ForceHTTP1Upstream = forceHTTP1Upstream
 
 	if backend.Spec.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
@@ -2559,10 +2565,21 @@ func backendAppProtocolToIRAppProtocol(ap egv1a1.AppProtocolType, defaultProtoco
 	switch ap {
 	case egv1a1.AppProtocolTypeH2C:
 		return ir.HTTP2
+	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
+		return ir.HTTP
 	case "grpc":
 		return ir.GRPC
 	default:
 		return defaultProtocol
+	}
+}
+
+func isWebSocketBackendAppProtocol(ap egv1a1.AppProtocolType) bool {
+	switch ap {
+	case egv1a1.AppProtocolTypeWS, egv1a1.AppProtocolTypeWSS:
+		return true
+	default:
+		return false
 	}
 }
 

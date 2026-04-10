@@ -1817,7 +1817,8 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1850,6 +1851,27 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 		}
 	}
 	return false
+}
+
+// HasMixedUpstreamProtocolRequirements returns true if destination settings require
+// mutually exclusive cluster-level upstream protocol configuration.
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+	hasForceHTTP1Upstream := false
+	hasHTTP2Upstream := false
+
+	for _, setting := range r.Settings {
+		if setting == nil {
+			continue
+		}
+		if setting.ForceHTTP1Upstream {
+			hasForceHTTP1Upstream = true
+		}
+		if setting.Protocol == HTTP2 || setting.Protocol == GRPC {
+			hasHTTP2Upstream = true
+		}
+	}
+
+	return hasForceHTTP1Upstream && hasHTTP2Upstream
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1901,8 +1923,11 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// ForceHTTP1Upstream requires Envoy to use explicit HTTP/1.1 upstream protocol selection.
+	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
+	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
+	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
