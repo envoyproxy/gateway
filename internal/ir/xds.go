@@ -2696,8 +2696,8 @@ type EnvoyPatchPolicyStatus struct {
 type JSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
 	Type string `json:"type" yaml:"type"`
-	// Name is the name of the resource
-	Name string `json:"name" yaml:"name"`
+	// Name is a StringMatch that is used to select the resources to patch based on their name.
+	Name StringMatch `json:"name" yaml:"name"`
 	// Patch defines the JSON Patch Operation
 	Operation JSONPatchOperation `json:"operation" yaml:"operation"`
 }

@@ -11,7 +11,8 @@ envoyPatchPolicies:
   generation: 1
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    name: "first-listener"
+    name:
+      exact: "first-listener"
     operation:
       op: "add"
       path: "/this/path/never/existed"

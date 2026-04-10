@@ -30383,11 +30383,33 @@ spec:
                 items:
                   description: |-
                     EnvoyJSONPatchConfig defines the configuration for patching a Envoy xDS Resource
-                    using JSONPatch semantic
+                    using JSONPatch semantics.
                   properties:
                     name:
-                      description: Name is the name of the resource
+                      description: Name is the name of the resource.
                       type: string
+                    nameSelector:
+                      description: NameSelector is a StringMatch that is used to select
+                        the resources to patch based on their name.
+                      properties:
+                        type:
+                          default: Exact
+                          description: Type specifies how to match against a string.
+                          enum:
+                          - Exact
+                          - Prefix
+                          - Suffix
+                          - RegularExpression
+                          type: string
+                        value:
+                          description: Value specifies the string value that the match
+                            must have.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                      required:
+                      - value
+                      type: object
                     operation:
                       description: Patch defines the JSON Patch Operation
                       properties:
@@ -30439,10 +30461,12 @@ spec:
                       - type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret
                       type: string
                   required:
-                  - name
                   - operation
                   - type
                   type: object
+                  x-kubernetes-validations:
+                  - message: only one of name and nameSelector can be specified
+                    rule: '!(has(self.name) && has(self.nameSelector))'
                 type: array
               priority:
                 description: |-
