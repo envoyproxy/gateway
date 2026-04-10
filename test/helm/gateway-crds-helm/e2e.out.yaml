@@ -8516,8 +8516,9 @@ spec:
             type: object
             x-kubernetes-validations:
             - message: exactly one of targetRef or targetRefs must be set
-              rule: (has(self.targetRef) && size(self.targetRefs) == 0) || (!has(self.targetRef)
-                && size(self.targetRefs) > 0)
+              rule: (has(self.targetRef) && (!has(self.targetRefs) || size(self.targetRefs)
+                == 0)) || (!has(self.targetRef) && has(self.targetRefs) && size(self.targetRefs)
+                > 0)
           status:
             description: Status defines the current status of EnvoyPatchPolicy.
             properties:
