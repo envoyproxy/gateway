@@ -587,7 +587,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
 								Window:           ptr.To(gwapiv1.Duration("10ms")),
-								Aggression:       ptr.To("1.5"),
+								Aggression:       ptr.To[uint32](150),
 								MinWeightPercent: ptr.To[uint32](25),
 							},
 						},
@@ -614,35 +614,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
 								Window:     ptr.To(gwapiv1.Duration("10ms")),
-								Aggression: ptr.To("0"),
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{
-				"aggression must be greater than 0",
-			},
-		},
-		{
-			desc: "roundrobin with non-numeric aggression is rejected",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: gwapiv1.Group("gateway.networking.k8s.io"),
-								Kind:  gwapiv1.Kind("Gateway"),
-								Name:  gwapiv1.ObjectName("eg"),
-							},
-						},
-					},
-					ClusterSettings: egv1a1.ClusterSettings{
-						LoadBalancer: &egv1a1.LoadBalancer{
-							Type: egv1a1.RoundRobinLoadBalancerType,
-							SlowStart: &egv1a1.SlowStart{
-								Window:     ptr.To(gwapiv1.Duration("10ms")),
-								Aggression: ptr.To("fast"),
+								Aggression: ptr.To[uint32](0),
 							},
 						},
 					},

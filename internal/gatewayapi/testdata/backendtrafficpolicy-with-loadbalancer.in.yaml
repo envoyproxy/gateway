@@ -200,7 +200,7 @@ backendTrafficPolicies:
         type: LeastRequest
         slowStart:
           window: 300s
-          aggression: "1.5"
+          aggression: 150
           minWeightPercent: 25
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: BackendTrafficPolicy
