@@ -19,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -423,7 +422,7 @@ func Test_JWTProvider(t *testing.T) {
 						URI: "https://test.local/jwt/public-key/jwks.json",
 					},
 					LocalJWKS: &egv1a1.LocalJWKS{
-						Inline: ptr.To("{}"),
+						Inline: new("{}"),
 					},
 				},
 			},
@@ -448,8 +447,8 @@ func Test_JWTProvider(t *testing.T) {
 					Issuer:    "https://www.test.local",
 					Audiences: []string{"test.local"},
 					LocalJWKS: &egv1a1.LocalJWKS{
-						Type:   ptr.To(egv1a1.LocalJWKSTypeValueRef),
-						Inline: ptr.To("{}"),
+						Type:   new(egv1a1.LocalJWKSTypeValueRef),
+						Inline: new("{}"),
 					},
 				},
 			},
@@ -746,13 +745,13 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 	}{
 		{
 			name:      "valid timeout",
-			timeout:   ptr.To(gwapiv1.Duration("10s")),
+			timeout:   new(gwapiv1.Duration("10s")),
 			wantValid: true,
 			wantValue: "10s",
 		},
 		{
 			name:      "invalid timeout format",
-			timeout:   ptr.To(gwapiv1.Duration("invalid-duration")),
+			timeout:   new(gwapiv1.Duration("invalid-duration")),
 			wantValid: false,
 			wantValue: "",
 		},
@@ -764,13 +763,13 @@ func Test_parseExtAuthTimeout(t *testing.T) {
 		},
 		{
 			name:      "complex valid timeout",
-			timeout:   ptr.To(gwapiv1.Duration("1h30m45s")),
+			timeout:   new(gwapiv1.Duration("1h30m45s")),
 			wantValid: true,
 			wantValue: "1h30m45s",
 		},
 		{
 			name:      "millisecond timeout",
-			timeout:   ptr.To(gwapiv1.Duration("500ms")),
+			timeout:   new(gwapiv1.Duration("500ms")),
 			wantValid: true,
 			wantValue: "500ms",
 		},
@@ -936,7 +935,7 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 							{
 								BackendObjectReference: gwapiv1a2.BackendObjectReference{
 									Name: "test-service",
-									Port: ptr.To(gwapiv1a2.PortNumber(80)),
+									Port: new(gwapiv1a2.PortNumber(80)),
 								},
 							},
 						},
@@ -1021,7 +1020,7 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 								BackendRef: gwapiv1.BackendRef{
 									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name: "test-service",
-										Port: ptr.To(gwapiv1.PortNumber(80)),
+										Port: new(gwapiv1.PortNumber(80)),
 									},
 								},
 							},
@@ -1194,7 +1193,7 @@ func Test_validateSecurityPolicyForTCP_Table(t *testing.T) {
 							Action: egv1a1.AuthorizationActionAllow,
 							Principal: egv1a1.Principal{
 								ClientIPGeoLocations: []egv1a1.ClientIPGeoLocation{
-									{Country: ptr.To("US")},
+									{Country: new("US")},
 								},
 							},
 						},
@@ -1288,7 +1287,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 	}{
 		{
 			name:          "country allowed with country database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
@@ -1297,14 +1296,14 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:              "missing provider rejected",
-			authorization:     newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			authorization:     newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy:        &egv1a1.EnvoyProxy{},
 			clientIPDetection: customHeaderDetection,
 			wantErr:           "requires EnvoyProxy.spec.geoIP.provider to be configured",
 		},
 		{
 			name:          "missing client ip detection rejected",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
@@ -1312,7 +1311,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "trusted cidrs rejected",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
@@ -1325,7 +1324,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "region requires city database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Region: ptr.To("CA")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Region: new("CA")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
@@ -1334,7 +1333,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "asn requires asn database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: new(uint32(64512))}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CityDBSource: cityDB,
 			}),
@@ -1343,7 +1342,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "isp requires isp database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: new("Example ISP")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CityDBSource: cityDB,
 			}),
@@ -1374,7 +1373,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "country accepted with city database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: ptr.To("US")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CityDBSource: cityDB,
 			}),
@@ -1383,7 +1382,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "asn accepted with asn database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: ptr.To(uint32(64512))}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ASN: new(uint32(64512))}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				ASNDBSource: asnDB,
 			}),
@@ -1392,7 +1391,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 		},
 		{
 			name:          "isp accepted with isp database",
-			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: ptr.To("Example ISP")}),
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{ISP: new("Example ISP")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				ISPDBSource: ispDB,
 			}),
@@ -1443,7 +1442,7 @@ func Test_buildContextExtensions(t *testing.T) {
 		{
 			name: "TypeValue",
 			contextExtensions: []*egv1a1.ContextExtension{
-				{Name: "foo", Value: ptr.To("bar")},
+				{Name: "foo", Value: new("bar")},
 			},
 			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
@@ -1458,7 +1457,7 @@ func Test_buildContextExtensions(t *testing.T) {
 				{
 					Name:  "foo",
 					Type:  egv1a1.ContextExtensionValueTypeValue,
-					Value: ptr.To("bar"),
+					Value: new("bar"),
 				},
 			},
 			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
@@ -1631,7 +1630,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
+					MergeType: new(egv1a1.StrategicMerge),
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 					},
@@ -1646,7 +1645,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				},
 			},
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				JWT: &egv1a1.JWT{
 					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 				},
@@ -1684,7 +1683,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
+					MergeType: new(egv1a1.StrategicMerge),
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 					},
@@ -1692,7 +1691,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			},
 			parentPolicy: nil,
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				JWT: &egv1a1.JWT{
 					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 				},
@@ -1703,7 +1702,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
+					MergeType: new(egv1a1.StrategicMerge),
 					CORS: &egv1a1.CORS{
 						AllowOrigins: []egv1a1.Origin{"https://example.com"},
 					},
@@ -1713,22 +1712,22 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "gateway-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
 					Authorization: &egv1a1.Authorization{
-						DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+						DefaultAction: new(egv1a1.AuthorizationActionDeny),
 						Rules: []egv1a1.AuthorizationRule{
-							{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+							{Name: new("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
 						},
 					},
 				},
 			},
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				CORS: &egv1a1.CORS{
 					AllowOrigins: []egv1a1.Origin{"https://example.com"},
 				},
 				Authorization: &egv1a1.Authorization{
-					DefaultAction: ptr.To(egv1a1.AuthorizationActionDeny),
+					DefaultAction: new(egv1a1.AuthorizationActionDeny),
 					Rules: []egv1a1.AuthorizationRule{
-						{Name: ptr.To("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
+						{Name: new("allow-admin"), Action: egv1a1.AuthorizationActionAllow},
 					},
 				},
 			},
@@ -1738,7 +1737,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.JSONMerge),
+					MergeType: new(egv1a1.JSONMerge),
 					CORS: &egv1a1.CORS{
 						AllowOrigins: []egv1a1.Origin{"https://route.com"},
 					},
@@ -1753,7 +1752,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				},
 			},
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.JSONMerge),
+				MergeType: new(egv1a1.JSONMerge),
 				CORS: &egv1a1.CORS{
 					AllowOrigins: []egv1a1.Origin{"https://route.com"},
 				},
@@ -1767,7 +1766,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
+					MergeType: new(egv1a1.StrategicMerge),
 					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 					},
@@ -1783,12 +1782,12 @@ func TestMergeSecurityPolicy(t *testing.T) {
 						Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
 					},
 					Authorization: &egv1a1.Authorization{
-						DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+						DefaultAction: new(egv1a1.AuthorizationActionAllow),
 					},
 				},
 			},
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				JWT: &egv1a1.JWT{
 					Providers: []egv1a1.JWTProvider{{Name: "route-jwt"}},
 				},
@@ -1799,7 +1798,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 					Users: gwapiv1.SecretObjectReference{Name: "gateway-users"},
 				},
 				Authorization: &egv1a1.Authorization{
-					DefaultAction: ptr.To(egv1a1.AuthorizationActionAllow),
+					DefaultAction: new(egv1a1.AuthorizationActionAllow),
 				},
 			},
 		},
@@ -1808,7 +1807,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			routePolicy: &egv1a1.SecurityPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: "route-policy", Namespace: "default"},
 				Spec: egv1a1.SecurityPolicySpec{
-					MergeType: ptr.To(egv1a1.StrategicMerge),
+					MergeType: new(egv1a1.StrategicMerge),
 					CORS: &egv1a1.CORS{
 						AllowOrigins: []egv1a1.Origin{"https://route.com"},
 						AllowMethods: []string{"GET", "POST"},
@@ -1825,7 +1824,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 				},
 			},
 			wantSpec: egv1a1.SecurityPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				CORS: &egv1a1.CORS{
 					AllowOrigins: []egv1a1.Origin{"https://route.com"},
 					AllowMethods: []string{"GET", "POST"},

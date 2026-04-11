@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -173,9 +172,9 @@ func TestAttachEnvoyProxy(t *testing.T) {
 		{
 			name: "only default spec - should use default",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				Concurrency: ptr.To[int32](4),
+				Concurrency: new(int32(4)),
 			},
-			expectedConcurrency: ptr.To[int32](4),
+			expectedConcurrency: new(int32(4)),
 		},
 		{
 			name: "gatewayclass envoy proxy overrides default spec",
@@ -185,13 +184,13 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Name:      "gc-proxy",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](8),
+					Concurrency: new(int32(8)),
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				Concurrency: ptr.To[int32](4),
+				Concurrency: new(int32(4)),
 			},
-			expectedConcurrency: ptr.To[int32](8),
+			expectedConcurrency: new(int32(8)),
 		},
 		{
 			name: "gateway envoy proxy overrides gatewayclass",
@@ -206,7 +205,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Name:      "gw-proxy",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](16),
+					Concurrency: new(int32(16)),
 				},
 			},
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
@@ -215,22 +214,22 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Name:      "gc-proxy",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](8),
+					Concurrency: new(int32(8)),
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				Concurrency: ptr.To[int32](4),
+				Concurrency: new(int32(4)),
 			},
-			expectedConcurrency: ptr.To[int32](16),
+			expectedConcurrency: new(int32(16)),
 		},
 		{
 			name: "default spec with merge gateways enabled",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
-				Concurrency:   ptr.To[int32](4),
+				MergeGateways: new(true),
+				Concurrency:   new(int32(4)),
 			},
-			expectedMergeGateways: ptr.To(true),
-			expectedConcurrency:   ptr.To[int32](4),
+			expectedMergeGateways: new(true),
+			expectedConcurrency:   new(int32(4)),
 		},
 		{
 			name: "gatewayclass overrides default merge gateways setting",
@@ -240,13 +239,13 @@ func TestAttachEnvoyProxy(t *testing.T) {
 					Name:      "gc-proxy",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(false),
+					MergeGateways: new(false),
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
+				MergeGateways: new(true),
 			},
-			expectedMergeGateways: ptr.To(false),
+			expectedMergeGateways: new(false),
 		},
 	}
 
@@ -324,14 +323,14 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 		{
 			name: "default spec with merge gateways true",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
+				MergeGateways: new(true),
 			},
 			expected: true,
 		},
 		{
 			name: "default spec with merge gateways false",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(false),
+				MergeGateways: new(false),
 			},
 			expected: false,
 		},
@@ -339,7 +338,7 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 			name: "gatewayclass proxy with merge gateways true",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(true),
+					MergeGateways: new(true),
 				},
 			},
 			expected: true,
@@ -348,11 +347,11 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 			name: "gatewayclass proxy overrides default - gc true, default false",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(true),
+					MergeGateways: new(true),
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(false),
+				MergeGateways: new(false),
 			},
 			expected: true,
 		},
@@ -360,11 +359,11 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 			name: "gatewayclass proxy overrides default - gc false, default true",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(false),
+					MergeGateways: new(false),
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
+				MergeGateways: new(true),
 			},
 			expected: false,
 		},
@@ -372,11 +371,11 @@ func TestIsMergeGatewaysEnabled(t *testing.T) {
 			name: "gatewayclass proxy nil merge gateways falls back to default",
 			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					Concurrency: ptr.To[int32](4), // some other setting
+					Concurrency: new(int32(4)), // some other setting
 				},
 			},
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
-				MergeGateways: ptr.To(true),
+				MergeGateways: new(true),
 			},
 			expected: true,
 		},

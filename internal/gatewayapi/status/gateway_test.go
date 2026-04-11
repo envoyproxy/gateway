@@ -17,7 +17,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -69,7 +68,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "127.0.0.1",
 				},
 			},
@@ -101,11 +100,11 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "127.0.0.1",
 				},
 				{
-					Type:  ptr.To(gwapiv1.HostnameAddressType),
+					Type:  new(gwapiv1.HostnameAddressType),
 					Value: "localhost",
 				},
 			},
@@ -128,7 +127,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "127.0.0.1",
 				},
 			},
@@ -153,11 +152,11 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "1",
 				},
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2",
 				},
 			},
@@ -188,7 +187,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			wantAddresses: func() (addr []gwapiv1.GatewayStatusAddress) {
 				for i := 0; i < 16; i++ {
 					addr = append(addr, gwapiv1.GatewayStatusAddress{
-						Type:  ptr.To(gwapiv1.IPAddressType),
+						Type:  new(gwapiv1.IPAddressType),
 						Value: strconv.Itoa(i),
 					})
 				}
@@ -217,7 +216,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2001:db8::1",
 				},
 			},
@@ -238,7 +237,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2001:db8::2",
 				},
 			},
@@ -261,11 +260,11 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2001:db8::3",
 				},
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2001:db8::4",
 				},
 			},
@@ -292,7 +291,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 					Spec: gwapiv1.GatewaySpec{
 						Addresses: []gwapiv1.GatewaySpecAddress{
 							{
-								Type:  ptr.To(gwapiv1.IPAddressType),
+								Type:  new(gwapiv1.IPAddressType),
 								Value: "10.0.0.1",
 							},
 						},
@@ -328,7 +327,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
 				{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: "2001:db8::4",
 				},
 			},
@@ -411,7 +410,7 @@ func TestUpdateGatewayProgrammedCondition(t *testing.T) {
 			gtw.Status.Addresses = make([]gwapiv1.GatewayStatusAddress, tc.serviceAddressNum)
 			for i := 0; i < tc.serviceAddressNum; i++ {
 				gtw.Status.Addresses[i] = gwapiv1.GatewayStatusAddress{
-					Type:  ptr.To(gwapiv1.IPAddressType),
+					Type:  new(gwapiv1.IPAddressType),
 					Value: strconv.Itoa(i),
 				}
 			}

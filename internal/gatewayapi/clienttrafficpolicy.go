@@ -521,7 +521,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			for _, route := range httpIR.Routes {
 				// Return a 500 direct response
 				route.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(route.Name)
 			}
@@ -585,7 +585,7 @@ func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid IdleTime value %s", *tcpKeepAlive.IdleTime)
 		}
-		irTCPKeepalive.IdleTime = ptr.To(uint32(d.Seconds()))
+		irTCPKeepalive.IdleTime = new(uint32(d.Seconds()))
 	}
 
 	if tcpKeepAlive.Interval != nil {
@@ -593,7 +593,7 @@ func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid Interval value %s", *tcpKeepAlive.Interval)
 		}
-		irTCPKeepalive.Interval = ptr.To(uint32(d.Seconds()))
+		irTCPKeepalive.Interval = new(uint32(d.Seconds()))
 	}
 
 	return irTCPKeepalive, nil
@@ -683,7 +683,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
 	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserveOrGenerate)
+		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {
@@ -765,7 +765,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 						numMatchingRoutes++
 						// make the linter happy
 						theHost := route.Hostname
-						defaultHost = ptr.To(theHost)
+						defaultHost = new(theHost)
 					}
 					if numMatchingRoutes > 1 {
 						break
@@ -834,8 +834,8 @@ func (t *Translator) buildListenerTLSParameters(
 
 	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
-	irTLSConfig.MinVersion = ptr.To(ir.TLSv12)
-	irTLSConfig.MaxVersion = ptr.To(ir.TLSv13)
+	irTLSConfig.MinVersion = new(ir.TLSv12)
+	irTLSConfig.MaxVersion = new(ir.TLSv13)
 
 	// Return early if not set
 	if tlsParams == nil {
@@ -850,10 +850,10 @@ func (t *Translator) buildListenerTLSParameters(
 	}
 
 	if tlsParams.MinVersion != nil {
-		irTLSConfig.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
+		irTLSConfig.MinVersion = new(ir.TLSVersion(*tlsParams.MinVersion))
 	}
 	if tlsParams.MaxVersion != nil {
-		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
+		irTLSConfig.MaxVersion = new(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
 		if err := validateCipherSuites(tlsParams.Ciphers); err != nil {
@@ -1047,7 +1047,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 		irConnectionLimit := &ir.ConnectionLimit{}
 
 		if connection.ConnectionLimit.Value != nil {
-			irConnectionLimit.Value = ptr.To(uint64(*connection.ConnectionLimit.Value))
+			irConnectionLimit.Value = new(uint64(*connection.ConnectionLimit.Value))
 		}
 
 		if connection.ConnectionLimit.CloseDelay != nil {
@@ -1090,11 +1090,11 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			return nil, fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
-		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
+		irConnection.BufferLimitBytes = new(uint32(bufferLimit))
 	}
 
 	if connection.MaxAcceptPerSocketEvent != nil {
-		irConnection.MaxAcceptPerSocketEvent = ptr.To(*connection.MaxAcceptPerSocketEvent)
+		irConnection.MaxAcceptPerSocketEvent = new(*connection.MaxAcceptPerSocketEvent)
 	}
 
 	return irConnection, nil

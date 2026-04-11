@@ -18,7 +18,6 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -478,7 +477,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight: ptr.To[uint32](1),
+		Weight: new(uint32(1)),
 		Endpoints: []*ir.DestinationEndpoint{
 			ir.NewDestEndpoint(nil, cluster.hostname, cluster.port, false, nil),
 		},
