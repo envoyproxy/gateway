@@ -299,13 +299,19 @@ type SlowStart struct {
 	// while values less than 1.0 result in a slower initial ramp-up followed by a
 	// faster approach to the full weight (logarithmic).
 	//
-	// Must be a positive decimal number (e.g. "1.0", "1.5", "2.0"). If unset,
-	// Envoy uses its default of 1.0, which produces a linear ramp-up.
+	// This is expressed as a percentage-based integer where 100 represents 1.0,
+	// 150 represents 1.5, 50 represents 0.5, etc. Must be greater than 0. If
+	// unset, Envoy uses its default of 1.0, which produces a linear ramp-up.
+	//
+	// For example:
+	// - 50  => 0.5x
+	// - 100 => 1.0x
+	// - 150 => 1.5x
+	// - 200 => 2.0x
 	//
 	// +optional
-	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?|\.[0-9]+)$`
-	// +kubebuilder:validation:XValidation:rule="self != '0' && self != '0.0' && self != '.0'",message="aggression must be greater than 0"
-	Aggression *string `json:"aggression,omitempty"`
+	// +kubebuilder:validation:Minimum=1
+	Aggression *uint32 `json:"aggression,omitempty"`
 
 	// MinWeightPercent specifies the minimum percent of origin weight that avoids
 	// too small new weight when an endpoint is in slow start window. This ensures

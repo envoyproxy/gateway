@@ -7727,7 +7727,7 @@ func (in *SlowStart) DeepCopyInto(out *SlowStart) {
 	}
 	if in.Aggression != nil {
 		in, out := &in.Aggression, &out.Aggression
-		*out = new(string)
+		*out = new(uint32)
 		**out = **in
 	}
 	if in.MinWeightPercent != nil {

@@ -42,7 +42,7 @@ backendTrafficPolicies:
   spec:
     loadBalancer:
       slowStart:
-        aggression: "1.5"
+        aggression: 150
         minWeightPercent: 25
         window: 300s
       type: LeastRequest

@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -438,10 +437,7 @@ func buildSlowStart(slowStart *egv1a1.SlowStart) (*ir.SlowStart, error) {
 		MinWeightPercent: slowStart.MinWeightPercent,
 	}
 	if slowStart.Aggression != nil {
-		aggression, err := strconv.ParseFloat(*slowStart.Aggression, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid slowStart.aggression %q: %w", *slowStart.Aggression, err)
-		}
+		aggression := float64(*slowStart.Aggression) / 100
 		ret.Aggression = &aggression
 	}
 	return ret, nil
