@@ -287,11 +287,41 @@ const (
 type SlowStart struct {
 	// Window defines the duration of the warm up period for newly added host.
 	// During slow start window, traffic sent to the newly added hosts will gradually increase.
-	// Currently only supports linear growth of traffic. For additional details,
+	// For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
 	// +kubebuilder:validation:Required
 	Window *gwapiv1.Duration `json:"window"`
-	// TODO: Add support for non-linear traffic increases based on user usage.
+
+	// Aggression controls the speed at which the endpoint weight ramps up during the
+	// slow start window. The endpoint weight is scaled by the time factor raised to
+	// the power of (1 / aggression). Values greater than 1.0 result in a faster
+	// initial ramp-up followed by a slower approach to the full weight (exponential),
+	// while values less than 1.0 result in a slower initial ramp-up followed by a
+	// faster approach to the full weight (logarithmic).
+	//
+	// This is expressed as a percentage-based integer where 100 represents 1.0,
+	// 150 represents 1.5, 50 represents 0.5, etc. Must be greater than 0. If
+	// unset, Envoy uses its default of 1.0, which produces a linear ramp-up.
+	//
+	// For example:
+	// - 50  => 0.5x
+	// - 100 => 1.0x
+	// - 150 => 1.5x
+	// - 200 => 2.0x
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	Aggression *uint32 `json:"aggression,omitempty"`
+
+	// MinWeightPercent specifies the minimum percent of origin weight that avoids
+	// too small new weight when an endpoint is in slow start window. This ensures
+	// that the EDF scheduler has a reasonable deadline. If unset, Envoy uses its
+	// default of 10%.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	MinWeightPercent *uint32 `json:"minWeightPercent,omitempty"`
 }
 
 // ZoneAware defines the configuration related to the distribution of requests between locality zones.

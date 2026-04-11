@@ -366,9 +366,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			LocalityLbConfig: localityLbConfig,
 		}
 		if args.loadBalancer.LeastRequest.SlowStart != nil && args.loadBalancer.LeastRequest.SlowStart.Window != nil {
-			leastRequest.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(args.loadBalancer.LeastRequest.SlowStart.Window.Duration),
-			}
+			leastRequest.SlowStartConfig = buildSlowStartConfig(args.loadBalancer.LeastRequest.SlowStart)
 		}
 		typedLeastRequest, err := proto.ToAnyWithValidation(leastRequest)
 		if err != nil {
@@ -387,9 +385,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			LocalityLbConfig: localityLbConfig,
 		}
 		if args.loadBalancer.RoundRobin.SlowStart != nil && args.loadBalancer.RoundRobin.SlowStart.Window != nil {
-			roundRobin.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(args.loadBalancer.RoundRobin.SlowStart.Window.Duration),
-			}
+			roundRobin.SlowStartConfig = buildSlowStartConfig(args.loadBalancer.RoundRobin.SlowStart)
 		}
 		typedRoundRobin, err := proto.ToAnyWithValidation(roundRobin)
 		if err != nil {
@@ -453,9 +449,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
 		}
 		if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
-			cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
-			}
+			cswrr.SlowStartConfig = buildSlowStartConfig(v.SlowStart)
 		}
 		if v.ErrorUtilizationPenaltyPercent != nil {
 			cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
@@ -687,6 +681,26 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	}
 
 	return od
+}
+
+// buildSlowStartConfig translates the IR SlowStart configuration into the
+// Envoy SlowStartConfig used by round-robin and least-request load balancers.
+// Callers must ensure slowStart and slowStart.Window are non-nil.
+func buildSlowStartConfig(slowStart *ir.SlowStart) *commonv3.SlowStartConfig {
+	cfg := &commonv3.SlowStartConfig{
+		SlowStartWindow: durationpb.New(slowStart.Window.Duration),
+	}
+	if slowStart.Aggression != nil {
+		cfg.Aggression = &corev3.RuntimeDouble{
+			DefaultValue: *slowStart.Aggression,
+		}
+	}
+	if slowStart.MinWeightPercent != nil {
+		cfg.MinWeightPercent = &xdstype.Percent{
+			Value: float64(*slowStart.MinWeightPercent),
+		}
+	}
+	return cfg
 }
 
 // buildHTTPStatusRange converts an array of http status to an array of the range of http status.

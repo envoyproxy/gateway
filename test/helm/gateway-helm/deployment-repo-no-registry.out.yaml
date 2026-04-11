@@ -425,7 +425,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: envoy/gateway:abcdef
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: 
         livenessProbe:
           httpGet:
             path: /healthz
@@ -643,7 +643,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: cluster.local
         image: envoy/gateway:abcdef
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: 
         name: envoy-gateway-certgen
         securityContext:
           allowPrivilegeEscalation: false
