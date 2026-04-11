@@ -18,7 +18,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -151,7 +150,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	}
 	envoyProxy.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas: ptr.To[int32](replicas),
+			Replicas: new(int32(replicas)),
 		},
 	}
 

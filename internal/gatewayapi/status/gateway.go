@@ -12,7 +12,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -121,7 +120,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 		gwAddresses := make([]gwapiv1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
 		for i := range addresses {
 			addr := gwapiv1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1.IPAddressType),
+				Type:  new(gwapiv1.IPAddressType),
 				Value: addresses[i],
 			}
 			gwAddresses = append(gwAddresses, addr)
@@ -129,7 +128,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 
 		for i := range hostnames {
 			addr := gwapiv1.GatewayStatusAddress{
-				Type:  ptr.To(gwapiv1.HostnameAddressType),
+				Type:  new(gwapiv1.HostnameAddressType),
 				Value: hostnames[i],
 			}
 			gwAddresses = append(gwAddresses, addr)

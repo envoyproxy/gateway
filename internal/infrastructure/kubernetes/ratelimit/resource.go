@@ -14,7 +14,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -259,7 +258,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
-					DefaultMode: ptr.To[int32](420),
+					DefaultMode: new(int32(420)),
 				},
 			},
 		})
@@ -270,7 +269,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy-rate-limit",
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: new(int32(420)),
 			},
 		},
 	})
@@ -283,8 +282,8 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "statsd-exporter-config",
 					},
-					Optional:    ptr.To(true),
-					DefaultMode: ptr.To[int32](420),
+					Optional:    new(true),
+					DefaultMode: new(int32(420)),
 				},
 			},
 		})
@@ -520,7 +519,7 @@ func expectedRateLimitContainerSecurityContext(rateLimitDeployment *egv1a1.Kuber
 func defaultSecurityContext() *corev1.SecurityContext {
 	defaultSC := resource.DefaultSecurityContext()
 	// run as non-root user
-	defaultSC.RunAsGroup = ptr.To(int64(65534))
-	defaultSC.RunAsUser = ptr.To(int64(65534))
+	defaultSC.RunAsGroup = new(int64(65534))
+	defaultSC.RunAsUser = new(int64(65534))
 	return defaultSC
 }
