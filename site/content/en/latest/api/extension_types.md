@@ -203,7 +203,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.4/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 30s if not specified. |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 30s if not specified. |
 | `successRateThreshold` | _integer_ |  false  |  | SuccessRateThreshold is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
 | `aggression` | _integer_ |  false  |  | Aggression controls the rejection probability curve. A value of 1 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.<br />Defaults to 1 if not specified. |
 | `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
