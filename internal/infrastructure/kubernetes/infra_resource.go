@@ -292,29 +292,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	)
 
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-
-		if pdb != nil {
-			deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
-				Namespace: pdb.Namespace,
-				Name:      pdb.Name,
-			}, &client.ListOptions{
-				Namespace:     pdb.Namespace,
-				LabelSelector: r.LabelSelector(),
-			})
-			if deleteErr != nil {
-				i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
-					"name", r.Name(), "namespace", r.Namespace())
-			}
-		}
-	}()
-
 	if pdb, err = r.PodDisruptionBudget(); err != nil {
 		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
@@ -325,6 +302,27 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 	if pdb == nil {
 		return i.deletePDB(ctx, r)
 	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
+			Namespace: pdb.Namespace,
+			Name:      pdb.Name,
+		}, &client.ListOptions{
+			Namespace:     pdb.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
+				"name", r.Name(), "namespace", r.Namespace())
+		}
+	}()
 
 	return i.Client.ServerSideApply(ctx, pdb)
 }
@@ -343,30 +341,8 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	)
 
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-
-		if hpa != nil {
-			deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
-				Namespace: hpa.Namespace,
-				Name:      hpa.Name,
-			}, &client.ListOptions{
-				Namespace:     hpa.Namespace,
-				LabelSelector: r.LabelSelector(),
-			})
-			if deleteErr != nil {
-				i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
-					"name", r.Name(), "namespace", r.Namespace())
-			}
-		}
-	}()
-
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -375,6 +351,27 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	if hpa == nil {
 		return i.deleteHPA(ctx, r)
 	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
+			Namespace: hpa.Namespace,
+			Name:      hpa.Name,
+		}, &client.ListOptions{
+			Namespace:     hpa.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
+				"name", r.Name(), "namespace", r.Namespace())
+		}
+	}()
 
 	return i.Client.ServerSideApply(ctx, hpa)
 }
@@ -473,6 +470,20 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	)
 
+	// Check if any Deployments exist before attempting deletion to avoid
+	// incrementing delete metrics on no-op reconciles.
+	deployList := &appsv1.DeploymentList{}
+	if err = i.Client.List(ctx, deployList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+	if len(deployList.Items) == 0 {
+		return nil
+	}
+
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
@@ -507,6 +518,20 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 			namespaceLabel.Value(ns),
 		}
 	)
+
+	// Check if any DaemonSets exist before attempting deletion to avoid
+	// incrementing delete metrics on no-op reconciles.
+	dsList := &appsv1.DaemonSetList{}
+	if err = i.Client.List(ctx, dsList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+	if len(dsList.Items) == 0 {
+		return nil
+	}
 
 	defer func() {
 		if err == nil {
@@ -613,6 +638,20 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
+	// Check if any HPAs exist before attempting deletion to avoid
+	// incrementing delete metrics on no-op reconciles.
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+	if err = i.Client.List(ctx, hpaList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+	if len(hpaList.Items) == 0 {
+		return nil
+	}
+
 	defer func() {
 		if err == nil {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
@@ -647,6 +686,20 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 			namespaceLabel.Value(ns),
 		}
 	)
+
+	// Check if any PDBs exist before attempting deletion to avoid
+	// incrementing delete metrics on no-op reconciles.
+	pdbList := &policyv1.PodDisruptionBudgetList{}
+	if err = i.Client.List(ctx, pdbList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); err != nil {
+		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		return err
+	}
+	if len(pdbList.Items) == 0 {
+		return nil
+	}
 
 	defer func() {
 		if err == nil {

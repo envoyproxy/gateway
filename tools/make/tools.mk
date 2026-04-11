@@ -55,9 +55,18 @@ tools/bin/$(notdir $(SHELLCHECK_TXZ)):
 	tar -C $(@D) -Jxmf $< --strip-components=1 shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
 endif
 
+# npm-based tools
+# ================
+#
+tools/markdownlint = tools/node_modules/.bin/markdownlint
+tools/linkinator = tools/node_modules/.bin/linkinator
+tools/node_modules/.bin/%: tools/package-lock.json tools/package.json
+	cd tools && npm ci
+
 tools.clean: # Remove all tools
 	@$(LOG_TARGET)
 	rm -rf $(tools.bindir)
+	rm -rf tools/node_modules
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.

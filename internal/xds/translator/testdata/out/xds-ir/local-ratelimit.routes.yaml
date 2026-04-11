@@ -82,7 +82,7 @@
               value: rule-1-match-0
             - key: rule-1-match-1
               value: rule-1-match-1
-            - key: masked_remote_address
+            - key: rule-1-masked-remote-address
               value: 192.168.0.0/16
             tokenBucket:
               fillInterval: 60s
@@ -135,7 +135,7 @@
                   ranges:
                   - addressPrefix: 192.168.0.0
                     prefixLen: 16
-                descriptorKey: masked_remote_address
+                descriptorKey: rule-1-masked-remote-address
                 descriptorValue: 192.168.0.0/16
           statPrefix: http_local_rate_limiter
           tokenBucket:

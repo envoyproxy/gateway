@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,6 +31,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/test/utils/prometheus"
 )
+
+func prometheusVectorHasSamples(v model.Value) bool {
+	if v == nil || v.Type() != model.ValVector {
+		return false
+	}
+
+	return len(v.(model.Vector)) > 0
+}
 
 func init() {
 	ConformanceTests = append(ConformanceTests,
@@ -106,7 +115,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 					tlog.Logf(t, "failed to query prometheus: %v", err)
 					return false, err
 				}
-				if v != nil {
+				if prometheusVectorHasSamples(v) {
 					tlog.Logf(t, "got expected value: %v", v)
 					return true, nil
 				}
@@ -164,14 +173,15 @@ var RateLimitCIDRInvertMatchAlwaysEnforceTest = suite.ConformanceTest{
 			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("failed to get expected response for the last (third) request: %v", err)
 			}
+			// key2 comes from the sanitized stat segment: ":" and IPv4 "." become "_", while "/" is preserved.
 			// make sure that metric worked as expected.
 			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_192.0.2.0/24"}`)
+				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="masked_remote_address_invert_192_0_2_0/24"}`)
 				if err != nil {
 					tlog.Logf(t, "failed to query prometheus: %v", err)
 					return false, err
 				}
-				if v != nil {
+				if prometheusVectorHasSamples(v) {
 					tlog.Logf(t, "got expected value: %v", v)
 					return true, nil
 				}

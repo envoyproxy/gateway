@@ -31,3 +31,10 @@ const (
 	KindClusterTrustBundle   = "ClusterTrustBundle"
 	KindListenerSet          = "ListenerSet"
 )
+
+type ResourceMetadata struct {
+	Group     string
+	Kind      string
+	Name      string
+	Namespace string
+}

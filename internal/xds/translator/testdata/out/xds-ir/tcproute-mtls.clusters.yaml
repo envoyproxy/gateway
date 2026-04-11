@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: tcproute/default/tcproute-1/rule/-1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

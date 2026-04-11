@@ -615,6 +615,7 @@ type HTTP1Settings struct {
 	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -2076,6 +2077,10 @@ type URLRewrite struct {
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Host configures the replacement of the request's host header.
 	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
+	// AppendXForwardedHost controls whether the original Host value is appended
+	// to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true when nil.
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty" yaml:"appendXForwardedHost,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
