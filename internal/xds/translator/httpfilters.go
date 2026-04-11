@@ -147,10 +147,17 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 		order = 307
 	case isFilterType(filter, egv1a1.EnvoyFilterCompressor):
 		order = 308
-	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
+	case isFilterType(filter, egv1a1.EnvoyFilterDecompressor):
+		// Decompressor must come after compressor in filter chain order so that,
+		// on the response path (which runs filters in reverse), the backend
+		// response is decompressed before the response-only compressor filter runs.
+		// The request path remains unaffected because the compressor is only
+		// configured for response-direction processing.
 		order = 309
-	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+	case isFilterType(filter, egv1a1.EnvoyFilterDynamicForwardProxy):
 		order = 310
+	case isFilterType(filter, egv1a1.EnvoyFilterRouter):
+		order = 311
 	}
 
 	return &OrderedHTTPFilter{
