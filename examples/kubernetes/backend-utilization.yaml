@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-utilization
+  labels:
+    app: backend-utilization
+spec:
+  selector:
+    app: backend-utilization
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-utilization-low
+  labels:
+    app: backend-utilization
+    util: low
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-utilization
+      util: low
+  template:
+    metadata:
+      labels:
+        app: backend-utilization
+        util: low
+    spec:
+      containers:
+        - name: backend
+          image: envoyproxy/gateway-backend-utilization:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: backend-utilization
+            - name: ORCA_CPU_UTILIZATION
+              value: "0.1"
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-utilization-high
+  labels:
+    app: backend-utilization
+    util: high
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-utilization
+      util: high
+  template:
+    metadata:
+      labels:
+        app: backend-utilization
+        util: high
+    spec:
+      containers:
+        - name: backend
+          image: envoyproxy/gateway-backend-utilization:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: SERVICE_NAME
+              value: backend-utilization
+            - name: ORCA_CPU_UTILIZATION
+              value: "0.9"
+          resources:
+            requests:
+              cpu: 10m
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-utilization
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend-utilization
+      backendRefs:
+        - name: backend-utilization
+          port: 3000

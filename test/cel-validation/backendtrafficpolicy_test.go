@@ -971,7 +971,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.loadBalancer: Invalid value:",
-				": ZoneAware routing is not supported for BackendUtilization and DynamicModule load balancers.",
+				": ZoneAware routing is not supported for DynamicModule load balancers.",
 			},
 		},
 		{
