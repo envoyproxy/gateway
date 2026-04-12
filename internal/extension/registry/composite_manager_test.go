@@ -277,9 +277,7 @@ func TestCompositeManager_GetPostXDSHookClient(t *testing.T) {
 		assert.True(t, ok)
 		assert.Len(t, compositeClient.entries, 2)
 	})
-}
 
-func TestCompositeManager_GetPostXDSHookClient_Error(t *testing.T) {
 	t.Run("returns error when failOpen is false", func(t *testing.T) {
 		composite := NewCompositeManager([]namedManager{
 			{name: "mgr1", manager: &mockManager{postHookErr: fmt.Errorf("connection failed")}},
