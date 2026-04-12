@@ -111,40 +111,36 @@ func (c *CompositeManager) GetTranslationHookConfig() *egv1a1.TranslationConfig 
 	return merged
 }
 
+// hookClientGetter abstracts GetPreXDSHookClient/GetPostXDSHookClient to allow shared collection logic.
+type hookClientGetter func(extTypes.Manager, egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error)
+
 // GetPreXDSHookClient returns a compositeXDSHookClient that chains all child clients
 // for the given hook type.
 func (c *CompositeManager) GetPreXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
-	var entries []hookClientEntry
-	for _, nm := range c.managers {
-		client, err := nm.manager.GetPreXDSHookClient(xdsHookType)
-		if err != nil {
-			if nm.manager.FailOpen() {
-				continue
-			}
-			return nil, err
-		}
-		if client != nil {
-			entries = append(entries, hookClientEntry{
-				name:           nm.name,
-				client:         client,
-				failOpen:       nm.manager.FailOpen(),
-				resourceGVKSet: nm.resourceGVKSet,
-				policyGVKSet:   nm.policyGVKSet,
-			})
-		}
-	}
-	if len(entries) == 0 {
-		return nil, nil
-	}
-	return &compositeXDSHookClient{entries: entries}, nil
+	return c.collectHookClients(xdsHookType, func(m extTypes.Manager, h egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
+		return m.GetPreXDSHookClient(h)
+	}, false)
 }
 
 // GetPostXDSHookClient returns a compositeXDSHookClient that chains all child clients
 // for the given hook type.
 func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
+	return c.collectHookClients(xdsHookType, func(m extTypes.Manager, h egv1a1.XDSTranslatorHook) (extTypes.XDSHookClient, error) {
+		return m.GetPostXDSHookClient(h)
+	}, true)
+}
+
+// collectHookClients iterates over all child managers, collects hook clients via the given getter,
+// and returns a compositeXDSHookClient. If includeTranslationConfig is true, each entry's
+// translationConfig is populated from the manager.
+func (c *CompositeManager) collectHookClients(
+	xdsHookType egv1a1.XDSTranslatorHook,
+	getter hookClientGetter,
+	includeTranslationConfig bool,
+) (extTypes.XDSHookClient, error) {
 	var entries []hookClientEntry
 	for _, nm := range c.managers {
-		client, err := nm.manager.GetPostXDSHookClient(xdsHookType)
+		client, err := getter(nm.manager, xdsHookType)
 		if err != nil {
 			if nm.manager.FailOpen() {
 				continue
@@ -152,14 +148,17 @@ func (c *CompositeManager) GetPostXDSHookClient(xdsHookType egv1a1.XDSTranslator
 			return nil, err
 		}
 		if client != nil {
-			entries = append(entries, hookClientEntry{
-				name:              nm.name,
-				client:            client,
-				failOpen:          nm.manager.FailOpen(),
-				resourceGVKSet:    nm.resourceGVKSet,
-				policyGVKSet:      nm.policyGVKSet,
-				translationConfig: nm.manager.GetTranslationHookConfig(),
-			})
+			entry := hookClientEntry{
+				name:           nm.name,
+				client:         client,
+				failOpen:       nm.manager.FailOpen(),
+				resourceGVKSet: nm.resourceGVKSet,
+				policyGVKSet:   nm.policyGVKSet,
+			}
+			if includeTranslationConfig {
+				entry.translationConfig = nm.manager.GetTranslationHookConfig()
+			}
+			entries = append(entries, entry)
 		}
 	}
 	if len(entries) == 0 {
