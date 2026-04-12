@@ -25,6 +25,7 @@ import (
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -310,6 +311,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			}
 			backendNamespace := NamespaceDerefOr(rule.BackendRefs[i].Namespace, httpRoute.GetNamespace())
 			backendRefNames[i] = fmt.Sprintf("%s/%s", backendNamespace, rule.BackendRefs[i].Name)
+		}
+
+		if usesBackendHostRewrite(httpFiltersContext.URLRewrite) {
+			t.applyServiceBackendHostnames(allDs)
 		}
 
 		// process each IR route generated for this rule, and set its destination
@@ -1324,12 +1329,17 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+	kind := obj.GetObjectKind().GroupVersionKind().Kind
+	if _, ok := obj.(*corev1.Service); ok && kind == "" {
+		kind = resource.KindService
+	}
+
 	metadata := &ir.ResourceMetadata{
-		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
-		Name:        resource.GetName(),
-		Namespace:   resource.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
+		Kind:        kind,
+		Name:        obj.GetName(),
+		Namespace:   obj.GetNamespace(),
+		Annotations: ir.MapToSlice(filterEGPrefix(obj.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
@@ -1958,6 +1968,9 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 	if filtersErr != nil {
 		return emptyDS, nil, status.NewRouteStatusError(filtersErr, status.RouteReasonInvalidBackendFilters)
 	}
+	if ds.Filters != nil && usesBackendHostRewrite(ds.Filters.URLRewrite) {
+		t.applyServiceBackendHostname(ds)
+	}
 
 	if err := validateDestinationSettings(ds, t.IsServiceRouting(envoyProxy, btpRoutingType), backendRef.Kind); err != nil {
 		return emptyDS, nil, err
@@ -1985,6 +1998,47 @@ func validateDestinationSettings(destinationSettings *ir.DestinationSetting, isS
 	}
 
 	return nil
+}
+
+func usesBackendHostRewrite(urlRewrite *ir.URLRewrite) bool {
+	return urlRewrite != nil && urlRewrite.Host != nil && ptr.Deref(urlRewrite.Host.Backend, false)
+}
+
+func (t *Translator) applyServiceBackendHostnames(settings []*ir.DestinationSetting) {
+	for _, setting := range settings {
+		t.applyServiceBackendHostname(setting)
+	}
+}
+
+func (t *Translator) applyServiceBackendHostname(setting *ir.DestinationSetting) {
+	if setting == nil {
+		return
+	}
+	if setting.Metadata == nil {
+		return
+	}
+
+	if setting.Metadata.Kind != resource.KindService {
+		return
+	}
+	if setting.Metadata.Name == "" || setting.Metadata.Namespace == "" {
+		return
+	}
+
+	hostname := fmt.Sprintf("%s.%s.svc.%s", setting.Metadata.Name, setting.Metadata.Namespace, t.dnsDomain())
+	for _, endpoint := range setting.Endpoints {
+		if endpoint == nil {
+			continue
+		}
+		endpoint.Hostname = ptr.To(hostname)
+	}
+}
+
+func (t *Translator) dnsDomain() string {
+	if t.DNSDomain != "" {
+		return t.DNSDomain
+	}
+	return config.DefaultDNSDomain
 }
 
 // isServiceHeadless reports true when a Kubernetes Service is headless.
