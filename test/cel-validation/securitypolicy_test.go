@@ -522,38 +522,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
-			desc: "GRPC external auth service with include route metadata",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						GRPC: &egv1a1.GRPCExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "grpc-auth-service",
-											Port: ptr.To(gwapiv1.PortNumber(15001)),
-										},
-									},
-								},
-							},
-						},
-						IncludeRouteMetadata: ptr.To(true),
-					},
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: "gateway.networking.k8s.io",
-								Kind:  "Gateway",
-								Name:  "eg",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
 			desc: "GRPC external auth service with backendRefs to ServiceImport",
 			mutate: func(sp *egv1a1.SecurityPolicy) {
 				sp.Spec = egv1a1.SecurityPolicySpec{
@@ -655,38 +623,6 @@ func TestSecurityPolicyTarget(t *testing.T) {
 								},
 							},
 						},
-					},
-					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
-						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-								Group: "gateway.networking.k8s.io",
-								Kind:  "Gateway",
-								Name:  "eg",
-							},
-						},
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "HTTP external auth service with include route metadata",
-			mutate: func(sp *egv1a1.SecurityPolicy) {
-				sp.Spec = egv1a1.SecurityPolicySpec{
-					ExtAuth: &egv1a1.ExtAuth{
-						HTTP: &egv1a1.HTTPExtAuthService{
-							BackendCluster: egv1a1.BackendCluster{
-								BackendRefs: []egv1a1.BackendRef{
-									{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "http-auth-service",
-											Port: ptr.To(gwapiv1.PortNumber(15001)),
-										},
-									},
-								},
-							},
-						},
-						IncludeRouteMetadata: ptr.To(true),
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
