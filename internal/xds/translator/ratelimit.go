@@ -188,7 +188,7 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
 // the TypedPerFilterConfig field.
-func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, domain string, rateLimits []*routev3.RateLimit, irRoute *ir.HTTPRoute) error { //nolint:unparam
+func patchRouteWithRateLimitOnTypedFilterConfig(route *routev3.Route, domain string, rateLimits []*routev3.RateLimit, irRoute *ir.HTTPRoute) error {
 	filterCfg := route.TypedPerFilterConfig
 	if filterCfg == nil {
 		filterCfg = make(map[string]*anypb.Any)
