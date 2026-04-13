@@ -98,6 +98,8 @@ spec:
     logoutPath: "/foo/logout"
     forwardAccessToken: true
     passThroughAuthHeader: true
+    forwardIDToken:
+      header: "x-eg-id-token"
   jwt:
     providers:
     - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
@@ -138,15 +140,5 @@ spec:
       name: "oidctest-bar-secret"
     redirectURL: "http://www.example.com/bar/oauth2/callback"
     logoutPath: "/bar/logout"
-    forwardAccessToken: true
-    passThroughAuthHeader: true
-  jwt:
-    providers:
-    - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
-      remoteJWKS:
-        uri: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs"
-        cacheDuration: 300s
-    - name: "example"  # This allows us to use the static JWTs in the test
-      remoteJWKS:
-        uri: "http://static-file-server.gateway-conformance-infra/jwt/jwks.json"
-        cacheDuration: 300s
+    forwardIDToken:
+      header: "Authorization"

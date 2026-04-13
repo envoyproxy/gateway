@@ -3057,6 +3057,11 @@ func (in *OIDC) DeepCopyInto(out *OIDC) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.ForwardIDTokenHeader != nil {
+		in, out := &in.ForwardIDTokenHeader, &out.ForwardIDTokenHeader
+		*out = new(string)
+		**out = **in
+	}
 	if in.DefaultTokenTTL != nil {
 		in, out := &in.DefaultTokenTTL, &out.DefaultTokenTTL
 		*out = new(metav1.Duration)

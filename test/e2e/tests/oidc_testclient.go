@@ -87,6 +87,7 @@ func (c *CookieTracker) RoundTrip(req *http.Request) (*http.Response, error) {
 // OIDCTestClient encapsulates a http.Client and keeps track of the state of the OIDC login process.
 type OIDCTestClient struct {
 	http        *http.Client     // Delegate HTTP client
+	tracker     *CookieTracker   // Tracks cookies set during the OIDC flow
 	loginURL    string           // URL of the IdP where users need to authenticate
 	loginMethod string           // Method (GET/POST) to use when posting the credentials to the IdP
 	mappings    *AddressMappings // Custom address mappings
@@ -136,7 +137,7 @@ func NewOIDCTestClient(opts ...Option) (*OIDCTestClient, error) {
 		defaultTransport = http.DefaultTransport.(*http.Transport).Clone()
 		logging          = &LoggingRoundTripper{Delegate: defaultTransport}
 		cookieTracker    = &CookieTracker{Cookies: make(map[string]*http.Cookie), Delegate: logging}
-		client           = &OIDCTestClient{http: &http.Client{Transport: cookieTracker}}
+		client           = &OIDCTestClient{http: &http.Client{Transport: cookieTracker}, tracker: cookieTracker}
 	)
 
 	for _, opt := range opts {
@@ -155,6 +156,16 @@ func NewOIDCTestClient(opts ...Option) (*OIDCTestClient, error) {
 	defaultTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 
 	return client, nil
+}
+
+// Cookies returns a copy of the tracked cookies keyed by cookie name.
+func (o *OIDCTestClient) Cookies() map[string]*http.Cookie {
+	cookies := make(map[string]*http.Cookie, len(o.tracker.Cookies))
+	for name, cookie := range o.tracker.Cookies {
+		copyCookie := *cookie
+		cookies[name] = &copyCookie
+	}
+	return cookies
 }
 
 // Get sends a GET request to the specified URL.

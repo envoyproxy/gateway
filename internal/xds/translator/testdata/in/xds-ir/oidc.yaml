@@ -39,6 +39,7 @@ http:
         logoutPath: "/foo/logout"
         cookieSuffix: 5F93C2E4
         forwardAccessToken: true
+        forwardIDTokenHeader: "x-eg-id-token"
         defaultTokenTTL: 1h
         refreshToken: true
         defaultRefreshTokenTTL: 48h
@@ -89,6 +90,7 @@ http:
             value: foobar
         logoutPath: "/bar/logout"
         cookieSuffix: 5f93c2e4
+        forwardIDTokenHeader: "Authorization"
         cookieNameOverrides:
           idToken: "CustomIdTokenOverride"
           accessToken: "CustomAccessTokenOverride"

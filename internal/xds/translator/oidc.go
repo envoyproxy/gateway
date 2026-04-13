@@ -8,9 +8,12 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	oauth2v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/oauth2/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -33,6 +36,9 @@ type oidc struct{}
 
 var _ httpFilter = &oidc{}
 
+// #nosec G101 - This is part of a filter name, not a credential
+const oidcIDTokenForwardLuaConfigName = "oidc-id-token-forward/0"
+
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
 func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
@@ -44,21 +50,32 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
-	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterOAuth2)) {
-		return nil
-	}
-
+	hasOIDC := false
+	hasForwardIDToken := false
 	for _, route := range irListener.Routes {
 		if !routeContainsOIDC(route) {
 			continue
 		}
+		hasOIDC = true
+		if routeContainsOIDCForwardIDToken(route) {
+			hasForwardIDToken = true
+		}
+	}
 
+	if hasOIDC && !hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterOAuth2)) {
 		filter, err := buildHCMOAuth2Filter()
 		if err != nil {
 			return err
 		}
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
-		return nil
+	}
+
+	if hasForwardIDToken && !hcmContainsFilter(mgr, oidcIDTokenForwardLuaFilterName()) {
+		filter, err := buildHCMLuaFilter(oidcIDTokenForwardLuaFilterName())
+		if err != nil {
+			return err
+		}
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
 	return nil
@@ -265,6 +282,78 @@ func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
 		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
 		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
 	}
+}
+
+func routeContainsOIDCForwardIDToken(irRoute *ir.HTTPRoute) bool {
+	if !routeContainsOIDC(irRoute) {
+		return false
+	}
+	return irRoute.Security.OIDC.ForwardIDTokenHeader != nil
+}
+
+func oidcIDTokenForwardLuaFilterName() string {
+	return perRouteFilterName(egv1a1.EnvoyFilterLua, oidcIDTokenForwardLuaConfigName)
+}
+
+func effectiveIDTokenCookieName(oidc *ir.OIDC) string {
+	if oidc.CookieNameOverrides != nil && oidc.CookieNameOverrides.IDToken != nil {
+		return *oidc.CookieNameOverrides.IDToken
+	}
+	return fmt.Sprintf("IdToken-%s", oidc.CookieSuffix)
+}
+
+func buildOIDCIDTokenForwardLua(oidc *ir.OIDC) string {
+	headerName := *oidc.ForwardIDTokenHeader
+	cookieName := effectiveIDTokenCookieName(oidc)
+	headerValueTemplate := "%s"
+	if strings.EqualFold(headerName, "Authorization") {
+		headerValueTemplate = "Bearer %s"
+	}
+
+	return fmt.Sprintf(`function envoy_on_request(handle)
+  local headers = handle:headers()
+  local cookie_header = headers:get("cookie")
+  if cookie_header == nil then
+    return
+  end
+
+  local token = nil
+  for cookie in string.gmatch(cookie_header, "([^;]+)") do
+    local trimmed = string.match(cookie, "^%%s*(.-)%%s*$")
+    local separator = string.find(trimmed, "=", 1, true)
+    if separator ~= nil then
+      local name = string.sub(trimmed, 1, separator - 1)
+      local value = string.sub(trimmed, separator + 1)
+      if name == %s and value ~= "" then
+        token = value
+        break
+      end
+    end
+  end
+
+  if token == nil then
+    return
+  end
+
+  headers:replace(%s, string.format(%s, token))
+end
+`, strconv.Quote(cookieName), strconv.Quote(headerName), strconv.Quote(headerValueTemplate))
+}
+
+func buildOIDCIDTokenForwardLuaPerRoute(oidc *ir.OIDC) (*luafilterv3.LuaPerRoute, error) {
+	luaPerRoute := &luafilterv3.LuaPerRoute{
+		Override: &luafilterv3.LuaPerRoute_SourceCode{
+			SourceCode: &corev3.DataSource{
+				Specifier: &corev3.DataSource_InlineString{
+					InlineString: buildOIDCIDTokenForwardLua(oidc),
+				},
+			},
+		},
+	}
+	if err := luaPerRoute.ValidateAll(); err != nil {
+		return nil, err
+	}
+	return luaPerRoute, nil
 }
 
 func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
@@ -585,5 +674,17 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	}
 
 	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterOAuth2)] = oauth2Any
+
+	if irRoute.Security.OIDC.ForwardIDTokenHeader != nil {
+		luaPerRoute, err := buildOIDCIDTokenForwardLuaPerRoute(irRoute.Security.OIDC)
+		if err != nil {
+			return err
+		}
+		luaAny, err := anypb.New(luaPerRoute)
+		if err != nil {
+			return err
+		}
+		route.TypedPerFilterConfig[oidcIDTokenForwardLuaFilterName()] = luaAny
+	}
 	return nil
 }

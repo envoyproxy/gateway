@@ -1584,6 +1584,11 @@ func (t *Translator) buildOIDC(
 	if oidc.ForwardAccessToken != nil {
 		forwardAccessToken = *oidc.ForwardAccessToken
 	}
+
+	var forwardIDTokenHeader *string
+	if oidc.ForwardIDToken != nil {
+		forwardIDTokenHeader = ptr.To(oidc.ForwardIDToken.Header)
+	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
 	}
@@ -1625,6 +1630,7 @@ func (t *Translator) buildOIDC(
 		RedirectPath:           redirectPath,
 		LogoutPath:             logoutPath,
 		ForwardAccessToken:     forwardAccessToken,
+		ForwardIDTokenHeader:   forwardIDTokenHeader,
 		RefreshToken:           refreshToken,
 		CookieSuffix:           suffix,
 		CookieNameOverrides:    policy.Spec.OIDC.CookieNames,

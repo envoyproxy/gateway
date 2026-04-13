@@ -13,6 +13,37 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
+        envoy.filters.http.lua/oidc-id-token-forward/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          sourceCode:
+            inlineString: |
+              function envoy_on_request(handle)
+                local headers = handle:headers()
+                local cookie_header = headers:get("cookie")
+                if cookie_header == nil then
+                  return
+                end
+
+                local token = nil
+                for cookie in string.gmatch(cookie_header, "([^;]+)") do
+                  local trimmed = string.match(cookie, "^%s*(.-)%s*$")
+                  local separator = string.find(trimmed, "=", 1, true)
+                  if separator ~= nil then
+                    local name = string.sub(trimmed, 1, separator - 1)
+                    local value = string.sub(trimmed, separator + 1)
+                    if name == "IdToken-5F93C2E4" and value ~= "" then
+                      token = value
+                      break
+                    end
+                  end
+                end
+
+                if token == nil then
+                  return
+                end
+
+                headers:replace("x-eg-id-token", string.format("%s", token))
+              end
         envoy.filters.http.oauth2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
           config:
@@ -68,6 +99,37 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
+        envoy.filters.http.lua/oidc-id-token-forward/0:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+          sourceCode:
+            inlineString: |
+              function envoy_on_request(handle)
+                local headers = handle:headers()
+                local cookie_header = headers:get("cookie")
+                if cookie_header == nil then
+                  return
+                end
+
+                local token = nil
+                for cookie in string.gmatch(cookie_header, "([^;]+)") do
+                  local trimmed = string.match(cookie, "^%s*(.-)%s*$")
+                  local separator = string.find(trimmed, "=", 1, true)
+                  if separator ~= nil then
+                    local name = string.sub(trimmed, 1, separator - 1)
+                    local value = string.sub(trimmed, separator + 1)
+                    if name == "CustomIdTokenOverride" and value ~= "" then
+                      token = value
+                      break
+                    end
+                  end
+                end
+
+                if token == nil then
+                  return
+                end
+
+                headers:replace("Authorization", string.format("Bearer %s", token))
+              end
         envoy.filters.http.oauth2:
           '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
           config:

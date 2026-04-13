@@ -122,6 +122,8 @@ securityPolicies:
       redirectURL: "https://www.example.com/bar/oauth2/callback"
       logoutPath: "/bar/logout"
       forwardAccessToken: true
+      forwardIDToken:
+        header: "x-eg-id-token"
       defaultTokenTTL: 30m
       refreshToken: true
       defaultRefreshTokenTTL: 24h
