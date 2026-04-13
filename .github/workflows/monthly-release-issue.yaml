@@ -61,21 +61,26 @@ jobs:
       - name: Create release issues for supported versions
         env:
           GH_TOKEN: ${{ github.token }}
+          TEMPLATE_CONTENT: ${{ steps.template.outputs.content }}
         run: |
           MONTH_NAME="${{ steps.versions.outputs.month_name }}"
           YEAR="${{ steps.versions.outputs.year }}"
-          TEMPLATE_CONTENT="${{ steps.template.outputs.content }}"
           VERSIONS='${{ steps.versions.outputs.matrix }}'
 
           for VERSION in $(echo "$VERSIONS" | jq -r '.[]'); do
             echo "Creating release issue for ${VERSION}.x ..."
-            gh issue create \
-              --title "Patch Release ${VERSION}.x for ${MONTH_NAME} ${YEAR}" \
-              --label "release-process" \
-              --body "## Patch Release Checklist for ${VERSION}.x (${MONTH_NAME} ${YEAR})
+            BODY="## Patch Release Checklist for ${VERSION}.x (${MONTH_NAME} ${YEAR})
 
           ${TEMPLATE_CONTENT}
 
           ---
           *This issue was automatically created by the monthly release workflow.*"
+
+            # Replace placeholder version with the actual release version
+            BODY="${BODY//v1.x.x/${VERSION}.x}"
+
+            gh issue create \
+              --title "Patch Release ${VERSION}.x for ${MONTH_NAME} ${YEAR}" \
+              --label "release-process" \
+              --body "$BODY"
           done
