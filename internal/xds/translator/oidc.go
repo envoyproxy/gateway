@@ -36,11 +36,7 @@ var _ httpFilter = &oidc{}
 
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an oauth2 filter for each route that contains an OIDC config.
-// the filter is disabled by default. It is enabled on the route level.
 func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	var errs error
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -49,56 +45,43 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
+	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterOAuth2)) {
+		return nil
+	}
+
 	for _, route := range irListener.Routes {
 		if !routeContainsOIDC(route) {
 			continue
 		}
 
-		// Only generates one OAuth2 Envoy filter for each unique name.
-		// For example, if there are two routes under the same gateway with the
-		// same OAuth2 config, only one OAuth2 filter will be generated.
-		if hcmContainsFilter(mgr, oauth2FilterName(route.Security.OIDC)) {
-			continue
-		}
-
-		filter, err := buildHCMOAuth2Filter(route.Security)
+		filter, err := buildHCMOAuth2Filter()
 		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
+			return err
 		}
-
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
+		return nil
 	}
 
-	return errs
+	return nil
 }
 
-// buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
-func buildHCMOAuth2Filter(securityFeatures *ir.SecurityFeatures) (*hcmv3.HttpFilter, error) {
-	oauth2Proto, err := oauth2Config(securityFeatures)
-	if err != nil {
-		return nil, err
-	}
-
+// buildHCMOAuth2Filter returns the listener-level OAuth2 HTTP filter.
+func buildHCMOAuth2Filter() (*hcmv3.HttpFilter, error) {
+	oauth2Proto := &oauth2v3.OAuth2{}
 	OAuth2Any, err := proto.ToAnyWithValidation(oauth2Proto)
 	if err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     oauth2FilterName(securityFeatures.OIDC),
-		Disabled: true,
+		Name: string(egv1a1.EnvoyFilterOAuth2),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: OAuth2Any,
 		},
 	}, nil
 }
 
-func oauth2FilterName(oidc *ir.OIDC) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterOAuth2, oidc.Name)
-}
-
-func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, error) {
+func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRoute, error) {
 	var (
 		tokenEndpointCluster string
 		err                  error
@@ -135,7 +118,7 @@ func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2, erro
 	// If the user wants to forward the oauth2 access token to the upstream service,
 	// we should not preserve the original authorization header.
 	preserveAuthorizationHeader := !oidc.ForwardAccessToken
-	oauth2 := &oauth2v3.OAuth2{
+	oauth2 := &oauth2v3.OAuth2PerRoute{
 		Config: &oauth2v3.OAuth2Config{
 			StatPrefix: oidc.Name,
 			TokenEndpoint: &corev3.HttpUri{
@@ -441,6 +424,9 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		} else {
 			// Create a cluster with the token endpoint url.
 			if err := createOAuth2TokenEndpointCluster(tCtx, oidc); err != nil {
@@ -586,11 +572,19 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 	if irRoute.Security == nil || irRoute.Security.OIDC == nil {
 		return nil
 	}
-	filterName := oauth2FilterName(irRoute.Security.OIDC)
-	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
-		Config: &anypb.Any{},
-	}); err != nil {
+	oauth2Proto, err := oauth2Config(irRoute.Security)
+	if err != nil {
 		return err
 	}
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+
+	oauth2Any, err := proto.ToAnyWithValidation(oauth2Proto)
+	if err != nil {
+		return err
+	}
+
+	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterOAuth2)] = oauth2Any
 	return nil
 }
