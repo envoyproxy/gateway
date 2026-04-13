@@ -108,6 +108,11 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: default/jwt-tls
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         sni: foo.bar.com
   type: STRICT_DNS
   typedExtensionProtocolOptions:
