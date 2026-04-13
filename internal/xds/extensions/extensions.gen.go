@@ -91,7 +91,6 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dns/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_forward_proxy/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/dynamic_modules/v3"
-	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/mcp_multicluster/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/redis/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/clusters/reverse_connection/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/extensions/common/async_files/v3"
