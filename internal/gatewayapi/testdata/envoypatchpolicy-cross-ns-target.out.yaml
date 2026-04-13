@@ -95,6 +95,23 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyPatchPolicies:
+    - name: edit-conn-buffer-bytes
+      namespace: envoy-gateway-2
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway-2
+          conditions:
+          - lastTransitionTime: null
+            message: Target to Gateway envoy-gateway-2/gateway-1 does not exist.
+            reason: Invalid
+            status: "False"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:

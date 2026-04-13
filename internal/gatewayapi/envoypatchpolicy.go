@@ -21,6 +21,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	// EnvoyPatchPolicies are already sorted by the provider layer (priority, then timestamp, then name)
 	for _, policy := range envoyPatchPolicies {
 		targetRefs := getTargetRefsForEPP(policy)
+		createdAnyPolicyIR := false
+
 		for _, targetRef := range targetRefs {
 			var (
 				ancestorRef gwapiv1.ParentReference
@@ -114,9 +116,11 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			policyIR.Namespace = policy.Namespace
 			policyIR.Generation = policy.Generation
 			policyIR.Status = &policy.Status
+			policyIR.AncestorRef = &ancestorRef
 
 			// Append the IR
 			gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+			createdAnyPolicyIR = true
 
 			// Save the patch
 			for _, patch := range policy.Spec.JSONPatches {
@@ -140,6 +144,24 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 					map[string]string{
 						"spec.targetRef": "spec.targetRefs",
 					})
+			}
+		}
+
+		// If no policyIR was created (all targets were rejected), but the policy has status
+		// (from rejected targets), create a status-only policyIR to ensure status gets published.
+		// Attach it to the first available XdsIR.
+		if !createdAnyPolicyIR && len(policy.Status.Ancestors) > 0 {
+			for _, gwXdsIR := range xdsIR {
+				policyIR := ir.EnvoyPatchPolicy{}
+				policyIR.Name = policy.Name
+				policyIR.Namespace = policy.Namespace
+				policyIR.Generation = policy.Generation
+				policyIR.Status = &policy.Status
+				// No AncestorRef since this is a status-only entry for all rejected targets
+				policyIR.AncestorRef = nil
+
+				gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+				break
 			}
 		}
 	}

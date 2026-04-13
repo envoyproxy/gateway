@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -371,6 +372,8 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					// They may have been skipped in this translation because
 					// their target is not found (not relevant)
 					if len(e.Status.Ancestors) > 0 {
+						// Truncate status.ancestors to max 16 entries before storing
+						status.TruncatePolicyAncestors(e.Status, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
 						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 					}
 					delete(statusesToDelete, key)

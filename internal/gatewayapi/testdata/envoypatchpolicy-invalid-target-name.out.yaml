@@ -140,6 +140,29 @@ xdsIR:
       - path: /dev/stdout
     envoyPatchPolicies:
     - generation: 10
+      name: gateway-not-exists
+      namespace: envoy-gateway
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-not-exists
+            namespace: envoy-gateway
+          conditions:
+          - lastTransitionTime: null
+            message: Target to Gateway envoy-gateway/gateway-not-exists does not exist.
+            observedGeneration: 10
+            reason: Invalid
+            status: "False"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      generation: 10
       jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:

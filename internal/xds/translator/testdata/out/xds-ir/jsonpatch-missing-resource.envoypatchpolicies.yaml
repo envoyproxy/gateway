@@ -1,4 +1,9 @@
-- generation: 1
+- ancestorRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: foobar
+    namespace: default
+  generation: 1
   name: first-policy
   namespace: default
   status:
