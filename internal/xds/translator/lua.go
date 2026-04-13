@@ -15,6 +15,7 @@ import (
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -152,6 +153,13 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 					},
 				},
 			},
+		}
+		if len(ep.FilterContext) > 0 {
+			fields := make(map[string]*structpb.Value, len(ep.FilterContext))
+			for k, v := range ep.FilterContext {
+				fields[k] = structpb.NewStringValue(v)
+			}
+			luaPerRoute.FilterContext = &structpb.Struct{Fields: fields}
 		}
 		luaPerRouteAny, err := anypb.New(luaPerRoute)
 		if err != nil {

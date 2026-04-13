@@ -7,6 +7,8 @@ envoyExtensionPolicies:
   spec:
     lua:
     - type: ValueRef
+      filterContext:
+        token_header: x-session-token
       valueRef:
         group: v1
         kind: ConfigMap
@@ -579,6 +581,8 @@ xdsIR:
               function envoy_on_response(response_handle)
               response_handle:logWarn('Goodbye.')
               end
+            FilterContext:
+              token_header: x-session-token
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
         isHTTP2: false
