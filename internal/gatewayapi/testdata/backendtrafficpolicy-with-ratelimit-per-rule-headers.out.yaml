@@ -32,8 +32,8 @@ backendTrafficPolicies:
             requests: 30
             unit: Hour
       type: Global
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
   status:
@@ -50,11 +50,58 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-route-2
+    namespace: default
+  spec:
+    rateLimit:
+      local:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+          limit:
+            requests: 10
+            unit: Hour
+          xRateLimit: "Off"
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: two
+          limit:
+            requests: 20
+            unit: Hour
+          xRateLimit: DraftVersion03
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: three
+          limit:
+            requests: 30
+            unit: Hour
+      type: Local
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-8080
+      conditions:
       - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
+        message: Policy has been accepted.
+        reason: Accepted
         status: "True"
-        type: Warning
+        type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -70,6 +117,12 @@ gateways:
           from: All
       name: http
       port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http-8080
+      port: 8080
       protocol: HTTP
   status:
     listeners:
@@ -91,6 +144,29 @@ gateways:
         status: "True"
         type: ResolvedRefs
       name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-8080
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -134,6 +210,43 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-8080
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-8080
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -144,6 +257,12 @@ infraIR:
           name: http-80
           protocol: HTTP
           servicePort: 80
+      - name: envoy-gateway/gateway-1/http-8080
+        ports:
+        - containerPort: 8080
+          name: http-8080
+          protocol: HTTP
+          servicePort: 8080
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -188,7 +307,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -264,6 +382,88 @@ xdsIR:
                   requests: 30
                   unit: Hour
                 name: default/policy-for-route/rule/2
+    - address: 0.0.0.0
+      externalPort: 8080
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-8080
+      name: envoy-gateway/gateway-1/http-8080
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-2
+            namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          rateLimit:
+            local:
+              default:
+                requests: 4294967295
+                unit: Second
+              rules:
+              - headerMatches:
+                - distinct: false
+                  exact: one
+                  name: x-user-id
+                limit:
+                  requests: 10
+                  unit: Hour
+                name: default/policy-for-route-2/rule/0
+                xRateLimitOption: "Off"
+              - headerMatches:
+                - distinct: false
+                  exact: two
+                  name: x-user-id
+                limit:
+                  requests: 20
+                  unit: Hour
+                name: default/policy-for-route-2/rule/1
+                xRateLimitOption: DraftVersion03
+              - headerMatches:
+                - distinct: false
+                  exact: three
+                  name: x-user-id
+                limit:
+                  requests: 30
+                  unit: Hour
+                name: default/policy-for-route-2/rule/2
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
