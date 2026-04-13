@@ -6,6 +6,8 @@
 package gatewayapi
 
 import (
+	"math"
+
 	certificatesv1b1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -122,12 +124,17 @@ func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap m
 	return err
 }
 
-func (g *GatewayContext) IncreaseAttachedListenerSets() {
+func (g *GatewayContext) IncreaseAttachedListenerSets(count uint32) {
 	if g.Status.AttachedListenerSets == nil {
-		g.Status.AttachedListenerSets = ptr.To[int32](1)
-	} else {
-		*g.Status.AttachedListenerSets++
+		if count > 0 {
+			g.Status.AttachedListenerSets = ptr.To(int32(min(int64(count), math.MaxInt32)))
+		}
+		return
 	}
+
+	// Check for potential overflow before adding
+	newValue := int64(*g.Status.AttachedListenerSets) + int64(count)
+	*g.Status.AttachedListenerSets = int32(min(newValue, math.MaxInt32))
 }
 
 // ListenerContext wraps a Listener and provides helper methods for
@@ -145,6 +152,10 @@ type ListenerContext struct {
 	listenerSetStatusIdx int
 
 	namespaceSelector labels.Selector
+
+	// specValid indicates whether per-listener spec validation succeeded.
+	// Conflict detection should only consider listeners with specValid=true.
+	specValid bool
 
 	tls ListenerTLSConfig
 

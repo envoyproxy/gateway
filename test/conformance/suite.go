@@ -47,8 +47,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 	skipTests := []suite.ConformanceTest{ //nolint:prealloc // capacity depends on conditional branch
 		tests.GatewayStaticAddresses,
 		// TODO: fix following conformance tests
-		tests.ListenerSetHostnameConflict,
-		tests.ListenerSetProtocolConflict,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	}
 
