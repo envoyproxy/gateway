@@ -13,6 +13,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for dynamic module lb policy.
   Added support for configuring optional health check configuration.
   Added support for shadow mode in local rate limiting.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
