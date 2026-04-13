@@ -140,8 +140,6 @@ type RateLimitRule struct {
 	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
 	// If not set, the rule inherits the listener-level setting (default behavior).
 	//
-	// Only supported for Global Rate Limits.
-	//
 	// +optional
 	XRateLimit *XRateLimitHeadersOption `json:"xRateLimit,omitempty"`
 }

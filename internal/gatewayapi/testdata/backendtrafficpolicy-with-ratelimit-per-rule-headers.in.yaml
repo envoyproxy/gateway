@@ -13,6 +13,12 @@ gateways:
       allowedRoutes:
         namespaces:
           from: All
+    - name: http-8080
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -33,6 +39,25 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http-8080
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-2
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -40,13 +65,50 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-route
   spec:
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     rateLimit:
       type: Global
       global:
+        rules:
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: one
+          limit:
+            requests: 10
+            unit: Hour
+          xRateLimit: "Off"
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: two
+          limit:
+            requests: 20
+            unit: Hour
+          xRateLimit: "DraftVersion03"
+        - clientSelectors:
+          - headers:
+            - name: x-user-id
+              value: three
+          limit:
+            requests: 30
+            unit: Hour
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    rateLimit:
+      type: Local
+      local:
         rules:
         - clientSelectors:
           - headers:
