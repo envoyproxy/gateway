@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -11,10 +11,10 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/docker/cli v29.4.0+incompatible
 	github.com/dominikbraun/graph v0.23.0
-	github.com/envoyproxy/go-control-plane v0.14.0
-	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260409083702-98966259b99a
-	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260409083702-98966259b99a
-	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260409083702-98966259b99a
+	github.com/envoyproxy/go-control-plane v0.14.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/contrib v1.36.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/envoy v1.37.1-0.20260409050421-3f47accd6e14
+	github.com/envoyproxy/go-control-plane/ratelimit v0.1.1-0.20260409050421-3f47accd6e14
 	github.com/envoyproxy/ratelimit v1.4.1-0.20260122083618-3fb702589d36
 	github.com/evanphx/json-patch v5.9.11+incompatible
 	github.com/evanphx/json-patch/v5 v5.9.11
@@ -32,7 +32,7 @@ require (
 	github.com/ohler55/ojg v1.28.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/replicatedhq/troubleshoot v0.125.1
+	github.com/replicatedhq/troubleshoot v0.126.1
 	github.com/shopspring/decimal v1.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -62,7 +62,7 @@ require (
 	google.golang.org/grpc/security/advancedtls v1.0.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.20.1
+	helm.sh/helm/v3 v3.20.2
 	k8s.io/api v0.35.3
 	k8s.io/apiextensions-apiserver v0.35.3
 	k8s.io/apimachinery v0.35.3
@@ -97,6 +97,18 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.41.5 // indirect
+	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.13 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.21 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.21 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0 // indirect
+	github.com/aws/smithy-go v1.24.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/c9s/goprocinfo v0.0.0-20170724085704-0010a05ce49f // indirect
@@ -179,12 +191,12 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/pgx/v5 v5.8.0 // indirect
+	github.com/jackc/pgx/v5 v5.9.1 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
@@ -196,7 +208,7 @@ require (
 	github.com/lyft/gostats v0.4.14 // indirect
 	github.com/mailru/easyjson v0.9.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/microsoft/go-mssqldb v1.9.8 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
@@ -237,7 +249,7 @@ require (
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/segmentio/ksuid v1.0.4 // indirect
-	github.com/shirou/gopsutil/v4 v4.26.2 // indirect
+	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
@@ -265,20 +277,20 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.63.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
-	go.podman.io/image/v5 v5.39.1 // indirect
+	go.podman.io/image/v5 v5.39.2 // indirect
 	go.podman.io/storage v1.62.1-0.20260218215809-4bd29ff8b87e // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
-	golang.org/x/text v0.35.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	golang.org/x/tools v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
