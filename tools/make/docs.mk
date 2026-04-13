@@ -42,7 +42,7 @@ CLEAN_NODE_MODULES ?= true
 .PHONY: docs-gen
 docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	cd $(ROOT_DIR)/site && npm install
+	cd $(ROOT_DIR)/site && npm ci
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
@@ -83,7 +83,6 @@ ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
 endif
 	rm -rf site/resources
-	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
