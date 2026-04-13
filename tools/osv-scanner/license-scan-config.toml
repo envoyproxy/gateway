@@ -39,6 +39,22 @@ ecosystem = "Go"
 license.override = ["Apache-2.0"]
 reason = "This package is dual-licensed: the code under the Apache 2.0 license and the documentation under the CC-BY-SA-4.0 license"
 
+# TODO: Remove this override after github.com/envoyproxy/go-control-plane v0.14.1 is released.
+[[PackageOverrides]]
+name = "github.com/envoyproxy/go-control-plane"
+version = "0.14.1-0.20260409050421-3f47accd6e14"
+ecosystem = "Go"
+license.override = ["Apache-2.0"]
+reason = "Module LICENSE is Apache-2.0; OSV license scan reports UNKNOWN for this pseudo-version before the v0.14.1 release is available"
+
+# TODO: Remove this override after github.com/envoyproxy/go-control-plane/ratelimit v0.1.1 is released.
+[[PackageOverrides]]
+name = "github.com/envoyproxy/go-control-plane/ratelimit"
+version = "0.1.1-0.20260409050421-3f47accd6e14"
+ecosystem = "Go"
+license.override = ["Apache-2.0"]
+reason = "Module LICENSE is Apache-2.0; OSV license scan reports UNKNOWN for this pseudo-version before the v0.1.1 release is available"
+
 # Remove this once OSV image updated
 [[PackageOverrides]]
 name = "stdlib"
