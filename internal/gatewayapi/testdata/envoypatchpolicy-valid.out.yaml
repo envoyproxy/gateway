@@ -207,7 +207,12 @@ xdsIR:
       json:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
@@ -235,7 +240,12 @@ xdsIR:
             status: "True"
             type: Warning
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
@@ -316,7 +326,12 @@ xdsIR:
       json:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace

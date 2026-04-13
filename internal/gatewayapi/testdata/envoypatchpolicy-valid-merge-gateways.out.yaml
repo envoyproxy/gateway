@@ -138,7 +138,11 @@ xdsIR:
       json:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
@@ -160,7 +164,11 @@ xdsIR:
             status: "True"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace

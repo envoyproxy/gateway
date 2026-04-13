@@ -1,11 +1,22 @@
 envoyPatchPolicies:
-- status:
+- ancestorRef:
+    group: "gateway.networking.k8s.io"
+    kind: "Gateway"
+    namespace: "default"
+    name: "foobar"
+  status:
     ancestors:
     - ancestorRef:
         group: "gateway.networking.k8s.io"
         kind: "Gateway"
         namespace: "default"
         name: "foobar"
+    # This ancestor will be ignored since it's not the current ancestorRef.
+    - ancestorRef:
+        group: "gateway.networking.k8s.io"
+        kind: "Gateway"
+        namespace: "default"
+        name: "another-gateway"
   name: "first-policy"
   namespace: "default"
   generation: 1

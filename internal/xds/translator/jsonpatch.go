@@ -156,17 +156,29 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 
 		// Set translation errors for every policy ancestor references
 		if tErrs != nil {
-			status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(tErrs), e.Generation)
+			if e.AncestorRef != nil {
+				status.SetTranslationErrorForEnvoyPatchPolicyAncestor(e.Status, e.AncestorRef, status.Error2ConditionMsg(tErrs), e.Generation)
+			} else {
+				status.SetTranslationErrorForEnvoyPatchPolicy(e.Status, status.Error2ConditionMsg(tErrs), e.Generation)
+			}
 			errs = errors.Join(errs, tErrs)
 		}
 
 		// Set resources not found errors for every policy ancestor references
 		if len(notFoundResources) > 0 {
-			status.SetResourceNotFoundErrorForEnvoyPatchPolicy(e.Status, notFoundResources, e.Generation)
+			if e.AncestorRef != nil {
+				status.SetResourceNotFoundErrorForEnvoyPatchPolicyAncestor(e.Status, e.AncestorRef, notFoundResources, e.Generation)
+			} else {
+				status.SetResourceNotFoundErrorForEnvoyPatchPolicy(e.Status, notFoundResources, e.Generation)
+			}
 		}
 
 		// Set Programmed condition if not yet set
-		status.SetProgrammedForEnvoyPatchPolicy(e.Status, e.Generation)
+		if e.AncestorRef != nil {
+			status.SetProgrammedForEnvoyPatchPolicyAncestor(e.Status, e.AncestorRef, e.Generation)
+		} else {
+			status.SetProgrammedForEnvoyPatchPolicy(e.Status, e.Generation)
+		}
 
 		// Set output context
 		tCtx.EnvoyPatchPolicyStatuses = append(tCtx.EnvoyPatchPolicyStatuses, &e.EnvoyPatchPolicyStatus)
