@@ -45,8 +45,16 @@ type ResourceMetadata struct {
 // Precedence order (highest to lowest):
 // 1. Gateway.spec.tls.backend configuration
 // 2. EnvoyProxy.spec.backendTLS (attached to Gateway or GatewayClass)
+//
+// TODO: Merging fields in EnvoyProxy and Gateway TLS configs should be considered.
 func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *ResourceMetadata) {
-	if g.backendTLS != nil {
+	// If Gateway.spec.tls.backend is configured, it takes precedence over
+	// EnvoyProxy.spec.backendTLS even when translation produced no usable
+	// backendTLS config (for example, due to invalid clientCertificateRef).
+	if g.Gateway != nil && g.Spec.TLS != nil && g.Spec.TLS.Backend != nil {
+		if g.backendTLS == nil {
+			return nil, nil
+		}
 		return g.backendTLS, &ResourceMetadata{
 			Namespace: g.Namespace,
 			Name:      g.Name,

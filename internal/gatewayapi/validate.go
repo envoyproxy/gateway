@@ -603,6 +603,7 @@ func (t *Translator) validateTLSConfiguration(
 
 	if listener.tls.frontendTLSValidation != nil &&
 		listener.tls.frontendTLSValidation.ValidateError != nil {
+		message := fmt.Sprintf("Listener has invalid caCertificateRef for frontend TLS validation: %v", listener.tls.frontendTLSValidation.ValidateError)
 		reason := gwapiv1.ListenerReasonInvalidCACertificateRef
 		switch {
 		case errors.Is(listener.tls.frontendTLSValidation.ValidateError, ErrInvalidCACertificateKind):
@@ -616,19 +617,19 @@ func (t *Translator) validateTLSConfiguration(
 			gwapiv1.ListenerConditionResolvedRefs,
 			metav1.ConditionFalse,
 			reason,
-			"Listener has invalid CA certificate for frontend TLS validation.",
+			message,
 		)
 		listener.SetCondition(
 			gwapiv1.ListenerConditionProgrammed,
 			metav1.ConditionFalse,
 			reason,
-			"Listener has invalid CA certificate for frontend TLS validation.",
+			message,
 		)
 		listener.SetCondition(
 			gwapiv1.ListenerConditionAccepted,
 			metav1.ConditionFalse,
 			gwapiv1.ListenerReasonNoValidCACertificate,
-			"Listener has invalid CA certificate for frontend TLS validation.",
+			message,
 		)
 	}
 }
