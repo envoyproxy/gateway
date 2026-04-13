@@ -55,7 +55,7 @@ type testFileConfig struct {
 type rateLimitOutput struct {
 	RouteName     string               `json:"routeName" yaml:"routeName"`
 	RateLimits    []*routev3.RateLimit `json:"rateLimits" yaml:"rateLimits"`
-	CostSpecified bool                 `json:"costSpecified" yaml:"costSpecified"`
+	HasSharedRule bool                 `json:"hasSharedRule" yaml:"hasSharedRule"`
 }
 
 func TestTranslateXds(t *testing.T) {
@@ -276,12 +276,12 @@ func TestBuildRouteRateLimits(t *testing.T) {
 			// Process each route to get rate limit actions
 			for _, listener := range listeners {
 				for _, route := range listener.Routes {
-					rateLimits, costSpecified := buildRouteRateLimits(route)
+					rateLimits, hasSharedRule := buildRouteRateLimits(route)
 
 					output := rateLimitOutput{
 						RouteName:     route.Name,
 						RateLimits:    rateLimits,
-						CostSpecified: costSpecified,
+						HasSharedRule: hasSharedRule,
 					}
 					outputs = append(outputs, output)
 				}
