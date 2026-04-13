@@ -178,12 +178,14 @@ func patchRouteWithRateLimit(irListener *ir.HTTPListener, route *routev3.Route, 
 	}
 	domain := irListener.Name
 	rateLimits, hasSharedRule := buildRouteRateLimits(irRoute)
-	if !hasSharedRule {
-		return patchRouteWithRateLimitOnTypedFilterConfig(route, domain, rateLimits, irRoute)
+	if hasSharedRule {
+		// for shared rules, we uses RateLimit on route instead of per filter config,
+		// since there're more than one ratelimit filters in HCM.
+		xdsRouteAction.RateLimits = rateLimits
+		return nil
 	}
 
-	xdsRouteAction.RateLimits = rateLimits
-	return nil
+	return patchRouteWithRateLimitOnTypedFilterConfig(route, domain, rateLimits, irRoute)
 }
 
 // patchRouteWithRateLimitOnTypedFilterConfig builds rate limit actions and appends to the route via
