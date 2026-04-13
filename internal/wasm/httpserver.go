@@ -136,6 +136,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 		}
 	}()
 
+	// #nosec G118 - ctx is already cancelled; Background is intentional for graceful shutdown
 	go func() {
 		// waiting for shutdown
 		<-ctx.Done()

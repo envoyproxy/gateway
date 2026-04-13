@@ -77,6 +77,7 @@ type BackendTrafficPolicySpec struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
 	// The compression config for the http streams.
+	//
 	// Deprecated: Use Compressor instead.
 	//
 	// +patchMergeKey=type

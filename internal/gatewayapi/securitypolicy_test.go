@@ -674,6 +674,7 @@ func ToPointer[T any](v T) *T {
 }
 
 func Test_validateHtpasswdFormat(t *testing.T) {
+	// #nosec G101 - These are test htpasswd hashes, not real credentials
 	tests := []struct {
 		name      string
 		htpasswd  string

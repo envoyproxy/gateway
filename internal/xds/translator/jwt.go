@@ -116,7 +116,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 				err        error
 			)
 
-			claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
+			claimToHeaders := make([]*jwtauthnv3.JwtClaimToHeader, 0, len(irProvider.ClaimToHeaders))
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,

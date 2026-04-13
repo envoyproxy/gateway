@@ -160,7 +160,7 @@ func (r *Runner) newOptions() (registerOptions, error) {
 // registerForHandler sets the global metrics registry to the provided Prometheus registerer.
 // if enables prometheus, it will return a prom http handler.
 func (r *Runner) registerForHandler(opts *registerOptions) (http.Handler, error) {
-	otelOpts := []metric.Option{}
+	otelOpts := []metric.Option{} //nolint:prealloc // capacity depends on runtime config across multiple register methods
 
 	if err := r.registerOTELPromExporter(&otelOpts, opts); err != nil {
 		return nil, err
