@@ -9,8 +9,8 @@ backendTrafficPolicies:
       dynamicModule:
         config:
           key: value
-        policyName: weighted-random
         name: custom-lb-module
+        policyName: weighted-random
       type: DynamicModule
     targetRef:
       group: gateway.networking.k8s.io
@@ -235,10 +235,10 @@ xdsIR:
               config:
                 key: value
               doNotClose: false
-              policyName: weighted-random
               loadGlobally: false
               name: custom-lb-module
               path: /usr/local/lib/custom_lb.so
+              policyName: weighted-random
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
