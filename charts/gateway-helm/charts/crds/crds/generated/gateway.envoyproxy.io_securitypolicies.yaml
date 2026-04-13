@@ -5431,6 +5431,22 @@ spec:
                       via the Authorization header Bearer scheme to the upstream.
                       If not specified, defaults to false.
                     type: boolean
+                  forwardIDToken:
+                    description: |-
+                      ForwardIDToken configures forwarding of the OIDC ID token to the upstream.
+
+                      If the configured header is "Authorization", EG forwards the ID token using
+                      the "Bearer " prefix. For any other header, EG forwards the raw token value.
+                      If not specified, the ID token will not be forwarded.
+                    properties:
+                      header:
+                        description: Header is the upstream request header that will
+                          carry the ID token.
+                        minLength: 1
+                        type: string
+                    required:
+                    - header
+                    type: object
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.
@@ -6888,6 +6904,11 @@ spec:
                 - message: only one of clientID or clientIDRef must be set
                   rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
                     && has(self.clientIDRef))
+                - message: forwardAccessToken cannot be true when forwardIDToken.header
+                    is Authorization
+                  rule: '!(has(self.forwardAccessToken) && self.forwardAccessToken
+                    && has(self.forwardIDToken) && self.forwardIDToken.header.lowerAscii()
+                    == ''authorization'')'
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.
