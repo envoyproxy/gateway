@@ -1,7 +1,7 @@
 # ENVOY_VERSION must match the target Envoy version for ABI compatibility.
 ARG ENVOY_VERSION=dev
 
-FROM golang:1.26.1 AS builder
+FROM golang:1.26.2 AS builder
 
 WORKDIR /build
 COPY go.mod ./
