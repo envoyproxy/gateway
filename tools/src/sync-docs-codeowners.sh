@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 OWNERS_FILE="$REPO_ROOT/OWNERS"
-CODEOWNERS_FILE="$REPO_ROOT/site/content/en/contributions/CODEOWNERS.md"
+CODEOWNERS_FILE="$REPO_ROOT/site/content/en/community/CODEOWNERS.md"
 
 maintainers=()
 emeritus=()
