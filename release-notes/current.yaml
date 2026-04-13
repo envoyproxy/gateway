@@ -37,6 +37,7 @@ new features: |
   Added support for stream idle timeout in BackendTrafficPolicy.
   Added `namespaceOverride` support to gateway-helm chart
   Added support for configuring statusOnError in ExtAuth settings
+  Added support for `SecurityPolicy.spec.extAuth.includeRouteMetadata` to forward Envoy Gateway route metadata to external authorization services.
   Added support for GeoIP-based authorization on HTTPRoute and GRPCRoute via `SecurityPolicy.spec.authorization.rules[*].principal.clientIPGeoLocations`, backed by shared GeoIP provider settings in `EnvoyProxy.spec.geoIP`.
   Added support for retry budget in BackendTrafficPolicy.
   Added support for BackendUtilization load balancing policy in BackendTrafficPolicy.

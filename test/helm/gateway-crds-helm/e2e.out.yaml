@@ -30874,6 +30874,15 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                  includeRouteMetadata:
+                    description: |-
+                      IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
+                      external authorization service as context.
+
+                      This includes Envoy Gateway's built-in metadata for the selected route,
+                      such as resource kind, namespace, name, sectionName, and supported route
+                      annotations.
+                    type: boolean
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
