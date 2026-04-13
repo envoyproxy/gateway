@@ -100,11 +100,11 @@ envoyextensionpolicies:
       name: gateway-1
     dynamicModule:
     - name: my-auth-module
-      implementationName: auth-check
+      filterName: auth-check
       config:
         authEndpoint: https://auth.example.com
     - name: remote-auth-module
-      implementationName: remote-auth-check
+      filterName: remote-auth-check
       config:
         authEndpoint: https://remote-auth.example.com
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -119,8 +119,8 @@ envoyextensionpolicies:
       name: httproute-1
     dynamicModule:
     - name: ai-gateway-filter
-      implementationName: token-ratelimit
+      filterName: token-ratelimit
       config:
         maxTokensPerMinute: 10000
     - name: path-loaded-module
-      implementationName: path-filter
+      filterName: path-filter

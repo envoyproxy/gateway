@@ -105,7 +105,7 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 
 	filterConfig := &dmfilterv3.DynamicModuleFilter{
 		DynamicModuleConfig: dmConfig,
-		FilterName:          dm.ImplementationName,
+		FilterName:          dm.FilterName,
 		TerminalFilter:      dm.TerminalFilter,
 	}
 

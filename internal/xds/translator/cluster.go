@@ -498,7 +498,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 
 		dmlbConfig := &dmlbv3.DynamicModulesLoadBalancerConfig{
 			DynamicModuleConfig: dmConfig,
-			LbPolicyName:        dm.ImplementationName,
+			LbPolicyName:        dm.PolicyName,
 		}
 
 		if dm.Config != nil && dm.Config.Raw != nil {

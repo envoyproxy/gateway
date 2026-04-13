@@ -30,7 +30,7 @@ http:
       - config:
           maxTokensPerMinute: 10000
         doNotClose: true
-        implementationName: token-ratelimit
+        filterName: token-ratelimit
         loadGlobally: true
         path: /usr/lib/envoy/modules/ai_gateway.so
         name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
@@ -57,7 +57,7 @@ http:
       - config:
           authEndpoint: https://auth.example.com
         doNotClose: false
-        implementationName: auth-check
+        filterName: auth-check
         loadGlobally: false
         path: /usr/lib/envoy/modules/my_auth.so
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
@@ -65,7 +65,7 @@ http:
       - config:
           authEndpoint: https://remote-auth.example.com
         doNotClose: false
-        implementationName: remote-auth-check
+        filterName: remote-auth-check
         loadGlobally: false
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
         remote:
@@ -92,7 +92,7 @@ http:
     envoyExtensions:
       dynamicModules:
       - doNotClose: false
-        implementationName: handler
+        filterName: handler
         loadGlobally: false
         path: /usr/lib/envoy/modules/my_handler.so
         name: envoyextensionpolicy/default/policy-terminal/dynamic-module/0
@@ -117,7 +117,7 @@ http:
     envoyExtensions:
       dynamicModules:
       - doNotClose: false
-        implementationName: path-filter
+        filterName: path-filter
         loadGlobally: false
         path: /opt/modules/my_module.so
         name: envoyextensionpolicy/default/policy-path/dynamic-module/0

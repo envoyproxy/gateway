@@ -36,11 +36,9 @@ func TestBuildLoadBalancer_DynamicModule(t *testing.T) {
 		LoadBalancer: &egv1a1.LoadBalancer{
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-				DynamicModuleRef: egv1a1.DynamicModuleRef{
-					Name:               "my-module",
-					ImplementationName: ptr.To("round-robin-v2"),
-					Config:             &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
-				},
+				Name:       "my-module",
+				PolicyName: ptr.To("round-robin-v2"),
+				Config:     &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
 			},
 		},
 	}
@@ -50,7 +48,7 @@ func TestBuildLoadBalancer_DynamicModule(t *testing.T) {
 	require.NotNil(t, lb)
 	require.NotNil(t, lb.DynamicModuleLB)
 	require.Equal(t, "my-module", lb.DynamicModuleLB.Name)
-	require.Equal(t, "round-robin-v2", lb.DynamicModuleLB.ImplementationName)
+	require.Equal(t, "round-robin-v2", lb.DynamicModuleLB.PolicyName)
 	require.NotNil(t, lb.DynamicModuleLB.Config)
 	require.Equal(t, "/usr/local/lib/my-module.so", lb.DynamicModuleLB.Path)
 }
@@ -76,10 +74,8 @@ func TestBuildLoadBalancer_DynamicModule_UnregisteredModule(t *testing.T) {
 		LoadBalancer: &egv1a1.LoadBalancer{
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-				DynamicModuleRef: egv1a1.DynamicModuleRef{
-					Name:               "my-module",
-					ImplementationName: ptr.To("round-robin-v2"),
-				},
+				Name:       "my-module",
+				PolicyName: ptr.To("round-robin-v2"),
 			},
 		},
 	}
@@ -94,10 +90,8 @@ func TestBuildLoadBalancer_DynamicModule_NilEnvoyProxy(t *testing.T) {
 		LoadBalancer: &egv1a1.LoadBalancer{
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-				DynamicModuleRef: egv1a1.DynamicModuleRef{
-					Name:               "my-module",
-					ImplementationName: ptr.To("round-robin-v2"),
-				},
+				Name:       "my-module",
+				PolicyName: ptr.To("round-robin-v2"),
 			},
 		},
 	}
@@ -129,10 +123,8 @@ func TestBuildLoadBalancer_DynamicModule_Remote(t *testing.T) {
 		LoadBalancer: &egv1a1.LoadBalancer{
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
-				DynamicModuleRef: egv1a1.DynamicModuleRef{
-					Name:               "remote-module",
-					ImplementationName: ptr.To("custom-lb"),
-				},
+				Name:       "remote-module",
+				PolicyName: ptr.To("custom-lb"),
 			},
 		},
 	}

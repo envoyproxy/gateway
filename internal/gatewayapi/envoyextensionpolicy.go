@@ -1207,14 +1207,14 @@ func (t *Translator) buildDynamicModules(
 		}
 
 		dmIR := ir.DynamicModule{
-			Name:               name,
-			ImplementationName: ptr.Deref(dm.ImplementationName, ""),
-			Config:             dm.Config,
-			DoNotClose:         resolved.DoNotClose,
-			LoadGlobally:       resolved.LoadGlobally,
-			TerminalFilter:     ptr.Deref(dm.TerminalFilter, false),
-			Path:               resolved.Path,
-			Remote:             resolved.Remote,
+			Name:           name,
+			FilterName:     ptr.Deref(dm.FilterName, ""),
+			Config:         dm.Config,
+			DoNotClose:     resolved.DoNotClose,
+			LoadGlobally:   resolved.LoadGlobally,
+			TerminalFilter: ptr.Deref(dm.TerminalFilter, false),
+			Path:           resolved.Path,
+			Remote:         resolved.Remote,
 		}
 
 		dmIRList = append(dmIRList, dmIR)

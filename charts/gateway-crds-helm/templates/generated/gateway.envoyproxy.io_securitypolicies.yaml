@@ -1707,19 +1707,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is the configuration for the dynamic module.
+                                      Config is the configuration for the dynamic module load balancer policy.
                                       This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  implementationName:
-                                    description: |-
-                                      ImplementationName identifies a specific implementation within the dynamic
-                                      module. A single shared library can contain multiple implementations
-                                      (e.g. multiple HTTP filters or LB policies).
-                                      This value is passed to the module's initialization function to
-                                      select the appropriate implementation.
-                                      If not specified, defaults to an empty string.
-                                    maxLength: 253
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -1728,6 +1718,15 @@ spec:
                                     maxLength: 253
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
                                     type: string
                                 required:
                                 - name
@@ -3102,19 +3101,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is the configuration for the dynamic module.
+                                      Config is the configuration for the dynamic module load balancer policy.
                                       This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  implementationName:
-                                    description: |-
-                                      ImplementationName identifies a specific implementation within the dynamic
-                                      module. A single shared library can contain multiple implementations
-                                      (e.g. multiple HTTP filters or LB policies).
-                                      This value is passed to the module's initialization function to
-                                      select the appropriate implementation.
-                                      If not specified, defaults to an empty string.
-                                    maxLength: 253
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -3123,6 +3112,15 @@ spec:
                                     maxLength: 253
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
                                     type: string
                                 required:
                                 - name
@@ -4757,19 +4755,9 @@ spec:
                                       properties:
                                         config:
                                           description: |-
-                                            Config is the configuration for the dynamic module.
+                                            Config is the configuration for the dynamic module load balancer policy.
                                             This is serialized as JSON and passed to the module's initialization function.
                                           x-kubernetes-preserve-unknown-fields: true
-                                        implementationName:
-                                          description: |-
-                                            ImplementationName identifies a specific implementation within the dynamic
-                                            module. A single shared library can contain multiple implementations
-                                            (e.g. multiple HTTP filters or LB policies).
-                                            This value is passed to the module's initialization function to
-                                            select the appropriate implementation.
-                                            If not specified, defaults to an empty string.
-                                          maxLength: 253
-                                          type: string
                                         name:
                                           description: |-
                                             Name references a dynamic module registered in the EnvoyProxy resource's
@@ -4778,6 +4766,15 @@ spec:
                                           maxLength: 253
                                           minLength: 1
                                           pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                          type: string
+                                        policyName:
+                                          description: |-
+                                            PolicyName identifies a specific load balancing policy implementation
+                                            within the dynamic module. A single shared library can contain multiple
+                                            policy implementations; this value is passed to the module's
+                                            initialization function to select one.
+                                            If not specified, defaults to an empty string.
+                                          maxLength: 253
                                           type: string
                                       required:
                                       - name
@@ -6444,19 +6441,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is the configuration for the dynamic module.
+                                      Config is the configuration for the dynamic module load balancer policy.
                                       This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  implementationName:
-                                    description: |-
-                                      ImplementationName identifies a specific implementation within the dynamic
-                                      module. A single shared library can contain multiple implementations
-                                      (e.g. multiple HTTP filters or LB policies).
-                                      This value is passed to the module's initialization function to
-                                      select the appropriate implementation.
-                                      If not specified, defaults to an empty string.
-                                    maxLength: 253
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -6465,6 +6452,15 @@ spec:
                                     maxLength: 253
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
+                                    type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
                                     type: string
                                 required:
                                 - name

@@ -972,10 +972,8 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{
-								Name:               "my-module",
-								ImplementationName: ptr.To("my-filter"),
-							},
+							Name:           "my-module",
+							FilterName:     ptr.To("my-filter"),
 							TerminalFilter: ptr.To(false),
 						},
 					},
@@ -998,7 +996,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{Name: "my-module"},
+							Name: "my-module",
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1020,7 +1018,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{Name: ""},
+							Name: "",
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1045,14 +1043,12 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{
-								Name:               "module-a",
-								ImplementationName: ptr.To("filter-a"),
-							},
+							Name:       "module-a",
+							FilterName: ptr.To("filter-a"),
 						},
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{Name: "module-b"},
-							TerminalFilter:   ptr.To(true),
+							Name:           "module-b",
+							TerminalFilter: ptr.To(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1074,9 +1070,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
 					DynamicModule: []egv1a1.DynamicModule{
 						{
-							DynamicModuleRef: egv1a1.DynamicModuleRef{
-								Name: "terminal-module",
-							},
+							Name:           "terminal-module",
 							TerminalFilter: ptr.To(true),
 						},
 					},

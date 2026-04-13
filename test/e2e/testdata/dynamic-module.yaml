@@ -70,4 +70,4 @@ spec:
       name: http-with-dynamic-module
   dynamicModule:
     - name: header-mutation
-      implementationName: header_mutation
+      filterName: header_mutation

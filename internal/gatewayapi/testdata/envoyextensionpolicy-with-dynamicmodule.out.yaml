@@ -8,9 +8,9 @@ envoyExtensionPolicies:
     dynamicModule:
     - config:
         maxTokensPerMinute: 10000
-      implementationName: token-ratelimit
+      filterName: token-ratelimit
       name: ai-gateway-filter
-    - implementationName: path-filter
+    - filterName: path-filter
       name: path-loaded-module
     targetRef:
       group: gateway.networking.k8s.io
@@ -45,11 +45,11 @@ envoyExtensionPolicies:
     dynamicModule:
     - config:
         authEndpoint: https://auth.example.com
-      implementationName: auth-check
+      filterName: auth-check
       name: my-auth-module
     - config:
         authEndpoint: https://remote-auth.example.com
-      implementationName: remote-auth-check
+      filterName: remote-auth-check
       name: remote-auth-module
     targetRef:
       group: gateway.networking.k8s.io
@@ -317,13 +317,13 @@ xdsIR:
           - config:
               maxTokensPerMinute: 10000
             doNotClose: true
-            implementationName: token-ratelimit
+            filterName: token-ratelimit
             loadGlobally: true
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/0
             path: /usr/lib/envoy/modules/ai_gateway.so
             terminalFilter: false
           - doNotClose: false
-            implementationName: path-filter
+            filterName: path-filter
             loadGlobally: false
             name: envoyextensionpolicy/default/policy-for-http-route/dynamic-module/1
             path: /opt/modules/my_module.so
@@ -363,7 +363,7 @@ xdsIR:
           - config:
               authEndpoint: https://auth.example.com
             doNotClose: false
-            implementationName: auth-check
+            filterName: auth-check
             loadGlobally: false
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
             path: /usr/lib/envoy/modules/my_auth.so
@@ -371,7 +371,7 @@ xdsIR:
           - config:
               authEndpoint: https://remote-auth.example.com
             doNotClose: false
-            implementationName: remote-auth-check
+            filterName: remote-auth-check
             loadGlobally: false
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
             remote:

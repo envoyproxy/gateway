@@ -107,10 +107,10 @@ type DynamicModuleEntry struct {
 	LoadGlobally *bool `json:"loadGlobally,omitempty"`
 }
 
-// DynamicModuleRef identifies a dynamic module registered in the EnvoyProxy
-// resource's dynamicModules allowlist and selects a specific implementation
-// within it.
-type DynamicModuleRef struct {
+// DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
+// The module must be registered in the EnvoyProxy resource's dynamicModules
+// allowlist by the infrastructure operator.
+type DynamicModule struct {
 	// Name references a dynamic module registered in the EnvoyProxy resource's
 	// dynamicModules list. The referenced module must exist in the registry;
 	// otherwise, the policy will be rejected.
@@ -120,29 +120,21 @@ type DynamicModuleRef struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
 	Name string `json:"name"`
 
-	// ImplementationName identifies a specific implementation within the dynamic
-	// module. A single shared library can contain multiple implementations
-	// (e.g. multiple HTTP filters or LB policies).
-	// This value is passed to the module's initialization function to
-	// select the appropriate implementation.
+	// FilterName identifies a specific HTTP filter implementation within the
+	// dynamic module. A single shared library can contain multiple filter
+	// implementations; this value is passed to the module's initialization
+	// function to select one.
 	// If not specified, defaults to an empty string.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	ImplementationName *string `json:"implementationName,omitempty"`
+	FilterName *string `json:"filterName,omitempty"`
 
-	// Config is the configuration for the dynamic module.
+	// Config is the configuration for the dynamic module filter.
 	// This is serialized as JSON and passed to the module's initialization function.
 	//
 	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
-}
-
-// DynamicModule defines a dynamic module HTTP filter to be loaded by Envoy.
-// The module must be registered in the EnvoyProxy resource's dynamicModules
-// allowlist by the infrastructure operator.
-type DynamicModule struct {
-	DynamicModuleRef `json:",inline"`
 
 	// TerminalFilter indicates that this dynamic module handles requests without
 	// requiring an upstream backend. The module is responsible for generating and

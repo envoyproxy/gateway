@@ -260,7 +260,7 @@ http:
       loadBalancer:
         dynamicModuleLB:
           name: custom-lb-module
-          implementationName: first-host
+          policyName: first-host
           path: /usr/local/lib/custom_lb.so
     destination:
       name: "eighteenth-route-dest"
@@ -275,7 +275,7 @@ http:
       loadBalancer:
         dynamicModuleLB:
           name: custom-lb-module-with-config
-          implementationName: weighted-random
+          policyName: weighted-random
           path: /usr/local/lib/custom_lb.so
           doNotClose: true
           loadGlobally: true
