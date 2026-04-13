@@ -12,6 +12,12 @@ metadata:
 - GitHub PR URL (e.g. review PR: https://github.com/envoyproxy/gateway/pull/8237), or
 - A local diff between commits (e.g. review change: git diff 4927877a HEAD)
 
+## Output
+- Lead with findings ordered by severity.
+- Include exact file and line references.
+- Separate required fixes from optional follow-ups.
+- If there are no findings, say that clearly and mention residual test or release-note risk.
+
 ## Review
 - Check API changes, implementation changes, feature coverage, and release notes as applicable.
 - Keep findings concise and actionable, with file references when possible.
@@ -37,7 +43,7 @@ metadata:
 
 ### Feature coverage
 - For new user-facing features, check that `test/e2e` has coverage.
-- For bug fixes, check that `test/e2e` has coverage if the bug is in user-facing code or has user-facing impact. 
+- For bug fixes, check that `test/e2e` has coverage if the bug is in user-facing code or has user-facing impact.
 
 ### Release notes
 Release notes should be added to `release-notes/current.yaml` for any of the following changes:
