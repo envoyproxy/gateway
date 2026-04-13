@@ -832,7 +832,7 @@ type ExtensionTLS struct {
 // +kubebuilder:validation:Enum=CANCELLED;UNKNOWN;INVALID_ARGUMENT;DEADLINE_EXCEEDED;NOT_FOUND;ALREADY_EXISTS;PERMISSION_DENIED;RESOURCE_EXHAUSTED;FAILED_PRECONDITION;ABORTED;OUT_OF_RANGE;UNIMPLEMENTED;INTERNAL;UNAVAILABLE;DATA_LOSS;UNAUTHENTICATED
 type RetryableGRPCStatusCode string
 
-// ExtensionServiceRetry defines the retry policy for to use when errors are encountered in communication with the extension service.
+// ExtensionServiceRetry defines the retry policy to use when errors are encountered while communicating with the extension service.
 type ExtensionServiceRetry struct {
 	// MaxAttempts defines the maximum number of retry attempts.
 	// Default: 4
