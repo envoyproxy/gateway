@@ -48,11 +48,13 @@ type TracingProvider struct {
 	// +kubebuilder:default=OpenTelemetry
 	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the provider service is exposed on.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
