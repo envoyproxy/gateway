@@ -16,6 +16,7 @@ const (
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
 // +kubebuilder:validation:XValidation:rule="(has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID) && has(self.clientIDRef))", message="only one of clientID or clientIDRef must be set"
+// +kubebuilder:validation:XValidation:rule="!(has(self.forwardAccessToken) && self.forwardAccessToken && has(self.forwardIDToken) && self.forwardIDToken.header.lowerAscii() == 'authorization')", message="forwardAccessToken cannot be true when forwardIDToken.header is Authorization"
 type OIDC struct {
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider"`
@@ -98,6 +99,14 @@ type OIDC struct {
 	// If not specified, defaults to false.
 	// +optional
 	ForwardAccessToken *bool `json:"forwardAccessToken,omitempty"`
+
+	// ForwardIDToken configures forwarding of the OIDC ID token to the upstream.
+	//
+	// If the configured header is "Authorization", EG forwards the ID token using
+	// the "Bearer " prefix. For any other header, EG forwards the raw token value.
+	// If not specified, the ID token will not be forwarded.
+	// +optional
+	ForwardIDToken *OIDCTokenForwarding `json:"forwardIDToken,omitempty"`
 
 	// DefaultTokenTTL is the default lifetime of the id token and access token.
 	// Please note that Envoy will always use the expiry time from the response
@@ -232,6 +241,13 @@ type OIDCCookieNames struct {
 	// If not specified, defaults to "IdToken-(randomly generated uid)"
 	// +optional
 	IDToken *string `json:"idToken,omitempty"`
+}
+
+// OIDCTokenForwarding defines how an OIDC token is forwarded upstream.
+type OIDCTokenForwarding struct {
+	// Header is the upstream request header that will carry the ID token.
+	// +kubebuilder:validation:MinLength=1
+	Header string `json:"header"`
 }
 
 type SameSite string
