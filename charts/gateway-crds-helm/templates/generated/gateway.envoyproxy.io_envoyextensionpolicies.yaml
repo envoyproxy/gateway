@@ -1593,6 +1593,14 @@ spec:
                     Lua defines a Lua extension
                     Only one of Inline or ValueRef must be set
                   properties:
+                    filterContext:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        FilterContext is a set of key/value pairs that are made available to the Lua script
+                        via request_handle:filterContext(). This allows a shared script to be
+                        parameterized differently per EnvoyExtensionPolicy/route.
+                      type: object
                     inline:
                       description: Inline contains the source code as an inline string.
                       type: string

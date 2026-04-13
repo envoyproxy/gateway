@@ -45,4 +45,10 @@ type Lua struct {
 	// +optional
 	// +unionMember
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
+	// FilterContext is a set of key/value pairs that are made available to the Lua script
+	// via request_handle:filterContext(). This allows a shared script to be
+	// parameterized differently per EnvoyExtensionPolicy/route.
+	//
+	// +optional
+	FilterContext map[string]string `json:"filterContext,omitempty"`
 }

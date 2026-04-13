@@ -9,6 +9,9 @@ envoyExtensionPolicies:
     lua:
     - inline: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
         end
+      filterContext:
+        mode: strict
+        token_header: x-api-key
       type: Inline
     targetRef:
       group: gateway.networking.k8s.io
@@ -278,6 +281,9 @@ xdsIR:
           luas:
           - Code: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
               end
+            FilterContext:
+              mode: strict
+              token_header: x-api-key
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
         hostname: www.example.com
         isHTTP2: false
