@@ -663,6 +663,7 @@ data:
                   endpoint: 0.0.0.0:6831
                 thrift_http:
                   endpoint: 0.0.0.0:14268
+            opencensus: null
             otlp:
               protocols:
                 grpc:
@@ -10881,7 +10882,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 0898f7ca87563d700c35d7ea1824cd042cf93fb2f05e254d12a854aa97a5c5e5
+        checksum/config: 6adb3b32cdf74ea13067dd7baba57991ad7df001873357792a143dc450fd9dd5
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true
