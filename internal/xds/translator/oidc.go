@@ -441,6 +441,9 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		} else {
 			// Create a cluster with the token endpoint url.
 			if err := createOAuth2TokenEndpointCluster(tCtx, oidc); err != nil {
