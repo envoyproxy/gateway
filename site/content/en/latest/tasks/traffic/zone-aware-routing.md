@@ -20,13 +20,13 @@ The `zoneAware` field supports two modes: `preferLocal` (prefer same-zone endpoi
 | `RoundRobin` | ✓ | ✓ |
 | `LeastRequest` | ✓ | ✓ |
 | `Random` | ✓ | ✓ |
-| `ConsistentHash` | ✗ | ✗ |
+| `ConsistentHash` | ✗ | ✓ |
 | `BackendUtilization` | ✗ | ✓ |
 | `DynamicModule` | ✗ | ✗ |
 
 **Why some combinations are unsupported:**
 
-- **`ConsistentHash` + any zone-aware mode**: Neither `preferLocal` nor `weightedZones` are currently supported. `weightedZones` support is planned (see [#8146](https://github.com/envoyproxy/gateway/issues/8146)).
+- **`ConsistentHash` + `preferLocal`**: Envoy's consistent hashing policies (Maglev/RingHash) route based on a request hash rather than endpoint locality, so the prefer-local algorithm cannot be layered on top. Use `weightedZones` to influence traffic distribution across zones while preserving hash-based affinity.
 - **`BackendUtilization` + `preferLocal`**: Envoy's `wrr_locality` extension, which wraps `BackendUtilization` with locality-weight support, does not implement the prefer-local routing algorithm. Only `weightedZones` is supported.
 - **`DynamicModule` + any zone-aware mode**: Custom load balancing modules manage their own endpoint selection entirely. Zone-aware routing cannot be layered on top of an opaque third-party algorithm.
 
@@ -194,7 +194,7 @@ spec:
 
 #### WeightedZones
 `weightedZones` distributes traffic across zones proportionally according to explicit weights. Zones not listed receive a default weight of 1.
-This mode is supported by `RoundRobin`, `LeastRequest`, `Random`, and `BackendUtilization`.
+This mode is supported by `RoundRobin`, `LeastRequest`, `Random`, `ConsistentHash`, and `BackendUtilization`.
 
 The example below routes 70% of traffic to `us-east-1a` and 30% to `us-east-1b` using `BackendUtilization`, which combines ORCA-based backend load metrics with locality weighting via Envoy's `wrr_locality` extension.
 
