@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -376,10 +375,10 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						// Enable listeners and routes for PostTranslateModifyHook for these tests
 						Translation: &egv1a1.TranslationConfig{
 							Listener: &egv1a1.ListenerTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 							Route: &egv1a1.RouteTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 						},
 					},
@@ -518,10 +517,10 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						// Enable listeners and routes for PostTranslateModifyHook for these tests
 						Translation: &egv1a1.TranslationConfig{
 							Listener: &egv1a1.ListenerTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 							Route: &egv1a1.RouteTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 						},
 					},

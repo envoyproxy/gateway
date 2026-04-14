@@ -171,10 +171,10 @@ func (f *RuntimeFlags) IsEnabled(flag RuntimeFlag) bool {
 // DefaultLeaderElection returns a new LeaderElection with default configuration parameters.
 func DefaultLeaderElection() *LeaderElection {
 	return &LeaderElection{
-		RenewDeadline: ptr.To(gwapiv1.Duration("10s")),
-		RetryPeriod:   ptr.To(gwapiv1.Duration("2s")),
-		LeaseDuration: ptr.To(gwapiv1.Duration("15s")),
-		Disable:       ptr.To(false),
+		RenewDeadline: new(gwapiv1.Duration("10s")),
+		RetryPeriod:   new(gwapiv1.Duration("2s")),
+		LeaseDuration: new(gwapiv1.Duration("15s")),
+		Disable:       new(false),
 	}
 }
 
@@ -182,8 +182,8 @@ func DefaultLeaderElection() *LeaderElection {
 func DefaultKubernetesClient() *KubernetesClient {
 	return &KubernetesClient{
 		RateLimit: &KubernetesClientRateLimit{
-			QPS:   ptr.To(DefaultKubernetesClientQPS),
-			Burst: ptr.To(DefaultKubernetesClientBurst),
+			QPS:   new(DefaultKubernetesClientQPS),
+			Burst: new(DefaultKubernetesClientBurst),
 		},
 	}
 }
@@ -335,7 +335,7 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.ShutdownManager == nil {
-		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: ptr.To(DefaultShutdownManagerImage)}
+		r.Kubernetes.ShutdownManager = &ShutdownManager{Image: new(DefaultShutdownManagerImage)}
 	}
 
 	return r.Kubernetes

@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/utils/ptr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -114,7 +113,7 @@ func Test_setupGRPCOpts(t *testing.T) {
 		{
 			args: args{
 				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", math.MaxInt))),
+					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", math.MaxInt))),
 					Service: &egv1a1.ExtensionService{
 						BackendEndpoint: egv1a1.BackendEndpoint{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -130,7 +129,7 @@ func Test_setupGRPCOpts(t *testing.T) {
 		{
 			args: args{
 				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", 0))),
+					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 0))),
 					Service: &egv1a1.ExtensionService{
 						BackendEndpoint: egv1a1.BackendEndpoint{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -146,7 +145,7 @@ func Test_setupGRPCOpts(t *testing.T) {
 		{
 			args: args{
 				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: ptr.To(resource.MustParse(fmt.Sprintf("%dM", 10))),
+					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 10))),
 					Service: &egv1a1.ExtensionService{
 						BackendEndpoint: egv1a1.BackendEndpoint{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -155,9 +154,9 @@ func Test_setupGRPCOpts(t *testing.T) {
 							},
 						},
 						Retry: &egv1a1.ExtensionServiceRetry{
-							MaxAttempts:    ptr.To(20),
-							InitialBackoff: ptr.To(gwapiv1.Duration("500ms")),
-							MaxBackoff:     ptr.To(gwapiv1.Duration("5s")),
+							MaxAttempts:    new(20),
+							InitialBackoff: new(gwapiv1.Duration("500ms")),
+							MaxBackoff:     new(gwapiv1.Duration("5s")),
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},
@@ -259,7 +258,7 @@ func Test_TLS(t *testing.T) {
 			TLS: &egv1a1.ExtensionTLS{
 				CertificateRef: gwapiv1.SecretObjectReference{
 					Name:      "cert",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 			},
 		},
@@ -354,11 +353,11 @@ func Test_mTLS(t *testing.T) {
 			TLS: &egv1a1.ExtensionTLS{
 				CertificateRef: gwapiv1.SecretObjectReference{
 					Name:      "ca-cert",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 				ClientCertificateRef: &gwapiv1.SecretObjectReference{
 					Name:      "client-cert",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 			},
 		},
@@ -463,9 +462,9 @@ func Test_buildServiceConfig(t *testing.T) {
 							},
 						},
 						Retry: &egv1a1.ExtensionServiceRetry{
-							MaxAttempts:    ptr.To(20),
-							InitialBackoff: ptr.To(gwapiv1.Duration("500ms")),
-							MaxBackoff:     ptr.To(gwapiv1.Duration("5s")),
+							MaxAttempts:    new(20),
+							InitialBackoff: new(gwapiv1.Duration("500ms")),
+							MaxBackoff:     new(gwapiv1.Duration("5s")),
 							BackoffMultiplier: &gwapiv1.Fraction{
 								Numerator: 50,
 							},
@@ -601,7 +600,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			name: "sufficient retries",
 			args: args{
 				retryPolicy: &egv1a1.ExtensionServiceRetry{
-					MaxAttempts: ptr.To(10),
+					MaxAttempts: new(10),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"UNAVAILABLE",
 					},
@@ -613,7 +612,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			name: "insufficient retries",
 			args: args{
 				retryPolicy: &egv1a1.ExtensionServiceRetry{
-					MaxAttempts: ptr.To(5),
+					MaxAttempts: new(5),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"UNAVAILABLE",
 					},
@@ -625,7 +624,7 @@ func Test_Integration_RetryPolicy_MaxAttempts(t *testing.T) {
 			name: "wrong retry code",
 			args: args{
 				retryPolicy: &egv1a1.ExtensionServiceRetry{
-					MaxAttempts: ptr.To(5),
+					MaxAttempts: new(5),
 					RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
 						"CANCELLED",
 					},
@@ -1008,7 +1007,7 @@ func TestGetTranslationHookConfig(t *testing.T) {
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Translation: &egv1a1.TranslationConfig{
 							Listener: &egv1a1.ListenerTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 						},
 					},
@@ -1016,7 +1015,7 @@ func TestGetTranslationHookConfig(t *testing.T) {
 			},
 			expected: &egv1a1.TranslationConfig{
 				Listener: &egv1a1.ListenerTranslationConfig{
-					IncludeAll: ptr.To(true),
+					IncludeAll: new(true),
 				},
 			},
 		},
@@ -1027,7 +1026,7 @@ func TestGetTranslationHookConfig(t *testing.T) {
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Translation: &egv1a1.TranslationConfig{
 							Route: &egv1a1.RouteTranslationConfig{
-								IncludeAll: ptr.To(true),
+								IncludeAll: new(true),
 							},
 						},
 					},
@@ -1035,7 +1034,7 @@ func TestGetTranslationHookConfig(t *testing.T) {
 			},
 			expected: &egv1a1.TranslationConfig{
 				Route: &egv1a1.RouteTranslationConfig{
-					IncludeAll: ptr.To(true),
+					IncludeAll: new(true),
 				},
 			},
 		},

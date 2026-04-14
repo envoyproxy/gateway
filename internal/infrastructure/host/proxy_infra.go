@@ -15,7 +15,6 @@ import (
 	"sync"
 
 	func_e_api "github.com/tetratelabs/func-e/api"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -89,9 +88,9 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
-		XdsServerHost:   ptr.To("0.0.0.0"),
-		AdminServerPort: ptr.To(int32(0)),
-		StatsServerPort: ptr.To(int32(0)),
+		XdsServerHost:   new("0.0.0.0"),
+		AdminServerPort: new(int32(0)),
+		StatsServerPort: new(int32(0)),
 		// Always disable the topology injector in standalone mode. The topology
 		// injector adds an EDS local_cluster to the bootstrap config for
 		// zone-aware routing, which is both irrelevant outside K8s, but also

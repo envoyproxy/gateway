@@ -14,7 +14,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -50,7 +49,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
@@ -73,7 +72,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
-				AutomountServiceAccountToken: ptr.To(false),
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,

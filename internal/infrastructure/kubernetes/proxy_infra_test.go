@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -146,13 +145,13 @@ func TestCreateProxyInfra(t *testing.T) {
 	infraWithPDB := infraWithLabels.DeepCopy()
 	infraWithPDB.GetProxyInfra().Config = ep.DeepCopy()
 	infraWithPDB.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyPDB = &egv1a1.KubernetesPodDisruptionBudgetSpec{
-		MinAvailable: ptr.To(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
+		MinAvailable: new(intstr.IntOrString{Type: intstr.Int, IntVal: 1}),
 	}
 
 	infraWithHPA := infraWithLabels.DeepCopy()
 	infraWithHPA.GetProxyInfra().Config = ep.DeepCopy()
 	infraWithHPA.GetProxyInfra().Config.Spec.Provider.Kubernetes.EnvoyHpa = &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-		MinReplicas: ptr.To[int32](1),
+		MinReplicas: new(int32(1)),
 	}
 
 	testCases := []struct {

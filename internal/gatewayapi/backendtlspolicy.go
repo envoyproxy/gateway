@@ -257,7 +257,7 @@ func (t *Translator) processServerValidationTLSSettings(
 	}
 
 	if backend.Spec.TLS.SNI != nil {
-		tlsConfig.SNI = ptr.To(string(*backend.Spec.TLS.SNI))
+		tlsConfig.SNI = new(string(*backend.Spec.TLS.SNI))
 	}
 
 	if !tlsConfig.InsecureSkipVerify {
@@ -366,10 +366,10 @@ func (t *Translator) processClientTLSSettings(
 		tlsConfig.SignatureAlgorithms = clientTLS.SignatureAlgorithms
 	}
 	if clientTLS.MinVersion != nil {
-		tlsConfig.MinVersion = ptr.To(ir.TLSVersion(*clientTLS.MinVersion))
+		tlsConfig.MinVersion = new(ir.TLSVersion(*clientTLS.MinVersion))
 	}
 	if clientTLS.MaxVersion != nil {
-		tlsConfig.MaxVersion = ptr.To(ir.TLSVersion(*clientTLS.MaxVersion))
+		tlsConfig.MaxVersion = new(ir.TLSVersion(*clientTLS.MaxVersion))
 	}
 	if len(clientTLS.ALPNProtocols) > 0 {
 		tlsConfig.ALPNProtocols = make([]string, len(clientTLS.ALPNProtocols))
@@ -448,9 +448,9 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 		var subjectAltName ir.SubjectAltName
 		switch san.Type {
 		case gwapiv1.HostnameSubjectAltNameType:
-			subjectAltName.Hostname = ptr.To(string(san.Hostname))
+			subjectAltName.Hostname = new(string(san.Hostname))
 		case gwapiv1.URISubjectAltNameType:
-			subjectAltName.URI = ptr.To(string(san.URI))
+			subjectAltName.URI = new(string(san.URI))
 		default:
 			continue // skip unknown types
 		}
@@ -458,7 +458,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	}
 
 	tlsBundle := &ir.TLSUpstreamConfig{
-		SNI:                 ptr.To(string(backendTLSPolicy.Spec.Validation.Hostname)),
+		SNI:                 new(string(backendTLSPolicy.Spec.Validation.Hostname)),
 		UseSystemTrustStore: ptr.Deref(backendTLSPolicy.Spec.Validation.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem,
 		SubjectAltNames:     subjectAltNames,
 	}
@@ -495,7 +495,7 @@ func getObjectReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReferen
 			Group:     caRef.Group,
 			Kind:      caRef.Kind,
 			Name:      caRef.Name,
-			Namespace: ptr.To(ns),
+			Namespace: new(ns),
 		})
 	}
 	return caRefs

@@ -950,7 +950,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 			loadBalancer: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 				PreferLocal: &ir.PreferLocalZone{
-					MinEndpointsThreshold: ptr.To[uint64](1),
+					MinEndpointsThreshold: new(uint64(1)),
 				},
 			},
 			metadata: svcCluster.Metadata,

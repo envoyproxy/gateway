@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -86,7 +85,7 @@ func setupCreateOrUpdateProxyDaemonSet(t *testing.T, gatewayNamespaceMode bool) 
 
 	if gatewayNamespaceMode {
 		cfg.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-			Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+			Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 		}
 		infra.Proxy.Name = "gateway-1"
 		infra.Proxy.Namespace = "ns1"
@@ -160,7 +159,7 @@ func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 									EnvoyDaemonSet: &egv1a1.KubernetesDaemonSetSpec{
 										Container: &egv1a1.KubernetesContainerSpec{
-											Image: ptr.To("envoyproxy/envoy-dev:v1.2.3"),
+											Image: new("envoyproxy/envoy-dev:v1.2.3"),
 										},
 									},
 								},

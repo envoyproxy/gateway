@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
@@ -23,8 +22,8 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 		sc := resource.DefaultSecurityContext()
 
 		// run as non-root user
-		sc.RunAsGroup = ptr.To(int64(65532))
-		sc.RunAsUser = ptr.To(int64(65532))
+		sc.RunAsGroup = new(int64(65532))
+		sc.RunAsUser = new(int64(65532))
 
 		// ShutdownManger creates a file to indicate the connection drain process is completed,
 		// so it needs file write permission.
@@ -33,9 +32,9 @@ func TestExpectedShutdownManagerSecurityContext(t *testing.T) {
 	}
 
 	customSc := &corev1.SecurityContext{
-		Privileged: ptr.To(true),
-		RunAsUser:  ptr.To(int64(21)),
-		RunAsGroup: ptr.To(int64(2100)),
+		Privileged: new(true),
+		RunAsUser:  new(int64(21)),
+		RunAsGroup: new(int64(2100)),
 	}
 
 	tests := []struct {
@@ -82,14 +81,14 @@ func TestResolveProxyImage(t *testing.T) {
 		{
 			name: "imageRepository set",
 			container: &egv1a1.KubernetesContainerSpec{
-				ImageRepository: ptr.To("envoyproxy/envoy"),
+				ImageRepository: new("envoyproxy/envoy"),
 			},
 			expected: fmt.Sprintf("envoyproxy/envoy:%s", defaultTag),
 		},
 		{
 			name: "image set",
 			container: &egv1a1.KubernetesContainerSpec{
-				Image: ptr.To("envoyproxy/envoy:v1.2.3"),
+				Image: new("envoyproxy/envoy:v1.2.3"),
 			},
 			expected: "envoyproxy/envoy:v1.2.3",
 		},
@@ -101,15 +100,15 @@ func TestResolveProxyImage(t *testing.T) {
 		{
 			name: "both image and imageRepository set (invalid per CRD, but still testable)",
 			container: &egv1a1.KubernetesContainerSpec{
-				Image:           ptr.To("envoyproxy/envoy:v1.2.3"),
-				ImageRepository: ptr.To("envoyproxy/envoy"),
+				Image:           new("envoyproxy/envoy:v1.2.3"),
+				ImageRepository: new("envoyproxy/envoy"),
 			},
 			expected: fmt.Sprintf("envoyproxy/envoy:%s", defaultTag),
 		},
 		{
 			name: "imageRepository with port",
 			container: &egv1a1.KubernetesContainerSpec{
-				ImageRepository: ptr.To("docker.io:443/envoyproxy/envoy"),
+				ImageRepository: new("docker.io:443/envoyproxy/envoy"),
 			},
 			expected: fmt.Sprintf("docker.io:443/envoyproxy/envoy:%s", defaultTag),
 		},
