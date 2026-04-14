@@ -125,6 +125,32 @@ func TestEnvoyPatchPolicy(t *testing.T) {
 			},
 			wantErrors: []string{"only one of name and nameSelector can be specified"},
 		},
+		{
+			desc: "invalid json patch with neither name nor nameSelector",
+			mutate: func(epp *egv1a1.EnvoyPatchPolicy) {
+				epp.Spec = egv1a1.EnvoyPatchPolicySpec{
+					Type: egv1a1.JSONPatchEnvoyPatchType,
+					JSONPatches: []egv1a1.EnvoyJSONPatchConfig{
+						{
+							Type: egv1a1.ListenerEnvoyResourceType,
+							Operation: egv1a1.JSONPatchOperation{
+								Op:   egv1a1.JSONPatchOperationType("test"),
+								Path: &patchPath,
+								Value: &apiextensionsv1.JSON{
+									Raw: []byte(`"listener-1"`),
+								},
+							},
+						},
+					},
+					TargetRef: gwapiv1.LocalPolicyTargetReference{
+						Group: gwapiv1.Group(gwapiv1.GroupName),
+						Kind:  gwapiv1.Kind("Gateway"),
+						Name:  gwapiv1.ObjectName("eg"),
+					},
+				}
+			},
+			wantErrors: []string{"either name or nameSelector must be specified"},
+		},
 	}
 
 	for _, tc := range cases {
