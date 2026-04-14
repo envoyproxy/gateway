@@ -686,6 +686,7 @@ func (t *Translator) validateTLSConfiguration(
 			gwapiv1.ListenerReasonNoValidCACertificate,
 			message,
 		)
+		specValid = false
 	}
 
 	return specValid
