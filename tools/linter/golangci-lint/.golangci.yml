@@ -89,6 +89,7 @@ linters:
     forbidigo:
       forbid:
         - pattern: ^ptr\.To$
+          pkg: ^k8s\.io/utils/ptr$
           msg: "use new() builtin instead of ptr.To"
       analyze-types: true
     gocritic:
