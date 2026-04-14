@@ -85,7 +85,6 @@ type ExtAuth struct {
 	// sectionName, and supported route annotations.
 	//
 	// +optional
-	// +notImplementedHide
 	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
 
 	// ContextExtensions are analogous to http_request.headers, however these
