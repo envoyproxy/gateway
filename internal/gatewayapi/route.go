@@ -1269,7 +1269,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 
-		var perHostRoutes []*ir.HTTPRoute
+		perHostRoutes := make([]*ir.HTTPRoute, 0, len(hosts)*len(routeRoutes))
 		for _, host := range hosts {
 			for _, routeRoute := range routeRoutes {
 				// If the redirect port is not set, the final redirect port must be derived.

@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -14366,12 +14366,14 @@ spec:
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
+
                                           Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
+
                                           Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
@@ -16034,12 +16036,14 @@ spec:
                                 host:
                                   description: |-
                                     Host define the service hostname.
+
                                     Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
+
                                     Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
@@ -17574,6 +17578,7 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
+
                               Deprecated: Use BackendRefs instead.
                             type: string
                           openTelemetry:
@@ -17677,6 +17682,7 @@ spec:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
+
                               Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
