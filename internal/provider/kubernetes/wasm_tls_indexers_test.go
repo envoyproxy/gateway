@@ -13,7 +13,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -51,8 +50,8 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("http-wasm-filter"),
-					RootID: ptr.To("http_root_id"),
+					Name:   new("http-wasm-filter"),
+					RootID: new("http_root_id"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
@@ -88,15 +87,15 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("http-wasm-filter-cm"),
-					RootID: ptr.To("http_root_id_cm"),
+					Name:   new("http-wasm-filter-cm"),
+					RootID: new("http_root_id_cm"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
 							URL: "https://example.com/wasm-http-cm.wasm",
 							TLS: &egv1a1.WasmCodeSourceTLSConfig{
 								CACertificateRef: gwapiv1.SecretObjectReference{
-									Kind: ptr.To[gwapiv1.Kind]("ConfigMap"),
+									Kind: new(gwapiv1.Kind("ConfigMap")),
 									Name: "http-wasm-ca-configmap",
 								},
 							},
@@ -126,15 +125,15 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("http-wasm-filter-ctb"),
-					RootID: ptr.To("http_root_id_ctb"),
+					Name:   new("http-wasm-filter-ctb"),
+					RootID: new("http_root_id_ctb"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.HTTPWasmCodeSourceType,
 						HTTP: &egv1a1.HTTPWasmCodeSource{
 							URL: "https://example.com/wasm-http-ctb.wasm",
 							TLS: &egv1a1.WasmCodeSourceTLSConfig{
 								CACertificateRef: gwapiv1.SecretObjectReference{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+									Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 									Name: "http-wasm-ca-ctb",
 								},
 							},
@@ -164,8 +163,8 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("image-wasm-filter"),
-					RootID: ptr.To("image_root_id"),
+					Name:   new("image-wasm-filter"),
+					RootID: new("image_root_id"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
@@ -201,15 +200,15 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("image-wasm-filter-cm"),
-					RootID: ptr.To("image_root_id_cm"),
+					Name:   new("image-wasm-filter-cm"),
+					RootID: new("image_root_id_cm"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: "oci://example.com/wasm-image-cm:v1.0.0",
 							TLS: &egv1a1.WasmCodeSourceTLSConfig{
 								CACertificateRef: gwapiv1.SecretObjectReference{
-									Kind: ptr.To[gwapiv1.Kind]("ConfigMap"),
+									Kind: new(gwapiv1.Kind("ConfigMap")),
 									Name: "image-wasm-ca-configmap",
 								},
 							},
@@ -239,15 +238,15 @@ func TestWasmTLSIndexers(t *testing.T) {
 			},
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("image-wasm-filter-ctb"),
-					RootID: ptr.To("image_root_id_ctb"),
+					Name:   new("image-wasm-filter-ctb"),
+					RootID: new("image_root_id_ctb"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{
 							URL: "oci://example.com/wasm-image-ctb:v1.0.0",
 							TLS: &egv1a1.WasmCodeSourceTLSConfig{
 								CACertificateRef: gwapiv1.SecretObjectReference{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+									Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 									Name: "image-wasm-ca-ctb",
 								},
 							},
@@ -447,7 +446,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 									URL: "oci://example.com/wasm:v1.0.0",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To[gwapiv1.Kind]("ConfigMap"),
+											Kind: new(gwapiv1.Kind("ConfigMap")),
 											Name: "ca-configmap",
 										},
 									},
@@ -477,7 +476,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 									URL: "https://example.com/wasm.wasm",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+											Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 											Name: "ca-ctb",
 										},
 									},
@@ -518,7 +517,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 								Image: &egv1a1.ImageWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To[gwapiv1.Kind]("ConfigMap"),
+											Kind: new(gwapiv1.Kind("ConfigMap")),
 											Name: "cm1",
 										},
 									},
@@ -531,7 +530,7 @@ func TestWasmTLSIndexerFunctions(t *testing.T) {
 								HTTP: &egv1a1.HTTPWasmCodeSource{
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+											Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 											Name: "ctb1",
 										},
 									},
