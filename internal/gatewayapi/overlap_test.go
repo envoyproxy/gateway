@@ -14,7 +14,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestRouteMatchesOverlap(t *testing.T) {
+// routesOverlap is a test helper that returns true if two routes produce the
+// same canonical overlap key (i.e., they match the same set of requests).
+func routesOverlap(a, b *ir.HTTPRoute) bool {
+	return buildOverlapKey(a) == buildOverlapKey(b)
+}
+
+func TestBuildOverlapKey(t *testing.T) {
 	tests := []struct {
 		name    string
 		a       *ir.HTTPRoute
@@ -143,6 +149,44 @@ func TestRouteMatchesOverlap(t *testing.T) {
 			overlap: false,
 		},
 		{
+			name: "header names are compared case-insensitively",
+			a: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")},
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "X-Custom", Exact: ptr.To("val1")},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")},
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "x-custom", Exact: ptr.To("val1")},
+				},
+			},
+			overlap: true,
+		},
+		{
+			name: "header matches in different order still overlap",
+			a: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")},
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "X-A", Exact: ptr.To("1")},
+					{Name: "X-B", Exact: ptr.To("2")},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname:  "example.com",
+				PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")},
+				HeaderMatches: []*ir.StringMatch{
+					{Name: "X-B", Exact: ptr.To("2")},
+					{Name: "X-A", Exact: ptr.To("1")},
+				},
+			},
+			overlap: true,
+		},
+		{
 			name: "identical exact path with identical query param matches",
 			a: &ir.HTTPRoute{
 				Hostname:  "example.com",
@@ -156,6 +200,42 @@ func TestRouteMatchesOverlap(t *testing.T) {
 				PathMatch: &ir.StringMatch{Exact: ptr.To("/foo")},
 				QueryParamMatches: []*ir.StringMatch{
 					{Name: "key", Exact: ptr.To("value")},
+				},
+			},
+			overlap: true,
+		},
+		{
+			name: "query param matches in different order still overlap",
+			a: &ir.HTTPRoute{
+				Hostname: "example.com",
+				QueryParamMatches: []*ir.StringMatch{
+					{Name: "a", Exact: ptr.To("1")},
+					{Name: "b", Exact: ptr.To("2")},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname: "example.com",
+				QueryParamMatches: []*ir.StringMatch{
+					{Name: "b", Exact: ptr.To("2")},
+					{Name: "a", Exact: ptr.To("1")},
+				},
+			},
+			overlap: true,
+		},
+		{
+			name: "cookie matches in different order still overlap",
+			a: &ir.HTTPRoute{
+				Hostname: "example.com",
+				CookieMatches: []*ir.StringMatch{
+					{Name: "a", Exact: ptr.To("1")},
+					{Name: "b", Exact: ptr.To("2")},
+				},
+			},
+			b: &ir.HTTPRoute{
+				Hostname: "example.com",
+				CookieMatches: []*ir.StringMatch{
+					{Name: "b", Exact: ptr.To("2")},
+					{Name: "a", Exact: ptr.To("1")},
 				},
 			},
 			overlap: true,
@@ -176,123 +256,7 @@ func TestRouteMatchesOverlap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.overlap, routeMatchesOverlap(tt.a, tt.b))
-		})
-	}
-}
-
-func TestStringMatchEqual(t *testing.T) {
-	tests := []struct {
-		name  string
-		a     *ir.StringMatch
-		b     *ir.StringMatch
-		equal bool
-	}{
-		{
-			name:  "both nil",
-			a:     nil,
-			b:     nil,
-			equal: true,
-		},
-		{
-			name:  "one nil",
-			a:     &ir.StringMatch{Exact: ptr.To("foo")},
-			b:     nil,
-			equal: false,
-		},
-		{
-			name:  "identical exact",
-			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v")},
-			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v")},
-			equal: true,
-		},
-		{
-			name:  "different name",
-			a:     &ir.StringMatch{Name: "a", Exact: ptr.To("v")},
-			b:     &ir.StringMatch{Name: "b", Exact: ptr.To("v")},
-			equal: false,
-		},
-		{
-			name:  "different value",
-			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v1")},
-			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v2")},
-			equal: false,
-		},
-		{
-			name:  "different distinct",
-			a:     &ir.StringMatch{Name: "h", Distinct: true},
-			b:     &ir.StringMatch{Name: "h", Distinct: false},
-			equal: false,
-		},
-		{
-			name:  "different invert",
-			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
-			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v")},
-			equal: false,
-		},
-		{
-			name:  "same invert",
-			a:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
-			b:     &ir.StringMatch{Name: "h", Exact: ptr.To("v"), Invert: ptr.To(true)},
-			equal: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.equal, stringMatchEqual(tt.a, tt.b))
-		})
-	}
-}
-
-func TestStringMatchSliceEqual(t *testing.T) {
-	tests := []struct {
-		name  string
-		a     []*ir.StringMatch
-		b     []*ir.StringMatch
-		equal bool
-	}{
-		{
-			name:  "both empty",
-			a:     nil,
-			b:     nil,
-			equal: true,
-		},
-		{
-			name:  "different lengths",
-			a:     []*ir.StringMatch{{Name: "a", Exact: ptr.To("1")}},
-			b:     nil,
-			equal: false,
-		},
-		{
-			name: "identical",
-			a: []*ir.StringMatch{
-				{Name: "a", Exact: ptr.To("1")},
-				{Name: "b", Exact: ptr.To("2")},
-			},
-			b: []*ir.StringMatch{
-				{Name: "a", Exact: ptr.To("1")},
-				{Name: "b", Exact: ptr.To("2")},
-			},
-			equal: true,
-		},
-		{
-			name: "same elements different order",
-			a: []*ir.StringMatch{
-				{Name: "a", Exact: ptr.To("1")},
-				{Name: "b", Exact: ptr.To("2")},
-			},
-			b: []*ir.StringMatch{
-				{Name: "b", Exact: ptr.To("2")},
-				{Name: "a", Exact: ptr.To("1")},
-			},
-			equal: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.equal, stringMatchSliceEqual(tt.a, tt.b))
+			assert.Equal(t, tt.overlap, routesOverlap(tt.a, tt.b))
 		})
 	}
 }

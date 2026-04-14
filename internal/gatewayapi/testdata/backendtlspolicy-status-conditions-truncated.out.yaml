@@ -1297,10 +1297,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -1317,10 +1317,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -1337,10 +1337,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-3
@@ -1357,10 +1357,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-4
@@ -1377,10 +1377,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-5
@@ -1397,10 +1397,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-6
@@ -1417,10 +1417,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-7
@@ -1437,10 +1437,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-8
@@ -1457,10 +1457,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-9
@@ -1477,10 +1477,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-10
@@ -1497,10 +1497,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-11
@@ -1517,10 +1517,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-12
@@ -1537,10 +1537,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-13
@@ -1557,10 +1557,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-14
@@ -1577,10 +1577,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-15
@@ -1597,10 +1597,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-16
@@ -1617,10 +1617,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-17
@@ -1637,10 +1637,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-18
@@ -1710,10 +1710,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -1731,10 +1731,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -1752,10 +1752,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-3
@@ -1773,10 +1773,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-4
@@ -1794,10 +1794,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-5
@@ -1815,10 +1815,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-6
@@ -1836,10 +1836,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-7
@@ -1857,10 +1857,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-8
@@ -1878,10 +1878,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-9
@@ -1899,10 +1899,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-10
@@ -1920,10 +1920,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-11
@@ -1941,10 +1941,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-12
@@ -1962,10 +1962,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-13
@@ -1983,10 +1983,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-14
@@ -2004,10 +2004,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-15
@@ -2025,10 +2025,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-16
@@ -2046,10 +2046,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-17
@@ -2067,10 +2067,10 @@ httpRoutes:
         status: "False"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): envoy-gateway/httproute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute envoy-gateway/httproute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-18

@@ -380,10 +380,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/httproute-3'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-3'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -422,10 +422,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2

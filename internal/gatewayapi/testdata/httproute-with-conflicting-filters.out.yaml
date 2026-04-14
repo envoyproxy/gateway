@@ -99,10 +99,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/mirror-request-redirect'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/mirror-request-redirect'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -163,10 +163,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/mirror-direct-response'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/mirror-direct-response'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1

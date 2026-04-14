@@ -506,11 +506,11 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-2,
-          default/grpcroute-3'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-2,
+          GRPCRoute default/grpcroute-3'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -544,11 +544,11 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-1,
-          default/grpcroute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1,
+          GRPCRoute default/grpcroute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -582,11 +582,11 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-1,
-          default/grpcroute-3'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1,
+          GRPCRoute default/grpcroute-3'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -663,10 +663,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/httproute-4'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-4'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2
@@ -742,10 +742,10 @@ httpRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/httproute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): HTTPRoute default/httproute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-2

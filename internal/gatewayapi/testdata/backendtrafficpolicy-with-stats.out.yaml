@@ -211,10 +211,10 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-2'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-2'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
@@ -248,10 +248,10 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-1'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-1'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1

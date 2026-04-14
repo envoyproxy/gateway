@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -1328,25 +1327,48 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-// routeKey returns a "namespace/name" key for a route resource metadata.
-func routeKey(namespace, name string) string {
-	return namespace + "/" + name
+// routeKey returns a "kind/namespace/name" key for a route resource.
+// Kind is included so HTTPRoute and GRPCRoute with the same namespace/name
+// do not collide in the route lookup.
+func routeKey(kind, namespace, name string) string {
+	return kind + "/" + namespace + "/" + name
+}
+
+// routeDisplayNameFromKey converts a routeKey ("Kind/namespace/name") into a
+// human-readable form ("Kind namespace/name") for user-facing status messages.
+func routeDisplayNameFromKey(key string) string {
+	kind, nsName, ok := strings.Cut(key, "/")
+	if !ok {
+		return key
+	}
+	return kind + " " + nsName
+}
+
+// overlapKey is a canonical representation of a route's match conditions.
+// Routes sharing the same overlapKey within a listener match the exact same
+// set of requests and are therefore considered overlapping.
+type overlapKey struct {
+	hostname string
+	path     string
+	headers  string
+	query    string
+	cookies  string
 }
 
 // checkRouteOverlaps detects overlapping route matches across all IR listeners
 // and sets a warning Overlap condition on the affected HTTPRoutes and GRPCRoutes.
 func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRoutes []*GRPCRouteContext, xdsIR resource.XdsIRMap) {
-	// Build a combined lookup from "namespace/name" to RouteContext and its ParentRefs.
+	// Build a combined lookup from "kind/namespace/name" to RouteContext and its ParentRefs.
 	type routeInfo struct {
 		route      RouteContext
 		parentRefs map[gwapiv1.ParentReference]*RouteParentContext
 	}
 	routeByKey := make(map[string]*routeInfo, len(httpRoutes)+len(grpcRoutes))
 	for _, hr := range httpRoutes {
-		routeByKey[routeKey(hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
+		routeByKey[routeKey(string(hr.GetRouteType()), hr.GetNamespace(), hr.GetName())] = &routeInfo{route: hr, parentRefs: hr.ParentRefs}
 	}
 	for _, gr := range grpcRoutes {
-		routeByKey[routeKey(gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
+		routeByKey[routeKey(string(gr.GetRouteType()), gr.GetNamespace(), gr.GetName())] = &routeInfo{route: gr, parentRefs: gr.ParentRefs}
 	}
 
 	// overlaps tracks per IR listener which routes overlap with which others.
@@ -1356,35 +1378,37 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 
 	for _, xds := range xdsIR {
 		for _, httpListener := range xds.HTTP {
-			routes := httpListener.Routes
-			// Pre-compute route keys
-			keys := make([]string, len(routes))
-			for i, r := range routes {
-				if r.Metadata != nil {
-					keys[i] = routeKey(r.Metadata.Namespace, r.Metadata.Name)
-				}
-			}
-			for i := 0; i < len(routes); i++ {
-				if keys[i] == "" {
+			// Bucket routes by their canonical overlap key. Any bucket with
+			// more than one distinct route contains overlapping routes.
+			buckets := make(map[overlapKey]map[string]struct{})
+			for _, r := range httpListener.Routes {
+				if r.Metadata == nil {
 					continue
 				}
-				for j := i + 1; j < len(routes); j++ {
-					if keys[j] == "" || keys[i] == keys[j] {
-						continue
-					}
-					if routeMatchesOverlap(routes[i], routes[j]) {
-						if overlaps[httpListener.Name] == nil {
-							overlaps[httpListener.Name] = make(listenerOverlaps)
+				rKey := routeKey(r.Metadata.Kind, r.Metadata.Namespace, r.Metadata.Name)
+				k := buildOverlapKey(r)
+				if buckets[k] == nil {
+					buckets[k] = make(map[string]struct{})
+				}
+				buckets[k][rKey] = struct{}{}
+			}
+			for _, routeKeys := range buckets {
+				if len(routeKeys) < 2 {
+					continue
+				}
+				if overlaps[httpListener.Name] == nil {
+					overlaps[httpListener.Name] = make(listenerOverlaps)
+				}
+				lo := overlaps[httpListener.Name]
+				for ki := range routeKeys {
+					for kj := range routeKeys {
+						if ki == kj {
+							continue
 						}
-						lo := overlaps[httpListener.Name]
-						if lo[keys[i]] == nil {
-							lo[keys[i]] = make(map[string]struct{})
+						if lo[ki] == nil {
+							lo[ki] = make(map[string]struct{})
 						}
-						if lo[keys[j]] == nil {
-							lo[keys[j]] = make(map[string]struct{})
-						}
-						lo[keys[i]][keys[j]] = struct{}{}
-						lo[keys[j]][keys[i]] = struct{}{}
+						lo[ki][kj] = struct{}{}
 					}
 				}
 			}
@@ -1431,7 +1455,7 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 
 			conflictNames := make([]string, 0, len(conflicts))
 			for name := range conflicts {
-				conflictNames = append(conflictNames, name)
+				conflictNames = append(conflictNames, routeDisplayNameFromKey(name))
 			}
 			sort.Strings(conflictNames)
 
@@ -1441,69 +1465,130 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				info.route.GetGeneration(),
-				status.RouteConditionOverlap,
+				status.RouteConditionRouteRulesOverlap,
 				metav1.ConditionTrue,
-				status.RouteReasonOverlap,
+				status.RouteReasonRouteRulesOverlap,
 				msg,
 			)
 		}
 	}
 }
 
-// routeMatchesOverlap checks if two IR HTTP routes have identical match conditions,
-// indicating that they match the same set of requests.
-// This detects routes with the same hostname and identical path, header, query param,
-// and cookie match conditions across all path match types (exact, prefix, regex).
-func routeMatchesOverlap(a, b *ir.HTTPRoute) bool {
-	if a.Hostname != b.Hostname {
-		return false
+// buildOverlapKey returns a canonical key capturing a route's match conditions.
+// Two routes with the same overlapKey match the exact same set of requests.
+// Header names are normalized to lowercase since HTTP header names are
+// case-insensitive, and slice-valued matches (headers, query params, cookies)
+// are sorted so that ordering does not affect equality.
+func buildOverlapKey(r *ir.HTTPRoute) overlapKey {
+	return overlapKey{
+		hostname: r.Hostname,
+		path:     stringMatchKey(r.PathMatch, false),
+		headers:  stringMatchSliceKey(r.HeaderMatches, true),
+		query:    stringMatchSliceKey(r.QueryParamMatches, false),
+		cookies:  stringMatchSliceKey(r.CookieMatches, false),
 	}
-	if !stringMatchEqual(a.PathMatch, b.PathMatch) {
-		return false
-	}
-	if !stringMatchSliceEqual(a.HeaderMatches, b.HeaderMatches) {
-		return false
-	}
-	if !stringMatchSliceEqual(a.QueryParamMatches, b.QueryParamMatches) {
-		return false
-	}
-	if !stringMatchSliceEqual(a.CookieMatches, b.CookieMatches) {
-		return false
-	}
-	return true
 }
 
-func stringMatchEqual(a, b *ir.StringMatch) bool {
-	if a == nil && b == nil {
-		return true
+// stringMatchKey serializes a StringMatch into a canonical string.
+// When lowercaseName is true, the Name field is normalized to lowercase.
+func stringMatchKey(s *ir.StringMatch, lowercaseName bool) string {
+	if s == nil {
+		return ""
 	}
-	if a == nil || b == nil {
-		return false
+	name := s.Name
+	if lowercaseName {
+		name = strings.ToLower(name)
 	}
-	return a.Name == b.Name &&
-		a.Distinct == b.Distinct &&
-		ptr.Equal(a.Exact, b.Exact) &&
-		ptr.Equal(a.Prefix, b.Prefix) &&
-		ptr.Equal(a.Suffix, b.Suffix) &&
-		ptr.Equal(a.SafeRegex, b.SafeRegex) &&
-		ptr.Equal(a.Invert, b.Invert)
+	var b strings.Builder
+	b.WriteString(name)
+	b.WriteByte('\x00')
+	if s.Exact != nil {
+		b.WriteByte('e')
+		b.WriteString(*s.Exact)
+	}
+	b.WriteByte('\x00')
+	if s.Prefix != nil {
+		b.WriteByte('p')
+		b.WriteString(*s.Prefix)
+	}
+	b.WriteByte('\x00')
+	if s.Suffix != nil {
+		b.WriteByte('s')
+		b.WriteString(*s.Suffix)
+	}
+	b.WriteByte('\x00')
+	if s.SafeRegex != nil {
+		b.WriteByte('r')
+		b.WriteString(*s.SafeRegex)
+	}
+	b.WriteByte('\x00')
+	if s.Distinct {
+		b.WriteByte('d')
+	}
+	b.WriteByte('\x00')
+	if s.Invert != nil && *s.Invert {
+		b.WriteByte('i')
+	}
+	return b.String()
 }
 
-func stringMatchSliceEqual(a, b []*ir.StringMatch) bool {
-	return slices.EqualFunc(a, b, stringMatchEqual)
+// stringMatchSliceKey serializes a slice of StringMatch into a canonical string
+// that is independent of element order.
+func stringMatchSliceKey(s []*ir.StringMatch, lowercaseName bool) string {
+	if len(s) == 0 {
+		return ""
+	}
+	keys := make([]string, len(s))
+	for i, m := range s {
+		keys[i] = stringMatchKey(m, lowercaseName)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, "\x01")
 }
 
-func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
+	kind := obj.GetObjectKind().GroupVersionKind().Kind
+	if kind == "" {
+		// Typed objects fetched via controller-runtime clients typically have an
+		// empty TypeMeta, so fall back to a type-based lookup to keep Kind reliable.
+		kind = kindForObject(obj)
+	}
 	metadata := &ir.ResourceMetadata{
-		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
-		Name:        resource.GetName(),
-		Namespace:   resource.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
+		Kind:        kind,
+		Name:        obj.GetName(),
+		Namespace:   obj.GetNamespace(),
+		Annotations: ir.MapToSlice(filterEGPrefix(obj.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)
 	}
 	return metadata
+}
+
+// kindForObject returns the Kind string for a known Gateway API or Kubernetes
+// object type. Returns an empty string for unknown types.
+func kindForObject(obj client.Object) string {
+	switch obj.(type) {
+	case *gwapiv1.HTTPRoute:
+		return resource.KindHTTPRoute
+	case *gwapiv1.GRPCRoute:
+		return resource.KindGRPCRoute
+	case *gwapiv1a2.TLSRoute:
+		return resource.KindTLSRoute
+	case *gwapiv1a2.TCPRoute:
+		return resource.KindTCPRoute
+	case *gwapiv1a2.UDPRoute:
+		return resource.KindUDPRoute
+	case *gwapiv1.Gateway:
+		return resource.KindGateway
+	case *corev1.Service:
+		return resource.KindService
+	case *mcsapiv1a1.ServiceImport:
+		return resource.KindServiceImport
+	case *egv1a1.Backend:
+		return resource.KindBackend
+	}
+	return ""
 }
 
 func filterEGPrefix(in map[string]string) map[string]string {

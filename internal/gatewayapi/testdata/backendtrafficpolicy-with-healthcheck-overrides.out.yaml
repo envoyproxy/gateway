@@ -230,10 +230,10 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-with-no-overrides'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-with-no-overrides'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway
@@ -267,10 +267,10 @@ grpcRoutes:
         status: "True"
         type: ResolvedRefs
       - lastTransitionTime: null
-        message: 'Overlapping match conditions with route(s): default/grpcroute-with-overrides'
-        reason: Overlap
+        message: 'Overlapping match conditions with route(s): GRPCRoute default/grpcroute-with-overrides'
+        reason: RouteRulesOverlap
         status: "True"
-        type: Overlap
+        type: RouteRulesOverlap
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway

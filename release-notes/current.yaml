@@ -70,6 +70,7 @@ bug fixes: |
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
   Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
+  Added a `RouteRulesOverlap` warning status condition for routes whose match conditions are identical to another route on the same listener, so users can identify silently-shadowed routes.
 
 # Enhancements that improve performance.
 performance improvements: |
