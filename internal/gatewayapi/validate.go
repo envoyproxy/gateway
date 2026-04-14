@@ -274,7 +274,7 @@ func (t *Translator) validateBackendRefBackend(
 	return nil
 }
 
-func (t *Translator) validateListenerConditions(listener *ListenerContext) bool {
+func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
@@ -287,7 +287,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) bool 
 			listener.SetCondition(gwapiv1.ListenerConditionConflicted, metav1.ConditionFalse, gwapiv1.ListenerReasonNoConflicts,
 				"No conflicts detected")
 		}
-		return true
+		return
 	}
 
 	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
@@ -298,7 +298,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) bool 
 			"Listener has been successfully translated")
 		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 			"Sending translated listener configuration to the data plane")
-		return true
+		return
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
@@ -333,11 +333,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) bool 
 				"Listener references have been resolved",
 			)
 		}
-		// skip computing IR
-		return false
 	}
-
-	return true
 }
 
 // hasInvalidCondition checks if a listener has been marked as invalid during per-listener validation.
