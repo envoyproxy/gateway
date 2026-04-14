@@ -22,6 +22,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
+const (
+	// SDSSecretType is the type for secrets that reference SDS configuration
+	SDSSecretType = "gateway.envoyproxy.io/sds-ref"
+)
+
 var (
 	ErrRefNotPermitted          = fmt.Errorf("cross-namespace reference is not permitted by any ReferenceGrant")
 	ErrInvalidCACertificateKind = fmt.Errorf("Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
@@ -262,7 +267,6 @@ func (t *Translator) processServerValidationTLSSettings(
 
 	if !tlsConfig.InsecureSkipVerify {
 		tlsConfig.UseSystemTrustStore = ptr.Deref(backend.Spec.TLS.WellKnownCACertificates, "") == gwapiv1.WellKnownCACertificatesSystem
-
 		if tlsConfig.UseSystemTrustStore {
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
 				Name: fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
@@ -270,7 +274,7 @@ func (t *Translator) processServerValidationTLSSettings(
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
 			// Backend doesn't allow cross-namespace reference, so pass nil resources here.
-			caCert, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
+			caCert, sds, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
 				Name:      backend.Name,
 				Namespace: backend.Namespace,
 				Kind:      resource.KindBackendTLSPolicy,
@@ -282,6 +286,7 @@ func (t *Translator) processServerValidationTLSSettings(
 			tlsConfig.CACertificate = &ir.TLSCACertificate{
 				Certificate: caCert,
 				Name:        fmt.Sprintf("%s/%s-ca", backend.Name, backend.Namespace),
+				SDS:         sds,
 			}
 		}
 	}
@@ -404,8 +409,35 @@ func (t *Translator) processClientTLSSettings(
 			)
 			return tlsConfig, err
 		}
-		tlsConfig.ClientCertificates = append(tlsConfig.ClientCertificates, getTLSCertificateFromSecret(secret))
+		// Check if this is an SDS reference secret
+		if secret.Type == SDSSecretType {
+			// For SDS reference secrets, extract the SDS secret name and URL from data
+			sdsSecretName, hasSecretName := secret.Data["secretName"]
+			sdsURLBytes, hasURL := secret.Data["url"]
+			if hasSecretName && len(sdsSecretName) > 0 && hasURL && len(sdsURLBytes) > 0 {
+				tlsConfig.ClientCertificates = []ir.TLSCertificate{
+					{
+						Name: string(sdsSecretName),
+						SDS: &ir.SDSConfig{
+							SecretName: string(sdsSecretName),
+							URL:        string(sdsURLBytes),
+						},
+					},
+				}
+			} else {
+				if !hasSecretName || len(sdsSecretName) == 0 {
+					err = fmt.Errorf("no secretName found in SDS reference secret %s", secret.Name)
+				} else {
+					err = fmt.Errorf("no url found in SDS reference secret %s", secret.Name)
+				}
+				return tlsConfig, err
+			}
+		} else {
+			// Regular secret processing
+			tlsConfig.ClientCertificates = append(tlsConfig.ClientCertificates, getTLSCertificateFromSecret(secret))
+		}
 	}
+
 	return tlsConfig, nil
 }
 
@@ -472,7 +504,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	caRefs := getObjectReferences(gwapiv1.Namespace(backendTLSPolicy.Namespace), backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	// BackendTLSPolicy doesn't allow cross-namespace reference,
 	// so pass nil resources here
-	caCert, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
+	caCert, sds, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
 		Group:     egv1a1.GroupName,
 		Name:      backendTLSPolicy.Name,
 		Namespace: backendTLSPolicy.Namespace,
@@ -481,10 +513,13 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	if err != nil {
 		return nil, err
 	}
+
 	tlsBundle.CACertificate = &ir.TLSCACertificate{
 		Certificate: caCert,
 		Name:        fmt.Sprintf("%s/%s-ca", backendTLSPolicy.Name, backendTLSPolicy.Namespace),
+		SDS:         sds,
 	}
+
 	return tlsBundle, nil
 }
 
@@ -503,7 +538,8 @@ func getObjectReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReferen
 
 // getCaCertsFromCARefs retrieves CA certificates from the given CA refs. It supports ConfigMap, Secret, and ClusterTrustBundle kinds.
 // TODO: move out of backendtlspolicy.go
-func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCertificates []gwapiv1.ObjectReference, meta resource.ResourceMetadata) ([]byte, error) {
+func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCertificates []gwapiv1.ObjectReference, meta resource.ResourceMetadata,
+) (caCert []byte, sds *ir.SDSConfig, err error) {
 	ca := ""
 	foundSupportedRef := false
 	for _, caRef := range caCertificates {
@@ -531,7 +567,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 				},
 				resources.ReferenceGrants,
 			) {
-				return nil, fmt.Errorf("%w for caCertificateRef %s/%s (kind: %s, namespace: %s)", ErrRefNotPermitted, caRef.Group, caRef.Name, kind, caRefNs)
+				return nil, nil, fmt.Errorf("%w for caCertificateRef %s/%s (kind: %s, namespace: %s)", ErrRefNotPermitted, caRef.Group, caRef.Name, kind, caRefNs)
 			}
 		}
 
@@ -546,25 +582,43 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 					}
 					ca += crt
 				} else {
-					return nil, fmt.Errorf("no ca found in configmap %s", cm.Name)
+					return nil, nil, fmt.Errorf("no ca found in configmap %s", cm.Name)
 				}
 			} else {
-				return nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, caRefNs)
+				return nil, nil, fmt.Errorf("configmap %s not found in namespace %s", caRef.Name, caRefNs)
 			}
 		case resource.KindSecret:
 			foundSupportedRef = true
 			secret := t.GetSecret(caRefNs, string(caRef.Name))
 			if secret != nil {
+				// Check if this is an SDS reference secret
+				if secret.Type == SDSSecretType {
+					// For SDS reference secrets, extract the SDS secret name and URL from data
+					sdsSecretName, hasSecretName := secret.Data["secretName"]
+					sdsURLBytes, hasURL := secret.Data["url"]
+					// TODO: support more sds options if needed.
+					if !hasSecretName || len(sdsSecretName) == 0 {
+						return nil, nil, fmt.Errorf("no secretName found in SDS reference secret %s", secret.Name)
+					}
+					if !hasURL || len(sdsURLBytes) == 0 {
+						return nil, nil, fmt.Errorf("no url found in SDS reference secret %s", secret.Name)
+					}
+					return nil, &ir.SDSConfig{
+						SecretName: string(sdsSecretName),
+						URL:        string(sdsURLBytes),
+					}, nil
+				}
+				// Regular secret processing
 				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
 					if ca != "" {
 						ca += "\n"
 					}
 					ca += string(crt)
 				} else {
-					return nil, fmt.Errorf("no ca found in secret %s", secret.Name)
+					return nil, nil, fmt.Errorf("no ca found in secret %s", secret.Name)
 				}
 			} else {
-				return nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, caRefNs)
+				return nil, nil, fmt.Errorf("secret %s not found in namespace %s", caRef.Name, caRefNs)
 			}
 		case resource.KindClusterTrustBundle:
 			foundSupportedRef = true
@@ -575,18 +629,18 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 				}
 				ca += ctb.Spec.TrustBundle
 			} else {
-				return nil, fmt.Errorf("cluster trust bundle %s not found", caRef.Name)
+				return nil, nil, fmt.Errorf("cluster trust bundle %s not found", caRef.Name)
 			}
 		}
 	}
 
 	if ca == "" {
 		if !foundSupportedRef {
-			return nil, fmt.Errorf("%w in caCertificateRefs", ErrInvalidCACertificateKind)
+			return nil, nil, fmt.Errorf("%w in caCertificateRefs", ErrInvalidCACertificateKind)
 		}
-		return nil, ErrNoValidCACertificate
+		return nil, nil, ErrNoValidCACertificate
 	}
-	return []byte(ca), nil
+	return []byte(ca), nil, nil
 }
 
 func getAncestorRefs(policy *gwapiv1.BackendTLSPolicy) []*gwapiv1.ParentReference {

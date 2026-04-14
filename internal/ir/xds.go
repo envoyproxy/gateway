@@ -471,12 +471,26 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// SDSConfig holds the configuration for a Secret Discovery Service (SDS) server.
+// +k8s:deepcopy-gen=true
+type SDSConfig struct {
+	// SecretName is an identifier for the SDS configuration.
+	SecretName string `json:"secretName" yaml:"secretName"`
+	// URL is the URL of the SDS server
+	URL string `json:"url" yaml:"url"`
+
+	// TODO: support additional SDS configuration options
+	// such as TLS settings for the SDS server, or authentication credentials if needed.
 }
 
 // TLSCrl holds a single CRL's details
@@ -497,6 +511,8 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
