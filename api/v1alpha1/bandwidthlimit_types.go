@@ -13,12 +13,12 @@ import (
 //
 // +kubebuilder:validation:XValidation:rule="has(self.request) || has(self.response)",message="at least one of request or response must be specified"
 type BandwidthLimitSpec struct {
-	// Request configures the bandwidth limit for client-to-upstream (ingress) traffic.
+	// Request configures the bandwidth limit for incoming traffic (gateway to backend).
 	//
 	// +optional
 	Request *BandwidthLimitRequestConfig `json:"request,omitempty"`
 
-	// Response configures the bandwidth limit for upstream-to-client (egress) traffic.
+	// Response configures the bandwidth limit for outgoing traffic (backend to gateway).
 	//
 	// +optional
 	Response *BandwidthLimitResponseConfig `json:"response,omitempty"`
@@ -26,26 +26,32 @@ type BandwidthLimitSpec struct {
 
 // BandwidthLimitRequestConfig defines the bandwidth limit configuration for the request direction.
 type BandwidthLimitRequestConfig struct {
-	// Limit specifies the bandwidth limit as a bytes-per-second throughput rate.
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	Limit resource.Quantity `json:"limit"`
+	// Limit specifies the bandwidth limit as a bytes-per-unit throughput rate.
+	Limit BandwidthLimitValue `json:"limit"`
 }
 
 // BandwidthLimitResponseConfig defines the bandwidth limit configuration for the response direction.
 type BandwidthLimitResponseConfig struct {
-	// Limit specifies the bandwidth limit as a bytes-per-second throughput rate.
-	//
-	// +kubebuilder:validation:XIntOrString
-	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	Limit resource.Quantity `json:"limit"`
+	// Limit specifies the bandwidth limit as a bytes-per-unit throughput rate.
+	Limit BandwidthLimitValue `json:"limit"`
 
-	// ResponseTrailers con figures the trailer headers appended to responses
+	// ResponseTrailers configures the trailer headers appended to responses
 	// when bandwidth limiting introduces delays.
 	//
 	// +optional
 	ResponseTrailers *BandwidthLimitResponseTrailers `json:"responseTrailers,omitempty"`
+}
+
+// BandwidthLimitValue defines the bandwidth limit value and its time unit.
+type BandwidthLimitValue struct {
+	// Request specifies the bandwidth limit.
+	//
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	Request resource.Quantity `json:"request"`
+
+	// Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour).
+	Unit RateLimitUnit `json:"unit"`
 }
 
 type BandwidthLimitResponseTrailers struct {

@@ -22583,39 +22583,75 @@ spec:
                   sent to and received from the backend.
                 properties:
                   request:
-                    description: Request configures the bandwidth limit for client-to-upstream
-                      (ingress) traffic.
+                    description: Request configures the bandwidth limit for incoming
+                      traffic (gateway to backend).
                     properties:
                       limit:
-                        allOf:
-                        - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: Limit specifies the bandwidth limit as a bytes-per-second
+                        description: Limit specifies the bandwidth limit as a bytes-per-unit
                           throughput rate.
-                        x-kubernetes-int-or-string: true
+                        properties:
+                          request:
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Request specifies the bandwidth limit.
+                            x-kubernetes-int-or-string: true
+                          unit:
+                            description: Unit specifies the time unit for the bandwidth
+                              limit (e.g. Second, Minute, Hour).
+                            enum:
+                            - Second
+                            - Minute
+                            - Hour
+                            - Day
+                            - Month
+                            - Year
+                            type: string
+                        required:
+                        - request
+                        - unit
+                        type: object
                     required:
                     - limit
                     type: object
                   response:
-                    description: Response configures the bandwidth limit for upstream-to-client
-                      (egress) traffic.
+                    description: Response configures the bandwidth limit for outgoing
+                      traffic (backend to gateway).
                     properties:
                       limit:
-                        allOf:
-                        - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                        - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
-                        anyOf:
-                        - type: integer
-                        - type: string
-                        description: Limit specifies the bandwidth limit as a bytes-per-second
+                        description: Limit specifies the bandwidth limit as a bytes-per-unit
                           throughput rate.
-                        x-kubernetes-int-or-string: true
+                        properties:
+                          request:
+                            allOf:
+                            - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Request specifies the bandwidth limit.
+                            x-kubernetes-int-or-string: true
+                          unit:
+                            description: Unit specifies the time unit for the bandwidth
+                              limit (e.g. Second, Minute, Hour).
+                            enum:
+                            - Second
+                            - Minute
+                            - Hour
+                            - Day
+                            - Month
+                            - Year
+                            type: string
+                        required:
+                        - request
+                        - unit
+                        type: object
                       responseTrailers:
                         description: |-
-                          ResponseTrailers con figures the trailer headers appended to responses
+                          ResponseTrailers configures the trailer headers appended to responses
                           when bandwidth limiting introduces delays.
                         properties:
                           prefix:

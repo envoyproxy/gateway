@@ -611,7 +611,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-second throughput rate. |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
 
 
 #### BandwidthLimitResponseConfig
@@ -625,8 +625,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `limit` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-second throughput rate. |
-| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers con figures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers configures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
 
 
 #### BandwidthLimitResponseTrailers
@@ -654,8 +654,24 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures the bandwidth limit for client-to-upstream (ingress) traffic. |
-| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures the bandwidth limit for upstream-to-client (egress) traffic. |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures the bandwidth limit for incoming traffic (gateway to backend). |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures the bandwidth limit for outgoing traffic (backend to gateway). |
+
+
+#### BandwidthLimitValue
+
+
+
+BandwidthLimitValue defines the bandwidth limit value and its time unit.
+
+_Appears in:_
+- [BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `request` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Request specifies the bandwidth limit. |
+| `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
 
 
 #### BasicAuth
@@ -5168,6 +5184,7 @@ RateLimitUnit specifies the intervals for setting rate limits.
 Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
 
 _Appears in:_
+- [BandwidthLimitValue](#bandwidthlimitvalue)
 - [RateLimitValue](#ratelimitvalue)
 
 | Value | Description |
