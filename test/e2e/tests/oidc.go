@@ -83,7 +83,7 @@ var OIDCTest = suite.ConformanceTest{
 				testURL:            "http://www.example.com/foo",
 				logoutURL:          "http://www.example.com/foo/logout",
 				forwardAccessToken: true,
-				forwardIDToken:     ptr.To("x-eg-id-token"),
+				forwardIDToken:     new("x-eg-id-token"),
 			},
 			{
 				routeName:          "http-with-oidc-bar",
@@ -91,7 +91,7 @@ var OIDCTest = suite.ConformanceTest{
 				clientID:           "oidctest-bar",
 				testURL:            "http://www.example.com/bar",
 				logoutURL:          "http://www.example.com/bar/logout",
-				forwardIDToken:     ptr.To("Authorization"),
+				forwardIDToken:     new("Authorization"),
 			},
 		}
 
