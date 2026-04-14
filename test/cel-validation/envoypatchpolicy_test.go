@@ -16,7 +16,6 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -37,7 +36,7 @@ func TestEnvoyPatchPolicyTarget(t *testing.T) {
 					Name: "test-listener",
 					Operation: egv1a1.JSONPatchOperation{
 						Op:    "add",
-						Path:  ptr.To("/foo"),
+						Path:  new("/foo"),
 						Value: &apiextensionsv1.JSON{Raw: []byte(`"bar"`)},
 					},
 				},

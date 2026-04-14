@@ -169,9 +169,41 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 // getTargetRefsForEPP returns the target refs for the given EnvoyPatchPolicy, handling both the deprecated TargetRef and the new TargetRefs fields.
 // There's CEL validation to ensure that only one of TargetRef or TargetRefs is set, so we can safely return the non-nil field.
+// Duplicates are removed to prevent creating multiple IR entries for the same target.
 func getTargetRefsForEPP(policy *egv1a1.EnvoyPatchPolicy) []gwapiv1.LocalPolicyTargetReference {
+	var refs []gwapiv1.LocalPolicyTargetReference
 	if policy.Spec.TargetRef != nil {
-		return []gwapiv1.LocalPolicyTargetReference{*policy.Spec.TargetRef}
+		refs = []gwapiv1.LocalPolicyTargetReference{*policy.Spec.TargetRef}
+	} else {
+		refs = policy.Spec.TargetRefs
 	}
-	return policy.Spec.TargetRefs
+	return deduplicateTargetRefs(refs)
+}
+
+// deduplicateTargetRefs removes duplicate LocalPolicyTargetReference entries based on Group, Kind, and Name.
+func deduplicateTargetRefs(refs []gwapiv1.LocalPolicyTargetReference) []gwapiv1.LocalPolicyTargetReference {
+	if len(refs) <= 1 {
+		return refs
+	}
+
+	seen := make(map[string]bool)
+	deduplicated := make([]gwapiv1.LocalPolicyTargetReference, 0, len(refs))
+
+	for _, ref := range refs {
+		// Create a unique key from the reference fields
+		group := ""
+		if ref.Group != "" {
+			group = string(ref.Group)
+		}
+		kind := string(ref.Kind)
+		name := string(ref.Name)
+		key := fmt.Sprintf("%s/%s/%s", group, kind, name)
+
+		if !seen[key] {
+			seen[key] = true
+			deduplicated = append(deduplicated, ref)
+		}
+	}
+
+	return deduplicated
 }

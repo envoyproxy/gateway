@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	ktypes "k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -258,6 +259,36 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
+// ancestorRefKey generates a unique key for an ancestor reference.
+// This is used to identify and merge ancestor status updates.
+func ancestorRefKey(ref *gwapiv1.ParentReference) string {
+	if ref == nil {
+		return ""
+	}
+
+	group := ""
+	if ref.Group != nil {
+		group = string(*ref.Group)
+	}
+
+	kind := ""
+	if ref.Kind != nil {
+		kind = string(*ref.Kind)
+	}
+
+	namespace := ""
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	sectionName := ""
+	if ref.SectionName != nil {
+		sectionName = string(*ref.SectionName)
+	}
+
+	return fmt.Sprintf("%s/%s/%s/%s/%s", group, kind, namespace, ref.Name, sectionName)
+}
+
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(
@@ -363,6 +394,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 
 				// Publish EnvoyPatchPolicyStatus
+				// Merge ancestor conditions from multiple translation runs for the same policy
 				for _, e := range result.EnvoyPatchPolicyStatuses {
 					key := ktypes.NamespacedName{
 						Name:      e.Name,
@@ -372,9 +404,51 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					// They may have been skipped in this translation because
 					// their target is not found (not relevant)
 					if len(e.Status.Ancestors) > 0 {
-						// Truncate status.ancestors to max 16 entries before storing
-						status.TruncatePolicyAncestors(e.Status, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
-						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+						// Load existing status if it exists
+						existingStatus, exists := r.ProviderResources.EnvoyPatchPolicyStatuses.Load(key)
+
+						if exists && existingStatus != nil {
+							// Merge ancestors: update existing ancestors or add new ones
+							mergedAncestors := make([]gwapiv1.PolicyAncestorStatus, 0, len(existingStatus.Ancestors)+len(e.Status.Ancestors))
+
+							// Create a map of new ancestors by reference for quick lookup
+							newAncestorMap := make(map[string]*gwapiv1.PolicyAncestorStatus)
+							for i := range e.Status.Ancestors {
+								refKey := ancestorRefKey(&e.Status.Ancestors[i].AncestorRef)
+								newAncestorMap[refKey] = &e.Status.Ancestors[i]
+							}
+
+							// Update existing ancestors or keep them if not in new status
+							for i := range existingStatus.Ancestors {
+								refKey := ancestorRefKey(&existingStatus.Ancestors[i].AncestorRef)
+								if newAncestor, found := newAncestorMap[refKey]; found {
+									// Replace with updated ancestor
+									mergedAncestors = append(mergedAncestors, *newAncestor)
+									delete(newAncestorMap, refKey)
+								} else {
+									// Keep existing ancestor that wasn't updated
+									mergedAncestors = append(mergedAncestors, existingStatus.Ancestors[i])
+								}
+							}
+
+							// Add remaining new ancestors that weren't in existing status
+							for _, newAncestor := range newAncestorMap {
+								mergedAncestors = append(mergedAncestors, *newAncestor)
+							}
+
+							// Create merged status
+							mergedStatus := &gwapiv1.PolicyStatus{
+								Ancestors: mergedAncestors,
+							}
+							// Truncate merged status.ancestors to max 16 entries before storing
+							status.TruncatePolicyAncestors(mergedStatus, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
+							r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, mergedStatus)
+						} else {
+							// No existing status, store the new one
+							// Truncate status.ancestors to max 16 entries before storing
+							status.TruncatePolicyAncestors(e.Status, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
+							r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+						}
 					}
 					delete(statusesToDelete, key)
 				}
