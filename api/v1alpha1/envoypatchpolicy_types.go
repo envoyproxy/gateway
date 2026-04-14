@@ -81,6 +81,7 @@ const (
 // using JSONPatch semantics.
 //
 // +kubebuilder:validation:XValidation:rule="!(has(self.name) && has(self.nameSelector))",message="only one of name and nameSelector can be specified"
+// +kubebuilder:validation:XValidation:rule="has(self.name) || has(self.nameSelector)",message="either name or nameSelector must be specified"
 type EnvoyJSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
 	Type EnvoyResourceType `json:"type"`

@@ -128,6 +128,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Save the patch
+		policyRejected := false
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{}
 			irPatch.Type = string(patch.Type)
@@ -153,7 +154,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 						resolveErr,
 					)
 
-					continue
+					policyRejected = true
+					break
 				}
 			}
 			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
@@ -165,8 +167,14 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
 		}
 
-		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+		// Only set Accepted=True if policy was not rejected due to validation errors
+		if !policyRejected {
+			// Set Accepted=True
+			status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+		} else {
+			// Clear any partial patches that were added before validation failed
+			policyIR.JSONPatches = nil
+		}
 	}
 
 	return res
