@@ -150,7 +150,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	}
 	envoyProxy.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas: new(int32(replicas)),
+			Replicas: new(replicas),
 		},
 	}
 

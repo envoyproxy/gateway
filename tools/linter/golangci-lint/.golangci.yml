@@ -37,6 +37,7 @@ linters:
     - copyloopvar
     - depguard
     - errorlint
+    - forbidigo
     - gocritic
     - goheader
     - gosec
@@ -85,6 +86,11 @@ linters:
               desc: "use errors instead"
             - pkg: github.com/hashicorp/go-multierror
               desc: "use errors instead"
+    forbidigo:
+      forbid:
+        - pattern: ^ptr\.To$
+          msg: "use new() builtin instead of ptr.To"
+      analyze-types: true
     gocritic:
       enabled-tags:
         - performance
