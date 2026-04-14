@@ -452,14 +452,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 		}
 	}
 
-	var envoyProxy *egv1a1.EnvoyProxy
-	for _, pCtx := range parentRefCtxs {
-		if gw := pCtx.GetGateway(); gw != nil {
-			envoyProxy = gw.envoyProxy
-			break
-		}
-	}
-
 	// Set conditions for resolve error, then skip current xroute
 	if resolveErr != nil {
 		status.SetResolveErrorForPolicyAncestors(&policy.Status,
@@ -472,19 +464,60 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	}
 
 	if policy.Spec.MergeType == nil {
-		// Set conditions for translation error if it got any
-		if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, envoyProxy); err != nil {
-			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
-				t.GatewayControllerName,
-				policy.Generation,
-				status.Error2ConditionMsg(err),
-			)
+		if policyUsesDynamicModuleLoadBalancer(policy) {
+			// DynamicModule LB validation depends on the parent Gateway's
+			// EnvoyProxy.spec.dynamicModules allowlist, so translate once per
+			// unique IRKey with that gateway's EnvoyProxy and report status
+			// per ancestor. In MergeGateways mode multiple parents share an
+			// IRKey, so dedup.
+			errByIRKey := make(map[string]error)
+			seen := make(map[string]struct{})
+			for _, pCtx := range parentRefCtxs {
+				gw := pCtx.GetGateway()
+				if gw == nil {
+					continue
+				}
+				gwNN := utils.NamespacedName(gw.Gateway)
+				irKey := t.IRKey(gwNN)
+				if _, dup := seen[irKey]; dup {
+					continue
+				}
+				seen[irKey] = struct{}{}
+				if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gw.envoyProxy); err != nil {
+					errByIRKey[irKey] = err
+				}
+			}
+			for i, pCtx := range parentRefCtxs {
+				gw := pCtx.GetGateway()
+				if gw == nil {
+					continue
+				}
+				if err := errByIRKey[t.IRKey(utils.NamespacedName(gw.Gateway))]; err != nil {
+					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
+						ancestorRefs[i],
+						t.GatewayControllerName,
+						policy.Generation,
+						status.Error2ConditionMsg(err),
+					)
+				}
+			}
+		} else {
+			// No DynamicModule LB; no other traffic feature consults
+			// EnvoyProxy, so a single translation fans out across all parents.
+			if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, nil); err != nil {
+				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+					ancestorRefs,
+					t.GatewayControllerName,
+					policy.Generation,
+					status.Error2ConditionMsg(err),
+				)
+			}
 		}
 	} else {
 		for _, parentRefCtx := range parentRefCtxs {
 			for _, listener := range parentRefCtx.listeners {
 				gwNN := utils.NamespacedName(listener.gateway.Gateway)
+				parentEnvoyProxy := listener.gateway.envoyProxy
 				ancestorRef := getAncestorRefForPolicy(gwNN, &listener.Name)
 
 				// Find Gateway listener level policy
@@ -501,7 +534,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				gwPolicy := gatewayPolicyMap[gwMapKey]
 				if gwPolicy == nil && listenerPolicy == nil {
 					// not found, fall back to the current policy
-					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name, envoyProxy); err != nil {
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, &listener.Name, parentEnvoyProxy); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -521,7 +554,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// merge with parent policy
 				if err := t.translateBackendTrafficPolicyForRouteWithMerge(
 					policy, parentPolicy, currTarget, gwNN, &listener.Name,
-					targetedRoute, xdsIR, envoyProxy,
+					targetedRoute, xdsIR, parentEnvoyProxy,
 				); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -792,6 +825,15 @@ func resolveBackendTrafficPolicyRouteTargetRef(
 	routes[key] = route
 
 	return route.RouteContext, nil
+}
+
+// policyUsesDynamicModuleLoadBalancer reports whether the policy's load
+// balancer configuration requires per-parent EnvoyProxy resolution. Only the
+// DynamicModule LB type validates against EnvoyProxy.spec.dynamicModules; all
+// other traffic features are gateway-independent.
+func policyUsesDynamicModuleLoadBalancer(policy *egv1a1.BackendTrafficPolicy) bool {
+	return policy != nil && policy.Spec.LoadBalancer != nil &&
+		policy.Spec.LoadBalancer.Type == egv1a1.DynamicModuleLoadBalancerType
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRoute(
