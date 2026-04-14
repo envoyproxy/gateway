@@ -68,12 +68,9 @@ bug fixes: |
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
-<<<<<<< HEAD
   Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
-=======
-  Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager so generated certs ConfigMaps include `ca.crt`; secret read access is scoped to the `gateway-helm-infra-manager` Role for this mode.
->>>>>>> 0d0455f71 (add release notes)
+  Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
 
 # Enhancements that improve performance.
 performance improvements: |
