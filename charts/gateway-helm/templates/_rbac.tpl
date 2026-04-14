@@ -249,7 +249,7 @@ verbs:
   - watch
 {{- end }}
 
-{{- define "eg.rbac.namespaced.infra.secrets.read" -}}
+{{- define "eg.rbac.controllernamespace.secrets.read" -}}
 - apiGroups:
   - ""
   resources:
