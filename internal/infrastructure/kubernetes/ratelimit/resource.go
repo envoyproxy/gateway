@@ -267,6 +267,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 	volumes = append(volumes, corev1.Volume{
 		Name: "certs",
 		VolumeSource: corev1.VolumeSource{
+			// #nosec G101 - This refers to a Kubernetes secret volume, not a credential
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy-rate-limit",
 				DefaultMode: new(int32(420)),

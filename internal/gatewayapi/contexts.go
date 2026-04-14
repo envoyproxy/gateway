@@ -44,8 +44,16 @@ type ResourceMetadata struct {
 // Precedence order (highest to lowest):
 // 1. Gateway.spec.tls.backend configuration
 // 2. EnvoyProxy.spec.backendTLS (attached to Gateway or GatewayClass)
+//
+// TODO: Merging fields in EnvoyProxy and Gateway TLS configs should be considered.
 func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *ResourceMetadata) {
-	if g.backendTLS != nil {
+	// If Gateway.spec.tls.backend is configured, it takes precedence over
+	// EnvoyProxy.spec.backendTLS even when translation produced no usable
+	// backendTLS config (for example, due to invalid clientCertificateRef).
+	if g.Gateway != nil && g.Spec.TLS != nil && g.Spec.TLS.Backend != nil {
+		if g.backendTLS == nil {
+			return nil, nil
+		}
 		return g.backendTLS, &ResourceMetadata{
 			Namespace: g.Namespace,
 			Name:      g.Name,
@@ -80,37 +88,37 @@ func (g *GatewayContext) ResetListeners() {
 	}
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
+// attachEnvoyProxy merges EnvoyProxy configurations from multiple levels and attaches the result.
+// Returns an error if the merge fails, which should be logged by the caller.
+// On error, the envoyProxy is still set using fallback priority-based selection
+// so the gateway can continue to function, but administrators should investigate the merge failure.
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) error {
 	// Priority order (highest to lowest):
 	// 1. Gateway-level EnvoyProxy (via parametersRef)
 	// 2. GatewayClass-level EnvoyProxy
 	// 3. Default EnvoyProxySpec from EnvoyGateway configuration
+
+	var gatewayProxy *egv1a1.EnvoyProxy
 
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				g.envoyProxy = ep
-				return
+				gatewayProxy = ep
 			}
 		}
-		// not found, fallthrough to use envoyProxy attached to gatewayclass
 	}
 
-	// Use GatewayClass-level EnvoyProxy if available
-	if resources.EnvoyProxyForGatewayClass != nil {
-		g.envoyProxy = resources.EnvoyProxyForGatewayClass
-		return
-	}
-
-	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		// Create a synthetic EnvoyProxy object from the default spec
-		g.envoyProxy = &egv1a1.EnvoyProxy{
-			Spec: *resources.EnvoyProxyDefaultSpec,
-		}
-	}
+	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
+	// configuration so the gateway can continue to function.
+	merged, err := MergeEnvoyProxyConfigs(
+		resources.EnvoyProxyDefaultSpec,
+		resources.EnvoyProxyForGatewayClass,
+		gatewayProxy,
+	)
+	g.envoyProxy = merged
+	return err
 }
 
 func (g *GatewayContext) IncreaseAttachedListenerSets() {

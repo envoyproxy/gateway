@@ -170,7 +170,7 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			expectEnvoyProxyNil: true,
 		},
 		{
-			name: "only default spec - should use default",
+			name: "only default spec - no gateway or gatewayclass proxy, use defaults",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
 				Concurrency: new(int32(4)),
 			},
@@ -223,13 +223,13 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			expectedConcurrency: new(int32(16)),
 		},
 		{
-			name: "default spec with merge gateways enabled",
+			name: "default spec with merge gateways enabled - no gatewayclass proxy, use defaults",
 			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
 				MergeGateways: new(true),
 				Concurrency:   new(int32(4)),
 			},
-			expectedMergeGateways: new(true),
 			expectedConcurrency:   new(int32(4)),
+			expectedMergeGateways: new(true),
 		},
 		{
 			name: "gatewayclass overrides default merge gateways setting",
@@ -286,7 +286,8 @@ func TestAttachEnvoyProxy(t *testing.T) {
 			}
 
 			// Call attachEnvoyProxy
-			gCtx.attachEnvoyProxy(resources, epMap)
+			err := gCtx.attachEnvoyProxy(resources, epMap)
+			require.NoError(t, err)
 
 			// Verify results
 			if tc.expectEnvoyProxyNil {

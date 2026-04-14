@@ -932,8 +932,6 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 	translator := &Translator{}
 
-	var testcases []*testcase
-
 	baseCase := func() *testcase {
 		return &testcase{
 			name: "reference covered by reference grant (all resources of kind)",
@@ -973,60 +971,59 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		}
 	}
 
-	testcases = append(testcases, baseCase())
+	mutateBaseCase := func(modify func(*testcase)) *testcase {
+		tc := baseCase()
+		modify(tc)
+		return tc
+	}
 
-	modified := baseCase()
-	modified.name = "reference covered by reference grant (named resource)"
-	modified.referenceGrant.Spec.To[0].Name = ObjectNamePtr("tls-secret-1")
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "no reference grants"
-	modified.referenceGrant = nil
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from namespace)"
-	modified.referenceGrant.Spec.From[0].Namespace = "wrong-namespace"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from kind)"
-	modified.referenceGrant.Spec.From[0].Kind = "WrongKind"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from group)"
-	modified.referenceGrant.Spec.From[0].Group = "wrong.group.k8s.io"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to name)"
-	modified.referenceGrant.Spec.To[0].Name = ObjectNamePtr("wrong-name")
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to namespace)"
-	modified.referenceGrant.Namespace = "wrong-namespace"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to kind)"
-	modified.referenceGrant.Spec.To[0].Kind = "WrongKind"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to group)"
-	modified.referenceGrant.Spec.To[0].Group = "wrong.group.k8s.io"
-	modified.want = false
-	testcases = append(testcases, modified)
+	testcases := []*testcase{
+		baseCase(),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference covered by reference grant (named resource)"
+			tc.referenceGrant.Spec.To[0].Name = ObjectNamePtr("tls-secret-1")
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "no reference grants"
+			tc.referenceGrant = nil
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from namespace)"
+			tc.referenceGrant.Spec.From[0].Namespace = "wrong-namespace"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from kind)"
+			tc.referenceGrant.Spec.From[0].Kind = "WrongKind"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from group)"
+			tc.referenceGrant.Spec.From[0].Group = "wrong.group.k8s.io"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to name)"
+			tc.referenceGrant.Spec.To[0].Name = ObjectNamePtr("wrong-name")
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to namespace)"
+			tc.referenceGrant.Namespace = "wrong-namespace"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to kind)"
+			tc.referenceGrant.Spec.To[0].Kind = "WrongKind"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to group)"
+			tc.referenceGrant.Spec.To[0].Group = "wrong.group.k8s.io"
+			tc.want = false
+		}),
+	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {

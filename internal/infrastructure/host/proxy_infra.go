@@ -107,6 +107,7 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
 func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
+	// #nosec G118 - cancel is stored in proxyContextMap and called later to stop the Envoy process
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
 	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})

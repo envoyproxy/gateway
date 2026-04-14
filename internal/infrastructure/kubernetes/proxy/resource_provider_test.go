@@ -407,6 +407,7 @@ func TestDeployment(t *testing.T) {
 						{
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
+								// #nosec G101 - This is a test secret name, not a credential
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "custom-envoy-cert",
 									DefaultMode: new(int32(420)),
@@ -962,6 +963,7 @@ func TestDaemonSet(t *testing.T) {
 						{
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
+								// #nosec G101 - This is a test secret name, not a credential
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "custom-envoy-cert",
 									DefaultMode: new(int32(420)),
@@ -1980,7 +1982,6 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 	}
 
 	// Create test infra with multiple namespaces
-	var infraList []*ir.Infra
 	infra1 := newTestInfraWithNamespacedName(types.NamespacedName{Namespace: "namespace-1", Name: "gateway-1"})
 	// Add HPA config to first infra
 	if infra1.Proxy.Config == nil {
@@ -2015,7 +2016,7 @@ func TestGatewayNamespaceModeMultipleResources(t *testing.T) {
 		MaxReplicas: new(int32(3)),
 	}
 
-	infraList = append(infraList, infra1, infra2)
+	infraList := []*ir.Infra{infra1, infra2}
 
 	deployments := make([]*appsv1.Deployment, 0, len(infraList))
 	services := make([]*corev1.Service, 0, len(infraList))

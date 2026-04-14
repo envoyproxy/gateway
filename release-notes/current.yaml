@@ -6,6 +6,7 @@ breaking changes: |
   The `0s` timeout in SecurityPolicy is now treated as infinite timeout instead of immediate timeout.
   `SamplingFraction` behavior changed from raw fraction to percentage ratio. This will lead to 100x more sampling than before. E.g. `numerator: 100` used to result in 1% sampling rate, now will result in 100% sampling.
   The controller now uses production logging encoder config by default, which provides better output when using JSON encoder.
+  SecurityPolicy OIDC now generates a single native `envoy.filters.http.oauth2` HTTP filter in the HCM filter chain and moves route-specific OAuth2 configuration to route `typed_per_filter_config`. This can break existing EnvoyPatchPolicies and extension managers that depend on the previous per-route OAuth2 filter instances or on the old OAuth2 filter configuration shape in the HCM filter chain.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -43,13 +44,16 @@ new features: |
   Added support for invert match in CIDR match RateLimit API.
   Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
+  Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
+  Fixed ClientTrafficPolicy to disable HTTP/3 and surface a warning on the policy when downstream client TLS validation is configured, instead of generating a rejected QUIC listener.
   Fixed validation of XListenerSet certificateRefs
   Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
   Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
+  Fixed `X-ENVOY-ORIGINAL-HOST` not being set when `headers.enableEnvoyHeaders` is enabled and hostname rewrite is configured for DynamicResolver type of Backends.
   Fixed standalone mode emitting non-actionable error logs for missing secrets and unsupported ratelimit deletion on every startup.
   Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
   Fixed xPolicy resources being processed from all namespaces when NamespaceSelector watch mode is configured in the Kubernetes provider.
@@ -64,7 +68,7 @@ bug fixes: |
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
-  Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy extAuth Backend
+  Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
 
 # Enhancements that improve performance.

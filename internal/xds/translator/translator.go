@@ -312,7 +312,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
 
-		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
+		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil //nolint:govet // nilness false positive: tcpXDSListener is reassigned each iteration by findXdsListenerByHostPort
 		tlsEnabled = httpListener.TLS != nil
 
 		switch {

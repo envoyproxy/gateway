@@ -82,6 +82,9 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
 				if portValidation.TLS.Validation == nil {
+					// An explicit per-port tls override with no validation disables
+					// frontend default validation on that port.
+					gtwPerPortCaCertificate[portValidation.Port] = nil
 					continue
 				}
 				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
