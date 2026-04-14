@@ -1338,6 +1338,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// EG uses the first rule without clientSelectors as the default route-level
 	// limit. If no such rule is found, EG uses a default limit of uint32 max.
 	var defaultLimit *ir.RateLimitValue
+	var defaultXRateLimitOption *egv1a1.XRateLimitHeadersOption
 	for _, rule := range local.Rules {
 		if len(rule.ClientSelectors) == 0 {
 			if defaultLimit != nil {
@@ -1347,6 +1348,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 				Requests: rule.Limit.Requests,
 				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 			}
+			// Capture the xRateLimit setting for the default bucket
+			defaultXRateLimitOption = rule.XRateLimit
 		}
 	}
 	// If no rule without clientSelectors is found, use uint32 max as the default
@@ -1390,8 +1393,9 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	rateLimit := &ir.RateLimit{
 		Local: &ir.LocalRateLimit{
-			Default: *defaultLimit,
-			Rules:   irRules,
+			Default:                 *defaultLimit,
+			Rules:                   irRules,
+			DefaultXRateLimitOption: defaultXRateLimitOption,
 		},
 	}
 

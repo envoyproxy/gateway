@@ -2498,6 +2498,12 @@ type LocalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// DefaultXRateLimitOption controls whether X-RateLimit response headers are emitted for
+	// the default bucket (requests not matching any rule).
+	// When nil, the default bucket inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	DefaultXRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"defaultXRateLimitOption,omitempty" yaml:"defaultXRateLimitOption,omitempty"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
