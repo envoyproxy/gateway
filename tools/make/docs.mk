@@ -5,6 +5,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
 LINKINATOR_IGNORE := "opentelemetry.io \
+	blog.envoyproxy.io \
 	gateway-api.sigs.k8s.io/reference/1.3 \
 	ntia.gov \
 	github.com \
@@ -41,12 +42,17 @@ CLEAN_NODE_MODULES ?= true
 .PHONY: docs-gen
 docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	cd $(ROOT_DIR)/site && npm install
+	cd $(ROOT_DIR)/site && npm ci
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs
 docs: docs-gen docs-check ## Generate docs and verify no changes are needed
+
+.PHONY: sync-benchmark-dashboard
+sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild tracked static assets. Requires VERSION=vX.Y.Z.
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make sync-benchmark-dashboard VERSION=v1.7.1" && exit 1)
+	@./tools/src/benchmark-dashboard-sync/sync.sh --version "$(VERSION)" --force
 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
@@ -77,7 +83,6 @@ ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
 endif
 	rm -rf site/resources
-	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
@@ -213,12 +218,12 @@ docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-
 	$(tools/sync-docs-codeowners)
 
 .PHONY: docs-check-links
-docs-check-links: # Check for broken links in the docs
+docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
-docs-markdown-lint:
-	markdownlint -c .github/markdown_lint_config.json site/content/*
+docs-markdown-lint: $(tools/markdownlint)
+	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*
 
 .PHONY: docs-check
 docs-check: ## Verify no doc changes are needed

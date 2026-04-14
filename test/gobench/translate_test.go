@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package fuzz
+package gobench
 
 import (
 	"fmt"
@@ -215,7 +215,7 @@ spec:
 func genSecurityPolicies(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
@@ -236,7 +236,7 @@ spec:
             group: ""
             kind: ConfigMap
             name: jwks-cm-%d
-`, i, i, i, i))
+`, i, i, i, i)
 	}
 	return sb.String()
 }
@@ -244,7 +244,7 @@ spec:
 func genBackendTrafficPolicies(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -260,7 +260,7 @@ spec:
     maxPendingRequests: %d
   loadBalancer:
     type: RoundRobin
-`, i, i, 100+i*10, 50+i*5))
+`, i, i, 100+i*10, 50+i*5)
 	}
 	return sb.String()
 }
@@ -268,7 +268,7 @@ spec:
 func genEnvoyExtensionPolicies(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
 metadata:
@@ -285,7 +285,7 @@ spec:
           name: myExtProc
           port: 3000
       messageTimeout: 5s
-`, i, i))
+`, i, i)
 	}
 	return sb.String()
 }
@@ -294,7 +294,7 @@ spec:
 func genJWKSConfigMaps(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -302,7 +302,7 @@ metadata:
   namespace: default
 data:
   local.jwt: '{"keys": [{"kty": "RSA","n": "some-modulus","e": "AQAB","kid": "example1-key"}]}'
-`, i))
+`, i)
 	}
 	return sb.String()
 }
@@ -311,7 +311,7 @@ data:
 func genHTTPRoutes(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -326,7 +326,7 @@ spec:
     - backendRefs:
         - name: service-backend-%d
           port: 8000
-`, i, i, i))
+`, i, i, i)
 	}
 	return sb.String()
 }
@@ -334,7 +334,7 @@ spec:
 func genGRPCRoutes(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GRPCRoute
 metadata:
@@ -354,7 +354,7 @@ spec:
       backendRefs:
         - name: service-backend-%d
           port: 9000
-`, i, i, i, i))
+`, i, i, i, i)
 	}
 	return sb.String()
 }
@@ -362,7 +362,7 @@ spec:
 func genUDPRoutes(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
@@ -376,7 +376,7 @@ spec:
     - backendRefs:
         - name: service-backend-%d
           port: %d
-`, i, i, 3000+i))
+`, i, i, 3000+i)
 	}
 	return sb.String()
 }
@@ -384,7 +384,7 @@ spec:
 func genService(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: v1
 kind: Service
 metadata:
@@ -397,7 +397,7 @@ spec:
       name: http
       protocol: TCP
       targetPort: 8000
-`, i))
+`, i)
 	}
 	return sb.String()
 }
@@ -405,7 +405,7 @@ spec:
 func genEndpointSlice(n int) string {
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(fmt.Sprintf(`---
+		fmt.Fprintf(&sb, `---
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
@@ -423,7 +423,7 @@ endpoints:
       - 192.168.1.1
     conditions:
       ready: true
-`, i, i))
+`, i, i)
 	}
 	return sb.String()
 }

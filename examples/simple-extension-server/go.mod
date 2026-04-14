@@ -1,11 +1,11 @@
 module github.com/envoyproxy/gateway-simple-extension-server
 
-go 1.26.1
+go 1.26.2
 
 require (
-	github.com/envoyproxy/gateway v1.7.0
+	github.com/envoyproxy/gateway v1.7.1
 	github.com/urfave/cli/v2 v2.27.7
-	google.golang.org/grpc v1.79.2
+	google.golang.org/grpc v1.80.0
 )
 
 require (

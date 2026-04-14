@@ -134,6 +134,8 @@ type EnvoyProxySpec struct {
 	//
 	// - envoy.filters.http.dynamic_modules
 	//
+	// - envoy.filters.http.geoip
+	//
 	// - envoy.filters.http.rbac
 	//
 	// - envoy.filters.http.local_ratelimit
@@ -186,8 +188,9 @@ type EnvoyProxySpec struct {
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 
 	// DynamicModules defines the set of dynamic modules that are allowed to be
-	// used by EnvoyExtensionPolicy resources. Each entry registers a module by
-	// a logical name and specifies the shared library that Envoy will load.
+	// used by EnvoyExtensionPolicy resources and dynamic module load balancer
+	// policies. Each entry registers a module by a logical name and specifies
+	// the shared library that Envoy will load.
 	//
 	// The EnvoyProxy owner is responsible for ensuring the module .so files are available
 	// on the proxy container's filesystem (e.g., via init containers, custom images,
@@ -202,8 +205,15 @@ type EnvoyProxySpec struct {
 	// GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet.
 	//
 	// +optional
-	// +notImplementedHide
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+
+	// MergeType controls how this EnvoyProxy merges with less specific configurations
+	// in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
+	// If unset, this EnvoyProxy completely replaces less specific settings.
+	// Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
+	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
@@ -276,7 +286,7 @@ type FilterPosition struct {
 }
 
 // EnvoyFilter defines the type of Envoy HTTP filter.
-// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
+// +kubebuilder:validation:Enum=envoy.filters.http.custom_response;envoy.filters.http.health_check;envoy.filters.http.fault;envoy.filters.http.cors;envoy.filters.http.header_mutation;envoy.filters.http.ext_authz;envoy.filters.http.api_key_auth;envoy.filters.http.basic_auth;envoy.filters.http.oauth2;envoy.filters.http.jwt_authn;envoy.filters.http.stateful_session;envoy.filters.http.buffer;envoy.filters.http.lua;envoy.filters.http.ext_proc;envoy.filters.http.wasm;envoy.filters.http.dynamic_modules;envoy.filters.http.geoip;envoy.filters.http.rbac;envoy.filters.http.local_ratelimit;envoy.filters.http.ratelimit;envoy.filters.http.grpc_web;envoy.filters.http.grpc_stats;envoy.filters.http.credential_injector;envoy.filters.http.compressor;envoy.filters.http.dynamic_forward_proxy
 type EnvoyFilter string
 
 const (
@@ -328,6 +338,9 @@ const (
 
 	// EnvoyFilterDynamicModules defines the Envoy HTTP dynamic modules filter.
 	EnvoyFilterDynamicModules EnvoyFilter = "envoy.filters.http.dynamic_modules"
+
+	// EnvoyFilterGeoIP defines the Envoy HTTP GeoIP filter.
+	EnvoyFilterGeoIP EnvoyFilter = "envoy.filters.http.geoip"
 
 	// EnvoyFilterRBAC defines the Envoy RBAC filter.
 	EnvoyFilterRBAC EnvoyFilter = "envoy.filters.http.rbac"

@@ -44,6 +44,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.group == 'gateway.networking.k8s.io') : true ", message="this policy can only have a targetRefs[*].group of gateway.networking.k8s.io"
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
+// +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer cannot be used together with httpUpgrade"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
@@ -53,6 +54,8 @@ type BackendTrafficPolicySpec struct {
 	// into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
 	// This field cannot be set when targeting a parent resource (Gateway).
 	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	//
+	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for BackendTrafficPolicySpec"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 
@@ -74,6 +77,7 @@ type BackendTrafficPolicySpec struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
 	// The compression config for the http streams.
+	//
 	// Deprecated: Use Compressor instead.
 	//
 	// +patchMergeKey=type
@@ -98,7 +102,9 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	ResponseOverride []*ResponseOverride `json:"responseOverride,omitempty"`
 	// HTTPUpgrade defines the configuration for HTTP protocol upgrades.
-	// If not specified, the default upgrade configuration(websocket) will be used.
+	// If not specified, the default upgrade configuration (websocket) will be used.
+	// However, if requestBuffer is configured, the default upgrade configuration
+	// will be ignored.
 	//
 	// +patchMergeKey=type
 	// +patchStrategy=merge
@@ -114,6 +120,9 @@ type BackendTrafficPolicySpec struct {
 	//
 	// When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an
 	// increase in memory usage for Envoy that should be accounted for in your deployment settings.
+	//
+	// Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option
+	// on routes that need those protocols, because requests can hang instead of being forwarded upstream.
 	//
 	// +optional
 	RequestBuffer *RequestBuffer `json:"requestBuffer,omitempty"`

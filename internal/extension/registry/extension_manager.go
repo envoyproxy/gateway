@@ -34,6 +34,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/fraction"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -435,18 +436,6 @@ func getClientCertificateFromSecret(ctx context.Context, client k8scli.Client, e
 	return &cert, nil
 }
 
-func fractionOrDefault(fraction *gwapiv1.Fraction, defaultValue float64) float64 {
-	if fraction != nil {
-		numerator := float64(fraction.Numerator)
-		denominator := float64(100)
-		if fraction.Denominator != nil {
-			denominator = float64(*fraction.Denominator)
-		}
-		return numerator / denominator
-	}
-	return defaultValue
-}
-
 var retryStrToCode = map[string]codes.Code{
 	`"CANCELLED"`:           codes.Canceled,
 	`"UNKNOWN"`:             codes.Unknown,
@@ -499,7 +488,7 @@ func buildServiceConfig(ext *egv1a1.ExtensionManager) (string, error) {
 		maxAttempts = ptr.Deref(ext.Service.Retry.MaxAttempts, defaultMaxAttempts)
 		initialBackoff = ptr.Deref(ext.Service.Retry.InitialBackoff, defaultInitialBackoff)
 		maxBackoff = ptr.Deref(ext.Service.Retry.MaxBackoff, defaultMaxBackoff)
-		backoffMultiplier = fractionOrDefault(ext.Service.Retry.BackoffMultiplier, defaultBackoffMultiplier)
+		backoffMultiplier = fraction.Deref(ext.Service.Retry.BackoffMultiplier, defaultBackoffMultiplier)
 
 		if len(ext.Service.Retry.RetryableStatusCodes) > 0 {
 			var err error

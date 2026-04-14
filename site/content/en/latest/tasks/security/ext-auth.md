@@ -2,7 +2,7 @@
 title: "External Authorization"
 ---
 
-This task provides instructions for configuring external authentication.
+This task provides instructions for configuring external authorization.
 
 External authorization calls an external HTTP or gRPC service to check whether an incoming HTTP request is authorized
 or not. If the request is deemed unauthorized, then the request will be denied with a 403 (Forbidden) response. If the
@@ -157,13 +157,13 @@ Quickstart instructions to set the variable.
 echo $GATEWAY_HOST
 ```
 
-Send a request to the backend service without `Authentication` header:
+Send a request to the backend service without `Authorization` header:
 
 ```shell
 curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/myapp"
 ```
 
-You should see `403 Forbidden` in the response, indicating that the request is not allowed without authentication.
+You should see `403 Forbidden` in the response, indicating that the request is not allowed without authorization.
 
 ```shell
 * Connected to 172.18.255.200 (172.18.255.200) port 80 (#0)
@@ -180,7 +180,7 @@ You should see `403 Forbidden` in the response, indicating that the request is n
 * Connection #0 to host 172.18.255.200 left intact
 ```
 
-Send a request to the backend service with `Authentication` header:
+Send a request to the backend service with `Authorization` header:
 
 ```shell
 curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${GATEWAY_HOST}/myapp"
@@ -399,13 +399,13 @@ Quickstart instructions to set the variable.
 echo $GATEWAY_HOST
 ```
 
-Send a request to the backend service without `Authentication` header:
+Send a request to the backend service without `Authorization` header:
 
 ```shell
 curl -v -H "Host: www.example.com" "http://${GATEWAY_HOST}/myapp"
 ```
 
-You should see `403 Forbidden` in the response, indicating that the request is not allowed without authentication.
+You should see `403 Forbidden` in the response, indicating that the request is not allowed without authorization.
 
 ```shell
 * Connected to 172.18.255.200 (172.18.255.200) port 80 (#0)
@@ -422,7 +422,7 @@ You should see `403 Forbidden` in the response, indicating that the request is n
 * Connection #0 to host 172.18.255.200 left intact
 ```
 
-Send a request to the backend service with `Authentication` header:
+Send a request to the backend service with `Authorization` header:
 
 ```shell
 curl -v -H "Host: www.example.com" -H "Authorization: Bearer token1" "http://${GATEWAY_HOST}/myapp"
@@ -444,7 +444,7 @@ kubectl delete backendtlspolicy/grpc-ext-auth-btls
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

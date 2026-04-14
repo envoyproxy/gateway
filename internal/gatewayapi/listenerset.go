@@ -78,7 +78,7 @@ func (t *Translator) processListenerSet(ls *gwapiv1.ListenerSet, gatewayMap map[
 		// Convert ListenerSet listener to Gateway listener for internal processing
 		gwListener := &gwapiv1.Listener{
 			Name:          listener.Name,
-			Port:          gwapiv1.PortNumber(listener.Port), //nolint
+			Port:          listener.Port,
 			Protocol:      listener.Protocol,
 			TLS:           listener.TLS,
 			AllowedRoutes: listener.AllowedRoutes,

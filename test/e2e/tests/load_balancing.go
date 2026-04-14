@@ -46,7 +46,90 @@ func init() {
 		EndpointOverrideLoadBalancing,
 		MultiHeaderConsistentHashHeaderLoadBalancing,
 		QueryParamsBasedConsistentHashLoadBalancing,
+		BackendUtilizationLoadBalancingTest,
 	)
+}
+
+var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationLoadBalancing",
+	Description: "Test that BackendUtilization shifts traffic toward lower-utilization backends using ORCA metrics",
+	Manifests: []string{
+		"testdata/load_balancing_backend_utilization.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const (
+			warmupRequests = 20
+			sendRequests   = 100
+			lowUtilMinPct  = 80 // ORCA utilization split is 90:10 but gives a 10% buffer
+		)
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "backend-utilization-lb-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: SameNamespaceGateway.Name, Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-lb-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-utilization"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/backend-utilization",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+		// Identify which pod is low-util vs high-util by deployment name prefix.
+		isLowUtil := func(podName string) bool {
+			return strings.Contains(podName, "lb-backend-low-util")
+		}
+
+		t.Run("warmup until both backends are hit", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, warmupRequests, func(trafficMap map[string]int) bool {
+					return len(trafficMap) >= 2
+				}), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to hit both backends during warmup: %v", err)
+			}
+		})
+
+		time.Sleep(time.Second)
+
+		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, func(trafficMap map[string]int) bool {
+					lowCount := 0
+					total := 0
+					for podName, count := range trafficMap {
+						total += count
+						if isLowUtil(podName) {
+							lowCount += count
+						}
+					}
+					if total == 0 {
+						return false
+					}
+					lowPct := (lowCount * 100) / total
+					tlog.Logf(t, "traffic distribution: low-util=%d/%d (%d%%), high-util=%d/%d",
+						lowCount, total, lowPct, total-lowCount, total)
+					return lowPct >= lowUtilMinPct
+				}), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
+			}
+		})
+	},
 }
 
 var RoundRobinLoadBalancing = suite.ConformanceTest{

@@ -149,6 +149,14 @@ func expectedRateLimitContainers(rateLimit *egv1a1.RateLimit, rateLimitDeploymen
 		},
 	}
 
+	if enablePrometheus(rateLimit) {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: PrometheusPort,
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:            InfraName,
@@ -260,6 +268,7 @@ func expectedDeploymentVolumes(rateLimit *egv1a1.RateLimit, rateLimitDeployment 
 	volumes = append(volumes, corev1.Volume{
 		Name: "certs",
 		VolumeSource: corev1.VolumeSource{
+			// #nosec G101 - This refers to a Kubernetes secret volume, not a credential
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy-rate-limit",
 				DefaultMode: ptr.To[int32](420),

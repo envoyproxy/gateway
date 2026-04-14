@@ -1,0 +1,521 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-tls-frontend-backend
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 80
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: https
+          port: 8443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+      tls:
+        frontend:
+          default:
+            validation:
+              mode: AllowValidOnly
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls:
+                validation:
+                  mode: AllowValidOnly
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
+        backend:
+          clientCertificateRef:
+            group: ""
+            kind: Secret
+            name: certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: invalid-default-client-validation-config
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              mode: AllowValidOnly
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: does-not-exist
+          perPort:
+            - port: 80
+              tls:
+                validation:
+                  mode: AllowValidOnly
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: http
+          port: 80
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-insecure-fallback
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              mode: AllowInsecureFallback
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls:
+                validation:
+                  mode: AllowInsecureFallback
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-with-hostname
+          port: 8443
+          hostname: second-example.org
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-default
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls:
+                validation:
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: tls-validity-checks-per-port-ca-certificate
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-with-hostname
+          port: 8443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-per-port-disable-default
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 8443
+              tls: {}
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-disable-default-validation
+          port: 8443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: client-validation-per-port-disable-invalid-default
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: does-not-exist
+          perPort:
+            - port: 8443
+              tls: {}
+      listeners:
+        - name: https-invalid-default
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-disable-default-validation
+          port: 8443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: invalid-gateway-backend-client-cert-no-fallback
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          port: 8080
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: All
+      tls:
+        backend:
+          clientCertificateRef:
+            group: ""
+            kind: ConfigMap
+            name: invalid-kind
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-with-invalid-client-cert-validation
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      tls:
+        frontend:
+          default:
+            validation:
+              caCertificateRefs:
+                - kind: ConfigMap
+                  group: ""
+                  name: tls-validity-checks-ca-certificate
+          perPort:
+            - port: 7443
+              tls:
+                validation:
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: non-exisitng-cm
+            - port: 8443
+              tls:
+                validation:
+                  caCertificateRefs:
+                    - kind: Service
+                      group: ""
+                      name: infra-backend-v2
+            - port: 6443
+              tls:
+                validation:
+                  caCertificateRefs:
+                    - kind: ConfigMap
+                      group: ""
+                      name: web-backend-cm
+                      namespace: default
+      listeners:
+        - name: https
+          port: 443
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-unresolved
+          port: 7443
+          hostname: first-example.org
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+        - name: https-invalid-kind
+          port: 8443
+          hostname: second-example.org
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+                namespace: gateway-conformance-infra
+        - name: https-grant-missing
+          port: 6443
+          hostname: fourth-example.org
+          protocol: HTTPS
+          allowedRoutes:
+            namespaces:
+              from: Same
+          tls:
+            certificateRefs:
+              - group: ""
+                kind: Secret
+                name: tls-validity-checks-certificate
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: gateway-tls-frontend-backend
+      namespace: default
+    spec:
+      parentRefs:
+        - name: gateway-tls-frontend-backend
+          namespace: envoy-gateway
+      hostnames:
+        - example.org
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: invalid-default-client-validation-config
+      namespace: default
+    spec:
+      parentRefs:
+        - name: invalid-default-client-validation-config
+          namespace: envoy-gateway
+      hostnames:
+        - example.org
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: invalid-gateway-backend-client-cert-no-fallback
+      namespace: default
+    spec:
+      parentRefs:
+        - name: invalid-gateway-backend-client-cert-no-fallback
+          namespace: envoy-gateway
+      hostnames:
+        - mTLS.example.org
+      rules:
+        - backendRefs:
+            - name: tls-backend
+              namespace: default
+              port: 443
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: tls-backend
+      namespace: default
+    spec:
+      clusterIP: 10.22.33.44
+      ports:
+        - port: 443
+          name: https
+          protocol: TCP
+          targetPort: 443
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-tls-backend
+      namespace: default
+      labels:
+        kubernetes.io/service-name: tls-backend
+    addressType: IPv4
+    ports:
+      - name: https
+        protocol: TCP
+        port: 443
+    endpoints:
+      - addresses:
+          - "10.244.0.22"
+        conditions:
+          ready: true
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: tls-backend-policy
+      namespace: default
+    spec:
+      targetRefs:
+        - group: ""
+          kind: Service
+          name: tls-backend
+      validation:
+        wellKnownCACertificates: System
+        hostname: backend.example.org
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: backend-client-cert-default
+  spec:
+    backendTLS:
+      clientCertificateRef:
+        group: ""
+        kind: Secret
+        name: global-backend-client-cert
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-validity-checks-certificate
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUREVENDQWZXZ0F3SUJBZ0lVRUZNaFA5ZUo5WEFCV3NRNVptNmJSazJjTE5Rd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZqRVVNQklHQTFVRUF3d0xabTl2TG1KaGNpNWpiMjB3SGhjTk1qUXdNakk1TURrek1ERXdXaGNOTXpRdwpNakkyTURrek1ERXdXakFXTVJRd0VnWURWUVFEREF0bWIyOHVZbUZ5TG1OdmJUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKbEk2WXhFOVprQ1BzNnBDUXhickNtZWl4OVA1RGZ4OVJ1NUxENFQKSm1kVzdJS2R0UVYvd2ZMbXRzdTc2QithVGRDaldlMEJUZmVPT1JCYlIzY1BBRzZFbFFMaWNsUVVydW4zcStncwpKcEsrSTdjSStqNXc4STY4WEg1V1E3clZVdGJ3SHBxYncrY1ZuQnFJVU9MaUlhdGpJZjdLWDUxTTF1RjljZkVICkU0RG5jSDZyYnI1OS9SRlpCc2toeHM1T3p3Sklmb2hreXZGd2V1VHd4Sy9WcGpJKzdPYzQ4QUJDWHBOTzlEL3EKRWgrck9hdWpBTWNYZ0hRSVRrQ2lpVVRjVW82TFNIOXZMWlB0YXFmem9acTZuaE1xcFc2NUUxcEF3RjNqeVRUeAphNUk4SmNmU0Zqa2llWjIwTFVRTW43TThVNHhIamFvL2d2SDBDQWZkQjdSTFUyc0NBd0VBQWFOVE1GRXdIUVlEClZSME9CQllFRk9SQ0U4dS8xRERXN2loWnA3Y3g5dFNtUG02T01COEdBMVVkSXdRWU1CYUFGT1JDRTh1LzFERFcKN2loWnA3Y3g5dFNtUG02T01BOEdBMVVkRXdFQi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQgpBRnQ1M3pqc3FUYUg1YThFMmNodm1XQWdDcnhSSzhiVkxNeGl3TkdqYm1FUFJ6K3c2TngrazBBOEtFY0lEc0tjClNYY2k1OHU0b1didFZKQmx6YS9adWpIUjZQMUJuT3BsK2FveTc4NGJiZDRQMzl3VExvWGZNZmJCQ20xdmV2aDkKQUpLbncyWnRxcjRta2JMY3hFcWxxM3NCTEZBUzlzUUxuS05DZTJjR0xkVHAyYm9HK3FjZ3lRZ0NJTTZmOEVNdgpXUGlmQ01NR3V6Sy9HUkY0YlBPL1lGNDhld0R1M1VlaWgwWFhkVUFPRTlDdFVhOE5JaGMxVVBhT3pQcnRZVnFyClpPR2t2L0t1K0I3OGg4U0VzTzlYclFjdXdiT25KeDZLdFIrYWV5a3ZBcFhDUTNmWkMvYllLQUFSK1A4QUpvUVoKYndJVW1YaTRnajVtK2JLUGhlK2lyK0U9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0=
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ2QwZlBDYWtweE1nUnUKT0VXQjFiQk5FM3ZseW55aTZWbkV2VWF1OUhvakR2UHVPTFJIaGI4MmoyY1ovMHhnL1lKR09LelBuV2JERkxGNApHdWh3dDRENmFUR0xYNklPODEwTDZ0SXZIWGZNUXRJS2VwdTZ3K3p1WVo4bG1yejB1RjZlWEtqamVIbHhyb2ZrCnVNekM3OUVaU0lYZlZlczJ1SmdVRSs4VGFzSDUzQ2Y4MFNSRGlIeEdxckttdVNjWCtwejBreGdCZ1VWYTVVS20KUWdTZDFmVUxLOUEwNXAxOXkrdURPM204bVhRNkxVQ0N1STFwZHNROGFlNS9zamlxa0VjWlJjMTdWYVgxWjVVaQpvcGZnNW9SY05VTG9VTHNiek9aNTR0YlVDUmdSV2VLbGZxaElINEZ6OUlkVlUyR3dFdEdhMmV6TjgyMVBaQ3QzCjZhbVRIelJsQWdNQkFBRUNnZ0VBWTFGTUlLNDVXTkVNUHJ6RTZUY3NNdVV2RkdhQVZ4bVk5NW5SMEtwajdvb3IKY21CVys2ZXN0TTQ4S1AwaitPbXd3VFpMY29Cd3VoWGN0V1Bob1lXcDhteWUxRUlEdjNyaHRHMDdocEQ1NGg2dgpCZzh3ejdFYStzMk9sT0N6UnlKNzBSY281YlhjWDNGaGJjdnFlRWJwaFFyQnpOSEtLMjZ4cmZqNWZIT3p6T1FGCmJHdUZ3SDVic3JGdFhlajJXM3c4eW90N0ZQSDV3S3RpdnhvSWU5RjMyOXNnOU9EQnZqWnpiaG1LVTArckFTK1kKRGVield2bFJyaEUrbXVmQTN6M0N0QXhDOFJpNzNscFNoTDRQQWlvcG1SUXlxZXRXMjYzOFFxcnM0R3hnNzhwbApJUXJXTmNBc2s3Slg5d3RZenV6UFBXSXRWTTFscFJiQVRhNTJqdFl2NVFLQmdRRE5tMTFtZTRYam1ZSFV2cStZCmFTUzdwK2UybXZEMHVaOU9JeFluQnBWMGkrckNlYnFFMkE1Rm5hcDQ5Yld4QTgwUElldlVkeUpCL2pUUkoxcVMKRUpXQkpMWm1LVkg2K1QwdWw1ZUtOcWxFTFZHU0dCSXNpeE9SUXpDZHBoMkx0UmtBMHVjSVUzY3hiUmVMZkZCRQpiSkdZWENCdlNGcWd0VDlvZTFldVpMVmFOd0tCZ1FERWdENzJENk81eGIweEQ1NDQ1M0RPMUJhZmd6aThCWDRTCk1SaVd2LzFUQ0w5N05sRWtoeXovNmtQd1owbXJRcE5CMzZFdkpKZFVteHdkU2MyWDhrOGcxMC85NVlLQkdWQWoKL3d0YVZYbE9WeEFvK0ZSelpZeFpyQ29uWWFSMHVwUzFybDRtenN4REhlZU9mUVZUTUgwUjdZN0pnbTA5dXQ4SwplanAvSXZBb1F3S0JnQjNaRWlRUWhvMVYrWjBTMlpiOG5KS0plMy9zMmxJTXFHM0ZkaS9RS3Q0eWViQWx6OGY5ClBZVXBzRmZEQTg5Z3grSU1nSm5sZVptdTk2ZnRXSjZmdmJSenllN216TG5zZU05TXZua1lHbGFGWmJRWnZubXMKN3ZoRmtzY3dHRlh4d21GMlBJZmU1Z3pNMDRBeVdjeTFIaVhLS2dNOXM3cGsxWUdyZGowZzdacmRBb0dCQUtLNApDR3MrbkRmMEZTMFJYOWFEWVJrRTdBNy9YUFhtSG5YMkRnU1h5N0Q4NTRPaWdTTWNoUmtPNTErbVNJejNQbllvCk41T1FXM2lHVVl1M1YvYmhnc0VSUzM1V2xmRk9BdDBzRUR5bjF5SVdXcDF5dG93d3BUNkVvUXVuZ2NYZjA5RjMKS1NROXowd3M4VmsvRWkvSFVXcU5LOWFXbU51cmFaT0ZqL2REK1ZkOUFvR0FMWFN3dEE3K043RDRkN0VEMURSRQpHTWdZNVd3OHFvdDZSdUNlNkpUY0FnU3B1MkhNU3JVY2dXclpiQnJZb09FUnVNQjFoMVJydk5ybU1qQlM0VW9FClgyZC8vbGhpOG1wL2VESWN3UDNRa2puanBJRFJWMFN1eWxrUkVaZURKZjVZb3R6eDdFdkJhbzFIbkQrWEg4eUIKVUtmWGJTaHZKVUdhRmgxT3Q1Y3JoM1k9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway-system
+      name: global-backend-client-cert
+    type: kubernetes.io/tls
+    data:
+      tls.crt: YQ==
+      tls.key: Yg==
+configmaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: tls-validity-checks-ca-certificate
+      namespace: envoy-gateway
+    data:
+      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURVRENDQWlTZ0F3SUJBZ0lRQU5CQkN3VUFNQk1BOEdBMVVFQkJRQ0N3VUFZSUt3WUJCUVVIQXdFR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQkNRR0NDc0dBUVVGQndNQk1BOEdBMVVFQ2d3V2pBTkJna3Foa2lHOXcwQlNRR0NDc0dBUVVGQUFPakFVTVEwd0N3WURWUVFERXdFQi93UUZNQU1CQWY4d0hRWU9CQllFRkdEQ0NBUjYwTVEwd05
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: tls-validity-checks-per-port-ca-certificate
+      namespace: envoy-gateway
+    data:
+      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZekNDQWt1Z0F3SUJBZ0lDQitnd0RRWUpLb1pJaHZjTkFRRUxCUUF3UXpFTE1Ba0dBMVVFQmhNQ1ZWTXgKSHpBZEJnTlZCQW9URmt0MVltVnlibVYwWlhNZ1IyRjBaWGRoZVNCQlVFa3hFekFSQmdOVkJBTVRDbWRoZEdWMwpZWGxoY0drd0hoY05Nall3TXpBeU1ERXhPVEV3V2hjTk1qY3dNekF5TURFeE9URXdXakJETVFzd0NRWURWUVFHCkV3SlZVekVmTUIwR0ExVUVDaE1XUzNWaVpYSnVaWFJsY3lCSFlYUmxkMkY1SUVGUVNURVRNQkVHQTFVRUF4TUsKWjJGMFpYZGhlV0Z3YVRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVdMcG9hWAo0WXYvZU9UVVV0dXRDZm5zRkllRDdDbDZJUVl1a0IvbVpHMDU1ODhsY2ZwZ0xWSnpQdE9SSmZ3U2dFSncrZmh5ClJYUFY2RmU1blpNSVpUQXlGdTJnVTlFWVRKNFFpQTVrVGxOdGNlWEhOR3c5MGo4dXliQ2lzVUw0aWExbHVwN0kKaXlOSUpWblVQSkFscDJ3WkVITTR2QlVvYWxmcTVGWUplQ3NNZjdXdFE5b2ZjTWhkQXhXbUdidkZYTEU5eXBEVwo1MUg1L2dZWWNqeXBFUjI4ZkhVSENvTENGWERxeVBEZVJzRHVFVk1uOFhmMWdFd2hTV1l1TS9Kc1JvTGNNTWxWClJOSnVDMmFyeDhhUnE4OHVxQnRUeXphcnhxc0lGMG5TOGp4bmltVmovbC8wLzZrSUtBWG5zTk9SeVZBbmQ3K0EKZlJkL1Nyblc3VVhMZW5rQ0F3RUFBYU5oTUY4d0RnWURWUjBQQVFIL0JBUURBZ0tFTUIwR0ExVWRKUVFXTUJRRwpDQ3NHQVFVRkJ3TUNCZ2dyQmdFRkJRY0RBVEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQjBHQTFVZERnUVdCQlRVCmp0N1ZzQ2FMdU95UG1MT2RtZTUrUy82QWVUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFVZVVLMWhVY1d1a0UKYlBsTUVyKzhucTlmd045YS85WXFMS21seEN5ZUxpdGpLbElGb290NmN3ZEphQm1FZ25DSWNzSkFodnFxci9iZQpmMFNLZys2bTdjazhMdlVpRHBYZ0lJN2VpT2VWdkJXTnpzVEZxK01EWkNKLzhGek5IaS9tN3hSalZXZzFHQUhSClZCQVZjUjRDWFNVNFllQnUxTzdSQ0NKUDVRaktXaWhlMlpIcFVCRmRmKzFIZ202UUhoSDZyd2IxQmpsY0I0azUKMW9SNGxVenJOejRXak9SNjVBeXJyU2pDWlJoSXhRTlFtV3BCK1NVK3BkeEhqenFtclhtR3M5WSt6cFRXbE50eQpCSGQ1QzRJZkJCL0FVOXJSRjlIcVdQbU1qSW5GczhNYzlFRDRsWmRaSnI4WUNvSjl5dVUraWNZTlovNTJvcW1nCjYra05iZnMycUE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: web-backend-cm
+      namespace: default
+    data:
+      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZekNDQWt1Z0F3SUJBZ0lDQitnd0RRWUpLb1pJaHZjTkFRRUxCUUF3UXpFTE1Ba0dBMVVFQmhNQ1ZWTXgKSHpBZEJnTlZCQW9URmt0MVltVnlibVYwWlhNZ1IyRjBaWGRoZVNCQlVFa3hFekFSQmdOVkJBTVRDbWRoZEdWMwpZWGxoY0drd0hoY05Nall3TXpBeU1ERXhPVEV3V2hjTk1qY3dNekF5TURFeE9URXdXakJETVFzd0NRWURWUVFHCkV3SlZVekVmTUIwR0ExVUVDaE1XUzNWaVpYSnVaWFJsY3lCSFlYUmxkMkY1SUVGUVNURVRNQkVHQTFVRUF4TUsKWjJGMFpYZGhlV0Z3YVRDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTVdMcG9hWAo0WXYvZU9UVVV0dXRDZm5zRkllRDdDbDZJUVl1a0IvbVpHMDU1ODhsY2ZwZ0xWSnpQdE9SSmZ3U2dFSncrZmh5ClJYUFY2RmU1blpNSVpUQXlGdTJnVTlFWVRKNFFpQTVrVGxOdGNlWEhOR3c5MGo4dXliQ2lzVUw0aWExbHVwN0kKaXlOSUpWblVQSkFscDJ3WkVITTR2QlVvYWxmcTVGWUplQ3NNZjdXdFE5b2ZjTWhkQXhXbUdidkZYTEU5eXBEVwo1MUg1L2dZWWNqeXBFUjI4ZkhVSENvTENGWERxeVBEZVJzRHVFVk1uOFhmMWdFd2hTV1l1TS9Kc1JvTGNNTWxWClJOSnVDMmFyeDhhUnE4OHVxQnRUeXphcnhxc0lGMG5TOGp4bmltVmovbC8wLzZrSUtBWG5zTk9SeVZBbmQ3K0EKZlJkL1Nyblc3VVhMZW5rQ0F3RUFBYU5oTUY4d0RnWURWUjBQQVFIL0JBUURBZ0tFTUIwR0ExVWRKUVFXTUJRRwpDQ3NHQVFVRkJ3TUNCZ2dyQmdFRkJRY0RBVEFQQmdOVkhSTUJBZjhFQlRBREFRSC9NQjBHQTFVZERnUVdCQlRVCmp0N1ZzQ2FMdU95UG1MT2RtZTUrUy82QWVUQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFVZVVLMWhVY1d1a0UKYlBsTUVyKzhucTlmd045YS85WXFMS21seEN5ZUxpdGpLbElGb290NmN3ZEphQm1FZ25DSWNzSkFodnFxci9iZQpmMFNLZys2bTdjazhMdlVpRHBYZ0lJN2VpT2VWdkJXTnpzVEZxK01EWkNKLzhGek5IaS9tN3hSalZXZzFHQUhSClZCQVZjUjRDWFNVNFllQnUxTzdSQ0NKUDVRaktXaWhlMlpIcFVCRmRmKzFIZ202UUhoSDZyd2IxQmpsY0I0azUKMW9SNGxVenJOejRXak9SNjVBeXJyU2pDWlJoSXhRTlFtV3BCK1NVK3BkeEhqenFtclhtR3M5WSt6cFRXbE50eQpCSGQ1QzRJZkJCL0FVOXJSRjlIcVdQbU1qSW5GczhNYzlFRDRsWmRaSnI4WUNvSjl5dVUraWNZTlovNTJvcW1nCjYra05iZnMycUE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t

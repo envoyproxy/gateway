@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: clienttrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -715,6 +715,7 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
+
                       Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
@@ -841,6 +842,41 @@ spec:
                           ClientTrafficPolicy invalid.
                         type: boolean
                     type: object
+                  ignoredUpgradeTypes:
+                    description: |-
+                      IgnoredUpgradeTypes specifies a list of upgrade types for which
+                      HTTP/1.1 Upgrade requests should be ignored by Envoy instead of being
+                      rejected with a 403 response. When a client sends an HTTP/1.1 request
+                      with Connection: Upgrade and an Upgrade header matching one of these
+                      matchers, Envoy will strip the upgrade headers and process the request
+                      as a normal HTTP/1.1 request.
+
+                      Example: To ignore TLS upgrade requests (RFC 2817), use a Prefix match with value "TLS/".
+                    items:
+                      description: |-
+                        StringMatch defines how to match any strings.
+                        This is a general purpose match condition that can be used by other EG APIs
+                        that need to match against a string.
+                      properties:
+                        type:
+                          default: Exact
+                          description: Type specifies how to match against a string.
+                          enum:
+                          - Exact
+                          - Prefix
+                          - Suffix
+                          - RegularExpression
+                          type: string
+                        value:
+                          description: Value specifies the string value that the match
+                            must have.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                      required:
+                      - value
+                      type: object
+                    type: array
                   preserveHeaderCase:
                     description: |-
                       PreserveHeaderCase defines if Envoy should preserve the letter case of headers.
@@ -850,6 +886,38 @@ spec:
               http2:
                 description: HTTP2 provides HTTP/2 configuration on the listener.
                 properties:
+                  connectionKeepalive:
+                    description: ConnectionKeepalive configures HTTP/2 connection
+                      keepalive using PING frames.
+                    properties:
+                      idleInterval:
+                        description: IdleInterval specifies how long a connection
+                          must be idle before a PING is sent.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      interval:
+                        description: Interval specifies how often to send HTTP/2 PING
+                          frames to keep the connection alive.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                      intervalJitter:
+                        description: |-
+                          IntervalJitter specifies a random jitter percentage added to each interval.
+                          Defaults to 15% if not specified.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                      timeout:
+                        description: Timeout specifies how long to wait for a PING
+                          response before considering the connection dead.
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                    type: object
+                    x-kubernetes-validations:
+                    - message: timeout must be less than interval
+                      rule: '!has(self.timeout) || !has(self.interval) || duration(self.timeout)
+                        < duration(self.interval)'
                   initialConnectionWindowSize:
                     allOf:
                     - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
@@ -1375,10 +1443,22 @@ spec:
                         required:
                         - refs
                         type: object
+                      mode:
+                        description: |-
+                          Mode defines how the Gateway or Listener validates client certificates.
+                          If not specified, defaults to RequireAndVerify.
+                        enum:
+                        - Request
+                        - RequireAny
+                        - VerifyIfGiven
+                        - RequireAndVerify
+                        type: string
                       optional:
                         description: |-
                           Optional set to true accepts connections even when a client doesn't present a certificate.
                           Defaults to false, which rejects connections without a valid client certificate.
+
+                          Deprecated: Use Mode instead.
                         type: boolean
                       spkiHashes:
                         description: |-
