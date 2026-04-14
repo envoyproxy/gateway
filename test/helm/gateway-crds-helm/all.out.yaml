@@ -30517,6 +30517,8 @@ spec:
                   x-kubernetes-validations:
                   - message: only one of name and nameSelector can be specified
                     rule: '!(has(self.name) && has(self.nameSelector))'
+                  - message: either name or nameSelector must be specified
+                    rule: has(self.name) || has(self.nameSelector)
                 type: array
               priority:
                 description: |-
