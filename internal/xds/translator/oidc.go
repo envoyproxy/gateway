@@ -37,7 +37,7 @@ type oidc struct{}
 var _ httpFilter = &oidc{}
 
 // #nosec G101 - This is part of a filter name, not a credential
-const oidcIDTokenForwardLuaConfigName = "oidc-id-token-forward/0"
+const oidcIDTokenForwardLuaConfigName = "oidc-id-token-forward/-1"
 
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.

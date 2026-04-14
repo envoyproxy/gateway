@@ -13,7 +13,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/oidc-id-token-forward/0:
+        envoy.filters.http.lua/oidc-id-token-forward/-1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sourceCode:
             inlineString: |
@@ -99,7 +99,7 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.lua/oidc-id-token-forward/0:
+        envoy.filters.http.lua/oidc-id-token-forward/-1:
           '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
           sourceCode:
             inlineString: |

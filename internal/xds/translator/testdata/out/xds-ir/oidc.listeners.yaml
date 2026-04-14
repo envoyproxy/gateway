@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
         - disabled: true
-          name: envoy.filters.http.lua/oidc-id-token-forward/0
+          name: envoy.filters.http.lua/oidc-id-token-forward/-1
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
             defaultSourceCode:
