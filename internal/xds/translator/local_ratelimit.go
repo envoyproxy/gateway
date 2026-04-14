@@ -228,7 +228,10 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
-			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
+			rateLimit := &routev3.RateLimit{Actions: rlActions}
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+			rateLimits = append(rateLimits, rateLimit)
 			descriptors = append(descriptors, &rlv3.LocalRateLimitDescriptor{
 				Entries: descriptorEntries,
 				TokenBucket: &typev3.TokenBucket{

@@ -146,6 +146,7 @@
                 - name: x-user-id
                   stringMatch:
                     exact: one
+            xRatelimitOption: "OFF"
           - actions:
             - headerValueMatch:
                 descriptorKey: rule-1-match-0
@@ -155,6 +156,7 @@
                 - name: x-user-id
                   stringMatch:
                     exact: two
+            xRatelimitOption: DRAFT_VERSION_03
           - actions:
             - headerValueMatch:
                 descriptorKey: rule-2-match-0
