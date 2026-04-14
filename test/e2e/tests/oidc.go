@@ -96,7 +96,8 @@ var OIDCTest = suite.ConformanceTest{
 		}
 
 		t.Run("oidc provider represented by a URL", func(t *testing.T) {
-			for _, tc := range urlBackedCases {
+			for i := range urlBackedCases {
+				tc := &urlBackedCases[i]
 				t.Run(tc.routeName, func(t *testing.T) {
 					testOIDC(t, suite, tc, "testdata/oidc-securitypolicy.yaml")
 				})
@@ -174,18 +175,19 @@ var OIDCTest = suite.ConformanceTest{
 		// Apply the security policy that configures OIDC authentication with BackendCluster.
 		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/oidc-securitypolicy-backendcluster.yaml", true)
 		t.Run("oidc provider represented by a BackendCluster", func(t *testing.T) {
-			testOIDC(t, suite, oidcRouteTestCase{
+			tc := &oidcRouteTestCase{
 				routeName:          "http-with-oidc",
 				securityPolicyName: "oidc-test",
 				clientID:           "oidctest",
 				testURL:            "http://www.example.com/myapp",
 				logoutURL:          "http://www.example.com/myapp/logout",
-			}, "testdata/oidc-securitypolicy-backendcluster.yaml")
+			}
+			testOIDC(t, suite, tc, "testdata/oidc-securitypolicy-backendcluster.yaml")
 		})
 	},
 }
 
-func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestCase, securityPolicyManifest string) {
+func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc *oidcRouteTestCase, securityPolicyManifest string) {
 	const ns = "gateway-conformance-infra"
 
 	routeNN := types.NamespacedName{Name: tc.routeName, Namespace: ns}
@@ -296,7 +298,7 @@ func testOIDC(t *testing.T, suite *suite.ConformanceTestSuite, tc oidcRouteTestC
 			Namespace: ns,
 		}
 		req := gwhttp.MakeRequest(t, &expectedResponse, httpGWAddr, "HTTP", "http")
-		waitForForwardedOIDCTokens(t, suite.RoundTripper, req, expectedResponse, tc)
+		waitForForwardedOIDCTokens(t, suite.RoundTripper, &req, &expectedResponse, tc)
 	}
 
 	// Verify that we can logout
@@ -335,16 +337,16 @@ type jwtClaims struct {
 	Audience      interface{} `json:"aud"`
 }
 
-func waitForForwardedOIDCTokens(t *testing.T, r roundtripper.RoundTripper, req roundtripper.Request, expected gwhttp.ExpectedResponse, tc oidcRouteTestCase) {
+func waitForForwardedOIDCTokens(t *testing.T, r roundtripper.RoundTripper, req *roundtripper.Request, expected *gwhttp.ExpectedResponse, tc *oidcRouteTestCase) {
 	t.Helper()
 
 	err := wait.PollUntilContextTimeout(context.Background(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
-		cReq, cRes, err := r.CaptureRoundTrip(req)
+		cReq, cRes, err := r.CaptureRoundTrip(*req)
 		if err != nil {
 			tlog.Logf(t, "request failed while verifying forwarded OIDC tokens: %v", err)
 			return false, nil
 		}
-		if err := gwhttp.CompareRoundTrip(t, &req, cReq, cRes, expected); err != nil {
+		if err := gwhttp.CompareRoundTrip(t, req, cReq, cRes, *expected); err != nil {
 			tlog.Logf(t, "round trip not ready while verifying forwarded OIDC tokens: %v", err)
 			return false, nil
 		}
@@ -379,7 +381,7 @@ func waitForForwardedOIDCTokens(t *testing.T, r roundtripper.RoundTripper, req r
 	require.NoError(t, err)
 }
 
-func assertJWTClaims(token string, name string, expectedType string, expectedAZP string) error {
+func assertJWTClaims(token, name, expectedType, expectedAZP string) error {
 	claims, err := decodeJWTClaims(token)
 	if err != nil {
 		return fmt.Errorf("failed to decode %s JWT: %w", name, err)
