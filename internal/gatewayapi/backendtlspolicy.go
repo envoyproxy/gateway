@@ -542,6 +542,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 ) (caCert []byte, sds *ir.SDSConfig, err error) {
 	ca := ""
 	foundSupportedRef := false
+	var foundSDSConfig *ir.SDSConfig
 	for _, caRef := range caCertificates {
 		kind := string(caRef.Kind)
 		var caRefNs string
@@ -603,10 +604,14 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 					if !hasURL || len(sdsURLBytes) == 0 {
 						return nil, nil, fmt.Errorf("no url found in SDS reference secret %s", secret.Name)
 					}
-					return nil, &ir.SDSConfig{
+					if foundSDSConfig != nil {
+						return nil, nil, fmt.Errorf("multiple SDS reference secrets are not supported")
+					}
+					foundSDSConfig = &ir.SDSConfig{
 						SecretName: string(sdsSecretName),
 						URL:        string(sdsURLBytes),
-					}, nil
+					}
+					continue
 				}
 				// Regular secret processing
 				if crt, dataOk := getOrFirstFromData(secret.Data, CACertKey); dataOk {
@@ -634,6 +639,17 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		}
 	}
 
+	// Validate that SDS is not mixed with regular certificates
+	if foundSDSConfig != nil && ca != "" {
+		return nil, nil, fmt.Errorf("cannot mix SDS reference secrets with other CA certificate types")
+	}
+
+	// Return SDS config if found
+	if foundSDSConfig != nil {
+		return nil, foundSDSConfig, nil
+	}
+
+	// Return regular certificates if found
 	if ca == "" {
 		if !foundSupportedRef {
 			return nil, nil, fmt.Errorf("%w in caCertificateRefs", ErrInvalidCACertificateKind)

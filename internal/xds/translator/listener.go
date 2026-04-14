@@ -840,13 +840,19 @@ func buildDownstreamQUICTransportSocket(tlsConfig *ir.TLSConfig) (*corev3.Transp
 		},
 	}
 
-	for _, tlsConfig := range tlsConfig.Certificates {
+	for _, cert := range tlsConfig.Certificates {
+		sdsConfig := &tlsv3.SdsSecretConfig{
+			Name:      cert.Name,
+			SdsConfig: makeConfigSource(),
+		}
+		if cert.SDS != nil {
+			// Use external SDS server instead of ADS
+			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
+		}
 		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
-			&tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.Name,
-				SdsConfig: makeConfigSource(),
-			})
+			sdsConfig)
 	}
 
 	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
@@ -877,13 +883,19 @@ func buildXdsDownstreamTLSSocket(tlsConfig *ir.TLSConfig) (*corev3.TransportSock
 		},
 	}
 
-	for _, tlsConfig := range tlsConfig.Certificates {
+	for _, cert := range tlsConfig.Certificates {
+		sdsConfig := &tlsv3.SdsSecretConfig{
+			Name:      cert.Name,
+			SdsConfig: makeConfigSource(),
+		}
+		if cert.SDS != nil {
+			// Use external SDS server instead of ADS
+			clusterName := sdsClusterNameFromURL(cert.SDS.URL)
+			sdsConfig = sdsSecretConfig(cert.SDS.SecretName, clusterName)
+		}
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
-			&tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.Name,
-				SdsConfig: makeConfigSource(),
-			})
+			sdsConfig)
 	}
 
 	if tlsConfig.CACertificate != nil || tlsConfig.ClientValidationEnabled {
@@ -951,21 +963,27 @@ func setTLSValidationContext(tlsConfig *ir.TLSConfig, tlsCtx *tlsv3.CommonTlsCon
 		return
 	}
 
-	sdsSecretConfig := &tlsv3.SdsSecretConfig{
+	sdsConfig := &tlsv3.SdsSecretConfig{
 		Name:      tlsConfig.CACertificate.Name,
 		SdsConfig: makeConfigSource(),
+	}
+
+	if tlsConfig.CACertificate.SDS != nil {
+		// Use external SDS server instead of ADS
+		clusterName := sdsClusterNameFromURL(tlsConfig.CACertificate.SDS.URL)
+		sdsConfig = sdsSecretConfig(tlsConfig.CACertificate.SDS.SecretName, clusterName)
 	}
 
 	if needsDefaultValidationContext {
 		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_CombinedValidationContext{
 			CombinedValidationContext: &tlsv3.CommonTlsContext_CombinedCertificateValidationContext{
 				DefaultValidationContext:         validationContext,
-				ValidationContextSdsSecretConfig: sdsSecretConfig,
+				ValidationContextSdsSecretConfig: sdsConfig,
 			},
 		}
 	} else {
 		tlsCtx.ValidationContextType = &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
-			ValidationContextSdsSecretConfig: sdsSecretConfig,
+			ValidationContextSdsSecretConfig: sdsConfig,
 		}
 	}
 }
