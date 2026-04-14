@@ -2601,3 +2601,99 @@ func TestProxyAccessLogFormatNoType(t *testing.T) {
 		})
 	}
 }
+
+func TestProxyHealthCheckLog(t *testing.T) {
+	fileSink := func(path string) egv1a1.HealthCheckEventLogSink {
+		return egv1a1.HealthCheckEventLogSink{
+			Type: egv1a1.HealthCheckEventLogSinkTypeFile,
+			File: &egv1a1.HealthCheckLoggingFileSink{Path: path},
+		}
+	}
+
+	cases := []struct {
+		desc          string
+		hcLog         *egv1a1.ProxyHealthCheckLog
+		expectedError string
+	}{
+		{
+			desc: "valid - single file sink",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.HealthCheckEventLogSink{fileSink("/dev/stdout")},
+			},
+		},
+		{
+			desc: "valid - single file sink with always-log flags",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:                        []egv1a1.HealthCheckEventLogSink{fileSink("/dev/stdout")},
+				AlwaysLogHealthCheckFailures: ptr.To(true),
+				AlwaysLogHealthCheckSuccess:  ptr.To(true),
+			},
+		},
+		{
+			desc: "invalid - zero sinks",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.HealthCheckEventLogSink{},
+			},
+			expectedError: "exactly one sink must be specified",
+		},
+		{
+			desc: "invalid - two sinks",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.HealthCheckEventLogSink{
+					fileSink("/dev/stdout"),
+					fileSink("/dev/stderr"),
+				},
+			},
+			expectedError: "exactly one sink must be specified",
+		},
+		{
+			desc: "invalid - File type without file field",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.HealthCheckEventLogSink{
+					{Type: egv1a1.HealthCheckEventLogSinkTypeFile},
+				},
+			},
+			expectedError: "If HealthCheckEventLogSink type is File, file field needs to be set",
+		},
+		{
+			desc: "invalid - empty path in file sink",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks: []egv1a1.HealthCheckEventLogSink{
+					{
+						Type: egv1a1.HealthCheckEventLogSinkTypeFile,
+						File: &egv1a1.HealthCheckLoggingFileSink{Path: ""},
+					},
+				},
+			},
+			expectedError: "path",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			proxy := &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("proxy-%v", time.Now().UnixNano()),
+					Namespace: metav1.NamespaceDefault,
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						HealthCheckLog: tc.hcLog,
+					},
+				},
+			}
+
+			err := c.Create(t.Context(), proxy)
+			t.Cleanup(func() {
+				_ = c.Delete(t.Context(), proxy)
+			})
+
+			if tc.expectedError == "" {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.Contains(t, strings.ToLower(err.Error()), strings.ToLower(tc.expectedError))
+			}
+		})
+	}
+}

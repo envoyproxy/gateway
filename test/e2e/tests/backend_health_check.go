@@ -31,6 +31,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		BackendHealthCheckActiveHTTPTest,
 		BackendHealthCheckWithOverrideTest,
+		BackendHealthCheckEventLogTest,
 	)
 }
 
@@ -258,6 +259,58 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 
 				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			})
+		})
+	},
+}
+
+var BackendHealthCheckEventLogTest = suite.ConformanceTest{
+	ShortName:   "BackendHealthCheckEventLog",
+	Description: "Health check events are logged to stdout when healthCheckLog is configured",
+	Manifests:   []string{"testdata/backend-health-check-event-log.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "http-with-hc-event-log", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "hc-event-log-gtw", Namespace: ns}
+
+		kubernetes.GatewayAndHTTPRoutesMustBeAccepted(
+			t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), routeNN,
+		)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(
+			t, suite.Client,
+			types.NamespacedName{Name: "hc-event-log-btp", Namespace: ns},
+			suite.ControllerName, ancestorRef,
+		)
+
+		gatewayNS := GetGatewayResourceNamespace()
+		lokiLabels := map[string]string{
+			"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+			"namespace": gatewayNS,
+			"container": "envoy",
+		}
+
+		t.Run("health check events appear in logs", func(t *testing.T) {
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, "health_checker_type")
+					if err != nil {
+						tlog.Logf(t, "loki query error: %v", err)
+						return false
+					}
+					tlog.Logf(t, "loki match %q count=%d", "health_checker_type", count)
+					return count > 0
+				},
+			)
 		})
 	},
 }

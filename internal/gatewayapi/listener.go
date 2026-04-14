@@ -678,6 +678,28 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
+}
+
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	hcLogging := envoyProxy.Spec.Telemetry.HealthCheckLog
+	irHCLogging := &ir.ProxyHealthCheckLog{
+		AlwaysLogHealthCheckFailures: hcLogging.AlwaysLogHealthCheckFailures,
+		AlwaysLogHealthCheckSuccess:  hcLogging.AlwaysLogHealthCheckSuccess,
+	}
+	sink := hcLogging.Sinks[0]
+	if sink.Type == egv1a1.HealthCheckEventLogSinkTypeFile && sink.File != nil {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.HealthCheckLoggingFileSink{
+			Path: sink.File.Path,
+		})
+	}
+	return irHCLogging
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {

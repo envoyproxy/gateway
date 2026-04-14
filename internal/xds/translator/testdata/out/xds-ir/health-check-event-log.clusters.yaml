@@ -1,0 +1,79 @@
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route-dest
+  healthChecks:
+  - alwaysLogHealthCheckFailures: true
+    eventLogger:
+    - name: envoy.health_check.event_sinks.file
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.health_check.event_sinks.file.v3.HealthCheckEventFileSink
+        eventLogPath: /dev/stdout
+    healthyThreshold: 1
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
+      host: '*'
+      path: /healthz
+    interval: 3s
+    timeout: 0.500s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: first-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
+  healthChecks:
+  - alwaysLogHealthCheckFailures: true
+    eventLogger:
+    - name: envoy.health_check.event_sinks.file
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.health_check.event_sinks.file.v3.HealthCheckEventFileSink
+        eventLogPath: /dev/stdout
+    healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - text: 706f6e67
+      send:
+        text: "70696e67"
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: second-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

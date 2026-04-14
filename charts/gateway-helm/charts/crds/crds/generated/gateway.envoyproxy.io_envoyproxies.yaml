@@ -14475,6 +14475,72 @@ spec:
                         minItems: 1
                         type: array
                     type: object
+                  healthCheckLog:
+                    description: |-
+                      HealthCheckLog configures health check event logging for all clusters
+                      that have active health checks configured.
+                      Health check events are written as JSON to the specified file path.
+                    properties:
+                      alwaysLogHealthCheckFailures:
+                        description: |-
+                          AlwaysLogHealthCheckFailures forces a log entry to be written for every
+                          failed health check, regardless of the host's current health state.
+
+                          See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-failures
+                        type: boolean
+                      alwaysLogHealthCheckSuccess:
+                        description: |-
+                          AlwaysLogHealthCheckSuccess forces a log entry to be written for every
+                          successful health check, regardless of the host's current health state.
+
+                          See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-success
+                        type: boolean
+                      sinks:
+                        description: |-
+                          Sinks defines where health check events are written.
+                          Exactly one sink must be specified.
+                        items:
+                          description: HealthCheckEventLogSink defines a destination
+                            for health check event logs.
+                          properties:
+                            file:
+                              description: |-
+                                File defines the file sink configuration.
+                                Required when type is File.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path specifies the file path for health check event output.
+                                    Use /dev/stdout to write to standard output.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - path
+                              type: object
+                            type:
+                              allOf:
+                              - enum:
+                                - File
+                              - enum:
+                                - File
+                              description: Type defines the type of sink.
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: If HealthCheckEventLogSink type is File, file
+                              field needs to be set.
+                            rule: 'self.type == ''File'' ? has(self.file) : !has(self.file)'
+                        maxItems: 1
+                        minItems: 1
+                        type: array
+                    required:
+                    - sinks
+                    type: object
+                    x-kubernetes-validations:
+                    - message: exactly one sink must be specified
+                      rule: size(self.sinks) == 1
                   metrics:
                     description: Metrics defines metrics configuration for managed
                       proxies.

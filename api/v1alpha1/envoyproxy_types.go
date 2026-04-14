@@ -404,6 +404,12 @@ type ProxyTelemetry struct {
 	// RequestID configures Envoy request ID behavior.
 	// +optional
 	RequestID *RequestIDSettings `json:"requestID,omitempty"`
+
+	// HealthCheckLog configures health check event logging for all clusters
+	// that have active health checks configured.
+	// Health check events are written as JSON to the specified file path.
+	// +optional
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty"`
 }
 
 // EnvoyProxyProviderType defines the types of providers supported by Envoy Proxy.

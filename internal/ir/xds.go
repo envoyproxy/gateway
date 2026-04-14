@@ -162,6 +162,8 @@ type Xds struct {
 	Tracing *Tracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// Metrics configuration for the gateway.
 	Metrics *Metrics `json:"metrics,omitempty" yaml:"metrics,omitempty"`
+	// HealthCheckLog configuration for the gateway.
+	HealthCheckLog *ProxyHealthCheckLog `json:"healthCheckLog,omitempty" yaml:"healthCheckLog,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -2689,6 +2691,25 @@ type AccessLog struct {
 	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
 	ALS           []*ALSAccessLog           `json:"als,omitempty" yaml:"als,omitempty"`
 	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
+}
+
+// ProxyHealthCheckLog holds health check event logging configuration.
+// Events are written as JSON to the specified file path.
+// +k8s:deepcopy-gen=true
+type ProxyHealthCheckLog struct {
+	// FileSinks holds file-based HC event log sinks.
+	FileSinks []*HealthCheckLoggingFileSink `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
+	// AlwaysLogHealthCheckFailures forces logging of every failed health check.
+	AlwaysLogHealthCheckFailures *bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
+	// AlwaysLogHealthCheckSuccess forces logging of every successful health check.
+	AlwaysLogHealthCheckSuccess *bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
+}
+
+// HealthCheckLoggingFileSink is the IR representation of a file-based HC event log sink.
+// +k8s:deepcopy-gen=true
+type HealthCheckLoggingFileSink struct {
+	// Path is the file path for HC event JSON output.
+	Path string `json:"path" yaml:"path"`
 }
 
 // TextAccessLog holds the configuration for text access logging.

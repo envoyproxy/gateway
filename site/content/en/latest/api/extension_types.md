@@ -3134,6 +3134,51 @@ _Appears in:_
 | `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
 
 
+#### HealthCheckEventLogSink
+
+
+
+HealthCheckEventLogSink defines a destination for health check event logs.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[HealthCheckEventLogSinkType](#healthcheckeventlogsinktype)_ |  true  |  | Type defines the type of sink. |
+| `file` | _[HealthCheckLoggingFileSink](#healthcheckloggingfilesink)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
+
+
+#### HealthCheckEventLogSinkType
+
+_Underlying type:_ _string_
+
+HealthCheckEventLogSinkType is the type of health check event log sink.
+
+_Appears in:_
+- [HealthCheckEventLogSink](#healthcheckeventlogsink)
+
+| Value | Description |
+| ----- | ----------- |
+| `File` | HealthCheckEventLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
+
+
+#### HealthCheckLoggingFileSink
+
+
+
+HealthCheckLoggingFileSink writes health check events as JSON to a local file path.
+
+See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
+
+_Appears in:_
+- [HealthCheckEventLogSink](#healthcheckeventlogsink)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
+
+
 #### HealthCheckOverrides
 
 
@@ -4595,6 +4640,27 @@ _Appears in:_
 | `jsonPatches` | _[JSONPatchOperation](#jsonpatchoperation) array_ |  true  |  | JSONPatches is an array of JSONPatches to be applied to the default bootstrap. Patches are<br />applied in the order in which they are defined. |
 
 
+#### ProxyHealthCheckLog
+
+
+
+ProxyHealthCheckLog configures Envoy health check event logging.
+Health check events (state transitions, failures, successes) are emitted
+to each configured sink.
+
+See the Envoy health check API reference for details on the underlying fields:
+https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sinks` | _[HealthCheckEventLogSink](#healthcheckeventlogsink) array_ |  true  |  | Sinks defines where health check events are written.<br />Exactly one sink must be specified. |
+| `alwaysLogHealthCheckFailures` | _boolean_ |  false  |  | AlwaysLogHealthCheckFailures forces a log entry to be written for every<br />failed health check, regardless of the host's current health state.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-failures |
+| `alwaysLogHealthCheckSuccess` | _boolean_ |  false  |  | AlwaysLogHealthCheckSuccess forces a log entry to be written for every<br />successful health check, regardless of the host's current health state.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-success |
+
+
 #### ProxyLogComponent
 
 _Underlying type:_ _string_
@@ -4769,6 +4835,7 @@ _Appears in:_
 | `tracing` | _[ProxyTracing](#proxytracing)_ |  false  |  | Tracing defines tracing configuration for managed proxies.<br />If unspecified, will not send tracing data. |
 | `metrics` | _[ProxyMetrics](#proxymetrics)_ |  true  |  | Metrics defines metrics configuration for managed proxies. |
 | `requestID` | _[RequestIDSettings](#requestidsettings)_ |  false  |  | RequestID configures Envoy request ID behavior. |
+| `healthCheckLog` | _[ProxyHealthCheckLog](#proxyhealthchecklog)_ |  false  |  | HealthCheckLog configures health check event logging for all clusters<br />that have active health checks configured.<br />Health check events are written as JSON to the specified file path. |
 
 
 #### ProxyTracing

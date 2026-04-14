@@ -1,0 +1,57 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "500ms"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: "*"
+            path: "/healthz"
+            expectedStatuses:
+            - 200
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "5s"
+          unhealthyThreshold: 3
+          healthyThreshold: 3
+          tcp:
+            send:
+              text: "ping"
+            receive:
+              text: "pong"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "second-route-dest/backend/0"
+healthCheckLog:
+  fileSinks:
+  - path: "/dev/stdout"
+  alwaysLogHealthCheckFailures: true
+  alwaysLogHealthCheckSuccess: false
