@@ -22031,7 +22031,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: backends.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -22531,7 +22531,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -22682,6 +22682,7 @@ spec:
               compression:
                 description: |-
                   The compression config for the http streams.
+
                   Deprecated: Use Compressor instead.
                 items:
                   description: |-
@@ -25800,7 +25801,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: clienttrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -26512,6 +26513,7 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
+
                       Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
@@ -27862,7 +27864,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoyextensionpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -30338,7 +30340,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoypatchpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -30849,7 +30851,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -45225,12 +45227,14 @@ spec:
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
+
                                           Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
+
                                           Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
@@ -46900,12 +46904,14 @@ spec:
                                 host:
                                   description: |-
                                     Host define the service hostname.
+
                                     Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
+
                                     Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
@@ -48447,6 +48453,7 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
+
                               Deprecated: Use BackendRefs instead.
                             type: string
                           openTelemetry:
@@ -48550,6 +48557,7 @@ spec:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
+
                               Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
@@ -48908,7 +48916,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: httproutefilters.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -49402,7 +49410,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: securitypolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
