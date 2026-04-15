@@ -287,6 +287,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			}
 
 			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
+			needModifyListenerPort := r.EnvoyGateway.Provider == nil || r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes
 			for _, resources := range *val {
 				// Translate and publish IRs.
 				t := &gatewayapi.Translator{
@@ -301,6 +302,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),
 					WasmCache:                       r.wasmCache,
 					RunningOnHost:                   r.EnvoyGateway.Provider != nil && r.EnvoyGateway.Provider.IsRunningOnHost(),
+					ModifyListenerPort:              needModifyListenerPort,
 					Logger:                          traceLogger,
 					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs.LuaDisabled(),
 				}
