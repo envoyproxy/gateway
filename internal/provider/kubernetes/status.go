@@ -732,27 +732,27 @@ func mergeRouteParentStatus(ns string, old, new []gwapiv1.RouteParentStatus) []g
 	return merged
 }
 
+// This has to get updated.
 func (r *gatewayAPIReconciler) updateStatusForGateway(ctx context.Context, gtw *gwapiv1.Gateway) {
 	// nil check for unit tests.
 	if r.statusUpdater == nil {
 		return
 	}
 
-	// Get envoyObjects
-	envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
-	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
 	if status.GatewayAccepted(gtw) {
+		// Get envoyObjects
+		envoyObj, err := r.envoyObjectForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Deployment for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
+
+		// Get service
+		svc, err := r.envoyServiceForGateway(ctx, gtw)
+		if err != nil {
+			r.log.Info("failed to get Service for gateway",
+				"namespace", gtw.Namespace, "name", gtw.Name)
+		}
 		// Not already explicitly rejected (e.g. invalid EnvoyProxy/address) earlier in translation,
 		// so derive Accepted from the per-listener Accepted conditions the translator already set.
 		// TODO (huabing): this is tricky and confusing for later readers, we should remove this and set the accepted condition
