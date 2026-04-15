@@ -1,7 +1,7 @@
 # Envoy Gateway Fuzzing
 
 Envoy Gateway fuzzers are run continuously on [OSS-Fuzz](https://google.github.io/oss-fuzz/). Design documents is
-available [here](https://gateway.envoyproxy.io/contributions/design/fuzzing/).
+available [here](https://gateway.envoyproxy.io/community/design/fuzzing/).
 
 ## Local testing
 

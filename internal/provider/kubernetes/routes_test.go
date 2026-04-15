@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -121,8 +120,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/"),
 										},
 									},
 								},
@@ -165,8 +164,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/"),
 										},
 									},
 								},
@@ -261,8 +260,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/"),
 										},
 									},
 								},
@@ -334,8 +333,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/"),
 										},
 									},
 								},
@@ -382,8 +381,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/1"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/1"),
 										},
 									},
 								},
@@ -430,8 +429,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/2"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/2"),
 										},
 									},
 								},
@@ -508,8 +507,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/1"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/1"),
 										},
 									},
 								},
@@ -556,8 +555,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1.HTTPPathMatch{
-											Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-											Value: ptr.To("/2"),
+											Type:  new(gwapiv1.PathMatchPathPrefix),
+											Value: new("/2"),
 										},
 									},
 								},
@@ -747,7 +746,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								Matches: []gwapiv1.GRPCRouteMatch{
 									{
 										Method: &gwapiv1.GRPCMethodMatch{
-											Method: ptr.To("Ping"),
+											Method: new("Ping"),
 										},
 									},
 								},
@@ -1296,8 +1295,8 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 						{
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: ptr.To(gwapiv1.Group("storage.example.io")),
-									Kind:  ptr.To(gwapiv1.Kind("S3Backend")),
+									Group: new(gwapiv1.Group("storage.example.io")),
+									Kind:  new(gwapiv1.Kind("S3Backend")),
 									Name:  "s3-backend",
 								},
 							},
@@ -1305,8 +1304,8 @@ func TestProcessHTTPRoutesWithCustomBackends(t *testing.T) {
 						{
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
-									Group: ptr.To(gwapiv1.Group("compute.example.io")),
-									Kind:  ptr.To(gwapiv1.Kind("LambdaBackend")),
+									Group: new(gwapiv1.Group("compute.example.io")),
+									Kind:  new(gwapiv1.Kind("LambdaBackend")),
 									Name:  "lambda-backend",
 								},
 							},

@@ -64,6 +64,7 @@ var CredentialInjectionBackendFilterTest = suite.ConformanceTest{
 				},
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
+						// #nosec G101 - This is a test credential, not a real secret
 						Headers: map[string]string{
 							"x-credential": "Basic dXNlcjE6dGVzdDI=",
 						},

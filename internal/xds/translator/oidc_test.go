@@ -12,7 +12,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -33,7 +32,7 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			name: "all cookie configs set to None",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					SameSite: ptr.To("None"),
+					SameSite: new("None"),
 				},
 			},
 			expect: &oauth2v3.CookieConfigs{
@@ -50,7 +49,7 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			name: "all cookie configs set to Lax",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					SameSite: ptr.To("Lax"),
+					SameSite: new("Lax"),
 				},
 			},
 			expect: &oauth2v3.CookieConfigs{
@@ -67,7 +66,7 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			name: "all cookie configs set to Strict",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					SameSite: ptr.To("Strict"),
+					SameSite: new("Strict"),
 				},
 			},
 			expect: &oauth2v3.CookieConfigs{
@@ -84,7 +83,7 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			name: "all cookie configs set to Disabled",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					SameSite: ptr.To("Disabled"),
+					SameSite: new("Disabled"),
 				},
 			},
 			expect: &oauth2v3.CookieConfigs{
@@ -101,7 +100,7 @@ func TestOIDCCookieConfigSameSite(t *testing.T) {
 			name: "cookie config received invalid SameSite value will default to Disabled",
 			input: ir.OIDC{
 				CookieConfig: &egv1a1.OIDCCookieConfig{
-					SameSite: ptr.To("InvalidValue"),
+					SameSite: new("InvalidValue"),
 				},
 			},
 			expect: &oauth2v3.CookieConfigs{
