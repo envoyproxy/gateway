@@ -93,6 +93,12 @@ envoyProxiesForGateways:
         local:
           path: /usr/lib/envoy/modules/my_auth.so
         type: Local
+    - name: remote-auth-module
+      source:
+        remote:
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          url: https://modules.example.com/libremote_auth.so
+        type: Remote
     - doNotClose: true
       loadGlobally: true
       name: ai-gateway-filter
