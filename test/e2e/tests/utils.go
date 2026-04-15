@@ -295,6 +295,40 @@ func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, polic
 	require.NoErrorf(t, waitErr, "error waiting for ClientTrafficPolicy to be accepted")
 }
 
+func EnvoyProxyMustBeAccepted(t *testing.T, client client.Client, epName types.NamespacedName, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		ep := &egv1a1.EnvoyProxy{}
+		err := client.Get(ctx, epName, ep)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyProxy: %w", err)
+		}
+
+		if envoyProxyAcceptedByAncestor(&ep.Status, ancestorRef) {
+			return true, nil
+		}
+
+		tlog.Logf(t, "EnvoyProxy not yet accepted: %v", ep)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyProxy to be accepted")
+}
+
+func envoyProxyAcceptedByAncestor(status *egv1a1.EnvoyProxyStatus, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range status.Ancestors {
+		if cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.EnvoyProxyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // AlmostEquals We use a solution similar to istio:
 // Given an offset, calculate whether the actual value is within the offset of the expected value
 func AlmostEquals(actual, expect, offset int) bool {

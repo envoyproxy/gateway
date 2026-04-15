@@ -1,3 +1,31 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    telemetry:
+      tracing:
+        provider:
+          host: otel-collector.monitoring.svc.cluster.local
+          port: 4317
+          type: OpenTelemetry
+        samplingRate: 100
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -109,7 +137,7 @@ infraIR:
               namespace: envoy-gateway
             conditions:
             - lastTransitionTime: null
-              message: ""
+              message: EnvoyProxy has been accepted.
               reason: Accepted
               status: "True"
               type: Accepted

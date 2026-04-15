@@ -120,6 +120,19 @@ func mergePolicyStatus(aggregated aggregatedPolicyStatus, incoming *gwapiv1.Poli
 	return aggregated
 }
 
+func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a1.EnvoyProxyStatus {
+	if incoming == nil {
+		return aggregated
+	}
+
+	if aggregated == nil {
+		return incoming
+	}
+
+	aggregated.Ancestors = append(aggregated.Ancestors, incoming.Ancestors...)
+	return aggregated
+}
+
 func New(cfg *Config) *Runner {
 	return &Runner{
 		Config:   *cfg,
@@ -229,6 +242,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			var tlsRouteStatusCount, tcpRouteStatusCount, udpRouteStatusCount int
 			var backendTLSPolicyStatusCount, clientTrafficPolicyStatusCount, backendTrafficPolicyStatusCount int
 			var securityPolicyStatusCount, envoyExtensionPolicyStatusCount, backendStatusCount, extensionServerPolicyStatusCount int
+			var envoyproxyStatusCount int
 
 			// `aggregatedStatuses` aggregates status result of resources from all
 			// parents/ancestors, and then stores the status once for every resource.
@@ -244,6 +258,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				SecurityPolicies        map[types.NamespacedName]aggregatedPolicyStatus
 				EnvoyExtensionPolicies  map[types.NamespacedName]aggregatedPolicyStatus
 				ExtensionServerPolicies map[message.NamespacedNameAndGVK]aggregatedPolicyStatus
+				EnvoyProxies            map[types.NamespacedName]*egv1a1.EnvoyProxyStatus
 			}{
 				HTTPRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
 				GRPCRoutes:              make(map[types.NamespacedName]aggregatedRouteStatus),
@@ -256,6 +271,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				SecurityPolicies:        make(map[types.NamespacedName]aggregatedPolicyStatus),
 				EnvoyExtensionPolicies:  make(map[types.NamespacedName]aggregatedPolicyStatus),
 				ExtensionServerPolicies: make(map[message.NamespacedNameAndGVK]aggregatedPolicyStatus),
+				EnvoyProxies:            make(map[types.NamespacedName]*egv1a1.EnvoyProxyStatus),
 			}
 
 			span.AddEvent("translate", trace.WithAttributes(attribute.Int("resources.count", len(*val))))
@@ -447,6 +463,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 						aggregatedStatuses.ExtensionServerPolicies[key] = mergePolicyStatus(aggregatedStatuses.ExtensionServerPolicies[key], &policyStatus, extServerPolicy.GetGeneration())
 					}
 				}
+				// EnvoyProxy status
+				for _, ep := range result.EnvoyProxiesForGateways {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
+				if ep := result.EnvoyProxyForGatewayClass; ep != nil {
+					r.Logger.Info("update envoyproxy status", "key", utils.NamespacedName(ep))
+					aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)] = mergeEnvoyProxyStatus(aggregatedStatuses.EnvoyProxies[utils.NamespacedName(ep)], &ep.Status)
+				}
 				statusUpdateSpan.End()
 			}
 
@@ -533,6 +558,15 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 				delete(keysToDelete.ExtensionServerPolicyStatus, key)
 				r.keyCache.ExtensionServerPolicyStatus[key] = true
 			}
+			for key, entry := range aggregatedStatuses.EnvoyProxies {
+				s := egv1a1.EnvoyProxyStatus{
+					Ancestors: entry.Ancestors,
+				}
+				r.ProviderResources.EnvoyProxyStatuses.Store(key, &s)
+				envoyproxyStatusCount++
+				delete(keysToDelete.EnvoyProxyStatus, key)
+				r.keyCache.EnvoyProxyStatus[key] = true
+			}
 			// Publish aggregated metrics
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, infraIRCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.XDSIRMessageName}, xdsIRCount)
@@ -551,6 +585,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyExtensionPolicyStatusMessageName}, envoyExtensionPolicyStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.BackendStatusMessageName}, backendStatusCount)
 			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.ExtensionServerPoliciesStatusMessageName}, extensionServerPolicyStatusCount)
+			message.PublishMetric(message.Metadata{Runner: r.Name(), Message: message.EnvoyProxyStatusMessageName}, envoyproxyStatusCount)
 
 			// Delete keys using mark and sweep
 			r.deleteKeys(keysToDelete)
@@ -660,6 +695,9 @@ func (r *Runner) deleteAllKeys() {
 	for key := range r.keyCache.BackendStatus {
 		r.ProviderResources.BackendStatuses.Delete(key)
 	}
+	for key := range r.keyCache.EnvoyProxyStatus {
+		r.ProviderResources.EnvoyProxyStatuses.Delete(key)
+	}
 
 	// Clear all tracking
 	r.keyCache = newKeyCache()
@@ -684,6 +722,7 @@ type KeyCache struct {
 	SecurityPolicyStatus        map[types.NamespacedName]bool
 	EnvoyExtensionPolicyStatus  map[types.NamespacedName]bool
 	ExtensionServerPolicyStatus map[message.NamespacedNameAndGVK]bool
+	EnvoyProxyStatus            map[types.NamespacedName]bool
 
 	BackendStatus map[types.NamespacedName]bool
 }
@@ -737,6 +776,9 @@ func (kc *KeyCache) copy() *KeyCache {
 	for key := range kc.ExtensionServerPolicyStatus {
 		copied.ExtensionServerPolicyStatus[key] = true
 	}
+	for key := range kc.EnvoyProxyStatus {
+		copied.EnvoyProxyStatus[key] = true
+	}
 	for key := range kc.BackendStatus {
 		copied.BackendStatus[key] = true
 	}
@@ -760,6 +802,7 @@ func newKeyCache() *KeyCache {
 		SecurityPolicyStatus:        make(map[types.NamespacedName]bool),
 		EnvoyExtensionPolicyStatus:  make(map[types.NamespacedName]bool),
 		ExtensionServerPolicyStatus: make(map[message.NamespacedNameAndGVK]bool),
+		EnvoyProxyStatus:            make(map[types.NamespacedName]bool),
 		BackendStatus:               make(map[types.NamespacedName]bool),
 	}
 }
@@ -811,6 +854,9 @@ func (r *Runner) populateKeyCache() {
 	}
 	for key := range r.ProviderResources.ExtensionPolicyStatuses.LoadAll() {
 		r.keyCache.ExtensionServerPolicyStatus[key] = true
+	}
+	for key := range r.ProviderResources.EnvoyProxyStatuses.LoadAll() {
+		r.keyCache.EnvoyProxyStatus[key] = true
 	}
 	for key := range r.ProviderResources.BackendStatuses.LoadAll() {
 		r.keyCache.BackendStatus[key] = true
@@ -878,6 +924,10 @@ func (r *Runner) deleteKeys(kc *KeyCache) {
 	for key := range kc.ExtensionServerPolicyStatus {
 		r.ProviderResources.ExtensionPolicyStatuses.Delete(key)
 		delete(r.keyCache.ExtensionServerPolicyStatus, key)
+	}
+	for key := range kc.EnvoyProxyStatus {
+		r.ProviderResources.EnvoyProxyStatuses.Delete(key)
+		delete(r.keyCache.EnvoyProxyStatus, key)
 	}
 	for key := range kc.BackendStatus {
 		r.ProviderResources.BackendStatuses.Delete(key)

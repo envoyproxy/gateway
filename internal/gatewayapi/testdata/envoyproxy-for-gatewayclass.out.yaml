@@ -1,3 +1,68 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: valid
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    telemetry:
+      accessLog:
+        settings:
+        - format:
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+            type: Text
+          sinks:
+          - file:
+              path: /dev/stdout
+            type: File
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ep-from-gtw
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: invalid
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    telemetry:
+      accessLog:
+        settings:
+        - format:
+            text: |
+              [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+            type: Text
+          sinks:
+          - type: File
+          - type: ALS
+          - type: OpenTelemetry
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: '[unable to configure access log when using File sink type but "file"
+          field being empty, unable to configure access log when using OpenTelemetry
+          sink type but "openTelemetry" field being empty]'
+        reason: InvalidParameters
+        status: "False"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -129,7 +194,7 @@ infraIR:
               namespace: envoy-gateway
             conditions:
             - lastTransitionTime: null
-              message: ""
+              message: EnvoyProxy has been accepted.
               reason: Accepted
               status: "True"
               type: Accepted

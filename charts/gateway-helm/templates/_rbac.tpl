@@ -100,6 +100,7 @@ verbs:
 apiGroups:
 - gateway.envoyproxy.io
 resources:
+- envoyproxies/status
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
