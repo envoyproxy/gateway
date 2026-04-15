@@ -272,8 +272,6 @@ e2e: create-cluster kube-install-image kube-deploy \
 install-ratelimit:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/redis/redis.yaml
-	tools/hack/deployment-exists.sh "app.kubernetes.io/name=envoy-ratelimit" "envoy-gateway-system"
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: enable-simple-extension-server
 enable-simple-extension-server:
@@ -286,7 +284,6 @@ enable-simple-extension-server:
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
 	@$(LOG_TARGET)
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f $(KUBE_DEPLOY_EG_CONFIG_FILE)
 	kubectl apply -f test/config/gatewayclass.yaml

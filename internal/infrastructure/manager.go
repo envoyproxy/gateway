@@ -10,10 +10,8 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
@@ -42,10 +40,10 @@ type Manager interface {
 }
 
 // NewManager returns a new infrastructure Manager.
-func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (mgr Manager, err error) {
+func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier, cli client.Client) (mgr Manager, err error) {
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		mgr, err = newManagerForKubernetes(cfg, errors)
+		mgr = kubernetes.NewInfra(cli, cfg, errors)
 	case egv1a1.ProviderTypeCustom:
 		mgr, err = newManagerForCustom(ctx, cfg, logger, errors)
 	}
@@ -54,16 +52,6 @@ func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, 
 		return nil, err
 	}
 	return mgr, nil
-}
-
-func newManagerForKubernetes(cfg *config.Server, errors message.RunnerErrorNotifier) (Manager, error) {
-	clientConfig := clicfg.GetConfigOrDie()
-	clientConfig.QPS, clientConfig.Burst = cfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
-	cli, err := client.New(clientConfig, client.Options{Scheme: envoygateway.GetScheme()})
-	if err != nil {
-		return nil, err
-	}
-	return kubernetes.NewInfra(cli, cfg, errors), nil
 }
 
 func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (Manager, error) {

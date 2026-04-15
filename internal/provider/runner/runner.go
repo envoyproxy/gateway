@@ -86,6 +86,9 @@ func (r *Runner) createKubernetesProvider(ctx context.Context, errors message.Ru
 		return nil, fmt.Errorf("failed to create provider %s: %w", egv1a1.ProviderTypeKubernetes, err)
 	}
 
+	// Send the kube client to the provider client channel for the infrastructure runner to use.
+	r.ProviderClient <- p.GetClient()
+
 	return p, err
 }
 

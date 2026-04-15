@@ -12,8 +12,10 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -174,18 +176,62 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			&discoveryv1.EndpointSlice{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
-			&appsv1.Deployment{}: {
-				UnsafeDisableDeepCopy: new(true),
-			},
 			&corev1.Node{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
 			&gwapiv1b1.ReferenceGrant{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
-			&appsv1.DaemonSet{}: {
+		}
+		// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
+		// If not, we only watch the controller namespace for those resources to reduce memory usage and avoid unnecessary RBAC permissions.
+		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
 				UnsafeDisableDeepCopy: new(true),
-			},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+			}
+			mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+			}
+			mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+			}
+			mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+			}
+		} else {
+			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
+			mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+				UnsafeDisableDeepCopy: new(true),
+				Namespaces: map[string]cache.Config{
+					svrCfg.ControllerNamespace: {},
+				},
+			}
 		}
 	}
 	// ProxyTopologyInjector is the only component that interacts with Pods.
@@ -199,6 +245,8 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
+		// Always include ControllerNamespace in cache for infra operations
+		mgrOpts.Cache.DefaultNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
 	}
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
@@ -260,6 +308,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 
 func (p *Provider) Type() egv1a1.ProviderType {
 	return egv1a1.ProviderTypeKubernetes
+}
+
+// GetClient returns the controller-runtime client created by the Kubernetes provider.
+func (p *Provider) GetClient() client.Client {
+	return p.client
 }
 
 // Start starts the Provider synchronously until a message is received from ctx.

@@ -10,6 +10,7 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
@@ -177,6 +178,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
 	// It will be closed once the leader is elected in the controller manager.
 	cfg.Elected = make(chan struct{})
+	// ProviderClient is a channel for sharing the k8s provider client between the provider runner and the infrastructure runner.
+	// It will be initialized if the provider type is kubernetes, and the provider runner will send the client to this channel once it's created.
+	// The infrastructure runner will receive the client from this channel when it starts, and use it to create the manager.
+	cfg.ProviderClient = make(chan client.Client, 1)
 
 	// Setup the Extension Manager
 	var extMgr types.Manager

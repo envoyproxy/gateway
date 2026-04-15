@@ -7,9 +7,11 @@ package runner
 
 import (
 	"context"
+	"sync"
 
 	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -27,6 +29,8 @@ type Config struct {
 type Runner struct {
 	Config
 	mgr infrastructure.Manager
+
+	rateLimitInfraOnce sync.Once
 }
 
 // Close implements Runner interface.
@@ -52,7 +56,19 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
+
+	var infraClient client.Client
+	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+		select {
+		case infraClient = <-r.ProviderClient:
+		case <-ctx.Done():
+			err = ctx.Err()
+			r.Logger.Error(err, "failed to create new manager")
+			return err
+		}
+	}
+
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier, infraClient)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -64,17 +80,6 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		sub := r.InfraIR.Subscribe(ctx)
 		go r.updateProxyInfraFromSubscription(ctx, sub)
 
-		// Enable global ratelimit if it has been configured.
-		if r.EnvoyGateway.RateLimit != nil {
-			go r.enableRateLimitInfra(ctx)
-		} else {
-			// Delete the ratelimit infra if it exists.
-			go func() {
-				if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
-					r.Logger.Error(err, "failed to delete ratelimit infra")
-				}
-			}()
-		}
 		r.Logger.Info("started")
 		<-ctx.Done()
 		r.InfraIR.Close()
@@ -116,6 +121,21 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			default:
 			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
+
+			// Since the rate limit infra is shared by all proxy infra, we only need to create it once when the first IR
+			// update is received.
+			r.rateLimitInfraOnce.Do(func() {
+				if r.EnvoyGateway.RateLimit != nil {
+					if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
+						r.Logger.Error(err, "failed to create ratelimit infra")
+					}
+				} else {
+					if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+						r.Logger.Error(err, "failed to delete ratelimit infra")
+					}
+				}
+			})
+
 			val := update.Value
 
 			if update.Delete {
@@ -160,11 +180,5 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 		return
 	default:
 		r.Logger.Info("infra subscriber shutting down")
-	}
-}
-
-func (r *Runner) enableRateLimitInfra(ctx context.Context) {
-	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
-		r.Logger.Error(err, "failed to create ratelimit infra")
 	}
 }

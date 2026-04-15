@@ -13,6 +13,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	policyv1 "k8s.io/api/policy/v1"
@@ -24,10 +28,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	egmetrics "github.com/envoyproxy/gateway/internal/metrics"
 )
-
-// errSimulatedListFailure is the sentinel error returned by newListFailingClient.
-var errSimulatedListFailure = fmt.Errorf("simulated list failure")
 
 // newDeleteTrackingClient builds a fake client whose interceptor counts
 // DeleteAllOf invocations per concrete Go type (e.g. "*v1.DaemonSet").
@@ -45,6 +47,73 @@ func newDeleteTrackingClient(mu *sync.Mutex, counts map[string]int) client.Clien
 			},
 		}).
 		Build()
+}
+
+func setupDeleteMetricsRecorder(t *testing.T) *sdkmetric.ManualReader {
+	t.Helper()
+
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	previousProvider := otel.GetMeterProvider()
+	previousDeleteTotal := resourceDeleteTotal
+	previousDeleteDuration := resourceDeleteDurationSeconds
+
+	otel.SetMeterProvider(provider)
+	resourceDeleteTotal = egmetrics.NewCounter(
+		"resource_delete_total",
+		"Total number of deleted resources.",
+	)
+	resourceDeleteDurationSeconds = egmetrics.NewHistogram(
+		"resource_delete_duration_seconds",
+		"How long in seconds a resource be deleted successfully.",
+		[]float64{0.001, 0.01, 0.1, 1, 5, 10},
+	)
+
+	t.Cleanup(func() {
+		resourceDeleteTotal = previousDeleteTotal
+		resourceDeleteDurationSeconds = previousDeleteDuration
+		otel.SetMeterProvider(previousProvider)
+	})
+
+	return reader
+}
+
+func collectDeleteSuccessTotalForKind(t *testing.T, reader *sdkmetric.ManualReader, kind string) float64 {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(context.Background(), &rm))
+
+	var total float64
+	for _, scopeMetric := range rm.ScopeMetrics {
+		for _, metric := range scopeMetric.Metrics {
+			if metric.Name != "resource_delete_total" {
+				continue
+			}
+
+			sum, ok := metric.Data.(metricdata.Sum[float64])
+			require.True(t, ok, "resource_delete_total should export a float64 sum")
+
+			for _, point := range sum.DataPoints {
+				if attributeValue(point.Attributes, "kind") == kind && attributeValue(point.Attributes, "status") == egmetrics.StatusSuccess {
+					total += point.Value
+				}
+			}
+		}
+	}
+
+	return total
+}
+
+func attributeValue(set attribute.Set, key string) string {
+	for _, kv := range set.ToSlice() {
+		if string(kv.Key) == key {
+			return kv.Value.AsString()
+		}
+	}
+
+	return ""
 }
 
 var sharedTestLabels = map[string]string{
@@ -91,70 +160,52 @@ func daemonSetModeInfra() *ir.Infra {
 	return infra
 }
 
-// TestDeleteNoopReconcileDeploymentMode verifies that in Deployment mode,
-// DeleteAllOf is NOT called for DaemonSet/HPA/PDB since they never existed.
-// This is the primary scenario reported in https://github.com/envoyproxy/gateway/issues/8438.
-func TestDeleteNoopReconcileDeploymentMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// TestNoopDeleteMetricsSuppressedInDeploymentMode verifies that in Deployment mode,
+// optional-resource cleanup does not record success delete metrics when those
+// resources do not exist.
+func TestNoopDeleteMetricsSuppressedInDeploymentMode(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 
 	err := kube.CreateOrUpdateProxyInfra(context.Background(), standardDeploymentInfra())
 	require.NoError(t, err)
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Equal(t, 0, counts["*v1.DaemonSet"],
-		"DeleteAllOf should not be called for DaemonSet when none exist")
-	assert.Equal(t, 0, counts["*v2.HorizontalPodAutoscaler"],
-		"DeleteAllOf should not be called for HPA when none exist")
-	assert.Equal(t, 0, counts["*v1.PodDisruptionBudget"],
-		"DeleteAllOf should not be called for PDB when none exist")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "DaemonSet"),
+		"no-op reconcile should not record a successful delete metric for DaemonSet")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "HPA"),
+		"no-op reconcile should not record a successful delete metric for HPA")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
+		"no-op reconcile should not record a successful delete metric for PDB")
 }
 
-// TestDeleteNoopReconcileDaemonSetMode verifies that in DaemonSet mode,
-// DeleteAllOf is NOT called for Deployment/HPA/PDB since they never existed.
-// This exercises the deleteDeployment fix (Deployment is nil in DaemonSet mode).
-func TestDeleteNoopReconcileDaemonSetMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// TestNoopDeleteMetricsSuppressedInDaemonSetMode verifies that in DaemonSet mode,
+// optional-resource cleanup does not record success delete metrics when those
+// resources do not exist.
+func TestNoopDeleteMetricsSuppressedInDaemonSetMode(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	require.NoError(t, setupOwnerReferenceResources(context.Background(), kube.Client))
 
 	err := kube.CreateOrUpdateProxyInfra(context.Background(), daemonSetModeInfra())
 	require.NoError(t, err)
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Equal(t, 0, counts["*v1.Deployment"],
-		"DeleteAllOf should not be called for Deployment when none exist (DaemonSet mode)")
-	assert.Equal(t, 0, counts["*v2.HorizontalPodAutoscaler"],
-		"DeleteAllOf should not be called for HPA when none exist")
-	assert.Equal(t, 0, counts["*v1.PodDisruptionBudget"],
-		"DeleteAllOf should not be called for PDB when none exist")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "Deployment"),
+		"no-op reconcile should not record a successful delete metric for Deployment")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "HPA"),
+		"no-op reconcile should not record a successful delete metric for HPA")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
+		"no-op reconcile should not record a successful delete metric for PDB")
 }
 
-// TestDeleteIsCalledWhenResourcesExistDeploymentMode verifies that in Deployment mode,
-// DeleteAllOf IS called for DaemonSet/HPA/PDB when they actually exist
-// (e.g. switching from DaemonSet to Deployment mode).
-func TestDeleteIsCalledWhenResourcesExistDeploymentMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// TestDeleteMetricsRecordedForStaleResourcesInDeploymentMode verifies that in
+// Deployment mode, stale DaemonSet/HPA/PDB cleanup records successful delete
+// metrics when those resources actually exist.
+func TestDeleteMetricsRecordedForStaleResourcesInDeploymentMode(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	ctx := context.Background()
 	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
@@ -182,27 +233,20 @@ func TestDeleteIsCalledWhenResourcesExistDeploymentMode(t *testing.T) {
 	err := kube.CreateOrUpdateProxyInfra(ctx, standardDeploymentInfra())
 	require.NoError(t, err)
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Positive(t, counts["*v1.DaemonSet"],
-		"DeleteAllOf should be called for DaemonSet when it exists")
-	assert.Positive(t, counts["*v2.HorizontalPodAutoscaler"],
-		"DeleteAllOf should be called for HPA when it exists")
-	assert.Positive(t, counts["*v1.PodDisruptionBudget"],
-		"DeleteAllOf should be called for PDB when it exists")
+	assert.Positive(t, collectDeleteSuccessTotalForKind(t, reader, "DaemonSet"),
+		"stale DaemonSet cleanup should record a successful delete metric")
+	assert.Positive(t, collectDeleteSuccessTotalForKind(t, reader, "HPA"),
+		"stale HPA cleanup should record a successful delete metric")
+	assert.Positive(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
+		"stale PDB cleanup should record a successful delete metric")
 }
 
-// TestDeleteIsCalledWhenResourcesExistDaemonSetMode verifies that in DaemonSet mode,
-// DeleteAllOf IS called for a stale Deployment when it actually exists
-// (e.g. switching from Deployment to DaemonSet mode).
-func TestDeleteIsCalledWhenResourcesExistDaemonSetMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// TestDeleteMetricsRecordedForStaleResourcesInDaemonSetMode verifies that in
+// DaemonSet mode, stale Deployment cleanup records a successful delete metric
+// when the resource actually exists.
+func TestDeleteMetricsRecordedForStaleResourcesInDaemonSetMode(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	ctx := context.Background()
 	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
@@ -218,23 +262,17 @@ func TestDeleteIsCalledWhenResourcesExistDaemonSetMode(t *testing.T) {
 	err := kube.CreateOrUpdateProxyInfra(ctx, daemonSetModeInfra())
 	require.NoError(t, err)
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Positive(t, counts["*v1.Deployment"],
-		"DeleteAllOf should be called for Deployment when it exists (DaemonSet mode)")
+	assert.Positive(t, collectDeleteSuccessTotalForKind(t, reader, "Deployment"),
+		"stale Deployment cleanup should record a successful delete metric")
 }
 
-// TestReconcileIdempotencyDeploymentMode is a regression test that runs
+// TestNoopDeleteMetricsStaySuppressedAcrossDeploymentReconciles is a regression test that runs
 // CreateOrUpdateProxyInfra multiple times in Deployment mode and verifies
-// that DeleteAllOf is never called for optional resources.
-func TestReconcileIdempotencyDeploymentMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// that repeated no-op reconciles still do not emit successful delete metrics
+// for optional resources that were already absent.
+func TestNoopDeleteMetricsStaySuppressedAcrossDeploymentReconciles(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	ctx := context.Background()
 	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
@@ -246,27 +284,21 @@ func TestReconcileIdempotencyDeploymentMode(t *testing.T) {
 		require.NoError(t, kube.CreateOrUpdateProxyInfra(ctx, infra))
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Equal(t, 0, counts["*v1.DaemonSet"],
-		"DaemonSet DeleteAllOf must never be called across multiple no-op reconciles")
-	assert.Equal(t, 0, counts["*v2.HorizontalPodAutoscaler"],
-		"HPA DeleteAllOf must never be called across multiple no-op reconciles")
-	assert.Equal(t, 0, counts["*v1.PodDisruptionBudget"],
-		"PDB DeleteAllOf must never be called across multiple no-op reconciles")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "DaemonSet"),
+		"repeated no-op reconciles should not record successful delete metrics for DaemonSet")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "HPA"),
+		"repeated no-op reconciles should not record successful delete metrics for HPA")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
+		"repeated no-op reconciles should not record successful delete metrics for PDB")
 }
 
-// TestReconcileIdempotencyDaemonSetMode is a regression test that runs
+// TestNoopDeleteMetricsStaySuppressedAcrossDaemonSetReconciles is a regression test that runs
 // CreateOrUpdateProxyInfra multiple times in DaemonSet mode and verifies
-// that DeleteAllOf is never called for optional resources.
-func TestReconcileIdempotencyDaemonSetMode(t *testing.T) {
-	var (
-		mu     sync.Mutex
-		counts = make(map[string]int)
-	)
-
-	cli := newDeleteTrackingClient(&mu, counts)
+// that repeated no-op reconciles still do not emit successful delete metrics
+// for optional resources that were already absent.
+func TestNoopDeleteMetricsStaySuppressedAcrossDaemonSetReconciles(t *testing.T) {
+	reader := setupDeleteMetricsRecorder(t)
+	cli := newDeleteTrackingClient(&sync.Mutex{}, make(map[string]int))
 	kube := newTestInfraWithClient(t, cli)
 	ctx := context.Background()
 	require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
@@ -278,76 +310,10 @@ func TestReconcileIdempotencyDaemonSetMode(t *testing.T) {
 		require.NoError(t, kube.CreateOrUpdateProxyInfra(ctx, infra))
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	assert.Equal(t, 0, counts["*v1.Deployment"],
-		"Deployment DeleteAllOf must never be called across multiple no-op reconciles (DaemonSet mode)")
-	assert.Equal(t, 0, counts["*v2.HorizontalPodAutoscaler"],
-		"HPA DeleteAllOf must never be called across multiple no-op reconciles")
-	assert.Equal(t, 0, counts["*v1.PodDisruptionBudget"],
-		"PDB DeleteAllOf must never be called across multiple no-op reconciles")
-}
-
-// newListFailingClient builds a fake client whose List interceptor returns an
-// error for the specified object list type (e.g. "*v1.DaemonSetList"), while
-// delegating all other List calls to the underlying client.
-func newListFailingClient(failType string) client.Client {
-	return fakeclient.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Patch: interceptorFunc.Patch,
-			List: func(ctx context.Context, clnt client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-				if fmt.Sprintf("%T", list) == failType {
-					return errSimulatedListFailure
-				}
-				return clnt.List(ctx, list, opts...)
-			},
-		}).
-		Build()
-}
-
-// TestDeleteListFailureReturnsError verifies that when the pre-delete List()
-// call fails (e.g. RBAC/API errors), the error propagates and the failure
-// metric recording path is exercised.
-func TestDeleteListFailureReturnsError(t *testing.T) {
-	tests := []struct {
-		name     string
-		failType string
-		infra    func() *ir.Infra
-	}{
-		{
-			name:     "DaemonSet List failure in Deployment mode",
-			failType: "*v1.DaemonSetList",
-			infra:    standardDeploymentInfra,
-		},
-		{
-			name:     "Deployment List failure in DaemonSet mode",
-			failType: "*v1.DeploymentList",
-			infra:    daemonSetModeInfra,
-		},
-		{
-			name:     "HPA List failure in Deployment mode",
-			failType: "*v2.HorizontalPodAutoscalerList",
-			infra:    standardDeploymentInfra,
-		},
-		{
-			name:     "PDB List failure in Deployment mode",
-			failType: "*v1.PodDisruptionBudgetList",
-			infra:    standardDeploymentInfra,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cli := newListFailingClient(tc.failType)
-			kube := newTestInfraWithClient(t, cli)
-			ctx := context.Background()
-			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
-
-			err := kube.CreateOrUpdateProxyInfra(ctx, tc.infra())
-			require.Error(t, err, "reconcile should fail when pre-delete List returns an error")
-			assert.ErrorIs(t, err, errSimulatedListFailure)
-		})
-	}
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "Deployment"),
+		"repeated no-op reconciles should not record successful delete metrics for Deployment")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "HPA"),
+		"repeated no-op reconciles should not record successful delete metrics for HPA")
+	assert.Zero(t, collectDeleteSuccessTotalForKind(t, reader, "PDB"),
+		"repeated no-op reconciles should not record successful delete metrics for PDB")
 }

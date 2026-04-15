@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -39,6 +41,10 @@ type Server struct {
 	Logger logging.Logger
 	// Elected chan is used to signal when an EG instance is elected as leader.
 	Elected chan struct{}
+	// ProviderClient is a channel for sharing the k8s provider client between the provider runner and the infrastructure runner.
+	// It will be initialized if the provider type is kubernetes, and the provider runner will send the client to this channel once it's created.
+	// The infrastructure runner will receive the client from this channel when it starts, and use it to create the manager.
+	ProviderClient chan client.Client
 	// Stdout is the writer for standard output.
 	Stdout io.Writer
 	// Stderr is the writer for error output.
