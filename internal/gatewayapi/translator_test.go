@@ -92,9 +92,6 @@ func TestTranslate(t *testing.T) {
 	mustUnmarshal(t, base, baseResources)
 
 	for _, inputFile := range inputFiles {
-		// if !strings.Contains(inputFile, "tcproute-with-backendtlspolicy") {
-		// 	continue
-		// }
 		t.Run(testName(inputFile), func(t *testing.T) {
 			input, err := os.ReadFile(inputFile)
 			require.NoError(t, err)

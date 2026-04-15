@@ -160,6 +160,7 @@ func newTranslateResult(
 
 	translateResult.GatewayClass = gc
 	if gc != nil {
+		// this won't happen in real world, just a safety check to make sure the testdata won't be a mess.
 		translateResult.EnvoyProxyForGatewayClass = envoyProxyForGC
 	}
 	epProxiesSet := sets.New[types.NamespacedName]()
@@ -167,6 +168,8 @@ func newTranslateResult(
 		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
 		for i, gateway := range gateways {
 			translateResult.Gateways[i] = gateway.Gateway
+			// If the EnvoyProxy is from the Gateway itself, add it to the result so that the status can be updated in the provider layer.
+			// If it's inherited from GatewayClass, it should be handled in EnvoyProxyForGatewayClass(L164).
 			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
 				epKey := utils.NamespacedName(gateway.envoyProxy)
 				if !epProxiesSet.Has(epKey) {
