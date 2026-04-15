@@ -1024,7 +1024,7 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 		return nil
 	}
 
-	return ptr.To(hc.Active.Overrides.Port)
+	return new(hc.Active.Overrides.Port)
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
