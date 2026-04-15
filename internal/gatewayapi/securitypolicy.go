@@ -73,6 +73,10 @@ const (
 	spFieldJwtProviders     FieldPath = "spec.jwt.providers"
 )
 
+func spFieldExtAuthContextExtension(name string) FieldPath {
+	return FieldPath(fmt.Sprintf("%s.%s", spFieldExtAuthContextExtensions, name))
+}
+
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
 	deprecatedFields := make(map[string]string)
@@ -2244,8 +2248,7 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthContextExtensions, policy)
-	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, ownerPolicy.Namespace); err != nil {
+	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, fieldOwners, policy); err != nil {
 		return nil, err
 	}
 
@@ -2299,7 +2302,8 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 
 func (t *Translator) buildContextExtensions(
 	contextExtensions []*egv1a1.ContextExtension,
-	policyNs string,
+	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	defaultOwner *egv1a1.SecurityPolicy,
 ) ([]*ir.ContextExtention, error) {
 	if len(contextExtensions) == 0 {
 		return nil, nil
@@ -2309,8 +2313,9 @@ func (t *Translator) buildContextExtensions(
 	for _, ext := range contextExtensions {
 		var value ir.PrivateBytes
 		if ext.Type == egv1a1.ContextExtensionValueTypeValueRef {
+			ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthContextExtension(ext.Name), defaultOwner)
 			var err error
-			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, policyNs); err != nil {
+			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, ownerPolicy.Namespace); err != nil {
 				return nil, err
 			}
 		} else if ext.Value != nil {
@@ -2595,7 +2600,9 @@ func applySecurityPolicyFieldOwners(
 			owners[spFieldExtAuthGRPCBackendRef] = policy
 		}
 		if len(policy.Spec.ExtAuth.ContextExtensions) > 0 {
-			owners[spFieldExtAuthContextExtensions] = policy
+			for _, ext := range policy.Spec.ExtAuth.ContextExtensions {
+				owners[spFieldExtAuthContextExtension(ext.Name)] = policy
+			}
 		}
 	}
 	if policy.Spec.OIDC != nil {

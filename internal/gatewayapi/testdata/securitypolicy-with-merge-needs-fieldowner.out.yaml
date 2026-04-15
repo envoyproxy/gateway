@@ -309,6 +309,8 @@ xdsIR:
               value: '[redacted]'
             - name: route-only
               value: '[redacted]'
+            - name: parent-only
+              value: '[redacted]'
             grpc:
               authority: grpc-backend.envoy-gateway:9000
               destination:

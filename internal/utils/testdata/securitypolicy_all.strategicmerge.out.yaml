@@ -29,6 +29,9 @@ spec:
     - name: route-only
       type: Value
       value: route-only
+    - name: parent-only
+      type: Value
+      value: parent-only
     grpc:
       backendRefs:
       - name: ext-auth-route

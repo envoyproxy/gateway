@@ -1423,9 +1423,14 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 
 func Test_buildContextExtensions(t *testing.T) {
 	policyNs := "default"
+	defaultOwner := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: policyNs},
+	}
 	tests := []struct {
 		name              string
 		contextExtensions []*egv1a1.ContextExtension
+		fieldOwners       PolicyFieldOwners[*egv1a1.SecurityPolicy]
+		defaultOwner      *egv1a1.SecurityPolicy
 		translatorContext *TranslatorContext
 		want              []*ir.ContextExtention
 		wantErr           bool
@@ -1529,6 +1534,58 @@ func Test_buildContextExtensions(t *testing.T) {
 			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
+			name: "TypeValueRefUsesPerKeyOwnerNamespace",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{
+					Name: "parent-only",
+					Type: egv1a1.ContextExtensionValueTypeValueRef,
+					ValueRef: &egv1a1.LocalObjectKeyReference{
+						LocalObjectReference: gwapiv1.LocalObjectReference{
+							Kind: resource.KindConfigMap,
+							Name: "parent-cm",
+						},
+						Key: "test-key",
+					},
+				},
+				{
+					Name: "route-only",
+					Type: egv1a1.ContextExtensionValueTypeValueRef,
+					ValueRef: &egv1a1.LocalObjectKeyReference{
+						LocalObjectReference: gwapiv1.LocalObjectReference{
+							Kind: resource.KindConfigMap,
+							Name: "route-cm",
+						},
+						Key: "test-key",
+					},
+				},
+			},
+			fieldOwners: PolicyFieldOwners[*egv1a1.SecurityPolicy]{
+				spFieldExtAuthContextExtension("parent-only"): &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "parent-ns"},
+				},
+				spFieldExtAuthContextExtension("route-only"): &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns"},
+				},
+			},
+			defaultOwner: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default-ns"},
+			},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: "parent-ns", Name: "parent-cm"}: {
+						Data: map[string]string{"test-key": "parent-bar"},
+					},
+					{Namespace: "route-ns", Name: "route-cm"}: {
+						Data: map[string]string{"test-key": "route-bar"},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{
+				{Name: "parent-only", Value: ir.PrivateBytes("parent-bar")},
+				{Name: "route-only", Value: ir.PrivateBytes("route-bar")},
+			},
+		},
+		{
 			name: "TypeValueRefSecretNotFound",
 			contextExtensions: []*egv1a1.ContextExtension{{
 				Name: "foo",
@@ -1605,7 +1662,11 @@ func Test_buildContextExtensions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			translator := &Translator{TranslatorContext: tt.translatorContext}
-			got, err := translator.buildContextExtensions(tt.contextExtensions, policyNs)
+			owner := tt.defaultOwner
+			if owner == nil {
+				owner = defaultOwner
+			}
+			got, err := translator.buildContextExtensions(tt.contextExtensions, tt.fieldOwners, owner)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, got)
@@ -1971,7 +2032,9 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 		assert.Same(t, routePolicy, owners[spFieldOIDCClientSecret])
 		assert.Same(t, routePolicy, owners[spFieldOIDCProviderBackendRefs])
 		assert.Same(t, routePolicy, owners[spFieldJwtProviders])
-		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtensions])
+		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtension("shared")])
+		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtension("route-only")])
+		assert.Same(t, parentPolicy, owners[spFieldExtAuthContextExtension("parent-only")])
 	})
 
 	t.Run("uses parent owner for grpc backend fields when route does not set them", func(t *testing.T) {

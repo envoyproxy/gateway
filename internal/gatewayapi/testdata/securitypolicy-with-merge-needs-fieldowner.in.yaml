@@ -79,7 +79,7 @@ securityPolicies:
         name: users-secret
     # merge extAuth check:
     # - can resolve backendRef in parent ns (envoy-gateway)
-    # - replace contextExtensions entirely with the values configured in route policy
+    # - merge contextExtensions by name and resolve each item from its owning policy namespace
     extAuth:
       grpc:
         backendRefs:
