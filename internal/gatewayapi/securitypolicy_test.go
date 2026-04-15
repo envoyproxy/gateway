@@ -1868,7 +1868,7 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "parent-cred"}},
 				},
 				Authorization: &egv1a1.Authorization{
-					Rules: []egv1a1.AuthorizationRule{{Name: ptr.To("parent-rule")}},
+					Rules: []egv1a1.AuthorizationRule{{Name: new("parent-rule")}},
 				},
 				ExtAuth: &egv1a1.ExtAuth{
 					HTTP: &egv1a1.HTTPExtAuthService{
@@ -1879,8 +1879,8 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 						},
 					},
 					ContextExtensions: []*egv1a1.ContextExtension{
-						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("parent-shared")},
-						{Name: "parent-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("parent-only")},
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("parent-shared")},
+						{Name: "parent-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("parent-only")},
 					},
 				},
 				OIDC: &egv1a1.OIDC{
@@ -1919,7 +1919,7 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "route-cred"}},
 				},
 				Authorization: &egv1a1.Authorization{
-					Rules: []egv1a1.AuthorizationRule{{Name: ptr.To("route-rule")}},
+					Rules: []egv1a1.AuthorizationRule{{Name: new("route-rule")}},
 				},
 				ExtAuth: &egv1a1.ExtAuth{
 					HTTP: &egv1a1.HTTPExtAuthService{
@@ -1930,8 +1930,8 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 						},
 					},
 					ContextExtensions: []*egv1a1.ContextExtension{
-						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("route-shared")},
-						{Name: "route-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: ptr.To("route-only")},
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("route-shared")},
+						{Name: "route-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("route-only")},
 					},
 				},
 				OIDC: &egv1a1.OIDC{
@@ -1950,8 +1950,8 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 					Providers: []egv1a1.JWTProvider{{
 						Name: "route-jwt-provider",
 						LocalJWKS: &egv1a1.LocalJWKS{
-							Type:   ptr.To(egv1a1.LocalJWKSTypeInline),
-							Inline: ptr.To(`{"keys":[]}`),
+							Type:   new(egv1a1.LocalJWKSTypeInline),
+							Inline: new(`{"keys":[]}`),
 						},
 					}},
 				},
