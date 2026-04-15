@@ -2971,7 +2971,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
 						Request: &egv1a1.BandwidthLimitRequestConfig{
-							Limit: resource.MustParse("10M"),
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.RateLimitUnitSecond,
+							},
 						},
 					},
 				}
@@ -2993,7 +2996,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
 						Response: &egv1a1.BandwidthLimitResponseConfig{
-							Limit: resource.MustParse("100M"),
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("100M"),
+								Unit:  egv1a1.RateLimitUnitSecond,
+							},
 						},
 					},
 				}
@@ -3015,10 +3021,16 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
 						Request: &egv1a1.BandwidthLimitRequestConfig{
-							Limit: resource.MustParse("10M"),
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.RateLimitUnitSecond,
+							},
 						},
 						Response: &egv1a1.BandwidthLimitResponseConfig{
-							Limit: resource.MustParse("100M"),
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("100M"),
+								Unit:  egv1a1.RateLimitUnitSecond,
+							},
 						},
 					},
 				}
@@ -3040,7 +3052,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
 						Response: &egv1a1.BandwidthLimitResponseConfig{
-							Limit: resource.MustParse("10M"),
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.RateLimitUnitSecond,
+							},
 							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
 								Prefix: ptr.To("x-eg"),
 							},
