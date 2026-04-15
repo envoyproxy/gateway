@@ -1,0 +1,23 @@
+date: April 16, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bump Envoy Proxy image to v1.37.2 for fixing several bugs. For more details, please refer to the [Envoy Proxy v1.37.2 release notes](https://github.com/envoyproxy/envoy/releases/tag/v1.37.2).
+  Bump Envoy ratelimit image to `05c08d03`.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
