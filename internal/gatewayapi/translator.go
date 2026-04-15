@@ -258,6 +258,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
 			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
 		)
 	}
 
@@ -334,7 +336,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, resources.ReferenceGrants, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}

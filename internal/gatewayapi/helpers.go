@@ -23,9 +23,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -727,8 +729,52 @@ func irConfigName(policy client.Object) string {
 }
 
 type targetRefWithTimestamp struct {
-	gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	policyTargetReferenceWithSectionName
 	CreationTimestamp metav1.Time
+}
+
+// policyTargetReferenceWithSectionName extends the Gateway API's LocalPolicyTargetReference to include a Namespace field.
+// This is necessary because policies may reference targets in other namespaces.
+type policyTargetReferenceWithSectionName struct {
+	// Group is the group of the target resource.
+	// +required
+	Group gwapiv1.Group `json:"group"`
+
+	// Kind is kind of the target resource.
+	// +required
+	Kind gwapiv1.Kind `json:"kind"`
+
+	// Name is the name of the target resource.
+	// +required
+	Name gwapiv1.ObjectName `json:"name"`
+
+	// Namespace is the namespace of the target resource. When unspecified, it is assumed to be in the same namespace as the policy.
+	Namespace gwapiv1.Namespace `json:"namespace"`
+
+	// SectionName is the name of a section within the target resource. When
+	// unspecified, this targetRef targets the entire resource. In the following
+	// resources, SectionName is interpreted as the following:
+	//
+	// * Gateway: Listener name
+	// * HTTPRoute: HTTPRouteRule name
+	// * Service: Port name
+	//
+	// If a SectionName is specified, but does not exist on the targeted object,
+	// the Policy must fail to attach, and the policy implementation should record
+	// a `ResolvedRefs` or similar Condition in the Policy's status.
+	//
+	// +optional
+	SectionName *gwapiv1.SectionName `json:"sectionName,omitempty"`
+}
+
+type policySelectorTargetMatch[T client.Object] struct {
+	Object T
+	Ref    policyTargetReferenceWithSectionName
+}
+
+type policySelectorTargetMatches[T client.Object] struct {
+	Allowed []policySelectorTargetMatch[T]
+	Denied  []policySelectorTargetMatch[T]
 }
 
 func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
@@ -743,8 +789,110 @@ func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector 
 	return l
 }
 
-func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
-	dedup := sets.New[targetRefWithTimestamp]()
+func targetNamespaceLabelSelector(namespaces *egv1a1.TargetSelectorNamespaces) labels.Selector {
+	if namespaces == nil || namespaces.Selector == nil {
+		return labels.Nothing()
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(namespaces.Selector)
+	if err != nil {
+		return labels.Nothing()
+	}
+
+	return selector
+}
+
+func targetSelectorNamespacesMatch(
+	namespaces *egv1a1.TargetSelectorNamespaces,
+	policyNamespace,
+	targetNamespace string,
+	targetNamespaceLabels map[string]string,
+) bool {
+	if namespaces == nil {
+		return targetNamespace == policyNamespace
+	}
+
+	switch namespaces.From {
+	case "", egv1a1.TargetNamespaceFromSame:
+		return targetNamespace == policyNamespace
+	case egv1a1.TargetNamespaceFromAll:
+		return true
+	case egv1a1.TargetNamespaceFromSelector:
+		if targetNamespaceLabels == nil {
+			return false
+		}
+		return targetNamespaceLabelSelector(namespaces).Matches(labels.Set(targetNamespaceLabels))
+	default:
+		return false
+	}
+}
+
+func targetNamespaceMatches(
+	selector egv1a1.TargetSelector,
+	policyNamespace,
+	targetNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) bool {
+	var targetNamespaceLabels map[string]string
+	if namespaceLookup != nil {
+		if ns := namespaceLookup(targetNamespace); ns != nil {
+			targetNamespaceLabels = ns.GetLabels()
+		}
+	}
+
+	return targetSelectorNamespacesMatch(selector.Namespaces, policyNamespace, targetNamespace, targetNamespaceLabels)
+}
+
+func isCrossNamespacePolicyTargetRefAllowed(
+	from crossNamespaceFrom,
+	to crossNamespaceTo,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+) bool {
+	if from.namespace == to.namespace {
+		return true
+	}
+
+	for _, referenceGrant := range referenceGrants {
+		if referenceGrant.Namespace != to.namespace {
+			continue
+		}
+
+		var fromAllowed bool
+		for _, refGrantFrom := range referenceGrant.Spec.From {
+			if string(refGrantFrom.Namespace) == from.namespace &&
+				string(refGrantFrom.Group) == from.group &&
+				string(refGrantFrom.Kind) == from.kind {
+				fromAllowed = true
+				break
+			}
+		}
+		if !fromAllowed {
+			continue
+		}
+
+		for _, refGrantTo := range referenceGrant.Spec.To {
+			if string(refGrantTo.Group) == to.group &&
+				string(refGrantTo.Kind) == to.kind &&
+				(refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func getPolicySelectorTargetMatches[T client.Object](
+	policy egv1a1.PolicyTargetReferences,
+	potentialTargets []T,
+	from crossNamespaceFrom,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) policySelectorTargetMatches[T] {
+	allowedDedup := sets.New[targetRefWithTimestamp]()
+	deniedDedup := sets.New[policyTargetReferenceWithSectionName]()
+	matches := policySelectorTargetMatches[T]{}
 	for _, currSelector := range policy.TargetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
@@ -754,32 +902,82 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 				continue
 			}
 
-			// Skip objects not in the same namespace as the policy
-			if obj.GetNamespace() != policyNamespace {
+			if !targetNamespaceMatches(currSelector, policyNamespace, obj.GetNamespace(), namespaceLookup) {
 				continue
 			}
 
-			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
-				dedup.Insert(targetRefWithTimestamp{
-					CreationTimestamp: obj.GetCreationTimestamp(),
-					LocalPolicyTargetReferenceWithSectionName: gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-							Group: gwapiv1.Group(gvk.Group),
-							Kind:  gwapiv1.Kind(gvk.Kind),
-							Name:  gwapiv1.ObjectName(obj.GetName()),
-						},
-					},
-				})
+			ref := policyTargetReferenceWithSectionName{
+				Group:     gwapiv1.Group(gvk.Group),
+				Kind:      gwapiv1.Kind(gvk.Kind),
+				Name:      gwapiv1.ObjectName(obj.GetName()),
+				Namespace: gwapiv1.Namespace(obj.GetNamespace()),
 			}
+
+			if !labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				continue
+			}
+
+			if !isCrossNamespacePolicyTargetRefAllowed(
+				from,
+				crossNamespaceTo{
+					group:     gvk.Group,
+					kind:      gvk.Kind,
+					namespace: obj.GetNamespace(),
+					name:      obj.GetName(),
+				},
+				referenceGrants,
+			) {
+				if deniedDedup.Has(ref) {
+					continue
+				}
+				deniedDedup.Insert(ref)
+				matches.Denied = append(matches.Denied, policySelectorTargetMatch[T]{
+					Object: obj,
+					Ref:    ref,
+				})
+				continue
+			}
+
+			targetRef := targetRefWithTimestamp{
+				CreationTimestamp:                    obj.GetCreationTimestamp(),
+				policyTargetReferenceWithSectionName: ref,
+			}
+			if allowedDedup.Has(targetRef) {
+				continue
+			}
+			allowedDedup.Insert(targetRef)
+			matches.Allowed = append(matches.Allowed, policySelectorTargetMatch[T]{
+				Object: obj,
+				Ref:    ref,
+			})
 		}
 	}
-	selectorsList := dedup.UnsortedList()
+
+	return matches
+}
+
+func getPolicyTargetRefs[T client.Object](
+	policy egv1a1.PolicyTargetReferences,
+	potentialTargets []T,
+	from crossNamespaceFrom,
+	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyNamespace string,
+	namespaceLookup func(string) *corev1.Namespace,
+) []policyTargetReferenceWithSectionName {
+	matches := getPolicySelectorTargetMatches(policy, potentialTargets, from, referenceGrants, policyNamespace, namespaceLookup)
+	selectorsList := make([]targetRefWithTimestamp, 0, len(matches.Allowed))
+	for _, match := range matches.Allowed {
+		selectorsList = append(selectorsList, targetRefWithTimestamp{
+			CreationTimestamp:                    match.Object.GetCreationTimestamp(),
+			policyTargetReferenceWithSectionName: match.Ref,
+		})
+	}
 	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	ret := make([]policyTargetReferenceWithSectionName, len(selectorsList))
 	for i, v := range selectorsList {
-		ret[i] = v.LocalPolicyTargetReferenceWithSectionName
+		ret[i] = v.policyTargetReferenceWithSectionName
 	}
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
@@ -791,12 +989,78 @@ func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, 
 			// This can happen when the targetRef structure is read from extension server policies
 			continue
 		}
-		if !fastLookup.Has(v) {
-			ret = append(ret, v)
+		targetRef := policyTargetReferenceWithSectionName{
+			Group:       v.Group,
+			Kind:        v.Kind,
+			Name:        v.Name,
+			Namespace:   gwapiv1.Namespace(policyNamespace),
+			SectionName: v.SectionName,
+		}
+		if !fastLookup.Has(targetRef) {
+			ret = append(ret, targetRef)
 		}
 	}
 
 	return ret
+}
+
+func setPolicyTargetRefNotPermittedStatus[T client.Object](
+	policyStatus *gwapiv1.PolicyStatus,
+	denied []policySelectorTargetMatch[T],
+	controllerName string,
+	generation int64,
+) {
+	for _, deniedMatch := range denied {
+		msg := fmt.Sprintf(
+			"Target %s %s/%s is not permitted by any ReferenceGrant.",
+			deniedMatch.Object.GetObjectKind().GroupVersionKind().Kind,
+			deniedMatch.Object.GetNamespace(),
+			deniedMatch.Object.GetName(),
+		)
+
+		switch obj := any(deniedMatch.Object).(type) {
+		case *GatewayContext:
+			ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(obj), nil)
+			status.SetResolveErrorForPolicyAncestor(policyStatus, &ancestorRef, controllerName, generation, &status.PolicyResolveError{
+				Reason:  egv1a1.PolicyReasonRefNotPermitted,
+				Message: msg,
+			})
+		case RouteContext:
+			parentRefs := GetManagedParentReferences(obj)
+			ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
+			for _, p := range parentRefs {
+				if p.Kind != nil && *p.Kind != resource.KindGateway {
+					continue
+				}
+				namespace := obj.GetNamespace()
+				if p.Namespace != nil {
+					namespace = string(*p.Namespace)
+				}
+				ancestorRef := getAncestorRefForPolicy(types.NamespacedName{
+					Name:      string(p.Name),
+					Namespace: namespace,
+				}, p.SectionName)
+				ancestorRefs = append(ancestorRefs, &ancestorRef)
+			}
+			status.SetResolveErrorForPolicyAncestors(policyStatus, ancestorRefs, controllerName, generation, &status.PolicyResolveError{
+				Reason:  egv1a1.PolicyReasonRefNotPermitted,
+				Message: msg,
+			})
+		}
+	}
+}
+
+func namespaceForPolicyTargetRef[T client.Object](
+	target policyTargetReferenceWithSectionName,
+	defaultNamespace string,
+	matches []policySelectorTargetMatch[T],
+) string {
+	for _, match := range matches {
+		if match.Ref == target {
+			return match.Object.GetNamespace()
+		}
+	}
+	return defaultNamespace
 }
 
 // Sets *target to value if and only if *target is nil

@@ -3184,7 +3184,12 @@ spec:
                               type: object
                           type: object
                           x-kubernetes-map-type: atomic
+                      required:
+                      - from
                       type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -3192,10 +3197,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: namespaces.selector must be specified when namespaces.from
-                      is Selector
-                    rule: '!has(self.namespaces) || self.namespaces.from != ''Selector''
-                      || has(self.namespaces.selector)'
                   - message: at least one of namespaces, matchLabels, or matchExpressions
                       must be specified
                     rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
@@ -5035,7 +5036,12 @@ spec:
                               type: object
                           type: object
                           x-kubernetes-map-type: atomic
+                      required:
+                      - from
                       type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -5043,10 +5049,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: namespaces.selector must be specified when namespaces.from
-                      is Selector
-                    rule: '!has(self.namespaces) || self.namespaces.from != ''Selector''
-                      || has(self.namespaces.selector)'
                   - message: at least one of namespaces, matchLabels, or matchExpressions
                       must be specified
                     rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
@@ -7767,7 +7769,12 @@ spec:
                               type: object
                           type: object
                           x-kubernetes-map-type: atomic
+                      required:
+                      - from
                       type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -7775,10 +7782,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: namespaces.selector must be specified when namespaces.from
-                      is Selector
-                    rule: '!has(self.namespaces) || self.namespaces.from != ''Selector''
-                      || has(self.namespaces.selector)'
                   - message: at least one of namespaces, matchLabels, or matchExpressions
                       must be specified
                     rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
@@ -34235,7 +34238,12 @@ spec:
                               type: object
                           type: object
                           x-kubernetes-map-type: atomic
+                      required:
+                      - from
                       type: object
+                      x-kubernetes-validations:
+                      - message: selector must be specified when from is Selector
+                        rule: self.from != 'Selector' || has(self.selector)
                   required:
                   - kind
                   type: object
@@ -34243,10 +34251,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: namespaces.selector must be specified when namespaces.from
-                      is Selector
-                    rule: '!has(self.namespaces) || self.namespaces.from != ''Selector''
-                      || has(self.namespaces.selector)'
                   - message: at least one of namespaces, matchLabels, or matchExpressions
                       must be specified
                     rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)

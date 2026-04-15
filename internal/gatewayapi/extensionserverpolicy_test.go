@@ -17,7 +17,7 @@ func TestExtractTargetRefs(t *testing.T) {
 	tests := []struct {
 		desc          string
 		specInput     map[string]any
-		output        []gwapiv1.LocalPolicyTargetReferenceWithSectionName
+		output        []policyTargetReferenceWithSectionName
 		expectedError string
 	}{
 		{
@@ -61,13 +61,11 @@ func TestExtractTargetRefs(t *testing.T) {
 					"name":  "name",
 				},
 			},
-			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			output: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
-					},
+					Group: "some.group",
+					Kind:  "SomeKind",
+					Name:  "name",
 				},
 			},
 		},
@@ -87,20 +85,16 @@ func TestExtractTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			output: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			output: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind2",
-						Name:  "othername",
-					},
+					Group: "some.group",
+					Kind:  "SomeKind2",
+					Name:  "othername",
 				},
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "some.group",
-						Kind:  "SomeKind",
-						Name:  "name",
-					},
+					Group: "some.group",
+					Kind:  "SomeKind",
+					Name:  "name",
 				},
 			},
 		},
@@ -112,7 +106,7 @@ func TestExtractTargetRefs(t *testing.T) {
 				Object: map[string]any{},
 			}
 			policy.Object["spec"] = currTest.specInput
-			targets, err := extractTargetRefs(policy, []*GatewayContext{})
+			targets, err := extractTargetRefs(policy, []*GatewayContext{}, nil, nil)
 
 			if currTest.expectedError != "" {
 				require.EqualError(t, err, currTest.expectedError)

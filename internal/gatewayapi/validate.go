@@ -833,44 +833,7 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 }
 
 func (t *Translator) validateCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*gwapiv1b1.ReferenceGrant) bool {
-	for _, referenceGrant := range referenceGrants {
-		// The ReferenceGrant must be defined in the namespace of
-		// the "to" (the referent).
-		if referenceGrant.Namespace != to.namespace {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "from".
-		var fromAllowed bool
-		for _, refGrantFrom := range referenceGrant.Spec.From {
-			if string(refGrantFrom.Namespace) == from.namespace && string(refGrantFrom.Group) == from.group && string(refGrantFrom.Kind) == from.kind {
-				fromAllowed = true
-				break
-			}
-		}
-		if !fromAllowed {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "to".
-		var toAllowed bool
-		for _, refGrantTo := range referenceGrant.Spec.To {
-			if string(refGrantTo.Group) == to.group && string(refGrantTo.Kind) == to.kind && (refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
-				toAllowed = true
-				break
-			}
-		}
-		if !toAllowed {
-			continue
-		}
-
-		// If we got here, both the "from" and the "to" were allowed by this
-		// reference grant.
-		return true
-	}
-
-	// If we got here, no reference policy or reference grant allowed both the "from" and "to".
-	return false
+	return isCrossNamespacePolicyTargetRefAllowed(from, to, referenceGrants)
 }
 
 // Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address

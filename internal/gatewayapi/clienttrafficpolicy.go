@@ -32,7 +32,7 @@ const (
 	AllSections = "/"
 )
 
-func hasSectionName(target *gwapiv1.LocalPolicyTargetReferenceWithSectionName) bool {
+func hasSectionName(target *policyTargetReferenceWithSectionName) bool {
 	return target.SectionName != nil
 }
 
@@ -90,7 +90,14 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		// so there's no need to try to match targets with selectors
 		targetRefs := currPolicy.Spec.GetTargetRefs()
 		for _, currTarget := range targetRefs {
-			if hasSectionName(&currTarget) {
+			targetRef := policyTargetReferenceWithSectionName{
+				Group:       currTarget.Group,
+				Kind:        currTarget.Kind,
+				Name:        currTarget.Name,
+				Namespace:   gwapiv1.Namespace(currPolicy.Namespace),
+				SectionName: currTarget.SectionName,
+			}
+			if hasSectionName(&targetRef) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = currPolicy
@@ -98,7 +105,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					res = append(res, policy)
 				}
 
-				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &currTarget, gatewayMap)
+				gateway, resolveErr := resolveClientTrafficPolicyTargetRef(policy, &targetRef, gatewayMap)
 
 				// Negative statuses have already been assigned so its safe to skip
 				if gateway == nil {
@@ -182,7 +189,39 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for _, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		matches := getPolicySelectorTargetMatches(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			crossNamespaceFrom{
+				group:     egv1a1.GroupVersion.Group,
+				kind:      "ClientTrafficPolicy",
+				namespace: currPolicy.Namespace,
+			},
+			resources.ReferenceGrants,
+			currPolicy.Namespace,
+			t.GetNamespace,
+		)
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			crossNamespaceFrom{
+				group:     egv1a1.GroupVersion.Group,
+				kind:      "ClientTrafficPolicy",
+				namespace: currPolicy.Namespace,
+			},
+			resources.ReferenceGrants,
+			currPolicy.Namespace,
+			t.GetNamespace,
+		)
+		if len(matches.Denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = currPolicy
+				res = append(res, policy)
+				handledPolicies[policyName] = policy
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, matches.Denied, t.GatewayControllerName, policy.Generation)
+		}
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
@@ -311,13 +350,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 func resolveClientTrafficPolicyTargetRef(
 	policy *egv1a1.ClientTrafficPolicy,
-	targetRef *gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	targetRef *policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(targetRef.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(targetRef.Namespace),
 	}
 	gateway, ok := gateways[key]
 
