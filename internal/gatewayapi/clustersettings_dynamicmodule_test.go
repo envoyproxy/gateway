@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -22,7 +21,7 @@ func TestBuildLoadBalancer_DynamicModule(t *testing.T) {
 				{
 					Name: "my-module",
 					Source: egv1a1.DynamicModuleSource{
-						Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+						Type: new(egv1a1.LocalDynamicModuleSourceType),
 						Local: &egv1a1.LocalDynamicModuleSource{
 							Path: "/usr/local/lib/my-module.so",
 						},
@@ -37,7 +36,7 @@ func TestBuildLoadBalancer_DynamicModule(t *testing.T) {
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
 				Name:       "my-module",
-				PolicyName: ptr.To("round-robin-v2"),
+				PolicyName: new("round-robin-v2"),
 				Config:     &apiextensionsv1.JSON{Raw: []byte(`{"key":"value"}`)},
 			},
 		},
@@ -60,7 +59,7 @@ func TestBuildLoadBalancer_DynamicModule_UnregisteredModule(t *testing.T) {
 				{
 					Name: "other-module",
 					Source: egv1a1.DynamicModuleSource{
-						Type: ptr.To(egv1a1.LocalDynamicModuleSourceType),
+						Type: new(egv1a1.LocalDynamicModuleSourceType),
 						Local: &egv1a1.LocalDynamicModuleSource{
 							Path: "/usr/local/lib/other.so",
 						},
@@ -75,7 +74,7 @@ func TestBuildLoadBalancer_DynamicModule_UnregisteredModule(t *testing.T) {
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
 				Name:       "my-module",
-				PolicyName: ptr.To("round-robin-v2"),
+				PolicyName: new("round-robin-v2"),
 			},
 		},
 	}
@@ -91,7 +90,7 @@ func TestBuildLoadBalancer_DynamicModule_NilEnvoyProxy(t *testing.T) {
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
 				Name:       "my-module",
-				PolicyName: ptr.To("round-robin-v2"),
+				PolicyName: new("round-robin-v2"),
 			},
 		},
 	}
@@ -108,7 +107,7 @@ func TestBuildLoadBalancer_DynamicModule_Remote(t *testing.T) {
 				{
 					Name: "remote-module",
 					Source: egv1a1.DynamicModuleSource{
-						Type: ptr.To(egv1a1.RemoteDynamicModuleSourceType),
+						Type: new(egv1a1.RemoteDynamicModuleSourceType),
 						Remote: &egv1a1.RemoteDynamicModuleSource{
 							URL:    "https://example.com/module.so",
 							SHA256: "abc123def456",
@@ -124,7 +123,7 @@ func TestBuildLoadBalancer_DynamicModule_Remote(t *testing.T) {
 			Type: egv1a1.DynamicModuleLoadBalancerType,
 			DynamicModule: &egv1a1.DynamicModuleLBPolicy{
 				Name:       "remote-module",
-				PolicyName: ptr.To("custom-lb"),
+				PolicyName: new("custom-lb"),
 			},
 		},
 	}
