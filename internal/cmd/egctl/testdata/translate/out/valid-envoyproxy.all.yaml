@@ -24,7 +24,7 @@ envoyProxyForGatewayClass:
         name: eg
       conditions:
       - lastTransitionTime: null
-        message: ""
+        message: EnvoyProxy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted

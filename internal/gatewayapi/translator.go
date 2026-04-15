@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -135,6 +136,7 @@ type TranslateResult struct {
 
 func newTranslateResult(
 	gc *gwapiv1.GatewayClass,
+	envoyProxyForGC *egv1a1.EnvoyProxy,
 	gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
@@ -157,11 +159,21 @@ func newTranslateResult(
 	}
 
 	translateResult.GatewayClass = gc
-
+	if gc != nil {
+		translateResult.EnvoyProxyForGatewayClass = envoyProxyForGC
+	}
+	epProxiesSet := sets.New[types.NamespacedName]()
 	if n := len(gateways); n > 0 {
 		translateResult.Gateways = make([]*gwapiv1.Gateway, n)
 		for i, gateway := range gateways {
 			translateResult.Gateways[i] = gateway.Gateway
+			if gateway.envoyProxyFromGateway && gateway.envoyProxy != nil {
+				epKey := utils.NamespacedName(gateway.envoyProxy)
+				if !epProxiesSet.Has(epKey) {
+					translateResult.EnvoyProxiesForGateways = append(translateResult.EnvoyProxiesForGateways, gateway.envoyProxy)
+					epProxiesSet.Insert(epKey)
+				}
+			}
 		}
 	}
 
@@ -366,6 +378,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	allGateways = append(allGateways, failedGateways...)
 
 	return newTranslateResult(resources.GatewayClass,
+		resources.EnvoyProxyForGatewayClass,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
@@ -429,7 +442,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			// we didn't append to envoyproxyValidatioErrorMap because it's valid.
 
 			status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
-				egv1a1.EnvoyProxyReasonAccepted, "")
+				egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 		}
 	}
 
@@ -497,7 +510,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 
 			if gCtx.envoyProxyFromGateway {
 				status.UpdateEnvoyProxyStatusAccepted(ep, ancestor,
-					egv1a1.EnvoyProxyReasonAccepted, "")
+					egv1a1.EnvoyProxyReasonAccepted, "EnvoyProxy has been accepted.")
 			}
 		}
 

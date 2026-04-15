@@ -29,7 +29,7 @@ func UpdateEnvoyProxyStatusAccepted(ep *egv1a1.EnvoyProxy, ancestor *gwapiv1.Par
 	for i := range ep.Status.Ancestors {
 		item := ep.Status.Ancestors[i]
 		if ancestorRefsEqual(&item.AncestorRef, ancestor) {
-			item.Conditions = MergeConditions(item.Conditions, cond)
+			ep.Status.Ancestors[i].Conditions = MergeConditions(item.Conditions, cond)
 			return
 		}
 	}

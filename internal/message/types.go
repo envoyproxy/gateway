@@ -115,6 +115,8 @@ type PolicyStatuses struct {
 	BackendTLSPolicyStatuses     watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
 	EnvoyExtensionPolicyStatuses watchable.Map[types.NamespacedName, *gwapiv1.PolicyStatus]
 	ExtensionPolicyStatuses      watchable.Map[NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+
+	EnvoyProxyStatuses watchable.Map[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // ExtensionStatuses contains statuses related to gw-api extension resources
@@ -130,6 +132,7 @@ func (p *PolicyStatuses) Close() {
 	p.BackendTLSPolicyStatuses.Close()
 	p.EnvoyExtensionPolicyStatuses.Close()
 	p.ExtensionPolicyStatuses.Close()
+	p.EnvoyProxyStatuses.Close()
 }
 
 func (e *ExtensionStatuses) Close() {
@@ -225,4 +228,6 @@ const (
 	ListenerSetStatusMessageName MessageName = "listenerset-status"
 	// GatewayClassStatusMessageName is a message containing updates to GatewayClass status
 	GatewayClassStatusMessageName MessageName = "gatewayclass-status"
+	// EnvoyProxyStatusMessageName is a message containing updates to EnvoyProxy status
+	EnvoyProxyStatusMessageName MessageName = "envoyproxy-status"
 )

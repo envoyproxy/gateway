@@ -132,6 +132,7 @@ type subscriptions struct {
 	securityPolicyStatuses       <-chan watchable.Snapshot[types.NamespacedName, *gwapiv1.PolicyStatus]
 	backendStatuses              <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.BackendStatus]
 	extensionPolicyStatuses      <-chan watchable.Snapshot[message.NamespacedNameAndGVK, *gwapiv1.PolicyStatus]
+	envoyProxyStatuses           <-chan watchable.Snapshot[types.NamespacedName, *egv1a1.EnvoyProxyStatus]
 }
 
 // newGatewayAPIController
@@ -254,6 +255,7 @@ func (r *gatewayAPIReconciler) subscribeToResources(ctx context.Context) {
 	r.subscriptions.securityPolicyStatuses = r.resources.SecurityPolicyStatuses.Subscribe(ctx)
 	r.subscriptions.backendStatuses = r.resources.BackendStatuses.Subscribe(ctx)
 	r.subscriptions.extensionPolicyStatuses = r.resources.ExtensionPolicyStatuses.Subscribe(ctx)
+	r.subscriptions.envoyProxyStatuses = r.resources.EnvoyProxyStatuses.Subscribe(ctx)
 }
 
 func (r *gatewayAPIReconciler) backendAPIDisabled() bool {
