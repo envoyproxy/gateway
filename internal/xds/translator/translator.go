@@ -312,7 +312,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
 
-		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
+		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil //nolint:govet // nilness false positive: tcpXDSListener is reassigned each iteration by findXdsListenerByHostPort
 		tlsEnabled = httpListener.TLS != nil
 
 		switch {
@@ -950,7 +950,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 			loadBalancer: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 				PreferLocal: &ir.PreferLocalZone{
-					MinEndpointsThreshold: ptr.To[uint64](1),
+					MinEndpointsThreshold: new(uint64(1)),
 				},
 			},
 			metadata: svcCluster.Metadata,

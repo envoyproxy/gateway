@@ -999,7 +999,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			var (
 				hasBaseErrs    = errs != nil
-				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+				directResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
 			)
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
@@ -1188,7 +1188,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
-	directResponse := &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
 	for _, h := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {

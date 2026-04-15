@@ -1,2 +1,16 @@
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: target-unknown-gateway
+    namespace: envoy-gateway
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: unknown-gateway
+    type: JSONPatch
+  status:
+    ancestors: null
 infraIR: {}
 xdsIR: {}

@@ -75,7 +75,7 @@ type ExtAuth struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=name
-	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty"`
+	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
 
 	// Sets the HTTP status that is returned when the authorization service returns an error
 	// or cannot be reached. Defaults to 403 Forbidden.

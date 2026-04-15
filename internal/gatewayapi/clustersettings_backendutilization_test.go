@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -19,10 +18,10 @@ import (
 
 func TestBuildLoadBalancer_BackendUtilization(t *testing.T) {
 	backendUtilization := &egv1a1.BackendUtilization{
-		BlackoutPeriod:                     ptr.To(gwapiv1.Duration("10s")),
-		WeightExpirationPeriod:             ptr.To(gwapiv1.Duration("3m")),
-		WeightUpdatePeriod:                 ptr.To(gwapiv1.Duration("1s")),
-		ErrorUtilizationPenaltyPercent:     ptr.To[uint32](150),
+		BlackoutPeriod:                     new(gwapiv1.Duration("10s")),
+		WeightExpirationPeriod:             new(gwapiv1.Duration("3m")),
+		WeightUpdatePeriod:                 new(gwapiv1.Duration("1s")),
+		ErrorUtilizationPenaltyPercent:     new(uint32(150)),
 		MetricNamesForComputingUtilization: []string{"named_metrics.foo", "cpu_utilization"},
 	}
 
