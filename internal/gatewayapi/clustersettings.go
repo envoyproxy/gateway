@@ -161,7 +161,7 @@ func buildClusterSettingsTimeout(policy *egv1a1.ClusterSettings) (*ir.Timeout, e
 			if err != nil {
 				errs = errors.Join(errs, fmt.Errorf("invalid StreamIdleTimeout value %s", *pto.HTTP.StreamIdleTimeout))
 			} else {
-				sit = ptr.To(metav1.Duration{Duration: d})
+				sit = new(metav1.Duration{Duration: d})
 			}
 		}
 
@@ -197,7 +197,7 @@ func buildBackendConnection(policy *egv1a1.ClusterSettings) (*ir.BackendConnecti
 				return nil, fmt.Errorf("BufferLimit value %s is out of range", bc.BufferLimit.String())
 			}
 
-			bcIR.BufferLimitBytes = ptr.To(uint32(bf))
+			bcIR.BufferLimitBytes = new(uint32(bf))
 		}
 		if bc.Preconnect != nil {
 			preconnect := &ir.Preconnect{}
@@ -232,7 +232,7 @@ func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid IdleTime value %s", *pka.IdleTime)
 		}
-		ka.IdleTime = ptr.To(uint32(d.Seconds()))
+		ka.IdleTime = new(uint32(d.Seconds()))
 	}
 
 	if pka.Interval != nil {
@@ -240,7 +240,7 @@ func buildTCPKeepAlive(policy *egv1a1.ClusterSettings) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid Interval value %s", *pka.Interval)
 		}
-		ka.Interval = ptr.To(uint32(d.Seconds()))
+		ka.Interval = new(uint32(d.Seconds()))
 	}
 	return ka, nil
 }
@@ -387,12 +387,12 @@ func buildLoadBalancer(policy *egv1a1.ClusterSettings, envoyProxy *egv1a1.EnvoyP
 				lb.BackendUtilization.WeightUpdatePeriod = ir.MetaV1DurationPtr(d)
 			}
 			if backendUtilization.ErrorUtilizationPenaltyPercent != nil {
-				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = ptr.To(*backendUtilization.ErrorUtilizationPenaltyPercent)
+				lb.BackendUtilization.ErrorUtilizationPenaltyPercent = new(*backendUtilization.ErrorUtilizationPenaltyPercent)
 			}
 			if len(backendUtilization.MetricNamesForComputingUtilization) > 0 {
 				lb.BackendUtilization.MetricNamesForComputingUtilization = append([]string(nil), backendUtilization.MetricNamesForComputingUtilization...)
 			}
-			lb.BackendUtilization.KeepResponseHeaders = ptr.To(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
+			lb.BackendUtilization.KeepResponseHeaders = new(ptr.Deref(backendUtilization.KeepResponseHeaders, false))
 		}
 		if policy.LoadBalancer.SlowStart != nil && policy.LoadBalancer.SlowStart.Window != nil {
 			d, err := time.ParseDuration(string(*policy.LoadBalancer.SlowStart.Window))
@@ -534,7 +534,7 @@ func buildConsistentHashLoadBalancer(policy egv1a1.LoadBalancer) (*ir.Consistent
 
 	switch policy.ConsistentHash.Type {
 	case egv1a1.SourceIPConsistentHashType:
-		consistentHash.SourceIP = ptr.To(true)
+		consistentHash.SourceIP = new(true)
 	case egv1a1.HeaderConsistentHashType:
 		consistentHash.Headers = []*egv1a1.Header{
 			{
@@ -804,7 +804,7 @@ func buildRetry(r *egv1a1.Retry) (*ir.Retry, error) {
 	rt := &ir.Retry{}
 
 	if r.NumRetries != nil {
-		rt.NumRetries = ptr.To(uint32(*r.NumRetries))
+		rt.NumRetries = new(uint32(*r.NumRetries))
 	}
 
 	rt.NumAttemptsPerPriority = r.NumAttemptsPerPriority

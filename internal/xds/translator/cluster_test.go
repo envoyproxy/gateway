@@ -21,7 +21,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
+
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -42,7 +42,7 @@ func TestBuildXdsCluster(t *testing.T) {
 		tSocket:      bootstrapXdsCluster.TransportSocket,
 		endpointType: EndpointTypeDNS,
 		healthCheck: &ir.HealthCheck{
-			PanicThreshold: ptr.To[uint32](66),
+			PanicThreshold: new(uint32(66)),
 		},
 	}
 	result, err := buildXdsCluster(args)
@@ -87,7 +87,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 			name: "nil health check overrides",
 			healthCheck: &ir.HealthCheck{
 				Active: &ir.ActiveHealthCheck{
-					HealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold: new(uint32(3)),
 				},
 			},
 			expected: nil,
@@ -96,7 +96,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 			name: "health check overrides with port override",
 			healthCheck: &ir.HealthCheck{
 				Active: &ir.ActiveHealthCheck{
-					HealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold: new(uint32(3)),
 					Overrides: &ir.HealthCheckOverrides{
 						Port: 9090,
 					},
@@ -156,8 +156,8 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			input: &ir.OutlierDetection{
 				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:   ptr.To[int32](10),
-				Consecutive5xxErrors: ptr.To[uint32](5),
+				MaxEjectionPercent:   new(int32(10)),
+				Consecutive5xxErrors: new(uint32(5)),
 			},
 			expected: &clusterv3.OutlierDetection{
 				Interval:           durationpb.New(10 * time.Second),
@@ -171,9 +171,9 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			input: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:         ptr.To[int32](10),
-				Consecutive5xxErrors:       ptr.To[uint32](5),
-				FailurePercentageThreshold: ptr.To[uint32](90),
+				MaxEjectionPercent:         new(int32(10)),
+				Consecutive5xxErrors:       new(uint32(5)),
+				FailurePercentageThreshold: new(uint32(90)),
 			},
 			expected: &clusterv3.OutlierDetection{
 				Interval:                   durationpb.New(10 * time.Second),
@@ -187,15 +187,15 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 		{
 			name: "outlier detection with all fields",
 			input: &ir.OutlierDetection{
-				SplitExternalLocalOriginErrors: ptr.To(true),
+				SplitExternalLocalOriginErrors: new(true),
 				Interval:                       ir.MetaV1DurationPtr(10 * time.Second),
-				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
-				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
-				Consecutive5xxErrors:           ptr.To[uint32](5),
+				ConsecutiveLocalOriginFailures: new(uint32(3)),
+				ConsecutiveGatewayErrors:       new(uint32(2)),
+				Consecutive5xxErrors:           new(uint32(5)),
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:             ptr.To[int32](10),
-				FailurePercentageThreshold:     ptr.To[uint32](85),
-				AlwaysEjectOneEndpoint:         ptr.To(true),
+				MaxEjectionPercent:             new(int32(10)),
+				FailurePercentageThreshold:     new(uint32(85)),
+				AlwaysEjectOneEndpoint:         new(true),
 			},
 			expected: &clusterv3.OutlierDetection{
 				SplitExternalLocalOriginErrors:     true,
@@ -298,13 +298,13 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			name: "nil HTTP health checker",
 			healthCheck: &ir.HealthCheck{
 				Active: &ir.ActiveHealthCheck{
-					HealthyThreshold: ptr.To[uint32](3),
+					HealthyThreshold: new(uint32(3)),
 				},
 			},
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "backend.example.com",
 		},
@@ -321,7 +321,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "backend.example.com",
 		},
@@ -338,7 +338,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "backend.example.com",
 		},
@@ -355,7 +355,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "",
 		},
@@ -429,7 +429,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "backend.example.com",
 		},
@@ -443,7 +443,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
-				Hostname: ptr.To("backend.example.com"),
+				Hostname: new("backend.example.com"),
 			},
 			expected: "backend.example.com",
 		},
