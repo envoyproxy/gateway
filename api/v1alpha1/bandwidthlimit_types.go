@@ -13,12 +13,12 @@ import (
 //
 // +kubebuilder:validation:XValidation:rule="has(self.request) || has(self.response)",message="at least one of request or response must be specified"
 type BandwidthLimitSpec struct {
-	// Request configures the bandwidth limit for incoming traffic (gateway to backend).
+	// Request configures bandwidth limits for traffic sent to the backend.
 	//
 	// +optional
 	Request *BandwidthLimitRequestConfig `json:"request,omitempty"`
 
-	// Response configures the bandwidth limit for outgoing traffic (backend to gateway).
+	// Response configures bandwidth limits for traffic sent from the backend.
 	//
 	// +optional
 	Response *BandwidthLimitResponseConfig `json:"response,omitempty"`
@@ -44,19 +44,21 @@ type BandwidthLimitResponseConfig struct {
 
 // BandwidthLimitValue defines the bandwidth limit value and its time unit.
 type BandwidthLimitValue struct {
-	// Request specifies the bandwidth limit.
+	// Value specifies the bandwidth limit.
 	//
 	// +kubebuilder:validation:XIntOrString
 	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
-	Request resource.Quantity `json:"request"`
+	Value resource.Quantity `json:"value"`
 
 	// Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour).
 	Unit RateLimitUnit `json:"unit"`
 }
 
 type BandwidthLimitResponseTrailers struct {
-	// Prefix is prepended to each trailer header name with delay metrics.
-	// For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".
+	// Prefix is prepended to each trailer header name.
+	// If not set, no prefix is added and the trailers are named as-is.
+	// For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms",
+	// while leaving it unset produces "bandwidth-request-delay-ms".
 	//
 	// The following four trailers can be added:
 	// "bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer

@@ -640,7 +640,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name with delay metrics.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name.<br />If not set, no prefix is added and the trailers are named as-is.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms",<br />while leaving it unset produces "bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
 
 
 #### BandwidthLimitSpec
@@ -654,8 +654,8 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures the bandwidth limit for incoming traffic (gateway to backend). |
-| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures the bandwidth limit for outgoing traffic (backend to gateway). |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures bandwidth limits for traffic sent to the backend. |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures bandwidth limits for traffic sent from the backend. |
 
 
 #### BandwidthLimitValue
@@ -670,7 +670,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `request` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Request specifies the bandwidth limit. |
+| `value` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Value specifies the bandwidth limit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
 
 
