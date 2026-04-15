@@ -3056,7 +3056,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 								Unit:  egv1a1.RateLimitUnitSecond,
 							},
 							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
-								Prefix: ptr.To("x-eg"),
+								Prefix: new("x-eg"),
 							},
 						},
 					},
