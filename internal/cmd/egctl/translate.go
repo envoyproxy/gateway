@@ -292,6 +292,7 @@ func translateGatewayAPIToIR(resources *resource.Resources) (*gatewayapi.Transla
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		ModifyListenerPort:      true,
 		// Discard logs during translation for egctl command to avoid polluting output
 		Logger: logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
@@ -322,6 +323,7 @@ func translateGatewayAPIToGatewayAPI(resources *resource.Resources) (resource.Re
 		EndpointRoutingDisabled: true,
 		EnvoyPatchPolicyEnabled: true,
 		BackendEnabled:          true,
+		ModifyListenerPort:      true,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
@@ -362,6 +364,7 @@ func TranslateGatewayAPIToXds(namespace, dnsDomain, resourceType string, resourc
 		EndpointRoutingDisabled: opts.EndpointRoutingDisabled,
 		EnvoyPatchPolicyEnabled: opts.EnvoyPatchPolicyEnabled,
 		BackendEnabled:          opts.BackendEnabled,
+		ModifyListenerPort:      true,
 		Logger:                  logging.DefaultLogger(io.Discard, egv1a1.LogLevelInfo),
 	}
 	gRes, _ := gTranslator.Translate(resources)
