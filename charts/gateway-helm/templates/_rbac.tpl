@@ -263,6 +263,17 @@ verbs:
   - watch
 {{- end }}
 
+{{- define "eg.rbac.controllernamespace.secrets.read" -}}
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+
 {{- define "eg.rbac.infra.tokenreview" -}}
 - apiGroups:
   - authentication.k8s.io
