@@ -292,8 +292,8 @@ func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
 		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{
-				{Host: "127.0.0.1", Port: 8080, Zone: ptr.To("us-east-1a")},
-				{Host: "127.0.0.2", Port: 8080, Zone: ptr.To("us-east-1b")},
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
 			},
 		}},
 		loadBalancer: &ir.LoadBalancer{
@@ -342,8 +342,8 @@ func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *test
 		endpointType: EndpointTypeStatic,
 		settings: []*ir.DestinationSetting{{
 			Endpoints: []*ir.DestinationEndpoint{
-				{Host: "127.0.0.1", Port: 8080, Zone: ptr.To("us-east-1a")},
-				{Host: "127.0.0.2", Port: 8080, Zone: ptr.To("us-east-1b")},
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
 			},
 		}},
 		loadBalancer: &ir.LoadBalancer{
@@ -356,7 +356,7 @@ func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *test
 			},
 			EndpointOverride: &ir.EndpointOverride{
 				ExtractFrom: []ir.EndpointOverrideExtractFrom{{
-					Header: ptr.To("x-fallback-host"),
+					Header: new("x-fallback-host"),
 				}},
 			},
 		},
