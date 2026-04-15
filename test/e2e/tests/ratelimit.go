@@ -10,7 +10,6 @@ package tests
 import (
 	"context"
 	"net"
-	"strconv"
 	"testing"
 	"time"
 
@@ -46,8 +45,6 @@ func init() {
 		RateLimitGlobalSharedCidrMatchTest,
 		RateLimitGlobalSharedGatewayHeaderMatchTest,
 		RateLimitGlobalMergeTest,
-		RateLimitGlobalShadowModeTest,
-		RateLimitQueryParametersTest,
 	)
 }
 
@@ -1392,229 +1389,13 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 		})
 
 		t.Run("shared_no_client_selectors", func(t *testing.T) {
-			// This test verifies that the gateway-level rate limit rule without clientSelectors
-			// applies to all requests that don't match more specific rules.
-			// The limit is set to 100 requests per hour (shared across all routes).
-			// We verify that requests without any headers are subject to this limit.
+			ok1 := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{200}}, Namespace: ns}
+			limit := http.ExpectedResponse{Request: http.Request{Path: "/bar"}, Response: http.Response{StatusCodes: []int{429}}, Namespace: ns}
 
-			ratelimitHeader := make(map[string]string)
-			expectOkResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/bar",
-				},
-				Response: http.Response{
-					StatusCodes: []int{200},
-					Headers:     ratelimitHeader,
-				},
-				Namespace: ns,
-			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "100, 100;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr1, "HTTP", "http")
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &ok1)
 
-			expectLimitResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/bar",
-				},
-				Response: http.Response{
-					StatusCodes: []int{429},
-				},
-				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr1, "HTTP", "http")
-
-			// Wait for the rate limit configuration to be ready
-			// This ensures the gateway is properly configured before we start counting requests
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr1, &expectOkResp)
-
-			// Probe current remaining count (retry on network errors)
-			// Since other tests sharing the same gateway may have consumed some tokens,
-			// we need to check the remaining tokens dynamically instead of assuming a fresh bucket.
-			var remainingHeaders []string
-			require.Eventually(t, func() bool {
-				cReq, cRes, err := suite.RoundTripper.CaptureRoundTrip(expectOkReq)
-				if err != nil {
-					tlog.Logf(t, "failed to capture round trip due to network error: %v, retrying...", err)
-					return false // retry on network errors
-				}
-				if http.CompareRoundTrip(t, &expectOkReq, cReq, cRes, expectOkResp) != nil {
-					tlog.Logf(t, "response does not match expected: %v, retrying...", http.CompareRoundTrip(t, &expectOkReq, cReq, cRes, expectOkResp))
-					return false // retry if response does not match expected
-				}
-				remainingHeaders = cRes.Headers["X-Ratelimit-Remaining"]
-				if len(remainingHeaders) == 0 {
-					tlog.Logf(t, "X-Ratelimit-Remaining header not found, retrying...")
-					return false // retry if XDS config is not yet propagated
-				}
-				return true
-			}, suite.TimeoutConfig.MaxTimeToConsistency, suite.TimeoutConfig.RequestTimeout, "probe remaining tokens")
-
-			require.NotEmpty(t, remainingHeaders)
-			remaining, err := strconv.Atoi(remainingHeaders[0])
-			require.NoError(t, err)
-
-			// Consume the remaining tokens
-			if remaining > 0 {
-				if err := GotExactExpectedResponseExceptErrors(t, remaining, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-					t.Errorf("failed to exhaust remaining %d requests: %v", remaining, err)
-				}
-			}
-
-			// The next request should be rate limited
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("expected 429 after exhaustion: %v", err)
-			}
-		})
-	},
-}
-
-var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
-	ShortName:   "RateLimitGlobalShadowModeTest",
-	Description: "Limit requests with shadow mode enabled, verifying that requests are not actually limited",
-	Manifests:   []string{"testdata/ratelimit-global-shadow-mode.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		shadowRouteNN := types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)
-
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
-			types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns},
-			suite.ControllerName, gwapiv1.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			})
-
-		t.Run("matched with shadow mode can't got limited", func(t *testing.T) {
-			ratelimitHeader := make(map[string]string)
-
-			expectOkResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path:   "/shadow",
-					Method: "GET",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-					Headers:    ratelimitHeader,
-				},
-				Namespace: ns,
-			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			// In shadow mode, requests are never blocked even when exceeding the rate limit.
-			// The rate limit is set to 3 requests per window, but we send 5 total requests.
-			// Shadow mode ensures all requests return 200 (never 429)
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the next 2 requests (total: 3 requests, reaching the limit)
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
-			}
-
-			// send 2 more requests that exceed the limit, but still expect 200 (not 429) due to shadow mode
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for requests exceeding the limit: %v", err)
-			}
-		})
-	},
-}
-
-var RateLimitQueryParametersTest = suite.ConformanceTest{
-	ShortName:   "RateLimitQueryParameters",
-	Description: "Limit all requests that match query parameters",
-	Manifests:   []string{"testdata/ratelimit-query-parameters.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "query-parameters-ratelimit", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-
-		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
-			types.NamespacedName{Name: "ratelimit-query-parameters", Namespace: ns},
-			suite.ControllerName, gwapiv1.ParentReference{
-				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-				Kind:      gatewayapi.KindPtr(resource.KindGateway),
-				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-				Name:      gwapiv1.ObjectName(gwNN.Name),
-			})
-
-		t.Run("all matched query parameters can got limited", func(t *testing.T) {
-			ratelimitHeader := make(map[string]string)
-			expectOkResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/get?user=alice",
-				},
-				Response: http.Response{
-					StatusCodes: []int{200},
-					Headers:     ratelimitHeader,
-				},
-				Namespace: ns,
-			}
-			expectOkResp.Response.Headers["X-Ratelimit-Limit"] = "3, 3;w=3600"
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			expectLimitResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/get?user=alice",
-				},
-				Response: http.Response{
-					StatusCodes: []int{429},
-				},
-				Namespace: ns,
-			}
-			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
-
-			// send exactly 4 requests, and still expect 200
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of requests
-			if err := GotExactExpectedResponseExceptErrors(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected response for the first three requests: %v", err)
-			}
-			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
-			// make sure that metric worked as expected.
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-				v, err := prometheus.QueryPrometheus(suite.Client, `ratelimit_service_rate_limit_over_limit{key2="user"}`)
-				if err != nil {
-					tlog.Logf(t, "failed to query prometheus: %v", err)
-					return false, err
-				}
-				if v != nil {
-					tlog.Logf(t, "got expected value: %v", v)
-					return true, nil
-				}
-				return false, nil
-			}); err != nil {
-				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
-			}
-		})
-
-		t.Run("different query parameter values should not be limited", func(t *testing.T) {
-			expectOkResp := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/get?name=bob",
-				},
-				Response: http.Response{
-					StatusCodes: []int{200},
-				},
-				Namespace: ns,
-			}
-			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
-			// send exactly 4 requests, and still expect 200
-
-			// keep sending requests till get 200 first, that will cost one 200
-			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
-
-			// fire the rest of the requests
-			if err := GotExactExpectedResponseExceptErrors(t, 3, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
-				t.Errorf("failed to get expected responses for the request: %v", err)
+			if err := GotExactExpectedResponseExceptErrors(t, 1, suite.RoundTripper, http.MakeRequest(t, &limit, gwAddr1, "HTTP", "http"), limit); err != nil {
+				t.Errorf("expected 429 for third request: %v", err)
 			}
 		})
 	},

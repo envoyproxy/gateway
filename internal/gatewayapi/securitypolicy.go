@@ -10,6 +10,7 @@ import (
 	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
 	"crypto/sha1"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"

@@ -41,7 +41,6 @@ func TestE2E(t *testing.T) {
 
 	skipTests := []string{
 		tests.GatewayInfraResourceTest.ShortName, // https://github.com/envoyproxy/gateway/issues/3191
-		tests.ConsistentHashQueryParamsLoadBalancingTest.ShortName,
 	}
 
 	// Skip test only work on DualStack cluster
