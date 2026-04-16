@@ -117,9 +117,10 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			},
 		},
 		Namespace: ns,
-	})
+	}
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp)
 
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+	expectedResp2 := http.ExpectedResponse{
 		Request: http.Request{
 			Path:    path,
 			Headers: headers,
@@ -139,5 +140,5 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 		},
 		Namespace: ns,
 	}
-	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp2)
 }

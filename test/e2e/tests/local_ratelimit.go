@@ -76,39 +76,6 @@ var LocalRateLimitTest = suite.ConformanceTest{
 	},
 }
 
-func runShadowModeRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
-	ns := "gateway-conformance-infra"
-	gwNN := gatewayNN(disableHeader)
-	gwAddr := gatewayAndHTTPRoutesMustBeAccepted(t, suite, gwNN)
-
-	ancestorRef := gwapiv1.ParentReference{
-		Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
-		Kind:      gatewayapi.KindPtr(resource.KindGateway),
-		Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
-		Name:      gwapiv1.ObjectName(gwNN.Name),
-	}
-	BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-shadow-mode", Namespace: ns}, suite.ControllerName, ancestorRef)
-
-	expectedShadowResp := http.ExpectedResponse{
-		Request: http.Request{
-			Path: "/ratelimit-shadow-mode",
-			Headers: map[string]string{
-				"x-user-id": "one",
-			},
-		},
-		Response: http.Response{
-			// always return 200 because shadow mode
-			StatusCodes: []int{200},
-		},
-		Namespace: ns,
-	}
-	for range 10 {
-		// keep sending requests till get 200 first, that will cost one 200
-		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedShadowResp)
-	}
-}
-
-
 // gatewayNN return the gateway namespace name when disabled header or not
 // All the HTTPRoute attached to the two gateways, the different is that we
 // disabled rate limit headers on all-namespace gateway
