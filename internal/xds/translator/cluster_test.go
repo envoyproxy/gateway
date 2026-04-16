@@ -160,12 +160,13 @@ func requireCmpNoDiff(t *testing.T, expected, actual interface{}) {
 	require.Empty(t, cmp.Diff(expected, actual, protocmp.Transform()))
 }
 
-func TestGetHealthCheckOverridesHostname(t *testing.T) {
+func TestBuildHealthCheckConfig(t *testing.T) {
 	tests := []struct {
-		name        string
-		healthCheck *ir.HealthCheck
-		endpoint    *ir.DestinationEndpoint
-		expected    string
+		name             string
+		healthCheck      *ir.HealthCheck
+		endpoint         *ir.DestinationEndpoint
+		expectedHostname string
+		expectNil        bool
 	}{
 		{
 			name: "nil HTTP health checker",
@@ -179,7 +180,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "backend.example.com",
+			expectedHostname: "backend.example.com",
 		},
 		{
 			name: "HTTP health checker with empty host and endpoint has hostname",
@@ -196,7 +197,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "backend.example.com",
+			expectedHostname: "backend.example.com",
 		},
 		{
 			name: "HTTP health checker with wildcard host and endpoint has hostname",
@@ -213,7 +214,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "backend.example.com",
+			expectedHostname: "backend.example.com",
 		},
 		{
 			name: "HTTP health checker with explicit host",
@@ -230,7 +231,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "",
+			expectNil: true,
 		},
 		{
 			name: "HTTP health checker with empty host but nil endpoint",
@@ -242,8 +243,8 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
-			endpoint: nil,
-			expected: "",
+			endpoint:  nil,
+			expectNil: true,
 		},
 		{
 			name: "HTTP health checker with empty host but endpoint has nil hostname",
@@ -260,7 +261,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: nil,
 			},
-			expected: "",
+			expectNil: true,
 		},
 		{
 			name: "HTTP health checker with wildcard host but nil endpoint",
@@ -272,8 +273,8 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
-			endpoint: nil,
-			expected: "",
+			endpoint:  nil,
+			expectNil: true,
 		},
 		{
 			name: "HTTP health checker with wildcard host but endpoint has nil hostname",
@@ -290,7 +291,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: nil,
 			},
-			expected: "",
+			expectNil: true,
 		},
 		{
 			name: "TCP health checker with endpoint hostname",
@@ -304,7 +305,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "backend.example.com",
+			expectedHostname: "backend.example.com",
 		},
 		{
 			name: "GRPC health checker with endpoint hostname",
@@ -318,14 +319,19 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: ptr.To("backend.example.com"),
 			},
-			expected: "backend.example.com",
+			expectedHostname: "backend.example.com",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint)
-			require.Equal(t, tc.expected, result)
+			result := buildHealthCheckConfig(tc.healthCheck, tc.endpoint)
+			if tc.expectNil {
+				require.Nil(t, result)
+			} else {
+				require.NotNil(t, result)
+				require.Equal(t, tc.expectedHostname, result.Hostname)
+			}
 		})
 	}
 }

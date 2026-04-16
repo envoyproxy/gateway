@@ -97,7 +97,8 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway-1/http
+      - address: null
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -141,11 +142,9 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
-      grpc:
-        enableGRPCStats: true
-        enableGRPCWeb: true
       hostnames:
       - '*'
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
