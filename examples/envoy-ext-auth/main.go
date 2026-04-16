@@ -15,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -35,6 +37,16 @@ var (
 		"token2": "user2",
 		"token3": "user3",
 	}
+)
+
+const (
+	routeMetadataNamespace    = "envoy-gateway"
+	routeMetadataResources    = "resources"
+	routeMetadataKind         = "kind"
+	routeMetadataName         = "name"
+	routeMetadataNamespaceKey = "namespace"
+	routeMetadataAnnotations  = "annotations"
+	routeNameHeader           = "x-eg-route-name"
 )
 
 func main() {
@@ -102,20 +114,40 @@ func (s *authServer) Check(
 	if len(extracted) == 2 && extracted[0] == "Bearer" {
 		valid, user := s.users.Check(extracted[1])
 		if valid {
+			headers := []*envoy_api_v3_core.HeaderValueOption{
+				{
+					Append: &wrappers.BoolValue{Value: false},
+					Header: &envoy_api_v3_core.HeaderValue{
+						// For a successful request, the authorization server sets the
+						// x-current-user value.
+						Key:   "x-current-user",
+						Value: user,
+					},
+				},
+			}
+			if routeMetadata, ok := getRouteMetadata(req); ok {
+				headers = append(headers, &envoy_api_v3_core.HeaderValueOption{
+					Append: &wrappers.BoolValue{Value: false},
+					Header: &envoy_api_v3_core.HeaderValue{
+						Key:   routeNameHeader,
+						Value: routeMetadata.Name,
+					},
+				})
+				for _, key := range sortedAnnotationKeys(routeMetadata.Annotations) {
+					headers = append(headers, &envoy_api_v3_core.HeaderValueOption{
+						Append: &wrappers.BoolValue{Value: false},
+						Header: &envoy_api_v3_core.HeaderValue{
+							Key:   routeAnnotationHeaderName(key),
+							Value: routeMetadata.Annotations[key],
+						},
+					})
+				}
+				log.Printf("GRPC route metadata: kind=%s namespace=%s name=%s", routeMetadata.Kind, routeMetadata.Namespace, routeMetadata.Name)
+			}
 			return &envoy_service_auth_v3.CheckResponse{
 				HttpResponse: &envoy_service_auth_v3.CheckResponse_OkResponse{
 					OkResponse: &envoy_service_auth_v3.OkHttpResponse{
-						Headers: []*envoy_api_v3_core.HeaderValueOption{
-							{
-								Append: &wrappers.BoolValue{Value: false},
-								Header: &envoy_api_v3_core.HeaderValue{
-									// For a successful request, the authorization server sets the
-									// x-current-user value.
-									Key:   "x-current-user",
-									Value: user,
-								},
-							},
-						},
+						Headers: headers,
 					},
 				},
 				Status: &status.Status{
@@ -130,6 +162,90 @@ func (s *authServer) Check(
 			Code: int32(code.Code_PERMISSION_DENIED),
 		},
 	}, nil
+}
+
+type routeMetadata struct {
+	Kind        string
+	Namespace   string
+	Name        string
+	Annotations map[string]string
+}
+
+func getRouteMetadata(req *envoy_service_auth_v3.CheckRequest) (*routeMetadata, bool) {
+	if req == nil || req.Attributes == nil || req.Attributes.RouteMetadataContext == nil {
+		return nil, false
+	}
+
+	ns := req.Attributes.RouteMetadataContext.FilterMetadata[routeMetadataNamespace]
+	if ns == nil {
+		return nil, false
+	}
+
+	resources := ns.Fields[routeMetadataResources]
+	if resources == nil || resources.GetListValue() == nil || len(resources.GetListValue().Values) == 0 {
+		return nil, false
+	}
+
+	resource := resources.GetListValue().Values[0].GetStructValue()
+	if resource == nil {
+		return nil, false
+	}
+
+	md := &routeMetadata{
+		Kind:        structFieldString(resource, routeMetadataKind),
+		Namespace:   structFieldString(resource, routeMetadataNamespaceKey),
+		Name:        structFieldString(resource, routeMetadataName),
+		Annotations: structFields(resource.Fields[routeMetadataAnnotations].GetStructValue()),
+	}
+	if md.Kind == "" || md.Namespace == "" || md.Name == "" {
+		return nil, false
+	}
+
+	return md, true
+}
+
+func structFieldString(st *structpb.Struct, key string) string {
+	if st == nil || st.Fields[key] == nil {
+		return ""
+	}
+	return st.Fields[key].GetStringValue()
+}
+
+func structFields(st *structpb.Struct) map[string]string {
+	if st == nil || len(st.Fields) == 0 {
+		return nil
+	}
+
+	fields := make(map[string]string, len(st.Fields))
+	for key, value := range st.Fields {
+		if value == nil {
+			continue
+		}
+		if stringValue := value.GetStringValue(); stringValue != "" {
+			fields[key] = stringValue
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	return fields
+}
+
+func sortedAnnotationKeys(annotations map[string]string) []string {
+	if len(annotations) == 0 {
+		return nil
+	}
+
+	keys := make([]string, 0, len(annotations))
+	for key := range annotations {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func routeAnnotationHeaderName(key string) string {
+	return "x-eg-route-annotation-" + strings.ToLower(key)
 }
 
 // Users holds a list of users.
