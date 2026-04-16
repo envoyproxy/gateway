@@ -18,7 +18,7 @@ gateways:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Gateway has an address with an unsupported type
+      message: 'Gateway has an address with an unsupported type: NamedAddress'
       reason: UnsupportedAddress
       status: "False"
       type: Accepted

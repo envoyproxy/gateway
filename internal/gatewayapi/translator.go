@@ -463,11 +463,11 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			}
 		}
 
-		if hasUnsupportedAddressType(gateway) {
+		if addrType := unsupportedAddressType(gateway); addrType != nil {
 			failedGateways = append(failedGateways, gCtx)
 			t.Logger.Info("Gateway has unsupported address type", logKeysAndValues...)
 			status.UpdateGatewayStatusNotAccepted(gCtx.Gateway, gwapiv1.GatewayReasonUnsupportedAddress,
-				"Gateway has an address with an unsupported type")
+				fmt.Sprintf("Gateway has an address with an unsupported type: %s", *addrType))
 			continue
 		}
 
@@ -599,15 +599,15 @@ func (t *Translator) IsServiceRouting(envoyProxy *egv1a1.EnvoyProxy, btpRoutingT
 	return false
 }
 
-func hasUnsupportedAddressType(gateway *gwapiv1.Gateway) bool {
+func unsupportedAddressType(gateway *gwapiv1.Gateway) *gwapiv1.AddressType {
 	for _, addr := range gateway.Spec.Addresses {
 		if addr.Type != nil &&
 			*addr.Type != gwapiv1.IPAddressType &&
 			*addr.Type != gwapiv1.HostnameAddressType {
-			return true
+			return addr.Type
 		}
 	}
-	return false
+	return nil
 }
 
 func infrastructureAnnotations(gtw *gwapiv1.Gateway) map[string]string {
