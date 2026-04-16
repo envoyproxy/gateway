@@ -678,12 +678,12 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 	}{
 		{
 			name:      "valid htpasswd with SHA format",
-			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:{SHA}hashed_user2_password",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=",
 			wantError: false,
 		},
 		{
 			name:      "valid htpasswd with SHA format and empty lines",
-			htpasswd:  "user1:{SHA}hashed_user1_password\n\nuser2:{SHA}hashed_user2_password\n",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\n\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\n",
 			wantError: false,
 		},
 		{
@@ -707,9 +707,19 @@ func Test_validateHtpasswdFormat(t *testing.T) {
 			wantError: true,
 		},
 		{
-			name:      "mixed valid and invalid formats",
-			htpasswd:  "user1:{SHA}hashed_user1_password\nuser2:$apr1$hashed_user2_password",
+			name:      "invalid htpasswd with hex sha1",
+			htpasswd:  "user1:{SHA}5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
 			wantError: true,
+		},
+		{
+			name:      "mixed valid and invalid formats",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\nuser2:$apr1$hashed_user2_password",
+			wantError: true,
+		},
+		{
+			name:      "valid htpasswd with CRLF line endings",
+			htpasswd:  "user1:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g=\r\nuser2:{SHA}qUqP5cyxm6YcTAhz05Hph5gvu9M=\r\n",
+			wantError: false,
 		},
 	}
 

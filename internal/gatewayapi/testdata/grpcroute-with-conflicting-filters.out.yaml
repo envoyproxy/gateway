@@ -10,7 +10,6 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: '*.envoyproxy.io'
       name: http
       port: 80
       protocol: HTTP
@@ -39,15 +38,13 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
+grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+  kind: GRPCRoute
   metadata:
-    name: httproute-1
+    name: mirror-direct-response
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -57,23 +54,35 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - responseHeaderModifier:
-          add:
-          - name: bad:header
-            value: some-value
-        type: ResponseHeaderModifier
-      matches:
-      - path:
-          value: /
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+        type: RequestMirror
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-direct-response
+        type: ExtensionRef
+    - backendRefs:
+      - name: service-2
+        port: 8080
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ResponseHeaderModifier Filter did not provide valid configuration
-          to add/remove any headers.
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: |-
+          Dropped Rule(s) [0]: Invalid filter ExtensionRef: unknown kind gateway.envoyproxy.io/HTTPRouteFilter.
+          RequestMirror filter cannot be used when the rule also configures a DirectResponse filter.
+        reason: IncompatibleFilters, UnsupportedValue
+        status: "True"
+        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -132,8 +141,8 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - '*.envoyproxy.io'
-      isHTTP2: false
+      - '*'
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -144,6 +153,41 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - directResponse:
+          statusCode: 500
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: mirror-direct-response
+          namespace: default
+        name: grpcroute/default/mirror-direct-response/rule/0/match/-1/*
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: mirror-direct-response
+            namespace: default
+          name: grpcroute/default/mirror-direct-response/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/mirror-direct-response/rule/1/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: mirror-direct-response
+          namespace: default
+        name: grpcroute/default/mirror-direct-response/rule/1/match/-1/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -70,7 +70,7 @@ httpRoutes:
     - conditions:
       - lastTransitionTime: null
         message: RequestHeaderModifier Filter did not provide valid configuration
-          to add/set/remove any headers
+          to add/set/remove any headers.
         reason: UnsupportedValue
         status: "False"
         type: Accepted

@@ -10,7 +10,6 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      hostname: '*.envoyproxy.io'
       name: http
       port: 80
       protocol: HTTP
@@ -39,15 +38,13 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
-    name: httproute-1
+    name: grpcroute-1
     namespace: default
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
@@ -57,23 +54,50 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - responseHeaderModifier:
-          add:
-          - name: bad:header
-            value: some-value
-        type: ResponseHeaderModifier
+      - extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
+        type: ExtensionRef
       matches:
-      - path:
-          value: /
+      - method:
+          method: ExampleExact
+          type: Exact
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - method:
+          method: FooBar[0-9]+
+          type: RegularExpression
+    - backendRefs:
+      - name: service-3
+        port: 8080
+      filters:
+      - extensionRef:
+          group: unknown.group
+          kind: HTTPRouteFilter
+          name: invalid-filter
+        type: ExtensionRef
+      matches:
+      - method:
+          method: ExampleExact
+          type: Exact
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ResponseHeaderModifier Filter did not provide valid configuration
-          to add/remove any headers.
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: |-
+          Dropped Rule(s) [0 2]: Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
+          Invalid filter ExtensionRef: unknown kind unknown.group/HTTPRouteFilter.
+        reason: UnsupportedValue
+        status: "True"
+        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -132,8 +156,8 @@ xdsIR:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - '*.envoyproxy.io'
-      isHTTP2: false
+      - '*'
+      isHTTP2: true
       metadata:
         kind: Gateway
         name: gateway-1
@@ -144,6 +168,62 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: GRPCRoute
+            name: grpcroute-1
+            namespace: default
+          name: grpcroute/default/grpcroute-1/rule/1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-2
+              namespace: default
+              sectionName: "8080"
+            name: grpcroute/default/grpcroute-1/rule/1/backend/0
+            protocol: GRPC
+            weight: 1
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
+      - directResponse:
+          statusCode: 500
+        headerMatches:
+        - distinct: false
+          name: :path
+          suffix: /ExampleExact
+        hostname: '*'
+        isHTTP2: true
+        metadata:
+          kind: GRPCRoute
+          name: grpcroute-1
+          namespace: default
+        name: grpcroute/default/grpcroute-1/rule/2/match/0/*
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

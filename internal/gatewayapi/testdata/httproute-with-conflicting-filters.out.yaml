@@ -43,7 +43,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-1
+    name: mirror-direct-response
     namespace: default
   spec:
     hostnames:
@@ -57,26 +57,28 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+        type: RequestMirror
       - extensionRef:
           group: gateway.envoyproxy.io
           kind: HTTPRouteFilter
-          name: credential-injection-1
+          name: mirror-direct-response
         type: ExtensionRef
       matches:
       - path:
-          value: /foo
+          type: PathPrefix
+          value: /mirror-direct-response
     - backendRefs:
-      - name: service-1
+      - name: service-2
         port: 8080
-      filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: HTTPRouteFilter
-          name: credential-injection-2
-        type: ExtensionRef
       matches:
       - path:
-          value: /bar
+          type: PathPrefix
+          value: /valid
   status:
     parents:
     - conditions:
@@ -85,6 +87,12 @@ httpRoutes:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
+          rule also configures a DirectResponse filter.'
+        reason: IncompatibleFilters
+        status: "True"
+        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -98,7 +106,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-2
+    name: mirror-request-redirect
     namespace: default
   spec:
     hostnames:
@@ -108,27 +116,42 @@ httpRoutes:
       namespace: envoy-gateway
       sectionName: http
     rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: HTTPRouteFilter
-          name: credential-injection-3
-        type: ExtensionRef
+    - filters:
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-1
+            port: 8080
+        type: RequestMirror
+      - requestRedirect:
+          scheme: https
+          statusCode: 302
+        type: RequestRedirect
       matches:
       - path:
-          value: /foo
+          type: PathPrefix
+          value: /mirror-redirect
+    - backendRefs:
+      - name: service-2
+        port: 8080
+      matches:
+      - path:
+          type: PathPrefix
+          value: /valid
   status:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: 'Invalid filter HTTPRouteFilter: secret default/non-existent-credential
-          does not exist.'
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'Dropped Rule(s) [0]: RequestMirror filter cannot be used when the
+          rule also configures a RequestRedirect filter.'
+        reason: IncompatibleFilters
+        status: "True"
+        type: PartiallyInvalid
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -200,72 +223,95 @@ xdsIR:
         mergeSlashes: true
       port: 10080
       routes:
-      - credentialInjection:
-          credential: '[redacted]'
-          name: httproutefilter/default/credential-injection-1
-        destination:
+      - addResponseHeaders:
+        - append: false
+          name: Content-Type
+          value:
+          - text/plain
+        directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: mirror-direct-response
+          namespace: default
+        name: httproute/default/mirror-direct-response/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /mirror-direct-response
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: mirror-request-redirect
+          namespace: default
+        name: httproute/default/mirror-request-redirect/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /mirror-redirect
+      - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: mirror-direct-response
             namespace: default
-          name: httproute/default/httproute-1/rule/0
+          name: httproute/default/mirror-direct-response/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              name: service-1
+              name: service-2
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
+            name: httproute/default/mirror-direct-response/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: mirror-direct-response
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/mirror-direct-response/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /foo
-      - credentialInjection:
-          credential: '[redacted]'
-          header: x-credential
-          name: httproutefilter/default/credential-injection-2
-          overwrite: true
-        destination:
+          prefix: /valid
+      - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-1
+            name: mirror-request-redirect
             namespace: default
-          name: httproute/default/httproute-1/rule/1
+          name: httproute/default/mirror-request-redirect/rule/1
           settings:
           - addressType: IP
             endpoints:
             - host: 7.7.7.7
               port: 8080
             metadata:
-              name: service-1
+              name: service-2
               namespace: default
               sectionName: "8080"
-            name: httproute/default/httproute-1/rule/1/backend/0
+            name: httproute/default/mirror-request-redirect/rule/1/backend/0
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-1
+          name: mirror-request-redirect
           namespace: default
-        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
+        name: httproute/default/mirror-request-redirect/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
-          prefix: /bar
+          prefix: /valid
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

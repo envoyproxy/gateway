@@ -57,11 +57,12 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - responseHeaderModifier:
-          add:
-          - name: bad:header
-            value: some-value
-        type: ResponseHeaderModifier
+      - requestMirror:
+          backendRef:
+            kind: Service
+            name: service-mirror-no-endpoints
+            port: 8080
+        type: RequestMirror
       matches:
       - path:
           value: /
@@ -69,11 +70,16 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: ResponseHeaderModifier Filter did not provide valid configuration
-          to add/remove any headers.
-        reason: UnsupportedValue
-        status: "False"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'Failed to validate the RequestMirror filter: no ready endpoints
+          for the related Service default/service-mirror-no-endpoints.'
+        reason: EndpointsNotFound
+        status: "False"
+        type: BackendsAvailable
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
@@ -144,6 +150,36 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-1
+            namespace: default
+          name: httproute/default/httproute-1/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-1/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

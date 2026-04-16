@@ -348,6 +348,21 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 				)
 			}
 		}
+
+		for _, filter := range rule.Filters {
+			if filter.Type != gwapiv1.GRPCRouteFilterRequestMirror {
+				continue
+			}
+
+			mirrorBackendRef := filter.RequestMirror.BackendRef
+
+			backendRefs = append(backendRefs,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, grpcroute.Namespace),
+					Name:      string(mirrorBackendRef.Name),
+				}.String(),
+			)
+		}
 	}
 	return backendRefs
 }
