@@ -26,16 +26,18 @@ var EnvoyPatchPolicyTest = suite.ConformanceTest{
 	Description: "update xds using EnvoyPatchPolicy",
 	Manifests:   []string{"testdata/envoy-patch-policy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("envoy patch policy", func(t *testing.T) {
-			testEnvoyPatchPolicy(t, suite)
-		})
+		for _, gtw := range []string{"same-namespace", "all-namespaces"} {
+			t.Run(gtw, func(t *testing.T) {
+				testEnvoyPatchPolicy(t, suite, gtw)
+			})
+		}
 	},
 }
 
-func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite) {
+func testEnvoyPatchPolicy(t *testing.T, suite *suite.ConformanceTestSuite, gtwName string) {
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "http-envoy-patch-policy", Namespace: ns}
-	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+	gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
 	gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 	OkResp := http.ExpectedResponse{
 		Request: http.Request{
