@@ -112,7 +112,10 @@ func mergePolicyStatus(aggregated aggregatedPolicyStatus, incoming *gwapiv1.Poli
 		return aggregated
 	}
 
-	aggregated.status.Ancestors = append(aggregated.status.Ancestors, incoming.Ancestors...)
+	// Prevent self-merge when aggregated and incoming reference the same object
+	if aggregated.status != incoming {
+		aggregated.status.Ancestors = append(aggregated.status.Ancestors, incoming.Ancestors...)
+	}
 	if generation > aggregated.generation {
 		aggregated.generation = generation
 	}
@@ -129,7 +132,10 @@ func mergeEnvoyProxyStatus(aggregated, incoming *egv1a1.EnvoyProxyStatus) *egv1a
 		return incoming
 	}
 
-	aggregated.Ancestors = append(aggregated.Ancestors, incoming.Ancestors...)
+	// Prevent self-merge when aggregated and incoming reference the same object
+	if aggregated != incoming {
+		aggregated.Ancestors = append(aggregated.Ancestors, incoming.Ancestors...)
+	}
 	return aggregated
 }
 
@@ -217,6 +223,13 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 			// There is only 1 key which is the controller name
 			// so when a delete is triggered, delete all keys
 			if update.Delete || valWrapper == nil || valWrapper.Resources == nil {
+				// Clear EnvoyProxy statuses before deleting to remove stale ancestor conditions
+				for key := range r.keyCache.EnvoyProxyStatus {
+					emptyStatus := &egv1a1.EnvoyProxyStatus{
+						Ancestors: []egv1a1.EnvoyProxyAncestorStatus{},
+					}
+					r.ProviderResources.EnvoyProxyStatuses.Store(key, emptyStatus)
+				}
 				r.deleteAllKeys()
 				return
 			}
