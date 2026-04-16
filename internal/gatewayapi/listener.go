@@ -958,7 +958,7 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err = t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy, nil)
+			ds, err = t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
 			if err != nil {
 				return nil, nil, err
 			}

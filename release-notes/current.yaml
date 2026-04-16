@@ -12,22 +12,16 @@ new features: |
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
   Fixed validation of XListenerSet certificateRefs
-  Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them
-  Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
   Fixed standalone mode emitting non-actionable error logs for missing secrets and unsupported ratelimit deletion on every startup.
-  Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
   Fixed xPolicy resources being processed from all namespaces when NamespaceSelector watch mode is configured in the Kubernetes provider.
-  Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
   Fixed route status parent aggregation when the number of parents exceeds the Gateway API cap of 32.
-  Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
-  Fixed endpoint hostname is not respected when doing active health check.
   Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
   Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed per-endpoint hostname override not working because the auto-generated wildcard hostname.
   Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
   BackendTLSPolicy was ignored when configuring TLS for telemetry backends (access logs, tracing, metrics).
-  Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
+  Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend.
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
   Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
 
