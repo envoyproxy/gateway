@@ -205,6 +205,7 @@ jobs:
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
+        SKIP_GO_BUILD: "true"
       run: make conformance
 
   e2e-test:
@@ -269,6 +270,7 @@ jobs:
         # set ACTIONS_STEP_DEBUG to true if context runner.debug is '1',
         # which means to dump the current state when there's a case failed.
         ACTIONS_STEP_DEBUG: ${{ runner.debug == '1' }}
+        SKIP_GO_BUILD: "true"
       run: make e2e
 
   benchmark-test:
@@ -304,6 +306,7 @@ jobs:
         BENCHMARK_MEMORY_LIMITS: 2000Mi
         BENCHMARK_REPORT_DIR: benchmark_report
         BENCHMARK_RENDER_PNG: "false"
+        SKIP_GO_BUILD: "true"
       run: make benchmark
 
     - name: Upload Benchmark report
@@ -335,6 +338,7 @@ jobs:
       env:
         IMAGE_PULL_POLICY: IfNotPresent
         CUSTOM_CNI: "true"
+        SKIP_GO_BUILD: "true"
       run: make resilience
 
   publish:
