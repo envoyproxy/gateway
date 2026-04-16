@@ -5,7 +5,9 @@ breaking changes: |
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
-
+  Bump golang to `1.25.9` for security fixes to the `crypto/tls` and `crypto/x509` packages.
+  Bump Envoy Proxy image to v1.37.2 for fixing several bugs. For more details, please refer to the [Envoy Proxy v1.37.2 release notes](https://github.com/envoyproxy/envoy/releases/tag/v1.37.2).
+  Bump Envoy ratelimit image to `05c08d03`.
 # New features or capabilities added in this release.
 new features: |
 
