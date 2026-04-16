@@ -161,6 +161,122 @@ Verify the EnvoyExtensionPolicy status:
 kubectl get envoyextensionpolicy/lua-valueref-test -o yaml
 ```
 
+### Lua Extension - FilterContext
+
+The `filterContext` field allows you to pass key/value pairs to a shared Lua script, so it can be parameterized differently per route.
+The Lua script accesses these values via the [`filterContext()` stream handle API](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter#stream-handle-api).
+
+This example uses a shared ConfigMap Lua script that reads a configurable header name from filter context and copies its value to the `authorization` header.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-lua-shared-auth
+data:
+  lua: |
+    function envoy_on_request(request_handle)
+      local ctx = request_handle:filterContext()
+      local token = request_handle:headers():get(ctx["token_header"])
+      if token and token ~= "" then
+        request_handle:headers():replace("authorization", "Bearer " .. token)
+      end
+    end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-filter-context-test
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-lua-shared-auth
+        kind: ConfigMap
+        group: v1
+      filterContext:
+        token_header: x-api-key
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-lua-shared-auth
+data:
+  lua: |
+    function envoy_on_request(request_handle)
+      local ctx = request_handle:filterContext()
+      local token = request_handle:headers():get(ctx["token_header"])
+      if token and token ~= "" then
+        request_handle:headers():replace("authorization", "Bearer " .. token)
+      end
+    end
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-filter-context-test
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-lua-shared-auth
+        kind: ConfigMap
+        group: v1
+      filterContext:
+        token_header: x-api-key
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+A different route can reuse the same ConfigMap with different filter context values:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: lua-filter-context-route-b
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-b
+  lua:
+    - type: ValueRef
+      valueRef:
+        name: cm-lua-shared-auth
+        kind: ConfigMap
+        group: v1
+      filterContext:
+        token_header: x-session-token
+```
+
+Verify the EnvoyExtensionPolicy status:
+
+```shell
+kubectl get envoyextensionpolicy/lua-filter-context-test -o yaml
+```
+
 ### Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the
@@ -191,7 +307,9 @@ Delete the EnvoyExtensionPolicy:
 ```shell
 kubectl delete envoyextensionpolicy/lua-inline-test
 kubectl delete envoyextensionpolicy/lua-valueref-test
+kubectl delete envoyextensionpolicy/lua-filter-context-test
 kubectl delete configmap/cm-lua-valueref
+kubectl delete configmap/cm-lua-shared-auth
 ```
 
 ## Next Steps

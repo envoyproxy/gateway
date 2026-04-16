@@ -762,8 +762,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:          name,
+		Code:          luaCode,
+		FilterContext: lua.FilterContext,
 	}, nil
 }
 

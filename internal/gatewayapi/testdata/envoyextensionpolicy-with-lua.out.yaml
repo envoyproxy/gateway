@@ -7,7 +7,10 @@ envoyExtensionPolicies:
     namespace: default
   spec:
     lua:
-    - inline: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
+    - filterContext:
+        mode: strict
+        token_header: x-api-key
+      inline: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
         end
       type: Inline
     targetRef:
@@ -279,6 +282,9 @@ xdsIR:
           - Code: function envoy_on_response(response_handle) response_handle:logWarn('Goodbye.')
               end
             Name: envoyextensionpolicy/default/policy-for-http-route/lua/0
+            filterContext:
+              mode: strict
+              token_header: x-api-key
         hostname: www.example.com
         isHTTP2: false
         metadata:
