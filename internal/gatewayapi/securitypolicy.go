@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"bytes"
 	//nolint:gosec // SHA1 is required to validate htpasswd {SHA} format.
 	"crypto/sha1"
 	"crypto/tls"
@@ -1798,6 +1799,10 @@ func (t *Translator) buildBasicAuth(
 			"users secret not found in secret %s/%s",
 			usersSecret.Namespace, usersSecret.Name)
 	}
+
+	// Normalize CRLF to LF so the \r is not included in the hash,
+	// which would cause Envoy to reject it as an invalid SHA hash length.
+	usersSecretBytes = bytes.ReplaceAll(usersSecretBytes, []byte("\r\n"), []byte("\n"))
 
 	// Validate the htpasswd format
 	if err := validateHtpasswdFormat(usersSecretBytes); err != nil {

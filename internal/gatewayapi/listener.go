@@ -634,7 +634,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				destName := fmt.Sprintf("accesslog_als_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
 				// TODO: how to get authority from the backendRefs?
-				ds, traffic, err := t.processBackendRefs(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.ALS.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -680,7 +680,7 @@ func (t *Translator) processAccessLog(envoyproxy *egv1a1.EnvoyProxy, resources *
 				// TODO: rename this, so that we can share backend with tracing?
 				destName := fmt.Sprintf("accesslog_otel_%d_%d", i, j)
 				settingName := irDestinationSettingName(destName, -1)
-				ds, traffic, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+				ds, traffic, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 				if err != nil {
 					return nil, err
 				}
@@ -743,7 +743,7 @@ func (t *Translator) processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.Envo
 	// TODO: rename this, so that we can share backend with accesslog?
 	destName := "tracing"
 	settingName := irDestinationSettingName(destName, -1)
-	ds, traffic, err := t.processBackendRefs(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+	ds, traffic, err := t.processBackendRefsForTelemetry(settingName, tracing.Provider.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 	if err != nil {
 		return nil, err
 	}
@@ -883,7 +883,7 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 
 		destName := fmt.Sprintf("metrics_otel_%d", i)
 		settingName := irDestinationSettingName(destName, -1)
-		ds, _, err := t.processBackendRefs(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
+		ds, _, err := t.processBackendRefsForTelemetry(settingName, sink.OpenTelemetry.BackendCluster, envoyproxy.Namespace, resources, envoyproxy)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -931,54 +931,66 @@ func (t *Translator) processMetrics(envoyproxy *egv1a1.EnvoyProxy, resources *re
 	}, resolvedSinks, nil
 }
 
-func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.BackendCluster, namespace string,
+func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
 	traffic, err := translateTrafficFeatures(backendCluster.BackendSettings)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	parent := gwapiv1.ParentReference{
+		Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
+		Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
+		Namespace: ptr.To(gwapiv1.Namespace(envoyProxy.Namespace)),
+		Name:      gwapiv1.ObjectName(envoyProxy.Name),
+	}
+
 	result := make([]*ir.DestinationSetting, 0, len(backendCluster.BackendRefs))
 	for i := range backendCluster.BackendRefs {
 		ref := &backendCluster.BackendRefs[i]
 		ns := NamespaceDerefOr(ref.Namespace, namespace)
 		kind := KindDerefOr(ref.Kind, resource.KindService)
+
+		var ds *ir.DestinationSetting
 		switch kind {
 		case resource.KindService:
 			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
+			ds, err = t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
 			if err != nil {
 				return nil, nil, err
 			}
-			result = append(result, ds)
 		case resource.KindBackend:
 			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
+			ds = t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
 			}
-			// Apply TLS config for backend (telemetry) clusters
-			backend := t.GetBackend(ns, string(ref.Name))
-			if backend.Spec.TLS != nil {
-				tlsConfig, err := t.processServerValidationTLSSettings(backend)
-				if err != nil {
-					return nil, nil, err
-				}
-				ds.TLS = tlsConfig
-				// Infer SNI from FQDN for telemetry backends (no Host header available)
-				if ds.TLS.SNI == nil && len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
-					ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
-				}
-			}
-			result = append(result, ds)
 		default:
 			return nil, nil, fmt.Errorf("unsupported kind for backendRefs: %s", kind)
 		}
+
+		// Apply TLS from Backend resource, BackendTLSPolicy, and EnvoyProxy.
+		backendTLS, err := t.applyBackendTLSSetting(ref.BackendObjectReference, ns, parent, resources, envoyProxy)
+		if err != nil {
+			return nil, nil, err
+		}
+		ds.TLS = backendTLS
+
+		// Infer SNI from FQDN for telemetry backends (no Host header available).
+		if ds.TLS != nil && ds.TLS.SNI == nil && kind == resource.KindBackend {
+			backend := t.GetBackend(ns, string(ref.Name))
+			if len(backend.Spec.Endpoints) == 1 && backend.Spec.Endpoints[0].FQDN != nil {
+				ds.TLS.SNI = &backend.Spec.Endpoints[0].FQDN.Hostname
+			}
+		}
+
+		result = append(result, ds)
 	}
 	if len(result) == 0 {
 		return nil, traffic, nil

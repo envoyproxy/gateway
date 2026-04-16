@@ -113,13 +113,13 @@ func runNoRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disable
 	}
 
 	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
 
 	// send 10+ more
 	total := 10
 	for total > 0 {
 		// keep sending requests till get 200 first, that will cost one 200
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectOkResp)
 		total--
 	}
 }
@@ -160,7 +160,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	} else {
 		okResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 	// this request should be limited because the user is john
 	limitResponse := http.ExpectedResponse{
@@ -183,7 +183,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	} else {
 		limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 
 	// this request should not be limited because the user is not john hit default bucket
 	notJohnResponse := http.ExpectedResponse{
@@ -207,7 +207,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	} else {
 		notJohnResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, notJohnResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &notJohnResponse)
 
 	// In the end it will hit the limit
 	notJohnLimitResponse := http.ExpectedResponse{
@@ -230,7 +230,7 @@ func runSpecificUserRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuit
 	} else {
 		notJohnLimitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, notJohnLimitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &notJohnLimitResponse)
 }
 
 func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
@@ -265,7 +265,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		okResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 	limitResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -285,7 +285,7 @@ func runAllTrafficRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite,
 		limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// this request should be limited at the end
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 }
 
 func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
@@ -322,7 +322,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 			RatelimitResetHeaderName:     "0",
 		}
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 	// this request should be limited because the user is one and org is not test and the limit is 3
 	limitResponse := http.ExpectedResponse{
@@ -346,7 +346,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 	} else {
 		limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 
 	// with test org
 	testOrgResponse := http.ExpectedResponse{
@@ -370,7 +370,7 @@ func runHeaderInvertMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTes
 	} else {
 		testOrgResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, testOrgResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &testOrgResponse)
 }
 
 func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
@@ -405,7 +405,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 		okResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 	limitResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -425,7 +425,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 		limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// this request should be limited at the end
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 
 	okResponse = http.ExpectedResponse{
 		Request: http.Request{
@@ -437,7 +437,7 @@ func runPathMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, 
 		Namespace: ns,
 	}
 	// this request should not be limited
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 }
 
 func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite, disableHeader bool) {
@@ -472,7 +472,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 		okResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// keep sending requests till get 200 first, that will cost one 200
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 	limitResponse := http.ExpectedResponse{
 		Request: http.Request{
@@ -492,7 +492,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 		limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 	}
 	// this request should be limited at the end
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 
 	okResponse = http.ExpectedResponse{
 		Request: http.Request{
@@ -505,7 +505,7 @@ func runMethodMatchRateLimitTest(t *testing.T, suite *suite.ConformanceTestSuite
 		Namespace: ns,
 	}
 	// this request should not be limited
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 }
 
 var LocalRateLimitQueryParametersTest = suite.ConformanceTest{
@@ -560,7 +560,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 			okResponse.Response.AbsentHeaders = allRateLimitHeaders
 		}
 		// Keep sending requests till get 200 first, that will cost one 200
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 		// Second request - should succeed
 		okResponse2 := http.ExpectedResponse{
@@ -622,7 +622,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		} else {
 			limitResponse.Response.AbsentHeaders = allRateLimitHeaders
 		}
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, limitResponse)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &limitResponse)
 	})
 
 	t.Run(fmt.Sprintf("different_query_parameter_values_should_not_be_limited-%s", caseSuffix), func(t *testing.T) {
@@ -642,7 +642,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 			okResponse.Response.AbsentHeaders = allRateLimitHeaders
 		}
 		// Keep sending requests till get 200 first, that will cost one 200
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse)
 
 		// Send multiple requests that should all succeed (default bucket is unlimited)
 		okResponse2 := http.ExpectedResponse{
@@ -657,7 +657,7 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		if disableHeader {
 			okResponse2.Response.AbsentHeaders = allRateLimitHeaders
 		}
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse2)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse2)
 
 		okResponse3 := http.ExpectedResponse{
 			Request: http.Request{
@@ -671,6 +671,6 @@ func runQueryParametersRateLimitTest(t *testing.T, suite *suite.ConformanceTestS
 		if disableHeader {
 			okResponse3.Response.AbsentHeaders = allRateLimitHeaders
 		}
-		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, okResponse3)
+		MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &okResponse3)
 	})
 }

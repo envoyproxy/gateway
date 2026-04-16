@@ -1,0 +1,63 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: RequestMirror
+        requestMirror:
+          backendRef:
+            kind: Service
+            name: service-mirror-no-endpoints
+            port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: service-mirror-no-endpoints
+  spec:
+    clusterIP: 3.3.3.3
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: default
+    name: endpointslice-service-mirror-no-endpoints
+    labels:
+      kubernetes.io/service-name: service-mirror-no-endpoints
+  addressType: IPv4
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP

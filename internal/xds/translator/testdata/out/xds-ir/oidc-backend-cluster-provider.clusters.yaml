@@ -108,6 +108,11 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: default/oidc-tls
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         sni: oauth.foo.com
   type: STRICT_DNS
   typedExtensionProtocolOptions:
