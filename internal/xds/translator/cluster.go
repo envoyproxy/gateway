@@ -628,12 +628,8 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, healthCheckLogging *
 	}
 
 	if healthCheckLogging != nil {
-		if healthCheckLogging.AlwaysLogHealthCheckFailures != nil {
-			hc.AlwaysLogHealthCheckFailures = *healthCheckLogging.AlwaysLogHealthCheckFailures
-		}
-		if healthCheckLogging.AlwaysLogHealthCheckSuccess != nil {
-			hc.AlwaysLogHealthCheckSuccess = *healthCheckLogging.AlwaysLogHealthCheckSuccess
-		}
+		hc.AlwaysLogHealthCheckFailures = healthCheckLogging.AlwaysLogHealthCheckFailures
+		hc.AlwaysLogHealthCheckSuccess = healthCheckLogging.AlwaysLogHealthCheckSuccess
 		for _, fs := range healthCheckLogging.FileSinks {
 			fileSinkAny, err := proto.ToAnyWithValidation(&hcfilev3.HealthCheckEventFileSink{
 				EventLogPath: fs.Path,

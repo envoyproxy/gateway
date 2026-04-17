@@ -2421,6 +2421,22 @@ _Appears in:_
 | `path` | _string_ |  true  |  | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
+#### FileEnvoyProxyHealthCheckLog
+
+
+
+FileEnvoyProxyHealthCheckLog writes health check events as JSON to a local file path.
+
+See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
+
+
 #### FilterPosition
 
 
@@ -3132,51 +3148,6 @@ _Appears in:_
 | `active` | _[ActiveHealthCheck](#activehealthcheck)_ |  false  |  | Active health check configuration |
 | `passive` | _[PassiveHealthCheck](#passivehealthcheck)_ |  false  |  | Passive passive check configuration |
 | `panicThreshold` | _integer_ |  false  |  | When number of unhealthy endpoints for a backend reaches this threshold<br />Envoy will disregard health status and balance across all endpoints.<br />It's designed to prevent a situation in which host failures cascade throughout the cluster<br />as load increases. If not set, the default value is 50%. To disable panic mode, set value to `0`. |
-
-
-#### HealthCheckEventLogSink
-
-
-
-HealthCheckEventLogSink defines a destination for health check event logs.
-
-_Appears in:_
-- [ProxyHealthCheckLog](#proxyhealthchecklog)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `type` | _[HealthCheckEventLogSinkType](#healthcheckeventlogsinktype)_ |  true  |  | Type defines the type of sink. |
-| `file` | _[HealthCheckLoggingFileSink](#healthcheckloggingfilesink)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
-
-
-#### HealthCheckEventLogSinkType
-
-_Underlying type:_ _string_
-
-HealthCheckEventLogSinkType is the type of health check event log sink.
-
-_Appears in:_
-- [HealthCheckEventLogSink](#healthcheckeventlogsink)
-
-| Value | Description |
-| ----- | ----------- |
-| `File` | HealthCheckEventLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
-
-
-#### HealthCheckLoggingFileSink
-
-
-
-HealthCheckLoggingFileSink writes health check events as JSON to a local file path.
-
-See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/health_check/event_sinks/file/v3/file.proto
-
-_Appears in:_
-- [HealthCheckEventLogSink](#healthcheckeventlogsink)
-
-| Field | Type | Required | Default | Description |
-| ---   | ---  | ---      | ---     | ---         |
-| `path` | _string_ |  true  |  | Path specifies the file path for health check event output.<br />Use /dev/stdout to write to standard output. |
 
 
 #### HealthCheckOverrides
@@ -4656,9 +4627,54 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `sinks` | _[HealthCheckEventLogSink](#healthcheckeventlogsink) array_ |  true  |  | Sinks defines where health check events are written.<br />Exactly one sink must be specified. |
-| `alwaysLogHealthCheckFailures` | _boolean_ |  false  |  | AlwaysLogHealthCheckFailures forces a log entry to be written for every<br />failed health check, regardless of the host's current health state.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-failures |
-| `alwaysLogHealthCheckSuccess` | _boolean_ |  false  |  | AlwaysLogHealthCheckSuccess forces a log entry to be written for every<br />successful health check, regardless of the host's current health state.<br />See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-success |
+| `sinks` | _[ProxyHealthCheckLogSink](#proxyhealthchecklogsink) array_ |  false  |  | Sinks defines where health check events are written.<br />When omitted, events are written to /dev/stdout. |
+| `matches` | _[ProxyHealthCheckLogEventType](#proxyhealthchecklogeventtype) array_ |  false  |  | Matches defines which health check probe outcomes produce a log entry.<br />When omitted or empty, all events are logged.<br />Each value must be unique. Multiple values are ORed. If any failure type is<br />specified then a success type must also be specified, and vice versa. |
+
+
+#### ProxyHealthCheckLogEventType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogEventType specifies which health check probe outcomes produce a log entry.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Value | Description |
+| ----- | ----------- |
+| `Failure` | ProxyHealthCheckLogEventTypeFailure logs every failed probe regardless of<br />the host's current health state.<br /> | 
+| `FailureTransition` | ProxyHealthCheckLogEventTypeFailureTransition logs only when a host<br />transitions from healthy to unhealthy.<br /> | 
+| `Success` | ProxyHealthCheckLogEventTypeSuccess logs every successful probe regardless<br />of the host's current health state.<br /> | 
+| `SuccessTransition` | ProxyHealthCheckLogEventTypeSuccessTransition logs only when a host<br />transitions from unhealthy to healthy.<br /> | 
+
+
+#### ProxyHealthCheckLogSink
+
+
+
+ProxyHealthCheckLogSink defines a destination for health check event logs.
+
+_Appears in:_
+- [ProxyHealthCheckLog](#proxyhealthchecklog)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[ProxyHealthCheckLogSinkType](#proxyhealthchecklogsinktype)_ |  true  |  | Type defines the type of sink. |
+| `file` | _[FileEnvoyProxyHealthCheckLog](#fileenvoyproxyhealthchecklog)_ |  false  |  | File defines the file sink configuration.<br />Required when type is File. |
+
+
+#### ProxyHealthCheckLogSinkType
+
+_Underlying type:_ _string_
+
+ProxyHealthCheckLogSinkType is the type of a ProxyHealthCheckLog sink.
+
+_Appears in:_
+- [ProxyHealthCheckLogSink](#proxyhealthchecklogsink)
+
+| Value | Description |
+| ----- | ----------- |
+| `File` | ProxyHealthCheckLogSinkTypeFile writes health check events as JSON to a local file.<br /> | 
 
 
 #### ProxyLogComponent

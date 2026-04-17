@@ -11,6 +11,7 @@
     serviceName: first-route-dest
   healthChecks:
   - alwaysLogHealthCheckFailures: true
+    alwaysLogHealthCheckSuccess: true
     eventLogger:
     - name: envoy.health_check.event_sinks.file
       typedConfig:
@@ -51,6 +52,7 @@
     serviceName: second-route-dest
   healthChecks:
   - alwaysLogHealthCheckFailures: true
+    alwaysLogHealthCheckSuccess: true
     eventLogger:
     - name: envoy.health_check.event_sinks.file
       typedConfig:

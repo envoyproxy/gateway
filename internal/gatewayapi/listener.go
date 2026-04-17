@@ -689,15 +689,38 @@ func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLo
 		return nil
 	}
 	hcLogging := envoyProxy.Spec.Telemetry.HealthCheckLog
-	irHCLogging := &ir.ProxyHealthCheckLog{
-		AlwaysLogHealthCheckFailures: hcLogging.AlwaysLogHealthCheckFailures,
-		AlwaysLogHealthCheckSuccess:  hcLogging.AlwaysLogHealthCheckSuccess,
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Translate Matches to the two Envoy booleans.
+	// Empty/omitted Matches means log everything (both always-log flags true).
+	// Failure sets AlwaysLogHealthCheckFailures; FailureTransition leaves it false
+	// (Envoy logs transitions by default). Same for Success/SuccessTransition.
+	// Both variants may coexist: Failure OR FailureTransition resolves to Failure.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			}
+		}
 	}
-	sink := hcLogging.Sinks[0]
-	if sink.Type == egv1a1.HealthCheckEventLogSinkTypeFile && sink.File != nil {
-		irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.HealthCheckLoggingFileSink{
-			Path: sink.File.Path,
+
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
 		})
+	} else {
+		sink := hcLogging.Sinks[0]
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
 	}
 	return irHCLogging
 }

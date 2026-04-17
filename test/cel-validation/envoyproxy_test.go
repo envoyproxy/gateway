@@ -2603,10 +2603,10 @@ func TestProxyAccessLogFormatNoType(t *testing.T) {
 }
 
 func TestProxyHealthCheckLog(t *testing.T) {
-	fileSink := func(path string) egv1a1.HealthCheckEventLogSink {
-		return egv1a1.HealthCheckEventLogSink{
-			Type: egv1a1.HealthCheckEventLogSinkTypeFile,
-			File: &egv1a1.HealthCheckLoggingFileSink{Path: path},
+	fileSink := func(path string) egv1a1.ProxyHealthCheckLogSink {
+		return egv1a1.ProxyHealthCheckLogSink{
+			Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+			File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: path},
 		}
 	}
 
@@ -2616,56 +2616,96 @@ func TestProxyHealthCheckLog(t *testing.T) {
 		expectedError string
 	}{
 		{
-			desc: "valid - single file sink",
+			desc: "valid - no event types (log everything)",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks: []egv1a1.HealthCheckEventLogSink{fileSink("/dev/stdout")},
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
 			},
 		},
 		{
-			desc: "valid - single file sink with always-log flags",
+			desc: "valid - Failure and Success",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks:                        []egv1a1.HealthCheckEventLogSink{fileSink("/dev/stdout")},
-				AlwaysLogHealthCheckFailures: ptr.To(true),
-				AlwaysLogHealthCheckSuccess:  ptr.To(true),
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
 			},
 		},
 		{
-			desc: "invalid - zero sinks",
+			desc: "valid - FailureTransition and SuccessTransition",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks: []egv1a1.HealthCheckEventLogSink{},
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
 			},
-			expectedError: "exactly one sink must be specified",
+		},
+		{
+			desc: "valid - Failure and SuccessTransition",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+		},
+		{
+			desc:  "valid - no sinks (defaults to /dev/stdout)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{},
 		},
 		{
 			desc: "invalid - two sinks",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks: []egv1a1.HealthCheckEventLogSink{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
 					fileSink("/dev/stdout"),
 					fileSink("/dev/stderr"),
 				},
 			},
-			expectedError: "exactly one sink must be specified",
+			expectedError: "Too many: 2: must have at most 1 items",
 		},
 		{
 			desc: "invalid - File type without file field",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks: []egv1a1.HealthCheckEventLogSink{
-					{Type: egv1a1.HealthCheckEventLogSinkTypeFile},
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
+					{Type: egv1a1.ProxyHealthCheckLogSinkTypeFile},
 				},
 			},
-			expectedError: "If HealthCheckEventLogSink type is File, file field needs to be set",
+			expectedError: "If ProxyHealthCheckLogSink type is File, file field needs to be set",
 		},
 		{
 			desc: "invalid - empty path in file sink",
 			hcLog: &egv1a1.ProxyHealthCheckLog{
-				Sinks: []egv1a1.HealthCheckEventLogSink{
+				Sinks: []egv1a1.ProxyHealthCheckLogSink{
 					{
-						Type: egv1a1.HealthCheckEventLogSinkTypeFile,
-						File: &egv1a1.HealthCheckLoggingFileSink{Path: ""},
+						Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+						File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: ""},
 					},
 				},
 			},
 			expectedError: "path",
+		},
+		{
+			desc: "valid - Failure and FailureTransition together (treated as Failure)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			},
+		},
+		{
+			desc: "valid - Success and SuccessTransition together (treated as Success)",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+		},
+		{
+			desc: "invalid - failure type without success type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
+		},
+		{
+			desc: "invalid - success type without failure type",
+			hcLog: &egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink("/dev/stdout")},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			},
+			expectedError: "a failure type and a success type must both be specified together",
 		},
 	}
 

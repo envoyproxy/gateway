@@ -6,13 +6,7 @@ metadata:
 spec:
   ipFamily: IPv4
   telemetry:
-    healthCheckLog:
-      sinks:
-        - type: File
-          file:
-            path: /dev/stdout
-      alwaysLogHealthCheckFailures: true
-      alwaysLogHealthCheckSuccess: true
+    healthCheckLog: {}
   shutdown:
     drainTimeout: 5s
     minDrainDuration: 1s
@@ -37,6 +31,25 @@ spec:
       kind: EnvoyProxy
       name: hc-event-log-proxy
 ---
+# Route without health checks — used to assert no HC events are logged before
+# the HC-enabled route is applied.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-without-hc-event-log
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: hc-event-log-gtw
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /no-hc-event-log
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -55,8 +68,8 @@ spec:
           port: 8080
 ---
 # BTP with an intentionally failing health check (/status/418 never returns 200).
-# With alwaysLogHealthCheckFailures=true, every probe cycle produces a failure event
-# logged to stdout, which Loki collects and the test can assert against.
+# With no matches set (log everything), every probe cycle produces a failure
+# event logged to stdout, which Loki collects and the test can assert against.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:

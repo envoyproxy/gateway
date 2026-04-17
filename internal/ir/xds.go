@@ -2698,16 +2698,16 @@ type AccessLog struct {
 // +k8s:deepcopy-gen=true
 type ProxyHealthCheckLog struct {
 	// FileSinks holds file-based HC event log sinks.
-	FileSinks []*HealthCheckLoggingFileSink `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
+	FileSinks []*FileEnvoyProxyHealthCheckLog `json:"fileSinks,omitempty" yaml:"fileSinks,omitempty"`
 	// AlwaysLogHealthCheckFailures forces logging of every failed health check.
-	AlwaysLogHealthCheckFailures *bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
+	AlwaysLogHealthCheckFailures bool `json:"alwaysLogHealthCheckFailures,omitempty" yaml:"alwaysLogHealthCheckFailures,omitempty"`
 	// AlwaysLogHealthCheckSuccess forces logging of every successful health check.
-	AlwaysLogHealthCheckSuccess *bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
+	AlwaysLogHealthCheckSuccess bool `json:"alwaysLogHealthCheckSuccess,omitempty" yaml:"alwaysLogHealthCheckSuccess,omitempty"`
 }
 
-// HealthCheckLoggingFileSink is the IR representation of a file-based HC event log sink.
+// FileEnvoyProxyHealthCheckLog is the IR representation of a file-based health check event log sink.
 // +k8s:deepcopy-gen=true
-type HealthCheckLoggingFileSink struct {
+type FileEnvoyProxyHealthCheckLog struct {
 	// Path is the file path for HC event JSON output.
 	Path string `json:"path" yaml:"path"`
 }

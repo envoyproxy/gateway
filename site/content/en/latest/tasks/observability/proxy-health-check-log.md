@@ -23,8 +23,11 @@ Health check event logs require active health checks to be running.
 Configure a [BackendTrafficPolicy][] targeting your `HTTPRoute` with an active health
 check. The example below polls `/healthz` every three seconds:
 
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -47,13 +50,46 @@ spec:
 EOF
 ```
 
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: backend-health-check
+  namespace: default
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-route
+  healthCheck:
+    active:
+      type: HTTP
+      http:
+        path: /healthz
+      interval: 3s
+      timeout: 1s
+      unhealthyThreshold: 3
+      healthyThreshold: 1
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
 ## Enable Health Check Event Logging
 
 Configure health check event logging in the [EnvoyProxy][] CRD.
-Events are written as JSON to the specified file sink.
+When no sinks are specified, events are written to `/dev/stdout` by default.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
@@ -73,13 +109,85 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
+    healthCheckLog: {}
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resources to your cluster:
+
+```yaml
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: hc-event-logging
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    healthCheckLog: {}
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+To write events to a specific file instead, configure an explicit sink:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging-file
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
     healthCheckLog:
       sinks:
         - type: File
           file:
-            path: /dev/stdout
+            path: /var/log/envoy/health-check-events.log
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging-file
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    healthCheckLog:
+      sinks:
+        - type: File
+          file:
+            path: /var/log/envoy/health-check-events.log
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 Health check events will now appear in the Envoy proxy container's standard output
 in JSON format, for example:
@@ -101,16 +209,68 @@ in JSON format, for example:
 
 ## Log All Events
 
-By default, Envoy only logs health check events that cause a state change
-(e.g. a host transitioning from healthy to unhealthy). To log every probe result
-regardless of outcome, use the
-[`alwaysLogHealthCheckFailures`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-failures)
-and
-[`alwaysLogHealthCheckSuccess`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/health_check.proto#envoy-v3-api-field-config-core-v3-healthcheck-always-log-health-check-success)
-flags:
+When `matches` is omitted (the default), all health check probe outcomes are
+logged. To log only specific outcomes, set `matches` to one or more values;
+they are ORed together. At least one failure variant and one success variant must
+be specified together.
+
+| Value | Logged when |
+|---|---|
+| `Failure` | Every failed probe, regardless of current health state |
+| `FailureTransition` | Only when a host transitions from healthy → unhealthy |
+| `Success` | Every successful probe, regardless of current health state |
+| `SuccessTransition` | Only when a host transitions from unhealthy → healthy |
+
+To log only on state transitions (the most conservative setting):
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
 
 ```shell
-kubectl apply -f - <<EOF
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging-transitions
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    healthCheckLog:
+      matches:
+        - FailureTransition
+        - SuccessTransition
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging-transitions
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    healthCheckLog:
+      matches:
+        - FailureTransition
+        - SuccessTransition
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+To log every probe result regardless of outcome:
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -119,14 +279,33 @@ metadata:
 spec:
   telemetry:
     healthCheckLog:
-      sinks:
-        - type: File
-          file:
-            path: /dev/stdout
-      alwaysLogHealthCheckFailures: true
-      alwaysLogHealthCheckSuccess: true
+      matches:
+        - Failure
+        - Success
 EOF
 ```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: hc-event-logging-verbose
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    healthCheckLog:
+      matches:
+        - Failure
+        - Success
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
 
 ## Verify
 
