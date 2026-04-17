@@ -106,18 +106,7 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 				extension: *ext,
 			}
 
-			resourceGVKSet := sets.New[schema.GroupVersionKind]()
-			for _, gvk := range ext.Resources {
-				resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
-			}
-			for _, gvk := range ext.BackendResources {
-				resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
-			}
-
-			policyGVKSet := sets.New[schema.GroupVersionKind]()
-			for _, gvk := range ext.PolicyResources {
-				policyGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
-			}
+			resourceGVKSet, policyGVKSet := buildManagerGVKSets(ext)
 
 			named = append(named, namedManager{
 				name:            ext.Name,
@@ -130,6 +119,26 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 
 		return NewCompositeManager(named), nil
 	}
+}
+
+// buildManagerGVKSets returns (resourceGVKSet, policyGVKSet) for an ExtensionManager.
+// resourceGVKSet covers Resources + BackendResources (used for per-extension filtering
+// in PostRouteModifyHook / PostClusterModifyHook). policyGVKSet covers PolicyResources
+// (used in PostHTTPListenerModifyHook / PostTranslateModifyHook).
+func buildManagerGVKSets(ext *egv1a1.ExtensionManager) (sets.Set[schema.GroupVersionKind], sets.Set[schema.GroupVersionKind]) {
+	resourceGVKSet := sets.New[schema.GroupVersionKind]()
+	for _, gvk := range ext.Resources {
+		resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+	}
+	for _, gvk := range ext.BackendResources {
+		resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+	}
+
+	policyGVKSet := sets.New[schema.GroupVersionKind]()
+	for _, gvk := range ext.PolicyResources {
+		policyGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+	}
+	return resourceGVKSet, policyGVKSet
 }
 
 func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {
