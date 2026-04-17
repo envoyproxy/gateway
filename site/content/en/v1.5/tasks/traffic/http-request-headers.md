@@ -96,7 +96,7 @@ spec:
 {{< /tabpane >}}
 
 
-The `HTTPRoute]` status should indicate that it has been accepted and is bound to the example `Gateway`.
+The `HTTPRoute` status should indicate that it has been accepted and is bound to the example `Gateway`.
 
 ```shell
 kubectl get httproute/http-headers -o yaml
