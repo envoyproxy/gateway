@@ -114,7 +114,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
 		MaxHeapSizeBytes:         maxHeapSizeBytes,
-		XdsServerHost:            ptr.To(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		XdsServerHost:            new(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
 		TopologyInjectorDisabled: topologyInjectorDisabled,
 	}
 
@@ -335,7 +335,7 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy",
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: new(int32(420)),
 			},
 		},
 	}
@@ -354,8 +354,8 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 							Path: XdsTLSCaFileName,
 						},
 					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
+					DefaultMode: new(int32(420)),
+					Optional:    new(false),
 				},
 			},
 		}
@@ -369,11 +369,11 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
 								Path:              "sa-token",
 								Audience:          saAudience,
-								ExpirationSeconds: ptr.To[int64](3600),
+								ExpirationSeconds: new(int64(3600)),
 							},
 						},
 					},
-					DefaultMode: ptr.To[int32](420),
+					DefaultMode: new(int32(420)),
 				},
 			},
 		}
@@ -390,8 +390,8 @@ func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1
 					Name: r.Name(),
 				},
 				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
-				DefaultMode: ptr.To[int32](420),
-				Optional:    ptr.To(false),
+				DefaultMode: new(int32(420)),
+				Optional:    new(false),
 			},
 		},
 	}
@@ -488,8 +488,8 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
-	sc.RunAsGroup = ptr.To(int64(65532))
-	sc.RunAsUser = ptr.To(int64(65532))
+	sc.RunAsGroup = new(int64(65532))
+	sc.RunAsUser = new(int64(65532))
 
 	// Envoy container needs to write to the log file/UDS socket.
 	sc.ReadOnlyRootFilesystem = nil
@@ -504,8 +504,8 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
-	sc.RunAsGroup = ptr.To(int64(65532))
-	sc.RunAsUser = ptr.To(int64(65532))
+	sc.RunAsGroup = new(int64(65532))
+	sc.RunAsUser = new(int64(65532))
 
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.

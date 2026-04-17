@@ -82,6 +82,9 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
 				if portValidation.TLS.Validation == nil {
+					// An explicit per-port tls override with no validation disables
+					// frontend default validation on that port.
+					gtwPerPortCaCertificate[portValidation.Port] = nil
 					continue
 				}
 				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
@@ -578,7 +581,7 @@ type overlappingCertificate struct {
 func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
 	for _, dns1 := range cert1DNSNames {
 		for _, dns2 := range cert2DNSNames {
-			if areOverlappingHostnames(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
+			if areOverlappingHostnames(new(gwapiv1.Hostname(dns1)), new(gwapiv1.Hostname(dns2))) {
 				return &overlappingCertificate{
 					san1: dns1,
 					san2: dns2,
@@ -730,11 +733,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		if accessLog.Type != nil {
 			switch *accessLog.Type {
 			case egv1a1.ProxyAccessLogTypeRoute:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
+				accessLogType = new(ir.ProxyAccessLogTypeRoute)
 			case egv1a1.ProxyAccessLogTypeListener:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+				accessLogType = new(ir.ProxyAccessLogTypeListener)
 			case egv1a1.ProxyAccessLogTypeUpstream:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeUpstream)
+				accessLogType = new(ir.ProxyAccessLogTypeUpstream)
 			}
 		}
 
@@ -1136,9 +1139,9 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 	}
 
 	parent := gwapiv1.ParentReference{
-		Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-		Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
-		Namespace: ptr.To(gwapiv1.Namespace(envoyProxy.Namespace)),
+		Group:     new(gwapiv1.Group(egv1a1.GroupName)),
+		Kind:      new(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
+		Namespace: new(gwapiv1.Namespace(envoyProxy.Namespace)),
 		Name:      gwapiv1.ObjectName(envoyProxy.Name),
 	}
 
@@ -1204,9 +1207,9 @@ func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.Des
 	return []*ir.DestinationSetting{
 		{
 			Name:        name,
-			Weight:      ptr.To[uint32](1),
+			Weight:      new(uint32(1)),
 			Protocol:    ir.GRPC,
-			AddressType: ptr.To(addressType),
+			AddressType: new(addressType),
 			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		},
 	}

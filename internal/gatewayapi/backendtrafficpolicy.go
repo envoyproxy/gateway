@@ -959,7 +959,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
+						StatusCode: new(uint32(500)),
 					}
 					routesWithDirectResponse.Insert(r.Name)
 					continue
@@ -1271,7 +1271,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if errs != nil {
 				// Return a 500 direct response
 				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 				continue
@@ -1518,7 +1518,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 		for _, method := range match.Methods {
 			irRule.MethodMatches = append(irRule.MethodMatches, &ir.StringMatch{
-				Exact:  ptr.To(string(method.Value)),
+				Exact:  new(string(method.Value)),
 				Invert: method.Invert,
 			})
 		}
@@ -1528,20 +1528,20 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			case gwapiv1.PathMatchPathPrefix:
 				if match.Path.Value == "/" {
 					irRule.PathMatch = &ir.StringMatch{
-						Prefix: ptr.To(match.Path.Value),
+						Prefix: new(match.Path.Value),
 						Invert: match.Path.Invert,
 					}
 				} else {
 					// envoy ratelimit HeaderMatcher doesn't support PathSeparatedPrefix like route matching,
 					// so we use regex to achieve the same path-separated prefix behavior.
 					irRule.PathMatch = &ir.StringMatch{
-						SafeRegex: ptr.To(regex.PathSeparatedPrefixRegex(match.Path.Value)),
+						SafeRegex: new(regex.PathSeparatedPrefixRegex(match.Path.Value)),
 						Invert:    match.Path.Invert,
 					}
 				}
 			case gwapiv1.PathMatchExact:
 				irRule.PathMatch = &ir.StringMatch{
-					Exact:  ptr.To(match.Path.Value),
+					Exact:  new(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
 			case gwapiv1.PathMatchRegularExpression:
@@ -1549,7 +1549,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 					return nil, err
 				}
 				irRule.PathMatch = &ir.StringMatch{
-					SafeRegex: ptr.To(match.Path.Value),
+					SafeRegex: new(match.Path.Value),
 					Invert:    match.Path.Invert,
 				}
 			default:
@@ -1653,7 +1653,7 @@ func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCo
 		ret.Number = cost.Number
 	}
 	if cost.Metadata != nil {
-		ret.Format = ptr.To(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
+		ret.Format = new(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
 			cost.Metadata.Namespace, cost.Metadata.Key))
 	}
 	return ret
@@ -1838,13 +1838,13 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				}
 			}
 			if ro.Redirect.Hostname != nil {
-				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+				redirect.Hostname = new(string(*ro.Redirect.Hostname))
 			}
 			if ro.Redirect.Port != nil {
-				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+				redirect.Port = new(uint32(*ro.Redirect.Port))
 			}
 			if ro.Redirect.StatusCode != nil {
-				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+				redirect.StatusCode = new(int32(*ro.Redirect.StatusCode))
 			}
 
 			rules = append(rules, ir.ResponseOverrideRule{
@@ -1858,7 +1858,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			}
 
 			if ro.Response.StatusCode != nil {
-				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+				response.StatusCode = new(uint32(*ro.Response.StatusCode))
 			}
 
 			var err error
@@ -1955,7 +1955,7 @@ func (t *Translator) resolveCustomResponseBodyRefToInline(body *egv1a1.CustomRes
 		"namespace", policyNs,
 		"ref", body.ValueRef.Name,
 	)
-	body.Type = ptr.To(egv1a1.ResponseValueTypeInline)
+	body.Type = new(egv1a1.ResponseValueTypeInline)
 	body.Inline = &inlineStr
 	body.ValueRef = nil
 	return nil
@@ -2001,7 +2001,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 				if c.MinContentLength != nil {
 					minContentLength, ok := c.MinContentLength.AsInt64()
 					if ok {
-						irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+						irCompression.MinContentLength = new(uint32(minContentLength))
 					}
 				}
 				result = append(result, &irCompression)
@@ -2023,7 +2023,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		if c.MinContentLength != nil {
 			minContentLength, ok := c.MinContentLength.AsInt64()
 			if ok {
-				irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+				irCompression.MinContentLength = new(uint32(minContentLength))
 			}
 		}
 		result = append(result, &irCompression)
