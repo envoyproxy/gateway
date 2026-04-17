@@ -1467,6 +1467,11 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.IncludeRouteMetadata != nil {
+		in, out := &in.IncludeRouteMetadata, &out.IncludeRouteMetadata
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ContextExtensions != nil {
 		in, out := &in.ContextExtensions, &out.ContextExtensions
 		*out = make([]*ContextExtention, len(*in))
