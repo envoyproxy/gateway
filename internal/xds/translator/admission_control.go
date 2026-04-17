@@ -131,28 +131,30 @@ func parseDuration(s string) (time.Duration, error) {
 	return time.ParseDuration(s)
 }
 
-// grpcStatusCodeToUint32 maps a gRPC status code string name to its numeric value.
+// grpcStatusCodes maps a gRPC status code string name to its numeric value.
 // See https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc
+var grpcStatusCodes = map[string]uint32{
+	"Ok":                 0,
+	"Cancelled":          1,
+	"Unknown":            2,
+	"InvalidArgument":    3,
+	"DeadlineExceeded":   4,
+	"NotFound":           5,
+	"AlreadyExists":      6,
+	"PermissionDenied":   7,
+	"ResourceExhausted":  8,
+	"FailedPrecondition": 9,
+	"Aborted":            10,
+	"OutOfRange":         11,
+	"Unimplemented":      12,
+	"Internal":           13,
+	"Unavailable":        14,
+	"DataLoss":           15,
+	"Unauthenticated":    16,
+}
+
+// grpcStatusCodeToUint32 maps a gRPC status code string name to its numeric value.
 func grpcStatusCodeToUint32(name string) (uint32, bool) {
-	codes := map[string]uint32{
-		"Ok":                 0,
-		"Cancelled":          1,
-		"Unknown":            2,
-		"InvalidArgument":    3,
-		"DeadlineExceeded":   4,
-		"NotFound":           5,
-		"AlreadyExists":      6,
-		"PermissionDenied":   7,
-		"ResourceExhausted":  8,
-		"FailedPrecondition": 9,
-		"Aborted":            10,
-		"OutOfRange":         11,
-		"Unimplemented":      12,
-		"Internal":           13,
-		"Unavailable":        14,
-		"DataLoss":           15,
-		"Unauthenticated":    16,
-	}
-	code, ok := codes[name]
+	code, ok := grpcStatusCodes[name]
 	return code, ok
 }
