@@ -2654,7 +2654,7 @@ func TestProxyHealthCheckLog(t *testing.T) {
 					fileSink("/dev/stderr"),
 				},
 			},
-			expectedError: "Too many: 2: must have at most 1 items",
+			expectedError: "Too many: 2: must have at most 1 item",
 		},
 		{
 			desc: "invalid - File type without file field",
