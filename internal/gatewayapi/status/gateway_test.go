@@ -42,6 +42,28 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 			wantAddresses: nil,
 		},
 		{
+			name: "nil svc with spec addresses populates status from spec",
+			args: args{
+				gw: &gwapiv1.Gateway{
+					Spec: gwapiv1.GatewaySpec{
+						Addresses: []gwapiv1.GatewaySpecAddress{
+							{
+								Type:  new(gwapiv1.IPAddressType),
+								Value: "10.0.0.1",
+							},
+						},
+					},
+				},
+				svc: nil,
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "10.0.0.1",
+				},
+			},
+		},
+		{
 			name: "LoadBalancer svc with ingress ip",
 			args: args{
 				gw: &gwapiv1.Gateway{},
@@ -99,10 +121,6 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				},
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{
-				{
-					Type:  new(gwapiv1.IPAddressType),
-					Value: "127.0.0.1",
-				},
 				{
 					Type:  new(gwapiv1.HostnameAddressType),
 					Value: "localhost",
@@ -307,6 +325,37 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 				},
 			},
 			wantAddresses: []gwapiv1.GatewayStatusAddress{},
+		},
+		{
+			name: "Spec addresses with hostname triggers AddressNotUsable",
+			args: args{
+				gw: &gwapiv1.Gateway{
+					Spec: gwapiv1.GatewaySpec{
+						Addresses: []gwapiv1.GatewaySpecAddress{
+							{
+								Type:  new(gwapiv1.IPAddressType),
+								Value: "10.0.0.1",
+							},
+							{
+								Type:  new(gwapiv1.HostnameAddressType),
+								Value: "test.example.com",
+							},
+						},
+					},
+				},
+				svc: &corev1.Service{
+					Spec: corev1.ServiceSpec{
+						ExternalIPs: []string{"10.0.0.1"},
+						Type:        corev1.ServiceTypeLoadBalancer,
+					},
+				},
+			},
+			wantAddresses: []gwapiv1.GatewayStatusAddress{
+				{
+					Type:  new(gwapiv1.IPAddressType),
+					Value: "10.0.0.1",
+				},
+			},
 		},
 		{
 			name: "Nodeport svc Ipv6 with dual stack node addresses",
