@@ -215,6 +215,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -226,6 +227,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -239,6 +241,7 @@ verbs:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
