@@ -245,8 +245,6 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		for _, watchNS := range svrCfg.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
-		// Always include ControllerNamespace in cache for infra operations
-		mgrOpts.Cache.DefaultNamespaces[svrCfg.ControllerNamespace] = cache.Config{}
 	}
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgrOpts.WebhookServer = webhook.NewServer(webhook.Options{
