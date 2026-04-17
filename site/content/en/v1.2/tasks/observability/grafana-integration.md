@@ -68,7 +68,7 @@ This dashboard example shows the overall resources stats for both Envoy Gateway 
 ## Update Dashboards
 
 All dashboards of Envoy Gateway are maintained under `charts/gateway-addons-helm/dashboards`,
-feel free to make [contributions](../../../contributions/CONTRIBUTING).
+feel free to make [contributions](/community/CONTRIBUTING).
 
 ### Grafonnet
 

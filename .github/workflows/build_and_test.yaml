@@ -41,7 +41,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
     # Generate the installation manifests first, so it can check
     # for errors while running `make -k lint`
@@ -52,14 +52,14 @@ jobs:
   gen-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -72,7 +72,7 @@ jobs:
     - changes
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
 
     # test
@@ -94,7 +94,7 @@ jobs:
     - build
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         fetch-depth: 0  # Need main branch access for benchmark comparison
     - uses: ./tools/github-actions/setup-deps
@@ -111,7 +111,7 @@ jobs:
     needs: [changes, lint, gen-check, license-check, coverage-test]
     if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       # For main branch builds, we need to fetch tags so go binary will be built with
       # the recent vX.Y.Z-rc.0 tag, which helps avoid false positives in vulnerability scans.
       # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
@@ -128,7 +128,7 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
       with:
         name: envoy-gateway
         path: bin/
@@ -169,7 +169,7 @@ jobs:
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -227,7 +227,7 @@ jobs:
           profile: xds-name-scheme-v2
 
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
     - uses: ./tools/github-actions/reclaim-storage
 
@@ -271,7 +271,7 @@ jobs:
     # So we need to check if this is a pull request and changes.
     if: ${{ github.event_name == 'pull_request' && needs.changes.outputs.run_test_workflow == 'true' }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
 
 
@@ -290,7 +290,7 @@ jobs:
       run: make benchmark
 
     - name: Upload Benchmark report
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
       with:
         name: benchmark_report
         path: ./test/benchmark/benchmark_report/
@@ -302,7 +302,7 @@ jobs:
     - build
     - changes
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
     - name: Resilience Test
       env:
@@ -315,7 +315,7 @@ jobs:
     needs: [conformance-test, e2e-test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -331,7 +331,7 @@ jobs:
 
     # build and push image
     - name: Login to DockerHub
-      uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2  # v4.0.0
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121  # v4.1.0
       with:
         username: ${{ vars.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

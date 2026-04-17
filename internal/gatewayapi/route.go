@@ -233,7 +233,12 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
@@ -318,7 +323,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			routesWithDirectResponse := sets.New[string]()
 			for _, irRoute := range ruleRoutes {
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -340,7 +345,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -362,7 +367,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
+					StatusCode: new(uint32(503)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -380,7 +385,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -399,7 +404,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -438,7 +443,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 			// set the stat name for this route
 			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
+				irRoute.Destination.StatName = new(buildStatName(pattern, httpRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -530,7 +535,7 @@ func processRouteRetry(irRoute *ir.HTTPRoute, rule *gwapiv1.HTTPRouteRule) {
 	retry := rule.Retry
 	res := &ir.Retry{}
 	if retry.Attempts != nil {
-		res.NumRetries = ptr.To(uint32(*retry.Attempts))
+		res.NumRetries = new(uint32(*retry.Attempts))
 	}
 	if retry.Backoff != nil {
 		backoff, err := time.ParseDuration(string(*retry.Backoff))
@@ -678,7 +683,7 @@ func (t *Translator) processHTTPRouteRule(
 			case gwapiv1.HeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: ptr.To(headerMatch.Value),
+					Exact: new(headerMatch.Value),
 				})
 			case gwapiv1.HeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
@@ -686,7 +691,7 @@ func (t *Translator) processHTTPRouteRule(
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: ptr.To(headerMatch.Value),
+					SafeRegex: new(headerMatch.Value),
 				})
 			}
 		}
@@ -695,7 +700,7 @@ func (t *Translator) processHTTPRouteRule(
 			case gwapiv1.QueryParamMatchExact:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:  string(queryParamMatch.Name),
-					Exact: ptr.To(queryParamMatch.Value),
+					Exact: new(queryParamMatch.Value),
 				})
 			case gwapiv1.QueryParamMatchRegularExpression:
 				if err := regex.Validate(queryParamMatch.Value); err != nil {
@@ -703,7 +708,7 @@ func (t *Translator) processHTTPRouteRule(
 				}
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
-					SafeRegex: ptr.To(queryParamMatch.Value),
+					SafeRegex: new(queryParamMatch.Value),
 				})
 			}
 		}
@@ -711,7 +716,7 @@ func (t *Translator) processHTTPRouteRule(
 		if match.Method != nil {
 			irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 				Name:  ":method",
-				Exact: ptr.To(string(*match.Method)),
+				Exact: new(string(*match.Method)),
 			})
 		}
 		for _, cookieMatch := range match.cookies {
@@ -724,12 +729,12 @@ func (t *Translator) processHTTPRouteRule(
 			}
 			switch matchType {
 			case egv1a1.CookieMatchExact:
-				sm.Exact = ptr.To(cookieMatch.Value)
+				sm.Exact = new(cookieMatch.Value)
 			case egv1a1.CookieMatchRegularExpression:
 				if err := regex.Validate(cookieMatch.Value); err != nil {
 					return nil, status.NewRouteStatusError(err, gwapiv1.RouteReasonUnsupportedValue)
 				}
-				sm.SafeRegex = ptr.To(cookieMatch.Value)
+				sm.SafeRegex = new(cookieMatch.Value)
 			default:
 				return nil, status.NewRouteStatusError(
 					fmt.Errorf("unsupported cookie match type %q", matchType),
@@ -773,15 +778,15 @@ func (t *Translator) processHTTPRouteRule(
 			corsHeaders := []*ir.StringMatch{
 				{
 					Name:  ":method",
-					Exact: ptr.To("OPTIONS"),
+					Exact: new("OPTIONS"),
 				},
 				{
 					Name:      "origin",
-					SafeRegex: ptr.To(".*"),
+					SafeRegex: new(".*"),
 				},
 				{
 					Name:      "access-control-request-method",
-					SafeRegex: ptr.To(".*"),
+					SafeRegex: new(".*"),
 				},
 			}
 			headerMatches = append(headerMatches, corsHeaders...)
@@ -956,7 +961,12 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		if len(errs) > 0 {
 			for _, err := range errs {
 				errorCollector.Add(err)
-				processFilterError = errors.Join(processFilterError, err)
+				// Gateway API conformance: When a filter's backend Service exists but has no
+				// endpoints (e.g. RequestMirror), do not treat it as a fatal filter error.
+				// The route should continue to work; only BackendsAvailable is set to False.
+				if err.Type() != status.RouteConditionBackendsAvailable {
+					processFilterError = errors.Join(processFilterError, err)
+				}
 				if err.Type() == gwapiv1.RouteConditionAccepted {
 					unacceptedRules.Insert(ruleIdx)
 				}
@@ -1035,7 +1045,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1056,7 +1066,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1077,7 +1087,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(503)),
+					StatusCode: new(uint32(503)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1095,7 +1105,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 					continue
 				}
 				irRoute.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(irRoute.Name)
 			}
@@ -1126,7 +1136,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 
 			// set the stat name for this route
 			if irRoute.Destination != nil && pattern != "" {
-				irRoute.Destination.StatName = ptr.To(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
+				irRoute.Destination.StatName = new(buildStatName(pattern, grpcRoute, rule.Name, ruleIdx, backendRefNames))
 			}
 		}
 
@@ -1170,7 +1180,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			case gwapiv1.GRPCHeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: ptr.To(headerMatch.Value),
+					Exact: new(headerMatch.Value),
 				})
 			case gwapiv1.GRPCHeaderMatchRegularExpression:
 				if err := regex.Validate(headerMatch.Value); err != nil {
@@ -1178,7 +1188,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 				}
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: ptr.To(headerMatch.Value),
+					SafeRegex: new(headerMatch.Value),
 				})
 			}
 		}
@@ -1213,17 +1223,17 @@ func (t *Translator) processGRPCRouteMethodExact(method *gwapiv1.GRPCMethodMatch
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Exact: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			Exact: new(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		// Use a header match since the PathMatch doesn't support Suffix matching
 		irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 			Name:   ":path",
-			Suffix: ptr.To(fmt.Sprintf("/%s", *method.Method)),
+			Suffix: new(fmt.Sprintf("/%s", *method.Method)),
 		})
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Prefix: ptr.To(fmt.Sprintf("/%s", *method.Service)),
+			Prefix: new(fmt.Sprintf("/%s", *method.Service)),
 		}
 	}
 }
@@ -1232,15 +1242,15 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1.GRP
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
 		}
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
+			SafeRegex: new(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
 		}
 	}
 }
@@ -1259,7 +1269,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			continue
 		}
 
-		var perHostRoutes []*ir.HTTPRoute
+		perHostRoutes := make([]*ir.HTTPRoute, 0, len(hosts)*len(routeRoutes))
 		for _, host := range hosts {
 			for _, routeRoute := range routeRoutes {
 				// If the redirect port is not set, the final redirect port must be derived.
@@ -1297,9 +1307,15 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					irListener.GRPC = &ir.GRPCSettings{}
 				}
 
-				// Backwards compatibility: enable gRPC-Web and gRPC stats filters when a GRPCRoute is attached to the listener
-				irListener.GRPC.EnableGRPCWeb = ptr.To(true)
-				irListener.GRPC.EnableGRPCStats = ptr.To(true)
+				// Backward-compatible defaulting for listeners with an attached GRPCRoute.
+				// gRPC stats may already be populated from EnvoyProxy at this point, so
+				// only default it when unset. gRPC-Web is also enabled by default here,
+				// but any explicit ClientTrafficPolicy setting is translated later and
+				// will override this value.
+				irListener.GRPC.EnableGRPCWeb = new(true)
+				if irListener.GRPC.EnableGRPCStats == nil {
+					irListener.GRPC.EnableGRPCStats = new(true)
+				}
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
@@ -2035,7 +2051,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		Protocol:    protocol,
 		Endpoints:   endpoints,
 		AddressType: addrType,
-		Metadata:    buildResourceMetadata(serviceImport, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:    buildResourceMetadata(serviceImport, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2091,7 +2107,7 @@ func (t *Translator) processServiceDestinationSetting(
 		Endpoints:   endpoints,
 		AddressType: addrType,
 		PreferLocal: processPreferLocalZone(service),
-		Metadata:    buildResourceMetadata(service, ptr.To(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
+		Metadata:    buildResourceMetadata(service, new(gwapiv1.SectionName(strconv.Itoa(int(*backendRef.Port))))),
 	}, nil
 }
 
@@ -2121,9 +2137,9 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 
 	if trafficDist := svc.Spec.TrafficDistribution; trafficDist != nil {
 		return &ir.PreferLocalZone{
-			MinEndpointsThreshold: ptr.To[uint64](1),
+			MinEndpointsThreshold: new(uint64(1)),
 			Force: &ir.ForceLocalZone{
-				MinEndpointsInZoneThreshold: ptr.To[uint32](1),
+				MinEndpointsInZoneThreshold: new(uint32(1)),
 			},
 		}
 	}
@@ -2134,9 +2150,9 @@ func processPreferLocalZone(svc *corev1.Service) *ir.PreferLocalZone {
 	// https://github.com/kubernetes/kubernetes/blob/9d9e1afdf78bce0a517cc22557457f942040ca19/staging/src/k8s.io/endpointslice/utils.go#L355-L368
 	if val, ok := svc.Annotations[corev1.AnnotationTopologyMode]; ok && val == "Auto" || val == "auto" {
 		return &ir.PreferLocalZone{
-			MinEndpointsThreshold: ptr.To[uint64](3),
+			MinEndpointsThreshold: new(uint64(3)),
 			Force: &ir.ForceLocalZone{
-				MinEndpointsInZoneThreshold: ptr.To[uint32](3),
+				MinEndpointsInZoneThreshold: new(uint32(3)),
 			},
 		}
 	}
@@ -2311,13 +2327,13 @@ func getIREndpointsFromEndpointSlices(endpointSlices []*discoveryv1.EndpointSlic
 
 	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(endpointSlices) {
-			dstAddrType = ptr.To(addrTypeState)
+			dstAddrType = new(addrTypeState)
 			break
 		}
 	}
 
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = ptr.To(ir.MIXED)
+		dstAddrType = new(ir.MIXED)
 	}
 
 	return dstEndpoints, dstAddrType
@@ -2489,7 +2505,7 @@ func (t *Translator) processBackendDestinationSetting(
 		case bep.Unix != nil:
 			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
-				Path: ptr.To(bep.Unix.Path),
+				Path: new(bep.Unix.Path),
 				Zone: bep.Zone,
 			}
 		}
@@ -2499,13 +2515,13 @@ func (t *Translator) processBackendDestinationSetting(
 
 	for addrTypeState, addrTypeCounts := range addrTypeMap {
 		if addrTypeCounts == len(backend.Spec.Endpoints) {
-			dstAddrType = ptr.To(addrTypeState)
+			dstAddrType = new(addrTypeState)
 			break
 		}
 	}
 
 	if len(addrTypeMap) > 0 && dstAddrType == nil {
-		dstAddrType = ptr.To(ir.MIXED)
+		dstAddrType = new(ir.MIXED)
 	}
 
 	ds.Endpoints = dstEndpoints
@@ -2515,7 +2531,7 @@ func (t *Translator) processBackendDestinationSetting(
 	if backend.Spec.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backend.Spec.Fallback, false) {
-			ds.Priority = ptr.To(uint32(1))
+			ds.Priority = new(uint32(1))
 		}
 	}
 

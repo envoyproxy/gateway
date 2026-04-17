@@ -42,7 +42,7 @@ CLEAN_NODE_MODULES ?= true
 .PHONY: docs-gen
 docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	cd $(ROOT_DIR)/site && npm install
+	cd $(ROOT_DIR)/site && npm ci
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
@@ -83,7 +83,6 @@ ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
 endif
 	rm -rf site/resources
-	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
@@ -219,12 +218,12 @@ docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-
 	$(tools/sync-docs-codeowners)
 
 .PHONY: docs-check-links
-docs-check-links: # Check for broken links in the docs
+docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
-docs-markdown-lint:
-	markdownlint -c .github/markdown_lint_config.json site/content/*
+docs-markdown-lint: $(tools/markdownlint)
+	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*
 
 .PHONY: docs-check
 docs-check: ## Verify no doc changes are needed

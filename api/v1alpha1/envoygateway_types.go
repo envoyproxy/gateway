@@ -227,6 +227,8 @@ type LeaderElection struct {
 type EnvoyGatewayTelemetry struct {
 	// Metrics defines metrics configuration for envoy gateway.
 	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
+	// Traces defines traces configuration for envoy gateway.
+	Traces *EnvoyGatewayTraces `json:"traces,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -783,12 +785,14 @@ type ExtensionService struct {
 	BackendEndpoint `json:",inline"`
 
 	// Host define the extension service hostname.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional

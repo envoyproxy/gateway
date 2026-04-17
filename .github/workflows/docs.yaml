@@ -21,20 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         ref: ${{ github.event.pull_request.head.sha }}
 
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Install markdownlint-cli
-      run: npm install -g markdownlint-cli@v0.47.0
-
     - name: Run markdown linter
       run: make lint.markdown
-
-    - name: Install linkinator
-      run: npm install -g linkinator@7.4.0
 
     - name: Check links
       run: make docs docs-check-links
@@ -46,30 +40,24 @@ jobs:
       contents: write
     steps:
     - name: Git checkout
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       with:
         submodules: true
         ref: ${{ github.event.pull_request.head.sha }}
 
     - uses: ./tools/github-actions/setup-deps
 
-    - name: Setup Hugo
-      uses: peaceiris/actions-hugo@75d2e84710de30f6ff7268e08f310b60ef14033f  # v3.0.0
-      with:
-        hugo-version: 'latest'
-        extended: true
-
     - name: Setup Node
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f  # v6.3.0
       with:
-        node-version: '18'
+        node-version-file: site/.nvmrc
 
     - name: Install Site Dependencies and Build Site
       run: make docs
 
     # Upload docs for GitHub Pages
     - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b  # v4.0.0
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
       with:
         # Path of the directory containing the static assets.
         path: site/public

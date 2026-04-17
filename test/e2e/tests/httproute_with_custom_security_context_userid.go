@@ -15,7 +15,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -92,8 +91,8 @@ func setEGSecurityContextUserID(t *testing.T, suite *suite.ConformanceTestSuite,
 		)
 		require.NoError(t, err)
 
-		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = ptr.To(uid)
-		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup = ptr.To(uid)
+		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsUser = new(uid)
+		egDeployment.Spec.Template.Spec.Containers[0].SecurityContext.RunAsGroup = new(uid)
 
 		if err = suite.Client.Update(context.Background(), egDeployment); err == nil {
 			break

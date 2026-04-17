@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -51,7 +52,6 @@ func NewOfflineGatewayAPIController(
 		extGVKs                []schema.GroupVersionKind
 		extServerPoliciesGVKs  []schema.GroupVersionKind
 		extBackendPoliciesGVKs []schema.GroupVersionKind
-		allExtensions          []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -69,9 +69,7 @@ func NewOfflineGatewayAPIController(
 			extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
 		}
 	}
-	allExtensions = append(allExtensions, extGVKs...)
-	allExtensions = append(allExtensions, extServerPoliciesGVKs...)
-	allExtensions = append(allExtensions, extBackendPoliciesGVKs...)
+	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs)
 
 	cli := newOfflineGatewayAPIClient(allExtensions)
 
