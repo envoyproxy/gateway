@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -45,10 +44,10 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 				SamplingWindow: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				SuccessRateThreshold:    ptr.To(uint32(90)),
-				Aggression:              ptr.To(uint32(2)),
-				RPSThreshold:            ptr.To(uint32(10)),
-				MaxRejectionProbability: ptr.To(uint32(80)),
+				SuccessRateThreshold:    new(uint32(90)),
+				Aggression:              new(uint32(2)),
+				RPSThreshold:            new(uint32(10)),
+				MaxRejectionProbability: new(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
 						HTTPSuccessStatus: []int32{200, 201, 300, 301},
@@ -101,20 +100,20 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 		{
 			name: "config with min thresholds",
 			config: &ir.AdmissionControl{
-				SuccessRateThreshold:    ptr.To(uint32(1)),
-				Aggression:              ptr.To(uint32(1)),
-				RPSThreshold:            ptr.To(uint32(0)),
-				MaxRejectionProbability: ptr.To(uint32(0)),
+				SuccessRateThreshold:    new(uint32(1)),
+				Aggression:              new(uint32(1)),
+				RPSThreshold:            new(uint32(0)),
+				MaxRejectionProbability: new(uint32(0)),
 			},
 			wantErr: false,
 		},
 		{
 			name: "config with max thresholds",
 			config: &ir.AdmissionControl{
-				SuccessRateThreshold:    ptr.To(uint32(100)),
-				Aggression:              ptr.To(uint32(10)),
-				RPSThreshold:            ptr.To(uint32(1000)),
-				MaxRejectionProbability: ptr.To(uint32(100)),
+				SuccessRateThreshold:    new(uint32(100)),
+				Aggression:              new(uint32(10)),
+				RPSThreshold:            new(uint32(1000)),
+				MaxRejectionProbability: new(uint32(100)),
 			},
 			wantErr: false,
 		},
@@ -144,10 +143,10 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 		SamplingWindow: &metav1.Duration{
 			Duration: 45 * time.Second,
 		},
-		SuccessRateThreshold:    ptr.To(uint32(85)),
-		Aggression:              ptr.To(uint32(2)),
-		RPSThreshold:            ptr.To(uint32(20)),
-		MaxRejectionProbability: ptr.To(uint32(75)),
+		SuccessRateThreshold:    new(uint32(85)),
+		Aggression:              new(uint32(2)),
+		RPSThreshold:            new(uint32(20)),
+		MaxRejectionProbability: new(uint32(75)),
 		SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 			HTTP: &ir.HTTPSuccessCriteria{
 				HTTPSuccessStatus: []int32{200, 201, 202},
@@ -209,10 +208,10 @@ func TestBuildUpstreamAdmissionControlFilter(t *testing.T) {
 				SamplingWindow: &metav1.Duration{
 					Duration: 30 * time.Second,
 				},
-				SuccessRateThreshold:    ptr.To(uint32(95)),
-				Aggression:              ptr.To(uint32(1)),
-				RPSThreshold:            ptr.To(uint32(5)),
-				MaxRejectionProbability: ptr.To(uint32(80)),
+				SuccessRateThreshold:    new(uint32(95)),
+				Aggression:              new(uint32(1)),
+				RPSThreshold:            new(uint32(5)),
+				MaxRejectionProbability: new(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
 						HTTPSuccessStatus: []int32{200, 201},
