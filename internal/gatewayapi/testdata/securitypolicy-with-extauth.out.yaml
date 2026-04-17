@@ -154,6 +154,7 @@ securityPolicies:
       headersToExtAuth:
       - header1
       - header2
+      includeRouteMetadata: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -318,6 +319,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            includeRouteMetadata: true
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           metadata:
@@ -376,6 +378,7 @@ xdsIR:
             headersToExtAuth:
             - header1
             - header2
+            includeRouteMetadata: true
             name: securitypolicy/default/policy-for-http-route-1
       - destination:
           metadata:

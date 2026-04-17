@@ -4,6 +4,8 @@ kind: HTTPRoute
 metadata:
   name: http-with-ext-auth
   namespace: gateway-conformance-infra
+  annotations:
+    gateway.envoyproxy.io/foo: bar
 spec:
   parentRefs:
   - name: same-namespace
@@ -46,6 +48,7 @@ spec:
     kind: HTTPRoute
     name: http-with-ext-auth
   extAuth:
+    includeRouteMetadata: true
     grpc:
       backendRefs:
       - name: grpc-ext-auth

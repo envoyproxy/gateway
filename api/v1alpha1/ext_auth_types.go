@@ -64,6 +64,29 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
+	// external authorization service as context.
+	//
+	// This includes Envoy Gateway's built-in metadata for the selected route in
+	// the "envoy-gateway" metadata namespace.
+	//
+	// The metadata is exposed under the "resources" field as a list of route
+	// resource objects. For example:
+	//
+	// envoy-gateway:
+	//   resources:
+	//   - kind: HTTPRoute
+	//     name: backend
+	//     namespace: default
+	//     annotations:
+	//       foo: bar
+	//
+	// The resource object may include fields such as kind, namespace, name,
+	// sectionName, and supported route annotations.
+	//
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
