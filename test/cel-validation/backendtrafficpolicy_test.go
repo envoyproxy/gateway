@@ -585,9 +585,9 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window:           ptr.To(gwapiv1.Duration("10ms")),
-								Aggression:       ptr.To[uint32](150),
-								MinWeightPercent: ptr.To[uint32](25),
+								Window:           new(gwapiv1.Duration("10ms")),
+								Aggression:       new(uint32(150)),
+								MinWeightPercent: new(uint32(25)),
 							},
 						},
 					},
@@ -612,8 +612,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						LoadBalancer: &egv1a1.LoadBalancer{
 							Type: egv1a1.RoundRobinLoadBalancerType,
 							SlowStart: &egv1a1.SlowStart{
-								Window:     ptr.To(gwapiv1.Duration("10ms")),
-								Aggression: ptr.To[uint32](0),
+								Window:     new(gwapiv1.Duration("10ms")),
+								Aggression: new(uint32(0)),
 							},
 						},
 					},
