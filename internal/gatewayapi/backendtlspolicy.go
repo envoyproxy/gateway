@@ -409,7 +409,7 @@ func (t *Translator) processClientTLSSettings(
 			// For SDS reference secrets, extract the SDS secret name and URL from data
 			s, err := ir.NewSDSConfig(secret)
 			if err != nil {
-				return tlsConfig, fmt.Errorf("invalid SDS reference secret: %v", err)
+				return tlsConfig, fmt.Errorf("invalid SDS reference secret: %w", err)
 			}
 			tlsConfig.ClientCertificates = []ir.TLSCertificate{
 				{
@@ -584,7 +584,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 					// For SDS reference secrets, extract the SDS secret name and URL from data
 					foundSDSConfig, err = ir.NewSDSConfig(secret)
 					if err != nil {
-						return nil, nil, fmt.Errorf("invalid SDS reference secret %s: %v", secret.Name, err)
+						return nil, nil, fmt.Errorf("invalid SDS reference secret %s: %w", secret.Name, err)
 					}
 					continue
 				}
