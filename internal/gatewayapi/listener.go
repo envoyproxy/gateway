@@ -239,40 +239,14 @@ func allowedRouteKindsForProtocol(protocol gwapiv1.ProtocolType, tlsMode *gwapiv
 	}
 }
 
-// validateProtocolRules validates protocol-specific constraints (hostname, TLS requirements).
-// Returns true if all constraints are satisfied, false otherwise.
-func validateProtocolRules(listener *ListenerContext) bool {
-	switch listener.Protocol {
-	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TLSProtocolType,
-		gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType:
-		// All supported protocols pass basic validation here.
-		// Protocol-specific constraints (TLS, hostname) are validated in
-		// validateTLSConfiguration and validateHostName respectively,
-		// where they can set proper conditions.
-		return true
-
-	default:
-		// Unsupported protocol handled separately
-		return false
-	}
-}
-
 func (t *Translator) validateListenerSpec(listener *ListenerContext, resources *resource.Resources) bool {
 	// Validate listener spec directly without relying on conditions.
 	// Start with valid assumption and invalidate on failures.
-
 	// Phase 1: Validate fundamental rules
 	specValid := t.validateAllowedNamespaces(listener)
-	if !validateProtocolRules(listener) {
-		specValid = false
-	}
 
 	// Phase 2: Validate allowed routes based on protocol
-	if listener.Protocol == gwapiv1.HTTPProtocolType ||
-		listener.Protocol == gwapiv1.HTTPSProtocolType ||
-		listener.Protocol == gwapiv1.TCPProtocolType ||
-		listener.Protocol == gwapiv1.UDPProtocolType ||
-		listener.Protocol == gwapiv1.TLSProtocolType {
+	if isSupportedListenerProtocol(listener.Protocol) {
 		var tlsMode *gwapiv1.TLSModeType
 		if listener.TLS != nil {
 			tlsMode = listener.TLS.Mode
