@@ -190,6 +190,8 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.ProviderResourcesMessageName}, sub,
 		func(update message.Update[string, *resource.ControllerResourcesContext], errChan chan error) {
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
+
 			parentCtx := context.Background()
 			if update.Value != nil && update.Value.Context != nil {
 				parentCtx = update.Value.Context

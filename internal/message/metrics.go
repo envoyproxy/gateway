@@ -34,6 +34,13 @@ var (
 		"Total number of published updates to watchable queue.",
 	)
 
-	runnerLabel  = metrics.NewLabel("runner")
-	messageLabel = metrics.NewLabel("message")
+	runnerEventTotal = metrics.NewCounter(
+		"runner_event_total",
+		"Total number of runner events.",
+	)
+
+	runnerLabel     = metrics.NewLabel("runner")
+	messageLabel    = metrics.NewLabel("message")
+	runnerTypeLabel = metrics.NewLabel("type")
+	runnerNameLabel = metrics.NewLabel("name")
 )

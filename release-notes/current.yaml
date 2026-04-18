@@ -87,3 +87,4 @@ Other changes: |
   Moved Envoy Gateway CRDs into a sub-chart to avoid the Helm release secret exceeding the 1MB size limit when adding new API fields. Upgrade/Install behavior is unchanged for users.
   The maximum number of rules in a RateLimit policy is increased from 128 to 256.
   The maximum number of JWT providers allowed in `SecurityPolicy.spec.jwt.providers` is increased from 4 to 16.
+  Added `runner_event_total` metric to track update and delete events in infrastructure and gateway API runners for improved observability.
