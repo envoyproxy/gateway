@@ -231,7 +231,7 @@ xdsIR:
                   secretName: ROOTCA
                   url: /var/run/secrets/workload-spiffe-uds/socket
               clientCertificates:
-              - name: default
+              - name: ""
                 sds:
                   secretName: default
                   url: /var/run/secrets/workload-spiffe-uds/socket

@@ -77,27 +77,23 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 	}
 
 	// Create the cluster based on the URL type
-	var c *cluster.Cluster
-	if strings.HasPrefix(sdsURL, "/") {
-		// Unix domain socket
-		c = &cluster.Cluster{
-			Name: clusterName,
-			ClusterDiscoveryType: &cluster.Cluster_Type{
-				Type: cluster.Cluster_STATIC,
-			},
-			LoadAssignment: &endpoint.ClusterLoadAssignment{
-				ClusterName: clusterName,
-				Endpoints: []*endpoint.LocalityLbEndpoints{
-					{
-						LbEndpoints: []*endpoint.LbEndpoint{
-							{
-								HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-									Endpoint: &endpoint.Endpoint{
-										Address: &corev3.Address{
-											Address: &corev3.Address_Pipe{
-												Pipe: &corev3.Pipe{
-													Path: sdsURL,
-												},
+	c := &cluster.Cluster{
+		Name: clusterName,
+		ClusterDiscoveryType: &cluster.Cluster_Type{
+			Type: cluster.Cluster_STATIC,
+		},
+		LoadAssignment: &endpoint.ClusterLoadAssignment{
+			ClusterName: clusterName,
+			Endpoints: []*endpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*endpoint.LbEndpoint{
+						{
+							HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+								Endpoint: &endpoint.Endpoint{
+									Address: &corev3.Address{
+										Address: &corev3.Address_Pipe{
+											Pipe: &corev3.Pipe{
+												Path: sdsURL,
 											},
 										},
 									},
@@ -107,12 +103,9 @@ func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 					},
 				},
 			},
-			ConnectTimeout:       durationpb.New(defaultConnectionTimeout),
-			Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
-		}
-	} else {
-		// TCP/IP address
-		return fmt.Errorf("TCP/IP SDS URLs are not yet supported: %s", sdsURL)
+		},
+		ConnectTimeout:       durationpb.New(defaultConnectionTimeout),
+		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
 	}
 
 	if err := tCtx.AddXdsResource(resourcev3.ClusterType, c); err != nil {

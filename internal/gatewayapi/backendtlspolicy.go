@@ -22,11 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils"
 )
 
-const (
-	// SDSSecretType is the type for secrets that reference SDS configuration
-	SDSSecretType = "gateway.envoyproxy.io/sds-ref"
-)
-
 var (
 	ErrRefNotPermitted          = fmt.Errorf("cross-namespace reference is not permitted by any ReferenceGrant")
 	ErrInvalidCACertificateKind = fmt.Errorf("Unsupported reference kind, supported kinds are ConfigMap, Secret, and ClusterTrustBundle")
@@ -410,27 +405,16 @@ func (t *Translator) processClientTLSSettings(
 			return tlsConfig, err
 		}
 		// Check if this is an SDS reference secret
-		if secret.Type == SDSSecretType {
+		if secret.Type == egv1a1.SDSSecretType {
 			// For SDS reference secrets, extract the SDS secret name and URL from data
-			sdsSecretName, hasSecretName := secret.Data["secretName"]
-			sdsURLBytes, hasURL := secret.Data["url"]
-			if hasSecretName && len(sdsSecretName) > 0 && hasURL && len(sdsURLBytes) > 0 {
-				tlsConfig.ClientCertificates = []ir.TLSCertificate{
-					{
-						Name: string(sdsSecretName),
-						SDS: &ir.SDSConfig{
-							SecretName: string(sdsSecretName),
-							URL:        string(sdsURLBytes),
-						},
-					},
-				}
-			} else {
-				if !hasSecretName || len(sdsSecretName) == 0 {
-					err = fmt.Errorf("no secretName found in SDS reference secret %s", secret.Name)
-				} else {
-					err = fmt.Errorf("no url found in SDS reference secret %s", secret.Name)
-				}
-				return tlsConfig, err
+			s, err := ir.NewSDSConfig(secret)
+			if err != nil {
+				return tlsConfig, fmt.Errorf("invalid SDS reference secret: %v", err)
+			}
+			tlsConfig.ClientCertificates = []ir.TLSCertificate{
+				{
+					SDS: s,
+				},
 			}
 		} else {
 			// Regular secret processing
@@ -593,23 +577,14 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 			secret := t.GetSecret(caRefNs, string(caRef.Name))
 			if secret != nil {
 				// Check if this is an SDS reference secret
-				if secret.Type == SDSSecretType {
-					// For SDS reference secrets, extract the SDS secret name and URL from data
-					sdsSecretName, hasSecretName := secret.Data["secretName"]
-					sdsURLBytes, hasURL := secret.Data["url"]
-					// TODO: support more sds options if needed.
-					if !hasSecretName || len(sdsSecretName) == 0 {
-						return nil, nil, fmt.Errorf("no secretName found in SDS reference secret %s", secret.Name)
-					}
-					if !hasURL || len(sdsURLBytes) == 0 {
-						return nil, nil, fmt.Errorf("no url found in SDS reference secret %s", secret.Name)
-					}
+				if secret.Type == egv1a1.SDSSecretType {
 					if foundSDSConfig != nil {
 						return nil, nil, fmt.Errorf("multiple SDS reference secrets are not supported")
 					}
-					foundSDSConfig = &ir.SDSConfig{
-						SecretName: string(sdsSecretName),
-						URL:        string(sdsURLBytes),
+					// For SDS reference secrets, extract the SDS secret name and URL from data
+					foundSDSConfig, err = ir.NewSDSConfig(secret)
+					if err != nil {
+						return nil, nil, fmt.Errorf("invalid SDS reference secret %s: %v", secret.Name, err)
 					}
 					continue
 				}

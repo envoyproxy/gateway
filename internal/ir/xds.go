@@ -16,6 +16,7 @@ import (
 	"net/netip"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -491,6 +492,23 @@ type SDSConfig struct {
 
 	// TODO: support additional SDS configuration options
 	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
+	sdsSecretName, hasSecretName := s.Data["secretName"]
+	sdsURLBytes, hasURL := s.Data["url"]
+	// TODO: support more sds options if needed.
+	if !hasSecretName || len(sdsSecretName) == 0 {
+		return nil, fmt.Errorf("no secretName found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+	if !hasURL || len(sdsURLBytes) == 0 {
+		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+
+	return &SDSConfig{
+		SecretName: string(sdsSecretName),
+		URL:        string(sdsURLBytes),
+	}, nil
 }
 
 // TLSCrl holds a single CRL's details
