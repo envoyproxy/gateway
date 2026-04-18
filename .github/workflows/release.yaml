@@ -118,6 +118,9 @@ jobs:
         run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
 
       - name: Generate Release Artifacts
+        # rc.0 tags ship no release notes, so generate-artifacts would fail on the missing file.
+        # These artifacts only feed the GitHub Release upload below, which is also skipped for rc.0.
+        if: ${{ !contains(github.ref, '-rc.0') }}
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
       - name: Build and Push EG Release Helm Chart
@@ -142,6 +145,7 @@ jobs:
           cd release-artifacts && unzip benchmark_report.zip
 
       - name: Package EG multiarch binaries
+        if: ${{ !contains(github.ref, '-rc.0') }}
         run: |
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
