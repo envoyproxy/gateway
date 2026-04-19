@@ -146,7 +146,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 	}
 
 	enableXRatelimitHeaders := rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03
-	if ptr.Deref(local.DefaultXRateLimitOption, egv1a1.XRateLimitHeadersOptionDraftVersion03) == egv1a1.XRateLimitHeadersOptionOff {
+	if ptr.Deref(local.DefaultXRateLimitOption, egv1a1.XRateLimitHeadersOptionDraftVersion03) == egv1a1.XRateLimitHeadersOptionDisabled {
 		enableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
 	}
 

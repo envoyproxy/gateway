@@ -325,7 +325,7 @@ func toEnvoyXRateLimitOption(opt *egv1a1.XRateLimitHeadersOption) routev3.RateLi
 		return routev3.RateLimit_UNSPECIFIED
 	}
 	switch *opt {
-	case egv1a1.XRateLimitHeadersOptionOff:
+	case egv1a1.XRateLimitHeadersOptionDisabled:
 		return routev3.RateLimit_OFF
 	case egv1a1.XRateLimitHeadersOptionDraftVersion03:
 		return routev3.RateLimit_DRAFT_VERSION_03

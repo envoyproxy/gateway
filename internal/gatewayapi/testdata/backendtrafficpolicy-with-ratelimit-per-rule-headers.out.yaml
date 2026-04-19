@@ -15,7 +15,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimitHeaders: "Off"
+          xRateLimitHeaders: Disabled
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -67,7 +67,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimitHeaders: "Off"
+          xRateLimitHeaders: Disabled
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -364,7 +364,7 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: default/policy-for-route/rule/0
-                xRateLimitOption: "Off"
+                xRateLimitOption: Disabled
               - headerMatches:
                 - distinct: false
                   exact: two
@@ -446,7 +446,7 @@ xdsIR:
                   requests: 10
                   unit: Hour
                 name: default/policy-for-route-2/rule/0
-                xRateLimitOption: "Off"
+                xRateLimitOption: Disabled
               - headerMatches:
                 - distinct: false
                   exact: two

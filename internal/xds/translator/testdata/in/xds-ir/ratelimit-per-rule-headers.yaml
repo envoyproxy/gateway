@@ -65,7 +65,7 @@ http:
               requests: 10
               unit: Hour
             name: default/policy-for-route/rule/0
-            xRateLimitOption: "Off"
+            xRateLimitOption: Disabled
           - headerMatches:
             - distinct: false
               exact: two
@@ -147,7 +147,7 @@ http:
               requests: 10
               unit: Hour
             name: default/policy-for-route-2/rule/0
-            xRateLimitOption: "Off"
+            xRateLimitOption: Disabled
           - headerMatches:
             - distinct: false
               exact: two

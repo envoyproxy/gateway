@@ -79,9 +79,9 @@ type LocalRateLimit struct {
 type XRateLimitHeadersOption string
 
 const (
-	// XRateLimitHeadersOptionOff disables X-RateLimit headers for this rate limit rule,
+	// XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,
 	// regardless of the global ClientTrafficPolicy setting.
-	XRateLimitHeadersOptionOff XRateLimitHeadersOption = "Off"
+	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Disabled"
 
 	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
 	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.

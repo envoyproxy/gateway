@@ -80,7 +80,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimitHeaders: "Off"
+          xRateLimitHeaders: "Disabled"
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -117,7 +117,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimitHeaders: "Off"
+          xRateLimitHeaders: "Disabled"
         - clientSelectors:
           - headers:
             - name: x-user-id
