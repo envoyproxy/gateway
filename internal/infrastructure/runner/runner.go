@@ -8,7 +8,9 @@ package runner
 import (
 	"context"
 	"sync"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +33,8 @@ type Runner struct {
 	Config
 	mgr infrastructure.Manager
 
-	rateLimitInfraOnce sync.Once
+	rateLimitInfraMu          sync.Mutex
+	rateLimitInfraInitialized bool
 }
 
 // Close implements Runner interface.
@@ -111,19 +114,7 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
 
-			// Since the rate limit infra is shared by all proxy infra, we only need to create it once when the first IR
-			// update is received.
-			r.rateLimitInfraOnce.Do(func() {
-				if r.EnvoyGateway.RateLimit != nil {
-					if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
-						r.Logger.Error(err, "failed to create ratelimit infra")
-					}
-				} else {
-					if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
-						r.Logger.Error(err, "failed to delete ratelimit infra")
-					}
-				}
-			})
+			r.ensureRateLimitInfraInitialized(ctx)
 
 			val := update.Value
 
@@ -170,4 +161,37 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 	default:
 		r.Logger.Info("infra subscriber shutting down")
 	}
+}
+
+func (r *Runner) ensureRateLimitInfraInitialized(ctx context.Context) {
+	r.rateLimitInfraMu.Lock()
+	defer r.rateLimitInfraMu.Unlock()
+
+	// Rate limit infra is shared across all proxy infra, so skip further
+	// initialization work once one attempt has completed successfully.
+	if r.rateLimitInfraInitialized {
+		return
+	}
+
+	if r.EnvoyGateway.RateLimit != nil {
+		err := backoff.Retry(func() error {
+			return r.mgr.CreateOrUpdateRateLimitInfra(ctx)
+		}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second)))
+		if err != nil {
+			r.Logger.Error(err, "failed to create ratelimit infra after retries")
+			return
+		}
+		r.Logger.Info("rate limit infra created successfully")
+	} else {
+		err := backoff.Retry(func() error {
+			return r.mgr.DeleteRateLimitInfra(ctx)
+		}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second)))
+		if err != nil {
+			r.Logger.Error(err, "failed to delete ratelimit infra after retries")
+			return
+		}
+		r.Logger.Info("rate limit infra deleted successfully")
+	}
+
+	r.rateLimitInfraInitialized = true
 }
