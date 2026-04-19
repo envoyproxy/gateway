@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -49,7 +48,7 @@ var SecurityPolicyMergedTest = suite.ConformanceTest{
 				Kind:        gatewayapi.KindPtr(resource.KindGateway),
 				Namespace:   gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:        gwapiv1.ObjectName(gwNN.Name),
-				SectionName: ptr.To(gwapiv1.SectionName("listener-1")),
+				SectionName: new(gwapiv1.SectionName("listener-1")),
 			}
 
 			// Verify gateway-level policy is accepted

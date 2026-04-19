@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 )
 
 // setupFakeEnvoyStats set up an HTTP server return content
@@ -202,7 +201,7 @@ func TestGetTotalConnections(t *testing.T) {
         }
     ]
 }`,
-			expectedCount: ptr.To(1),
+			expectedCount: new(1),
 		},
 		{
 			name:          "invalid",

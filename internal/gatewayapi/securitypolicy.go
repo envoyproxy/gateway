@@ -971,7 +971,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			var (
 				hasBaseErrs    = errs != nil
-				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+				directResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
 			)
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
@@ -1150,7 +1150,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
-	directResponse := &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
 	for _, h := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -2189,14 +2189,15 @@ func (t *Translator) buildExtAuth(
 	}
 
 	extAuth := &ir.ExtAuth{
-		Name:              irConfigName(policy),
-		HeadersToExtAuth:  policy.Spec.ExtAuth.HeadersToExtAuth,
-		ContextExtensions: contextExtensions,
-		FailOpen:          policy.Spec.ExtAuth.FailOpen,
-		Traffic:           traffic,
-		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
-		StatusOnError:     policy.Spec.ExtAuth.StatusOnError,
+		Name:                 irConfigName(policy),
+		HeadersToExtAuth:     policy.Spec.ExtAuth.HeadersToExtAuth,
+		ContextExtensions:    contextExtensions,
+		FailOpen:             policy.Spec.ExtAuth.FailOpen,
+		Traffic:              traffic,
+		RecomputeRoute:       policy.Spec.ExtAuth.RecomputeRoute,
+		IncludeRouteMetadata: policy.Spec.ExtAuth.IncludeRouteMetadata,
+		Timeout:              parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		StatusOnError:        policy.Spec.ExtAuth.StatusOnError,
 	}
 
 	if http != nil {

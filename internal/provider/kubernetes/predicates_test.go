@@ -17,7 +17,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -576,10 +575,10 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						OIDC: &egv1a1.OIDC{
 							Provider: egv1a1.OIDCProvider{
 								Issuer:                "https://accounts.google.com",
-								AuthorizationEndpoint: ptr.To("https://accounts.google.com/o/oauth2/v2/auth"),
-								TokenEndpoint:         ptr.To("https://oauth2.googleapis.com/token"),
+								AuthorizationEndpoint: new("https://accounts.google.com/o/oauth2/v2/auth"),
+								TokenEndpoint:         new("https://oauth2.googleapis.com/token"),
 							},
-							ClientID: ptr.To("client-id"),
+							ClientID: new("client-id"),
 							ClientSecret: gwapiv1.SecretObjectReference{
 								Name: "secret",
 							},
@@ -709,8 +708,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 						},
 						Wasm: []egv1a1.Wasm{
 							{
-								Name:   ptr.To("wasm-filter"),
-								RootID: ptr.To("my_root_id"),
+								Name:   new("wasm-filter"),
+								RootID: new("my_root_id"),
 								Code: egv1a1.WasmCodeSource{
 									Type: egv1a1.ImageWasmCodeSourceType,
 									Image: &egv1a1.ImageWasmCodeSource{
@@ -892,7 +891,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 										BackendRef: gwapiv1.BackendRef{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name: gwapiv1.ObjectName("service"),
-												Port: ptr.To(gwapiv1.PortNumber(80)),
+												Port: new(gwapiv1.PortNumber(80)),
 											},
 										},
 									},
@@ -903,7 +902,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 										RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 											BackendRef: gwapiv1.BackendObjectReference{
 												Name: "mirror-service",
-												Port: ptr.To(gwapiv1.PortNumber(80)),
+												Port: new(gwapiv1.PortNumber(80)),
 											},
 										},
 									},
@@ -967,8 +966,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 												{
 													BackendObjectReference: gwapiv1.BackendObjectReference{
 														Name:      "otel-collector",
-														Namespace: ptr.To(gwapiv1.Namespace("default")),
-														Port:      ptr.To(gwapiv1.PortNumber(4317)),
+														Namespace: new(gwapiv1.Namespace("default")),
+														Port:      new(gwapiv1.PortNumber(4317)),
 													},
 												},
 											},
@@ -989,8 +988,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Namespace: ptr.To(gwapiv1.Namespace("default")),
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("default")),
+												Port:      new(gwapiv1.PortNumber(4317)),
 											},
 										},
 									},
@@ -1007,8 +1006,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 								{
 									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name:      "otel-collector",
-										Namespace: ptr.To(gwapiv1.Namespace("default")),
-										Port:      ptr.To(gwapiv1.PortNumber(4317)),
+										Namespace: new(gwapiv1.Namespace("default")),
+										Port:      new(gwapiv1.PortNumber(4317)),
 									},
 								},
 							},
@@ -1775,7 +1774,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: egv1a1.BackendSpec{
-			Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+			Type: new(egv1a1.BackendTypeDynamicResolver),
 			TLS: &egv1a1.BackendTLSSettings{
 				CACertificateRefs: []gwapiv1.LocalObjectReference{
 					{
@@ -1808,7 +1807,7 @@ func TestValidateClusterTrustBundleForReconcile(t *testing.T) {
 			ClientValidation: &egv1a1.ClientValidationContext{
 				CACertificateRefs: []gwapiv1.SecretObjectReference{
 					{
-						Kind: ptr.To[gwapiv1.Kind]("ClusterTrustBundle"),
+						Kind: new(gwapiv1.Kind("ClusterTrustBundle")),
 						Name: gwapiv1.ObjectName(ctb.Name),
 					},
 				},
