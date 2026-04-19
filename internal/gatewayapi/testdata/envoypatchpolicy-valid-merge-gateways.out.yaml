@@ -12,8 +12,9 @@ envoyPatchPolicies:
         path: /per_connection_buffer_limit_bytes
         value: "1024"
       type: type.googleapis.com/envoy.config.listener.v3.Listener
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRef: null
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy-gateway-class
     type: JSONPatch
@@ -44,8 +45,9 @@ envoyPatchPolicies:
         value: "true"
       type: type.googleapis.com/envoy.config.listener.v3.Listener
     priority: -1
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRef: null
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy-gateway-class
     type: JSONPatch
@@ -136,7 +138,11 @@ xdsIR:
       json:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
@@ -158,7 +164,11 @@ xdsIR:
             status: "True"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - jsonPatches:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace

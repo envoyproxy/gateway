@@ -35,10 +35,43 @@ func SetProgrammedForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, generation int64)
 	}
 }
 
+// SetProgrammedForEnvoyPatchPolicyAncestor sets programmed condition for a specific ancestor reference if it is unset.
+func SetProgrammedForEnvoyPatchPolicyAncestor(s *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, generation int64) {
+	// Return early if Programmed condition is already set for this ancestor
+	for i, ancestor := range s.Ancestors {
+		if ancestorRefsEqual(&ancestor.AncestorRef, ancestorRef) {
+			for _, c := range ancestor.Conditions {
+				if c.Type == string(egv1a1.PolicyConditionProgrammed) {
+					return
+				}
+				if c.Type == string(gwapiv1.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
+					return
+				}
+			}
+
+			message := "Patches have been successfully applied."
+			cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, generation)
+			s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+			return
+		}
+	}
+}
+
 func SetTranslationErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, errMsg string, generation int64) {
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, generation)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
+}
+
+// SetTranslationErrorForEnvoyPatchPolicyAncestor sets translation error for a specific ancestor reference.
+func SetTranslationErrorForEnvoyPatchPolicyAncestor(s *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, errMsg string, generation int64) {
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonInvalid), errMsg, generation)
+	for i := range s.Ancestors {
+		if ancestorRefsEqual(&s.Ancestors[i].AncestorRef, ancestorRef) {
+			s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+			return
+		}
 	}
 }
 
@@ -47,5 +80,17 @@ func SetResourceNotFoundErrorForEnvoyPatchPolicy(s *gwapiv1.PolicyStatus, notFou
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, generation)
 	for i := range s.Ancestors {
 		s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+	}
+}
+
+// SetResourceNotFoundErrorForEnvoyPatchPolicyAncestor sets resource not found error for a specific ancestor reference.
+func SetResourceNotFoundErrorForEnvoyPatchPolicyAncestor(s *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, notFoundResources []string, generation int64) {
+	message := "Unable to find xds resources: " + strings.Join(notFoundResources, ",")
+	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionFalse, string(egv1a1.PolicyReasonResourceNotFound), message, generation)
+	for i := range s.Ancestors {
+		if ancestorRefsEqual(&s.Ancestors[i].AncestorRef, ancestorRef) {
+			s.Ancestors[i].Conditions = MergeConditions(s.Ancestors[i].Conditions, cond)
+			return
+		}
 	}
 }

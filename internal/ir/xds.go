@@ -2693,6 +2693,9 @@ type EnvoyPatchPolicyStatus struct {
 	Generation int64  `json:"generation,omitempty" yaml:"generation"`
 	// Status of the EnvoyPatchPolicy
 	Status *gwapiv1.PolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
+	// AncestorRef is the specific ancestor that this policyIR entry corresponds to.
+	// This is used to ensure that xDS translation errors only affect the status of this specific target.
+	AncestorRef *gwapiv1.ParentReference `json:"ancestorRef,omitempty" yaml:"ancestorRef,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource

@@ -4,7 +4,6 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: edit-conn-buffer-bytes
-    generation: 10
   spec:
     type: "JSONPatch"
     targetRef:
@@ -23,13 +22,15 @@ envoyPatchPolicies:
   metadata:
     namespace: envoy-gateway
     name: edit-ignore-global-limit
-    generation: 10
   spec:
     type: "JSONPatch"
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
     # Higher priority
     priority: -1
     jsonPatches:
@@ -45,6 +46,20 @@ gateways:
   metadata:
     namespace: envoy-gateway
     name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:

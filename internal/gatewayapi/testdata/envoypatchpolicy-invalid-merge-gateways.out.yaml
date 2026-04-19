@@ -25,9 +25,8 @@ envoyPatchPolicies:
         name: gateway-class-not-exists
       conditions:
       - lastTransitionTime: null
-        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:GatewayClass
-          TargetRef.Namespace:envoy-gateway TargetRef.Name:gateway-class-not-exists
-          not found or not accepted (MergeGateways=true).
+        message: Target to GatewayClass envoy-gateway/gateway-class-not-exists does
+          not exist.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -63,6 +62,11 @@ envoyPatchPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -138,7 +142,27 @@ xdsIR:
       json:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - jsonPatches:
+    - name: gateway-class-not-exists
+      namespace: envoy-gateway
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: GatewayClass
+            name: gateway-class-not-exists
+          conditions:
+          - lastTransitionTime: null
+            message: Target to GatewayClass envoy-gateway/gateway-class-not-exists
+              does not exist.
+            reason: Invalid
+            status: "False"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      jsonPatches:
       - name: envoy-gateway-gateway-1-http
         operation:
           op: replace
@@ -159,6 +183,11 @@ xdsIR:
             reason: Accepted
             status: "True"
             type: Accepted
+          - lastTransitionTime: null
+            message: spec.targetRef is deprecated, use spec.targetRefs instead
+            reason: DeprecatedField
+            status: "True"
+            type: Warning
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:

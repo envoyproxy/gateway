@@ -19,37 +19,92 @@ import (
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
 	// EnvoyPatchPolicies are already sorted by the provider layer (priority, then timestamp, then name)
-
 	for _, policy := range envoyPatchPolicies {
-		var (
-			ancestorRef gwapiv1.ParentReference
-			resolveErr  *status.PolicyResolveError
-			targetKind  string
-			irKey       string
-			gwXdsIR     *ir.Xds
-			ok          bool
-		)
+		targetRefs := getTargetRefsForEPP(policy)
+		createdAnyPolicyIR := false
 
-		refGroup, refKind, refName := policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
-		if t.MergeGateways {
-			targetKind = resource.KindGatewayClass
-			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L74.
-			irKey = string(refName)
-			ancestorRef = gwapiv1.ParentReference{
-				Group: GroupPtr(gwapiv1.GroupName),
-				Kind:  KindPtr(targetKind),
-				Name:  refName,
+		for _, targetRef := range targetRefs {
+			var (
+				ancestorRef gwapiv1.ParentReference
+				resolveErr  *status.PolicyResolveError
+				targetKind  string
+				irKey       string
+				gwXdsIR     *ir.Xds
+				ok          bool
+				gatewayNN   types.NamespacedName
+			)
+
+			refKind, refName := targetRef.Kind, targetRef.Name
+			ancestorRef = getAncestorRefForEnvoyPatchPolicyTargetRef(targetRef)
+			if t.MergeGateways {
+				targetKind = resource.KindGatewayClass
+				// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped when checking XDS IR.
+				irKey = string(refName)
+			} else {
+				targetKind = resource.KindGateway
+				gatewayNN = types.NamespacedName{
+					Namespace: policy.Namespace,
+					Name:      string(refName),
+				}
+				irKey = t.IRKey(gatewayNN)
+			}
+
+			// Ensure EnvoyPatchPolicy is enabled
+			if !t.EnvoyPatchPolicyEnabled {
+				resolveErr = &status.PolicyResolveError{
+					Reason:  egv1a1.PolicyReasonDisabled,
+					Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+				}
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+
+				continue
+			}
+
+			// Ensure EnvoyPatchPolicy is targeting to a support type
+			if targetRef.Group != gwapiv1.GroupName || string(refKind) != targetKind {
+				message := fmt.Sprintf("Target to %s/%s, only %s/%s is supported.",
+					targetRef.Group, targetRef.Kind, gwapiv1.GroupName, targetKind)
+
+				resolveErr = &status.PolicyResolveError{
+					Reason:  gwapiv1.PolicyReasonInvalid,
+					Message: message,
+				}
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+
+				continue
+			}
+
+			if t.MergeGateways {
+				ancestorRef = gwapiv1.ParentReference{
+					Group: GroupPtr(gwapiv1.GroupName),
+					Kind:  KindPtr(targetKind),
+					Name:  refName,
+				}
+			} else {
+				ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 			}
 
 			gwXdsIR, ok = xdsIR[irKey]
 			if !ok {
-				// The TargetRef GatewayClass is not an accepted GatewayClass, then skip processing.
-				message := fmt.Sprintf(
-					"TargetRef.Group:%s TargetRef.Kind:%s TargetRef.Namespace:%s TargetRef.Name:%s not found or not accepted (MergeGateways=%t).",
-					refGroup, refKind, policy.Namespace, string(refName), t.MergeGateways,
-				)
+				var message string
+				message = fmt.Sprintf("Target to %s %s/%s does not exist.", targetKind, policy.Namespace, refName)
+				// if mergeGateways is enabled, the TargetRef should be GatewayClass, otherwise it should be Gateway.
+				if string(refKind) != targetKind {
+					message = fmt.Sprintf("Target to %s, only %s is supported when MergeGateways is %t.", refKind, targetKind, t.MergeGateways)
+				}
+
 				resolveErr = &status.PolicyResolveError{
-					Reason:  gwapiv1.PolicyReasonInvalid,
+					Reason:  egv1a1.PolicyReasonInvalid,
 					Message: message,
 				}
 				status.SetResolveErrorForPolicyAncestor(&policy.Status,
@@ -61,82 +116,113 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				continue
 			}
 
-		} else {
-			targetKind = resource.KindGateway
-			gatewayNN := types.NamespacedName{
-				Namespace: policy.Namespace,
-				Name:      string(refName),
-			}
-			irKey = t.IRKey(gatewayNN)
-			ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
+			// Create the IR with the context need to publish the status later
+			policyIR := ir.EnvoyPatchPolicy{}
+			policyIR.Name = policy.Name
+			policyIR.Namespace = policy.Namespace
+			policyIR.Generation = policy.Generation
+			policyIR.Status = &policy.Status
+			policyIR.AncestorRef = &ancestorRef
 
-			gwXdsIR, ok = xdsIR[irKey]
-			if !ok {
-				// The TargetRef Gateway is not an accepted Gateway, then skip processing.
-				continue
+			// Append the IR
+			gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+			createdAnyPolicyIR = true
+
+			// Save the patch
+			for _, patch := range policy.Spec.JSONPatches {
+				irPatch := ir.JSONPatchConfig{}
+				irPatch.Type = string(patch.Type)
+				irPatch.Name = patch.Name
+				irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
+				irPatch.Operation.Path = patch.Operation.Path
+				irPatch.Operation.JSONPath = patch.Operation.JSONPath
+				irPatch.Operation.From = patch.Operation.From
+				irPatch.Operation.Value = patch.Operation.Value
+
+				policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
+			}
+
+			// Set Accepted=True
+			status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+			// If there are no valid TargetRefs, add a warning condition to the policy status.
+			if len(policy.Spec.TargetRefs) == 0 {
+				status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation,
+					map[string]string{
+						"spec.targetRef": "spec.targetRefs",
+					})
 			}
 		}
 
-		// Create the IR with the context need to publish the status later
-		policyIR := ir.EnvoyPatchPolicy{}
-		policyIR.Name = policy.Name
-		policyIR.Namespace = policy.Namespace
-		policyIR.Generation = policy.Generation
-		policyIR.Status = &policy.Status
+		// If no policyIR was created (all targets were rejected), but the policy has status
+		// (from rejected targets), create a status-only policyIR to ensure status gets published.
+		// Attach it to the first available XdsIR.
+		if !createdAnyPolicyIR && len(policy.Status.Ancestors) > 0 {
+			for _, gwXdsIR := range xdsIR {
+				policyIR := ir.EnvoyPatchPolicy{}
+				policyIR.Name = policy.Name
+				policyIR.Namespace = policy.Namespace
+				policyIR.Generation = policy.Generation
+				policyIR.Status = &policy.Status
+				// No AncestorRef since this is a status-only entry for all rejected targets
+				policyIR.AncestorRef = nil
 
-		// Append the IR
-		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
-
-		// Ensure EnvoyPatchPolicy is enabled
-		if !t.EnvoyPatchPolicyEnabled {
-			resolveErr = &status.PolicyResolveError{
-				Reason:  egv1a1.PolicyReasonDisabled,
-				Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
+				gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+				break
 			}
-			status.SetResolveErrorForPolicyAncestor(&policy.Status,
-				&ancestorRef,
-				t.GatewayControllerName,
-				policy.Generation,
-				resolveErr,
-			)
-
-			continue
 		}
-
-		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if refGroup != gwapiv1.GroupName || string(refKind) != targetKind {
-			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				refGroup, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
-
-			resolveErr = &status.PolicyResolveError{
-				Reason:  gwapiv1.PolicyReasonInvalid,
-				Message: message,
-			}
-			status.SetResolveErrorForPolicyAncestor(&policy.Status,
-				&ancestorRef,
-				t.GatewayControllerName,
-				policy.Generation,
-				resolveErr,
-			)
-
-			continue
-		}
-
-		// Save the patch
-		for _, patch := range policy.Spec.JSONPatches {
-			irPatch := ir.JSONPatchConfig{}
-			irPatch.Type = string(patch.Type)
-			irPatch.Name = patch.Name
-			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
-			irPatch.Operation.Path = patch.Operation.Path
-			irPatch.Operation.JSONPath = patch.Operation.JSONPath
-			irPatch.Operation.From = patch.Operation.From
-			irPatch.Operation.Value = patch.Operation.Value
-
-			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
-		}
-
-		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 	}
+}
+
+func getAncestorRefForEnvoyPatchPolicyTargetRef(targetRef gwapiv1.LocalPolicyTargetReference) gwapiv1.ParentReference {
+	ancestorRef := gwapiv1.ParentReference{
+		Kind: KindPtr(string(targetRef.Kind)),
+		Name: targetRef.Name,
+	}
+
+	if targetRef.Group != "" {
+		ancestorRef.Group = GroupPtr(string(targetRef.Group))
+	}
+
+	return ancestorRef
+}
+
+// getTargetRefsForEPP returns the target refs for the given EnvoyPatchPolicy, handling both the deprecated TargetRef and the new TargetRefs fields.
+// There's CEL validation to ensure that only one of TargetRef or TargetRefs is set, so we can safely return the non-nil field.
+// Duplicates are removed to prevent creating multiple IR entries for the same target.
+func getTargetRefsForEPP(policy *egv1a1.EnvoyPatchPolicy) []gwapiv1.LocalPolicyTargetReference {
+	var refs []gwapiv1.LocalPolicyTargetReference
+	if policy.Spec.TargetRef != nil {
+		refs = []gwapiv1.LocalPolicyTargetReference{*policy.Spec.TargetRef}
+	} else {
+		refs = policy.Spec.TargetRefs
+	}
+	return deduplicateTargetRefs(refs)
+}
+
+// deduplicateTargetRefs removes duplicate LocalPolicyTargetReference entries based on Group, Kind, and Name.
+func deduplicateTargetRefs(refs []gwapiv1.LocalPolicyTargetReference) []gwapiv1.LocalPolicyTargetReference {
+	if len(refs) <= 1 {
+		return refs
+	}
+
+	seen := make(map[string]bool)
+	deduplicated := make([]gwapiv1.LocalPolicyTargetReference, 0, len(refs))
+
+	for _, ref := range refs {
+		// Create a unique key from the reference fields
+		group := ""
+		if ref.Group != "" {
+			group = string(ref.Group)
+		}
+		kind := string(ref.Kind)
+		name := string(ref.Name)
+		key := fmt.Sprintf("%s/%s/%s", group, kind, name)
+
+		if !seen[key] {
+			seen[key] = true
+			deduplicated = append(deduplicated, ref)
+		}
+	}
+
+	return deduplicated
 }

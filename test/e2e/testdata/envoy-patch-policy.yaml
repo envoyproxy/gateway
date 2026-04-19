@@ -7,6 +7,7 @@ metadata:
 spec:
   parentRefs:
   - name: same-namespace
+  - name: all-namespaces
   rules:
   - backendRefs:
     - name: infra-backend-v1
@@ -22,12 +23,32 @@ metadata:
   name: custom-response-patch-policy
   namespace: gateway-conformance-infra
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: Gateway
     name: same-namespace
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: all-namespaces
   type: JSONPatch
   jsonPatches:
+  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+    name: "gateway-conformance-infra/all-namespaces/http"
+    operation:
+      op: add
+      path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
+      value:
+        mappers:
+        - filter:
+            status_code_filter:
+              comparison:
+                op: EQ
+                value:
+                  default_value: 404
+                  runtime_key: key_b
+          status_code: 406
+          body:
+            inline_string: "not acceptable"
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
     name: "gateway-conformance-infra/same-namespace/http"
     operation:

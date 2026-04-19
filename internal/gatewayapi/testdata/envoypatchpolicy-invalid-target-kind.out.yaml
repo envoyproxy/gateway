@@ -21,13 +21,11 @@ envoyPatchPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
+        kind: MyGateway
         name: gateway-1
-        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
-          only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
+        message: Target to gateway.networking.k8s.io/MyGateway, only gateway.networking.k8s.io/Gateway
           is supported.
         reason: Invalid
         status: "False"
@@ -104,13 +102,11 @@ xdsIR:
         ancestors:
         - ancestorRef:
             group: gateway.networking.k8s.io
-            kind: Gateway
+            kind: MyGateway
             name: gateway-1
-            namespace: envoy-gateway
           conditions:
           - lastTransitionTime: null
-            message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
-              only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
+            message: Target to gateway.networking.k8s.io/MyGateway, only gateway.networking.k8s.io/Gateway
               is supported.
             reason: Invalid
             status: "False"

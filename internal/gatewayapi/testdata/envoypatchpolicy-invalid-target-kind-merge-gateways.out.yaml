@@ -21,13 +21,12 @@ envoyPatchPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
+        kind: Gateway
         name: gateway-1
       conditions:
       - lastTransitionTime: null
-        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:Gateway
-          TargetRef.Namespace:envoy-gateway TargetRef.Name:gateway-1 not found or
-          not accepted (MergeGateways=true).
+        message: Target to gateway.networking.k8s.io/Gateway, only gateway.networking.k8s.io/GatewayClass
+          is supported.
         reason: Invalid
         status: "False"
         type: Accepted
@@ -105,6 +104,23 @@ xdsIR:
     accessLog:
       json:
       - path: /dev/stdout
+    envoyPatchPolicies:
+    - name: edit-conn-buffer-bytes
+      namespace: envoy-gateway
+      status:
+        ancestors:
+        - ancestorRef:
+            group: gateway.networking.k8s.io
+            kind: Gateway
+            name: gateway-1
+          conditions:
+          - lastTransitionTime: null
+            message: Target to gateway.networking.k8s.io/Gateway, only gateway.networking.k8s.io/GatewayClass
+              is supported.
+            reason: Invalid
+            status: "False"
+            type: Accepted
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
     globalResources:
       proxyServiceCluster:
         metadata:

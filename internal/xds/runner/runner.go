@@ -30,11 +30,13 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 	ktypes "k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -257,6 +259,92 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
+// ancestorRefKey generates a unique key for an ancestor reference.
+// This is used to identify and merge ancestor status updates.
+func ancestorRefKey(ref *gwapiv1.ParentReference) string {
+	if ref == nil {
+		return ""
+	}
+
+	group := ""
+	if ref.Group != nil {
+		group = string(*ref.Group)
+	}
+
+	kind := ""
+	if ref.Kind != nil {
+		kind = string(*ref.Kind)
+	}
+
+	namespace := ""
+	if ref.Namespace != nil {
+		namespace = string(*ref.Namespace)
+	}
+
+	sectionName := ""
+	if ref.SectionName != nil {
+		sectionName = string(*ref.SectionName)
+	}
+
+	return fmt.Sprintf("%s/%s/%s/%s/%s", group, kind, namespace, ref.Name, sectionName)
+}
+
+func ancestorObservedGeneration(ancestor *gwapiv1.PolicyAncestorStatus) int64 {
+	if ancestor == nil {
+		return 0
+	}
+
+	var maxObservedGeneration int64
+	for _, condition := range ancestor.Conditions {
+		if condition.ObservedGeneration > maxObservedGeneration {
+			maxObservedGeneration = condition.ObservedGeneration
+		}
+	}
+
+	return maxObservedGeneration
+}
+
+func mergePolicyAncestors(existing, translated []gwapiv1.PolicyAncestorStatus, generation int64) []gwapiv1.PolicyAncestorStatus {
+	if len(existing) == 0 {
+		return append([]gwapiv1.PolicyAncestorStatus(nil), translated...)
+	}
+
+	mergedAncestors := make([]gwapiv1.PolicyAncestorStatus, 0, len(existing)+len(translated))
+
+	// Index translated ancestors by reference to update existing entries in place.
+	translatedByRef := make(map[string]gwapiv1.PolicyAncestorStatus, len(translated))
+	for i := range translated {
+		refKey := ancestorRefKey(&translated[i].AncestorRef)
+		translatedByRef[refKey] = translated[i]
+	}
+
+	// Keep translated replacements first; only retain missing existing entries when
+	// they are from the same generation to support aggregation across translation runs.
+	for i := range existing {
+		refKey := ancestorRefKey(&existing[i].AncestorRef)
+		if translatedAncestor, found := translatedByRef[refKey]; found {
+			mergedAncestors = append(mergedAncestors, translatedAncestor)
+			delete(translatedByRef, refKey)
+			continue
+		}
+
+		if ancestorObservedGeneration(&existing[i]) == generation {
+			mergedAncestors = append(mergedAncestors, existing[i])
+		}
+	}
+
+	// Preserve translated ordering for newly introduced ancestors.
+	for i := range translated {
+		refKey := ancestorRefKey(&translated[i].AncestorRef)
+		if translatedAncestor, found := translatedByRef[refKey]; found {
+			mergedAncestors = append(mergedAncestors, translatedAncestor)
+			delete(translatedByRef, refKey)
+		}
+	}
+
+	return mergedAncestors
+}
+
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(
@@ -362,6 +450,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 				}
 
 				// Publish EnvoyPatchPolicyStatus
+				// Merge ancestor conditions from multiple translation runs for the same policy
 				for _, e := range result.EnvoyPatchPolicyStatuses {
 					key := ktypes.NamespacedName{
 						Name:      e.Name,
@@ -371,7 +460,25 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 					// They may have been skipped in this translation because
 					// their target is not found (not relevant)
 					if len(e.Status.Ancestors) > 0 {
-						r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+						// Load existing status if it exists
+						existingStatus, exists := r.ProviderResources.EnvoyPatchPolicyStatuses.Load(key)
+
+						if exists && existingStatus != nil {
+							mergedAncestors := mergePolicyAncestors(existingStatus.Ancestors, e.Status.Ancestors, e.Generation)
+
+							// Create merged status
+							mergedStatus := &gwapiv1.PolicyStatus{
+								Ancestors: mergedAncestors,
+							}
+							// Truncate merged status.ancestors to max 16 entries before storing
+							status.TruncatePolicyAncestors(mergedStatus, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
+							r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, mergedStatus)
+						} else {
+							// No existing status, store the new one
+							// Truncate status.ancestors to max 16 entries before storing
+							status.TruncatePolicyAncestors(e.Status, r.EnvoyGateway.Gateway.ControllerName, e.Generation)
+							r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+						}
 					}
 					delete(statusesToDelete, key)
 				}
