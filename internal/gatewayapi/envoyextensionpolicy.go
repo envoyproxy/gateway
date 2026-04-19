@@ -103,6 +103,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -112,7 +114,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -120,7 +122,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -132,7 +134,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting xRoutes
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -140,7 +142,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -152,7 +154,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -160,7 +162,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -172,7 +174,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -180,7 +182,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -1264,4 +1266,16 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
+	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }
