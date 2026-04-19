@@ -823,22 +823,32 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 		}
 
 		for _, listenersOnPort := range portListenerInfo {
-			var firstNonUDPProtocol string
-			seenNonUDPProtocol := false
-
+			nonUDPProtocols := sets.New[string]()
+			nonListenerSetCount := 0
 			for _, listener := range listenersOnPort {
 				protocol := getProtocolForListener(listener)
 				if protocol == string(gwapiv1.UDPProtocolType) {
 					continue
 				}
-
-				if !seenNonUDPProtocol {
-					firstNonUDPProtocol = protocol
-					seenNonUDPProtocol = true
-					continue
+				nonUDPProtocols.Insert(protocol)
+				if !listener.isFromListenerSet() {
+					nonListenerSetCount++
 				}
+			}
 
-				if protocol != firstNonUDPProtocol {
+			// No protocol conflict when all non-UDP listeners are compatible.
+			if len(nonUDPProtocols) <= 1 {
+				continue
+			}
+
+			// If there are more than 1 non-UDP protocols and more than 1 listener not from ListenerSet,
+			// we cannot determine a clear winner and all listeners on this port are in conflict.
+			if nonListenerSetCount > 1 {
+				// If any conflicted listener is not from ListenerSet, do not pick a winner.
+				for _, listener := range listenersOnPort {
+					if getProtocolForListener(listener) == string(gwapiv1.UDPProtocolType) {
+						continue
+					}
 					listener.SetCondition(
 						gwapiv1.ListenerConditionConflicted,
 						metav1.ConditionTrue,
@@ -846,6 +856,42 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 						"All listeners for a given port must use a compatible protocol",
 					)
 				}
+				continue
+			}
+
+			// If all conflicted listeners are from ListenerSet, the first one wins and
+			// the rest are marked conflicted when incompatible with the winner.
+			seenNonUDPProtocol := false
+			seenUDPProtocol := false
+			for _, listener := range listenersOnPort {
+				protocol := getProtocolForListener(listener)
+				if protocol == string(gwapiv1.UDPProtocolType) {
+					if !seenUDPProtocol {
+						seenUDPProtocol = true
+						continue
+					}
+					// Multiple UDP listeners on the same port is a conflict.
+					listener.SetCondition(
+						gwapiv1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						gwapiv1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a compatible protocol",
+					)
+					continue
+				}
+
+				if !seenNonUDPProtocol {
+					seenNonUDPProtocol = true
+					continue
+				}
+
+				// Multiple non-UDP protocols on the same port is a conflict.
+				listener.SetCondition(
+					gwapiv1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					gwapiv1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
 			}
 		}
 	}
