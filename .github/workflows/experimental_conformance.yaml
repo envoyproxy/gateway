@@ -45,6 +45,9 @@ jobs:
             # only run dual test on latest version to save time
             ipFamily: dual
             profile: gateway-namespace-mode
+          - version: v1.35.0
+            ipFamily: ipv4
+            profile: watch-namespaces
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - uses: ./tools/github-actions/setup-deps

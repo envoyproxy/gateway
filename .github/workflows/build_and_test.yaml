@@ -181,6 +181,10 @@ jobs:
           ipFamily: ipv4
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: watch-namespaces
+          gwapiChannel: experimental
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
     - uses: ./tools/github-actions/setup-deps
@@ -237,6 +241,9 @@ jobs:
         - version: v1.35.0
           ipFamily: ipv4
           profile: xds-name-scheme-v2
+        - version: v1.35.0
+          ipFamily: ipv4
+          profile: watch-namespaces
 
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
