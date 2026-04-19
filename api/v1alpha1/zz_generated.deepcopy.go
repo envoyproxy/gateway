@@ -7040,8 +7040,8 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.XRateLimit != nil {
-		in, out := &in.XRateLimit, &out.XRateLimit
+	if in.XRateLimitHeaders != nil {
+		in, out := &in.XRateLimitHeaders, &out.XRateLimitHeaders
 		*out = new(XRateLimitHeadersOption)
 		**out = **in
 	}

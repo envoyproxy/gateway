@@ -1349,7 +1349,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 			}
 			// Capture the xRateLimit setting for the default bucket
-			defaultXRateLimitOption = rule.XRateLimit
+			defaultXRateLimitOption = rule.XRateLimitHeaders
 		}
 	}
 	// If no rule without clientSelectors is found, use uint32 max as the default
@@ -1470,7 +1470,7 @@ func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 		MethodMatches:    make([]*ir.StringMatch, 0),
 		Shared:           rule.Shared,
 		ShadowMode:       rule.ShadowMode,
-		XRateLimitOption: rule.XRateLimit,
+		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
 	for _, match := range rule.ClientSelectors {

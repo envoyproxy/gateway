@@ -15,7 +15,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimit: "Off"
+          xRateLimitHeaders: "Off"
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -23,7 +23,7 @@ backendTrafficPolicies:
           limit:
             requests: 20
             unit: Hour
-          xRateLimit: DraftVersion03
+          xRateLimitHeaders: DraftVersion03
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -67,7 +67,7 @@ backendTrafficPolicies:
           limit:
             requests: 10
             unit: Hour
-          xRateLimit: "Off"
+          xRateLimitHeaders: "Off"
         - clientSelectors:
           - headers:
             - name: x-user-id
@@ -75,7 +75,7 @@ backendTrafficPolicies:
           limit:
             requests: 20
             unit: Hour
-          xRateLimit: DraftVersion03
+          xRateLimitHeaders: DraftVersion03
         - clientSelectors:
           - headers:
             - name: x-user-id

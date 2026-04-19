@@ -136,12 +136,12 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
-	// XRateLimit controls whether X-RateLimit response headers are emitted for this rate limit rule.
+	// XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
 	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
 	// If not set, the rule inherits the listener-level setting (default behavior).
 	//
 	// +optional
-	XRateLimit *XRateLimitHeadersOption `json:"xRateLimit,omitempty"`
+	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
 type RateLimitCost struct {
