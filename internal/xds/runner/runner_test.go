@@ -26,7 +26,9 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/crypto"
@@ -625,4 +627,65 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+func TestMergePolicyAncestors_PrunesStaleAncestorsOnGenerationChange(t *testing.T) {
+	ancestor := func(name string, generation int64) gwapiv1.PolicyAncestorStatus {
+		return gwapiv1.PolicyAncestorStatus{
+			AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)},
+			Conditions: []metav1.Condition{{
+				Type:               string(gwapiv1.PolicyConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: generation,
+				Reason:             string(gwapiv1.PolicyReasonAccepted),
+				Message:            "ok",
+			}},
+		}
+	}
+
+	existing := []gwapiv1.PolicyAncestorStatus{
+		ancestor("gw-a", 1),
+		ancestor("gw-b", 1),
+	}
+	translated := []gwapiv1.PolicyAncestorStatus{
+		ancestor("gw-a", 2),
+	}
+
+	merged := mergePolicyAncestors(existing, translated, 2)
+	require.Len(t, merged, 1)
+	assert.Equal(t, gwapiv1.ObjectName("gw-a"), merged[0].AncestorRef.Name)
+	assert.Equal(t, int64(2), merged[0].Conditions[0].ObservedGeneration)
+}
+
+func TestMergePolicyAncestors_RetainsSameGenerationForAggregation(t *testing.T) {
+	ancestor := func(name string, generation int64) gwapiv1.PolicyAncestorStatus {
+		return gwapiv1.PolicyAncestorStatus{
+			AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName(name)},
+			Conditions: []metav1.Condition{{
+				Type:               string(gwapiv1.PolicyConditionAccepted),
+				Status:             metav1.ConditionTrue,
+				ObservedGeneration: generation,
+				Reason:             string(gwapiv1.PolicyReasonAccepted),
+				Message:            "ok",
+			}},
+		}
+	}
+
+	existing := []gwapiv1.PolicyAncestorStatus{
+		ancestor("gw-b", 2),
+	}
+	translated := []gwapiv1.PolicyAncestorStatus{
+		ancestor("gw-a", 2),
+	}
+
+	merged := mergePolicyAncestors(existing, translated, 2)
+	require.Len(t, merged, 2)
+
+	actual := map[gwapiv1.ObjectName]int64{}
+	for _, ancestor := range merged {
+		actual[ancestor.AncestorRef.Name] = ancestor.Conditions[0].ObservedGeneration
+	}
+
+	assert.Equal(t, int64(2), actual[gwapiv1.ObjectName("gw-a")])
+	assert.Equal(t, int64(2), actual[gwapiv1.ObjectName("gw-b")])
 }

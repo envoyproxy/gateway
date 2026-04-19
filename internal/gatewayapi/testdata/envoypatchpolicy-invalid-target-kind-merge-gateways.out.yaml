@@ -21,7 +21,7 @@ envoyPatchPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: GatewayClass
+        kind: Gateway
         name: gateway-1
       conditions:
       - lastTransitionTime: null
@@ -111,7 +111,7 @@ xdsIR:
         ancestors:
         - ancestorRef:
             group: gateway.networking.k8s.io
-            kind: GatewayClass
+            kind: Gateway
             name: gateway-1
           conditions:
           - lastTransitionTime: null
