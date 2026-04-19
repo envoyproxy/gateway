@@ -31,26 +31,22 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				irKey       string
 				gwXdsIR     *ir.Xds
 				ok          bool
+				gatewayNN   types.NamespacedName
 			)
 
 			refKind, refName := targetRef.Kind, targetRef.Name
+			ancestorRef = getAncestorRefForEnvoyPatchPolicyTargetRef(targetRef)
 			if t.MergeGateways {
 				targetKind = resource.KindGatewayClass
 				// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped when checking XDS IR.
 				irKey = string(refName)
-				ancestorRef = gwapiv1.ParentReference{
-					Group: GroupPtr(gwapiv1.GroupName),
-					Kind:  KindPtr(targetKind),
-					Name:  refName,
-				}
 			} else {
 				targetKind = resource.KindGateway
-				gatewayNN := types.NamespacedName{
+				gatewayNN = types.NamespacedName{
 					Namespace: policy.Namespace,
 					Name:      string(refName),
 				}
 				irKey = t.IRKey(gatewayNN)
-				ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 			}
 
 			// Ensure EnvoyPatchPolicy is enabled
@@ -86,6 +82,16 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				)
 
 				continue
+			}
+
+			if t.MergeGateways {
+				ancestorRef = gwapiv1.ParentReference{
+					Group: GroupPtr(gwapiv1.GroupName),
+					Kind:  KindPtr(targetKind),
+					Name:  refName,
+				}
+			} else {
+				ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 			}
 
 			gwXdsIR, ok = xdsIR[irKey]
@@ -165,6 +171,19 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			}
 		}
 	}
+}
+
+func getAncestorRefForEnvoyPatchPolicyTargetRef(targetRef gwapiv1.LocalPolicyTargetReference) gwapiv1.ParentReference {
+	ancestorRef := gwapiv1.ParentReference{
+		Kind: KindPtr(string(targetRef.Kind)),
+		Name: targetRef.Name,
+	}
+
+	if targetRef.Group != "" {
+		ancestorRef.Group = GroupPtr(string(targetRef.Group))
+	}
+
+	return ancestorRef
 }
 
 // getTargetRefsForEPP returns the target refs for the given EnvoyPatchPolicy, handling both the deprecated TargetRef and the new TargetRefs fields.

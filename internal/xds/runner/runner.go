@@ -289,6 +289,62 @@ func ancestorRefKey(ref *gwapiv1.ParentReference) string {
 	return fmt.Sprintf("%s/%s/%s/%s/%s", group, kind, namespace, ref.Name, sectionName)
 }
 
+func ancestorObservedGeneration(ancestor *gwapiv1.PolicyAncestorStatus) int64 {
+	if ancestor == nil {
+		return 0
+	}
+
+	var maxObservedGeneration int64
+	for _, condition := range ancestor.Conditions {
+		if condition.ObservedGeneration > maxObservedGeneration {
+			maxObservedGeneration = condition.ObservedGeneration
+		}
+	}
+
+	return maxObservedGeneration
+}
+
+func mergePolicyAncestors(existing, translated []gwapiv1.PolicyAncestorStatus, generation int64) []gwapiv1.PolicyAncestorStatus {
+	if len(existing) == 0 {
+		return append([]gwapiv1.PolicyAncestorStatus(nil), translated...)
+	}
+
+	mergedAncestors := make([]gwapiv1.PolicyAncestorStatus, 0, len(existing)+len(translated))
+
+	// Index translated ancestors by reference to update existing entries in place.
+	translatedByRef := make(map[string]gwapiv1.PolicyAncestorStatus, len(translated))
+	for i := range translated {
+		refKey := ancestorRefKey(&translated[i].AncestorRef)
+		translatedByRef[refKey] = translated[i]
+	}
+
+	// Keep translated replacements first; only retain missing existing entries when
+	// they are from the same generation to support aggregation across translation runs.
+	for i := range existing {
+		refKey := ancestorRefKey(&existing[i].AncestorRef)
+		if translatedAncestor, found := translatedByRef[refKey]; found {
+			mergedAncestors = append(mergedAncestors, translatedAncestor)
+			delete(translatedByRef, refKey)
+			continue
+		}
+
+		if ancestorObservedGeneration(&existing[i]) == generation {
+			mergedAncestors = append(mergedAncestors, existing[i])
+		}
+	}
+
+	// Preserve translated ordering for newly introduced ancestors.
+	for i := range translated {
+		refKey := ancestorRefKey(&translated[i].AncestorRef)
+		if translatedAncestor, found := translatedByRef[refKey]; found {
+			mergedAncestors = append(mergedAncestors, translatedAncestor)
+			delete(translatedByRef, refKey)
+		}
+	}
+
+	return mergedAncestors
+}
+
 func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// Subscribe to resources
 	message.HandleSubscription(
@@ -408,33 +464,7 @@ func (r *Runner) translateFromSubscription(sub <-chan watchable.Snapshot[string,
 						existingStatus, exists := r.ProviderResources.EnvoyPatchPolicyStatuses.Load(key)
 
 						if exists && existingStatus != nil {
-							// Merge ancestors: update existing ancestors or add new ones
-							mergedAncestors := make([]gwapiv1.PolicyAncestorStatus, 0, len(existingStatus.Ancestors)+len(e.Status.Ancestors))
-
-							// Create a map of new ancestors by reference for quick lookup
-							newAncestorMap := make(map[string]*gwapiv1.PolicyAncestorStatus)
-							for i := range e.Status.Ancestors {
-								refKey := ancestorRefKey(&e.Status.Ancestors[i].AncestorRef)
-								newAncestorMap[refKey] = &e.Status.Ancestors[i]
-							}
-
-							// Update existing ancestors or keep them if not in new status
-							for i := range existingStatus.Ancestors {
-								refKey := ancestorRefKey(&existingStatus.Ancestors[i].AncestorRef)
-								if newAncestor, found := newAncestorMap[refKey]; found {
-									// Replace with updated ancestor
-									mergedAncestors = append(mergedAncestors, *newAncestor)
-									delete(newAncestorMap, refKey)
-								} else {
-									// Keep existing ancestor that wasn't updated
-									mergedAncestors = append(mergedAncestors, existingStatus.Ancestors[i])
-								}
-							}
-
-							// Add remaining new ancestors that weren't in existing status
-							for _, newAncestor := range newAncestorMap {
-								mergedAncestors = append(mergedAncestors, *newAncestor)
-							}
+							mergedAncestors := mergePolicyAncestors(existingStatus.Ancestors, e.Status.Ancestors, e.Generation)
 
 							// Create merged status
 							mergedStatus := &gwapiv1.PolicyStatus{

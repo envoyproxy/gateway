@@ -21,9 +21,8 @@ envoyPatchPolicies:
     ancestors:
     - ancestorRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
+        kind: MyGateway
         name: gateway-1
-        namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
         message: Target to gateway.networking.k8s.io/MyGateway, only gateway.networking.k8s.io/Gateway
@@ -103,9 +102,8 @@ xdsIR:
         ancestors:
         - ancestorRef:
             group: gateway.networking.k8s.io
-            kind: Gateway
+            kind: MyGateway
             name: gateway-1
-            namespace: envoy-gateway
           conditions:
           - lastTransitionTime: null
             message: Target to gateway.networking.k8s.io/MyGateway, only gateway.networking.k8s.io/Gateway
