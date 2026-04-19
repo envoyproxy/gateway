@@ -13,6 +13,7 @@ data:
         watch:
           type: Namespaces
           namespaces:
+          - envoy-gateway-system
           - gateway-conformance-infra
           - gateway-preserve-case-backend
           - gateway-upgrade-infra
