@@ -142,6 +142,7 @@ func newTranslateResult(
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*gwapiv1.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+	envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
@@ -210,6 +211,9 @@ func newTranslateResult(
 	if len(envoyExtensionPolicies) > 0 {
 		translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
 	}
+	if len(envoyPatchPolicies) > 0 {
+		translateResult.EnvoyPatchPolicies = envoyPatchPolicies
+	}
 	if len(extPolicies) > 0 {
 		translateResult.ExtensionServerPolicies = extPolicies
 	}
@@ -235,7 +239,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
 	// Process EnvoyPatchPolicies
-	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
+	envoyPatchPolicies := t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
@@ -330,7 +334,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), errs
+		envoyPatchPolicies, extServerPolicies, backends, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
