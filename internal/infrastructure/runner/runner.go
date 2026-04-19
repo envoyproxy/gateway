@@ -22,8 +22,9 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR      *message.InfraIR
-	RunnerErrors *message.RunnerErrors
+	ProviderClient client.Client
+	InfraIR        *message.InfraIR
+	RunnerErrors   *message.RunnerErrors
 }
 
 type Runner struct {
@@ -56,19 +57,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
-
-	var infraClient client.Client
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
-		select {
-		case infraClient = <-r.ProviderClient:
-		case <-ctx.Done():
-			err = ctx.Err()
-			r.Logger.Error(err, "failed to create new manager")
-			return err
-		}
-	}
-
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier, infraClient)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier, r.ProviderClient)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err

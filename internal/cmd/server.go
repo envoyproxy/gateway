@@ -10,7 +10,6 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/admin"
@@ -178,14 +177,20 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
 	// It will be closed once the leader is elected in the controller manager.
 	cfg.Elected = make(chan struct{})
-	// ProviderClient is a channel for sharing the k8s provider client between the provider runner and the infrastructure runner.
-	// It will be initialized if the provider type is kubernetes, and the provider runner will send the client to this channel once it's created.
-	// The infrastructure runner will receive the client from this channel when it starts, and use it to create the manager.
-	cfg.ProviderClient = make(chan client.Client, 1)
 
 	// Setup the Extension Manager
 	var extMgr types.Manager
 	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes); err != nil {
+		return err
+	}
+
+	providerRunner := providerrunner.New(&providerrunner.Config{
+		Server:            *cfg,
+		ProviderResources: channels.pResources,
+		RunnerErrors:      runnerErrors,
+	})
+	// Prepare the provider before starting the runners so that the provider can prepare the kubernetes client and share it with the infra runner.
+	if _, err = providerRunner.PrepareProvider(ctx); err != nil {
 		return err
 	}
 
@@ -202,11 +207,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// and publishes it.
 			// It also subscribes to status resources and once it receives
 			// a status resource back, it writes it out.
-			runner: providerrunner.New(&providerrunner.Config{
-				Server:            *cfg,
-				ProviderResources: channels.pResources,
-				RunnerErrors:      runnerErrors,
-			}),
+			runner: providerRunner,
 		},
 		{
 			// Start the GatewayAPI Translator Runner
@@ -239,9 +240,10 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 			// resources such as K8s deployment and services.
 			runner: infrarunner.New(&infrarunner.Config{
-				Server:       *cfg,
-				InfraIR:      channels.infraIR,
-				RunnerErrors: runnerErrors,
+				Server:         *cfg,
+				ProviderClient: providerRunner.KubernetesClient(),
+				InfraIR:        channels.infraIR,
+				RunnerErrors:   runnerErrors,
 			}),
 		},
 		{
