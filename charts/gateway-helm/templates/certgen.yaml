@@ -52,7 +52,7 @@ spec:
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
-        name: envoy-gateway-certgen
+        name: {{ include "eg.fullname" . }}-certgen
         {{- with .Values.certgen.job.resources }}
         resources:
           {{- toYaml . | nindent 10 }}

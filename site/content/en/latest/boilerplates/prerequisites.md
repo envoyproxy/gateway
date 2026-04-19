@@ -10,7 +10,7 @@ proceeding, you should be able to query the example backend using HTTP.
 1. Install the Gateway API CRDs and Envoy Gateway using Helm:
 
    ```shell
-   helm install eg oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
+   helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm --version {{< helm-version >}} -n envoy-gateway-system --create-namespace
    ```
 
 2. Install the GatewayClass, Gateway, HTTPRoute and example app:

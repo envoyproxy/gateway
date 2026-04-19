@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: envoy-gateway
+  name: {{ include "eg.fullname" . }}
   namespace: {{ include "eg.namespace" . }}
   {{- with .Values.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
   labels:
-    control-plane: envoy-gateway
+    control-plane: {{ include "eg.fullname" . }}
   {{- include "eg.labels" . | nindent 4 }}
 spec:
 {{- if not .Values.hpa.enabled }}
@@ -16,7 +16,7 @@ spec:
 {{- end }}
   selector:
     matchLabels:
-      control-plane: envoy-gateway
+      control-plane: {{ include "eg.fullname" . }}
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -25,7 +25,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        control-plane: envoy-gateway
+        control-plane: {{ include "eg.fullname" . }}
       {{- include "eg.selectorLabels" . | nindent 8 }}
       {{- with .Values.deployment.pod.labels }}
         {{- toYaml . | nindent 8 }}
@@ -67,7 +67,7 @@ spec:
             port: 8081
           initialDelaySeconds: 15
           periodSeconds: 20
-        name: envoy-gateway
+        name: {{ include "eg.fullname" . }}
         ports:
         {{- range .Values.deployment.ports }}
         - containerPort: {{ .port }}
@@ -98,13 +98,13 @@ spec:
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
       {{- end }}
-      serviceAccountName: envoy-gateway
+      serviceAccountName: {{ include "eg.fullname" . }}
       terminationGracePeriodSeconds: 10
       volumes:
       - configMap:
           defaultMode: 420
-          name: envoy-gateway-config
+          name: {{ include "eg.fullname" . }}-config
         name: envoy-gateway-config
       - name: certs
         secret:
-          secretName: envoy-gateway
+          secretName: {{ include "eg.fullname" . }}
