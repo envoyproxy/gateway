@@ -224,6 +224,48 @@ func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName t
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
 }
 
+func EnvoyPatchPolicyMustBeAccepted(t *testing.T, suite *suite.ConformanceTestSuite, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+	waitErr := wait.PollUntilContextTimeout(t.Context(), suite.TimeoutConfig.DefaultPollInterval, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyPatchPolicy{}
+		err := suite.Client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyPatchPolicy: %w", err)
+		}
+		if policyAcceptedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "EnvoyPatchPolicy has been accepted: %v", policy)
+			return true, nil
+		}
+
+		return false, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyPatchPolicy to be accepted")
+}
+
+// EnvoyPatchPolicyMustNotHaveAncestor waits for the specified EnvoyPatchPolicy to not be accepted by the ancestor.
+func EnvoyPatchPolicyMustNotHaveAncestor(t *testing.T, suite *suite.ConformanceTestSuite, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+	waitErr := wait.PollUntilContextTimeout(t.Context(), suite.TimeoutConfig.DefaultPollInterval, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.EnvoyPatchPolicy{}
+		err := suite.Client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching EnvoyPatchPolicy: %w", err)
+		}
+		for _, ancestor := range policy.Status.Ancestors {
+			if string(ancestor.ControllerName) != controllerName {
+				continue
+			}
+
+			if cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+				return false, nil
+			}
+		}
+		tlog.Logf(t, "EnvoyPatchPolicy is not accepted by the ancestor yet: %v", policy)
+		return true, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for EnvoyPatchPolicy to not be accepted")
+}
+
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
 func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
