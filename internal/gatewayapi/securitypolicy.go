@@ -1587,7 +1587,7 @@ func (t *Translator) buildOIDC(
 
 	var forwardIDTokenHeader *string
 	if oidc.ForwardIDToken != nil {
-		forwardIDTokenHeader = ptr.To(oidc.ForwardIDToken.Header)
+		forwardIDTokenHeader = new(oidc.ForwardIDToken.Header)
 	}
 	if oidc.RefreshToken != nil {
 		refreshToken = *oidc.RefreshToken
