@@ -63,6 +63,7 @@ bug fixes: |
   Made ConnectionLimit.Value optional so users can configure MaxConnectionDuration, MaxRequestsPerConnection, or MaxStreamDuration without setting a max connections value.
   Fixed endpoint hostname is not respected when doing active health check.
   Fixed ratelimit deployment missing metrics container port (19001), which prevented PodMonitor/ServiceMonitor from targeting the metrics endpoint.
+  Fixed ratelimit ServiceAccount missing standard Kubernetes app labels.
   Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
   Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
   Fixed BackendTrafficPolicy `requestBuffer` coexisting with route upgrades by disabling the default WebSocket upgrade on buffered routes and rejecting explicit `requestBuffer` + `httpUpgrade` combinations.
