@@ -1554,6 +1554,7 @@ spec:
                                     Envoy's local rate-limit TokenBucket (max_tokens / tokens_per_fill)
                                     are uint32 on the wire. Values above 4294967295 would otherwise be
                                     silently truncated modulo 2^32.
+                                  format: int32
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
@@ -1943,6 +1944,7 @@ spec:
                                     Envoy's local rate-limit TokenBucket (max_tokens / tokens_per_fill)
                                     are uint32 on the wire. Values above 4294967295 would otherwise be
                                     silently truncated modulo 2^32.
+                                  format: int32
                                   maximum: 4294967295
                                   minimum: 1
                                   type: integer
