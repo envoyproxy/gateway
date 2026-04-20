@@ -17,6 +17,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -159,10 +160,11 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		mgrOpts.Cache.SyncPeriod = new(csp)
 	}
 
-	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
+	// Disable deepcopy for some read only resources to reduce CPU and memory usage.
+	// These resources are not modified by the provider, so it is safe to skip deepcopy.
+	// If any of these resources need to be modified in the future, deepcopy should be re-enabled for that resource.
 	if mgrOpts.Cache.ByObject == nil {
 		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
-			// Disable deepcopy for read only resources
 			&corev1.Secret{}: {
 				UnsafeDisableDeepCopy: new(true),
 			},
@@ -183,61 +185,82 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 				UnsafeDisableDeepCopy: new(true),
 			},
 		}
-		// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
-		// If not, we only watch the controller namespace for those resources to reduce memory usage and avoid unnecessary RBAC permissions.
-		if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-			}
-			mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-			}
-			mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-			}
-			mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-			}
-		} else {
-			mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-				Namespaces: map[string]cache.Config{
-					svrCfg.ControllerNamespace: {},
-				},
-			}
-			mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-				Namespaces: map[string]cache.Config{
-					svrCfg.ControllerNamespace: {},
-				},
-			}
-			mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-				Namespaces: map[string]cache.Config{
-					svrCfg.ControllerNamespace: {},
-				},
-			}
-			mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-				Namespaces: map[string]cache.Config{
-					svrCfg.ControllerNamespace: {},
-				},
-			}
-			mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
-				UnsafeDisableDeepCopy: new(true),
-				Namespaces: map[string]cache.Config{
-					svrCfg.ControllerNamespace: {},
-				},
-			}
-		}
 	}
+
+	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
 	// ProxyTopologyInjector is the only component that interacts with Pods.
 	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
-		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
+		UnsafeDisableDeepCopy: new(true),
+		Label:                 labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}
+
+	// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
+	// If not, we only watch the controller namespace to avoid unnecessary RBAC permissions.
+	// A label selector is still applied in both cases to limit the cache to only the resources owned by EG to reduce memory and sync churn.
+	namesReq, err := labels.NewRequirement("app.kubernetes.io/name", selection.In,
+		[]string{"envoy", "envoy-ratelimit"})
+	if err != nil {
+		panic(err)
+	}
+	managedSelector := labels.NewSelector().Add(*namesReq)
+	if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
+		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
+		// are needed to watch for changes, and EG controller's labels can vary across install methods (for example Helm nameOverride/custom chart naming).
+		// Filtering these kinds by labels can hide the controller objects from the cache.
+		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+		}
+		mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+		}
+		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+		mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+		mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+		}
+	} else {
+		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&autoscalingv2.HorizontalPodAutoscaler{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+		mgrOpts.Cache.ByObject[&policyv1.PodDisruptionBudget{}] = cache.ByObject{
+			UnsafeDisableDeepCopy: new(true),
+			Label:                 managedSelector,
+			Namespaces: map[string]cache.Config{
+				svrCfg.ControllerNamespace: {},
+			},
+		}
+	}
+
 	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
 	if svrCfg.EnvoyGateway.NamespaceMode() {
