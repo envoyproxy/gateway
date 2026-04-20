@@ -73,6 +73,7 @@ bug fixes: |
   Fixed client certificate secret never delivered when it is exclusively referenced by a SecurityPolicy `extAuth`/`jwt`/`oidc` Backend
   Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
   Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
+  Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
 
 # Enhancements that improve performance.
 performance improvements: |
