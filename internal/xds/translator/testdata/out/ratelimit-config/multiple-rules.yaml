@@ -22,7 +22,7 @@ descriptors:
       - key: rule-1-match-0
         value: rule-1-match-0
         rate_limit:
-          requests_per_unit: 10
+          requests_per_unit: 4294967295
           unit: SECOND
           unlimited: false
           name: ""
