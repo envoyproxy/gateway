@@ -406,6 +406,9 @@ func (t *Translator) processClientTLSSettings(
 		}
 		// Check if this is an SDS reference secret
 		if secret.Type == egv1a1.SDSSecretType {
+			if !t.SDSSecretRefEnabled {
+				return tlsConfig, fmt.Errorf("SDS Secret reference is not enabled in EnvoyGateway configuration")
+			}
 			// For SDS reference secrets, extract the SDS secret name and URL from data
 			s, err := ir.NewSDSConfig(secret)
 			if err != nil {
@@ -578,6 +581,9 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 			if secret != nil {
 				// Check if this is an SDS reference secret
 				if secret.Type == egv1a1.SDSSecretType {
+					if !t.SDSSecretRefEnabled {
+						return nil, nil, fmt.Errorf("SDS Secret reference is not enabled in EnvoyGateway configuration")
+					}
 					if foundSDSConfig != nil {
 						return nil, nil, fmt.Errorf("multiple SDS reference secrets are not supported")
 					}
