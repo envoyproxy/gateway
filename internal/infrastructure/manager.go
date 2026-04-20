@@ -25,6 +25,31 @@ var (
 	_ Manager = (*host.Infra)(nil)
 )
 
+type kubernetesClientContextKey struct{}
+
+type kubernetesClientHolder struct {
+	client client.Client
+}
+
+func WithKubernetesClientHolder(ctx context.Context) context.Context {
+	return context.WithValue(ctx, kubernetesClientContextKey{}, &kubernetesClientHolder{})
+}
+
+func SetKubernetesClient(ctx context.Context, cli client.Client) {
+	holder, _ := ctx.Value(kubernetesClientContextKey{}).(*kubernetesClientHolder)
+	if holder != nil {
+		holder.client = cli
+	}
+}
+
+func KubernetesClientFromContext(ctx context.Context) client.Client {
+	holder, _ := ctx.Value(kubernetesClientContextKey{}).(*kubernetesClientHolder)
+	if holder == nil {
+		return nil
+	}
+	return holder.client
+}
+
 // Manager provides the scaffolding for managing infrastructure.
 type Manager interface {
 	// Close is called when Envoy Gateway is shutting down, it can be used to block until all resources are cleaned up.
@@ -40,9 +65,13 @@ type Manager interface {
 }
 
 // NewManager returns a new infrastructure Manager.
-func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier, cli client.Client) (mgr Manager, err error) {
+func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (mgr Manager, err error) {
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
+		cli := KubernetesClientFromContext(ctx)
+		if cli == nil {
+			return nil, fmt.Errorf("kubernetes client not found in context")
+		}
 		mgr = kubernetes.NewInfra(cli, cfg, errors)
 	case egv1a1.ProviderTypeCustom:
 		mgr, err = newManagerForCustom(ctx, cfg, logger, errors)

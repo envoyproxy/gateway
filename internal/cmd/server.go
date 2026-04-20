@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/extension/types"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
+	"github.com/envoyproxy/gateway/internal/infrastructure"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -183,16 +184,7 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	if extMgr, err = extensionregistry.NewManager(cfg, cfg.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes); err != nil {
 		return err
 	}
-
-	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:            *cfg,
-		ProviderResources: channels.pResources,
-		RunnerErrors:      runnerErrors,
-	})
-	// Prepare the provider before starting the runners so that the provider can prepare the kubernetes client and share it with the infra runner.
-	if _, err = providerRunner.PrepareProvider(ctx); err != nil {
-		return err
-	}
+	ctx = infrastructure.WithKubernetesClientHolder(ctx)
 
 	runners := []struct {
 		runner Runner
@@ -207,7 +199,11 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// and publishes it.
 			// It also subscribes to status resources and once it receives
 			// a status resource back, it writes it out.
-			runner: providerRunner,
+			runner: providerrunner.New(&providerrunner.Config{
+				Server:            *cfg,
+				ProviderResources: channels.pResources,
+				RunnerErrors:      runnerErrors,
+			}),
 		},
 		{
 			// Start the GatewayAPI Translator Runner
@@ -240,10 +236,9 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 			// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 			// resources such as K8s deployment and services.
 			runner: infrarunner.New(&infrarunner.Config{
-				Server:         *cfg,
-				ProviderClient: providerRunner.KubernetesClient(),
-				InfraIR:        channels.infraIR,
-				RunnerErrors:   runnerErrors,
+				Server:       *cfg,
+				InfraIR:      channels.infraIR,
+				RunnerErrors: runnerErrors,
 			}),
 		},
 		{

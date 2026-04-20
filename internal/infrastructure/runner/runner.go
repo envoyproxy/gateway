@@ -13,7 +13,6 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -24,9 +23,8 @@ import (
 
 type Config struct {
 	config.Server
-	ProviderClient client.Client
-	InfraIR        *message.InfraIR
-	RunnerErrors   *message.RunnerErrors
+	InfraIR      *message.InfraIR
+	RunnerErrors *message.RunnerErrors
 }
 
 type Runner struct {
@@ -60,7 +58,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier, r.ProviderClient)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
