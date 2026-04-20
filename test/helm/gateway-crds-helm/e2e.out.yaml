@@ -2046,6 +2046,17 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+
+                                    The value is bounded by the uint32 range because the upstream rate
+                                    limit service config proto (RateLimitPolicy.requests_per_unit) and
+                                    Envoy's local rate-limit TokenBucket (max_tokens / tokens_per_fill)
+                                    are uint32 on the wire. Values above 4294967295 would otherwise be
+                                    silently truncated modulo 2^32.
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -2424,6 +2435,17 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+
+                                    The value is bounded by the uint32 range because the upstream rate
+                                    limit service config proto (RateLimitPolicy.requests_per_unit) and
+                                    Envoy's local rate-limit TokenBucket (max_tokens / tokens_per_fill)
+                                    are uint32 on the wire. Values above 4294967295 would otherwise be
+                                    silently truncated modulo 2^32.
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-

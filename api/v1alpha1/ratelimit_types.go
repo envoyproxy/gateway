@@ -432,6 +432,17 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
+	// Requests is the number of requests (or cost units, when used with
+	// cost-based rate limiting) allowed per Unit.
+	//
+	// The value is bounded by the uint32 range because the upstream rate
+	// limit service config proto (RateLimitPolicy.requests_per_unit) and
+	// Envoy's local rate-limit TokenBucket (max_tokens / tokens_per_fill)
+	// are uint32 on the wire. Values above 4294967295 would otherwise be
+	// silently truncated modulo 2^32.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=4294967295
 	Requests uint          `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }
