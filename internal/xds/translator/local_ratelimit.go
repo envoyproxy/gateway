@@ -145,6 +145,11 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 			route.Name)
 	}
 
+	enableXRatelimitHeaders := rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03
+	if ptr.Deref(local.DefaultXRateLimitOption, egv1a1.XRateLimitHeadersOptionDraftVersion03) == egv1a1.XRateLimitHeadersOptionDisabled {
+		enableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
+	}
+
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
 		TokenBucket: &typev3.TokenBucket{
@@ -166,7 +171,7 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, h
 				Denominator: typev3.FractionalPercent_HUNDRED,
 			},
 		},
-		EnableXRatelimitHeaders: rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03,
+		EnableXRatelimitHeaders: enableXRatelimitHeaders,
 		Descriptors:             descriptors,
 		// By setting AlwaysConsumeDefaultTokenBucket to false, the descriptors
 		// won't consume the default token bucket. This means that a request only
@@ -228,7 +233,10 @@ func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
 
 			// Create rate limit and descriptor
-			rateLimits = append(rateLimits, &routev3.RateLimit{Actions: rlActions})
+			rateLimit := &routev3.RateLimit{Actions: rlActions}
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+			rateLimits = append(rateLimits, rateLimit)
 			descriptors = append(descriptors, &rlv3.LocalRateLimitDescriptor{
 				Entries: descriptorEntries,
 				TokenBucket: &typev3.TokenBucket{

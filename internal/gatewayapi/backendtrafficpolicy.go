@@ -1338,6 +1338,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// EG uses the first rule without clientSelectors as the default route-level
 	// limit. If no such rule is found, EG uses a default limit of uint32 max.
 	var defaultLimit *ir.RateLimitValue
+	var defaultXRateLimitOption *egv1a1.XRateLimitHeadersOption
 	for _, rule := range local.Rules {
 		if len(rule.ClientSelectors) == 0 {
 			if defaultLimit != nil {
@@ -1347,6 +1348,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 				Requests: rule.Limit.Requests,
 				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 			}
+			// Capture the xRateLimit setting for the default bucket
+			defaultXRateLimitOption = rule.XRateLimitHeaders
 		}
 	}
 	// If no rule without clientSelectors is found, use uint32 max as the default
@@ -1379,7 +1382,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 			continue
 		}
 
-		irRule, err = buildRateLimitRule(rule)
+		irRule, err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1390,8 +1393,9 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	rateLimit := &ir.RateLimit{
 		Local: &ir.LocalRateLimit{
-			Default: *defaultLimit,
-			Rules:   irRules,
+			Default:                 *defaultLimit,
+			Rules:                   irRules,
+			DefaultXRateLimitOption: defaultXRateLimitOption,
 		},
 	}
 
@@ -1416,7 +1420,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	irRules := rateLimit.Global.Rules
 	var err error
 	for i, rule := range global.Rules {
-		irRules[i], err = buildRateLimitRule(rule)
+		irRules[i], err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1456,16 +1460,17 @@ func (t *Translator) buildBothRateLimit(policy *egv1a1.BackendTrafficPolicy) (*i
 	return rl, nil
 }
 
-func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	irRule := &ir.RateLimitRule{
 		Limit: ir.RateLimitValue{
 			Requests: rule.Limit.Requests,
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
-		HeaderMatches: make([]*ir.StringMatch, 0),
-		MethodMatches: make([]*ir.StringMatch, 0),
-		Shared:        rule.Shared,
-		ShadowMode:    rule.ShadowMode,
+		HeaderMatches:    make([]*ir.StringMatch, 0),
+		MethodMatches:    make([]*ir.StringMatch, 0),
+		Shared:           rule.Shared,
+		ShadowMode:       rule.ShadowMode,
+		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
 	for _, match := range rule.ClientSelectors {
