@@ -2601,7 +2601,7 @@ type RateLimitUnit egv1a1.RateLimitUnit
 // +k8s:deepcopy-gen=true
 type RateLimitValue struct {
 	// Requests are the number of requests that need to be rate limited.
-	Requests uint `json:"requests" yaml:"requests"`
+	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
