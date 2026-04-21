@@ -50,17 +50,6 @@ spec:
       type: Inline
       inline: "ok"
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: direct-response-ok
-  namespace: btp-cross-ns-denied
-spec:
-  directResponse:
-    body:
-      type: Inline
-      inline: "ok"
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -98,12 +87,9 @@ spec:
     - path:
         type: PathPrefix
         value: /
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: HTTPRouteFilter
-        name: direct-response-ok
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant

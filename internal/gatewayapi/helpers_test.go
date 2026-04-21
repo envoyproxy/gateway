@@ -793,7 +793,6 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 			},
 			results: []policyTargetReferenceWithSectionName{
 				{
-
 					Group:     "gateway.networking.k8s.io",
 					Kind:      "Gateway",
 					Name:      "selected-ns",
