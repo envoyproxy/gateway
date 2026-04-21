@@ -15,12 +15,13 @@ import (
 	"strings"
 	"syscall"
 
-	pb "github.com/envoyproxy/gateway/proto/extension"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/envoyproxy/gateway/proto/extension"
 )
 
 func main() {

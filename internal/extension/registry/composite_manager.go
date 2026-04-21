@@ -8,7 +8,6 @@ package registry
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -96,16 +95,16 @@ func (c *CompositeManager) GetTranslationHookConfig() *egv1a1.TranslationConfig 
 
 	merged := &egv1a1.TranslationConfig{}
 	if includeListeners {
-		merged.Listener = &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)}
+		merged.Listener = &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)}
 	}
 	if includeRoutes {
-		merged.Route = &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)}
+		merged.Route = &egv1a1.RouteTranslationConfig{IncludeAll: new(true)}
 	}
 	if includeClusters {
-		merged.Cluster = &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)}
+		merged.Cluster = &egv1a1.ClusterTranslationConfig{IncludeAll: new(true)}
 	}
 	if includeSecrets {
-		merged.Secret = &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(true)}
+		merged.Secret = &egv1a1.SecretTranslationConfig{IncludeAll: new(true)}
 	}
 
 	return merged

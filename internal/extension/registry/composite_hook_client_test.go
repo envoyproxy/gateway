@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/types"
@@ -654,10 +653,10 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		}
 
 		translationConfig := &egv1a1.TranslationConfig{
-			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
-			Route:    &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)},
-			Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)},
-			Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(true)},
+			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
+			Route:    &egv1a1.RouteTranslationConfig{IncludeAll: new(true)},
+			Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: new(true)},
+			Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: new(true)},
 		}
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
@@ -776,8 +775,8 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 					name:   "ext1",
 					client: client1,
 					translationConfig: &egv1a1.TranslationConfig{
-						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(true)},
-						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: new(true)},
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: new(false)},
 						// Listener and Route nil → defaults false
 					},
 				},
@@ -785,9 +784,9 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 					name:   "ext2",
 					client: client2,
 					translationConfig: &egv1a1.TranslationConfig{
-						Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
-						Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
-						Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
+						Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: new(false)},
+						Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: new(false)},
+						Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
 					},
 				},
 			},
@@ -883,17 +882,17 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 					name:   "ext1",
 					client: client1,
 					translationConfig: &egv1a1.TranslationConfig{
-						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(true)},
-						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: new(true)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: new(false)},
 					},
 				},
 				{
 					name:   "ext2",
 					client: client2,
 					translationConfig: &egv1a1.TranslationConfig{
-						Route:   &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)},
-						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
-						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+						Route:   &egv1a1.RouteTranslationConfig{IncludeAll: new(true)},
+						Cluster: &egv1a1.ClusterTranslationConfig{IncludeAll: new(false)},
+						Secret:  &egv1a1.SecretTranslationConfig{IncludeAll: new(false)},
 					},
 				},
 			},
