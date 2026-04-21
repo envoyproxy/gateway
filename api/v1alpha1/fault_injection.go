@@ -53,6 +53,8 @@ type FaultInjectionAbort struct {
 	// GrpcStatus specifies the GRPC status code to be returned
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=16
 	GrpcStatus *int32 `json:"grpcStatus,omitempty"`
 
 	// Percentage specifies the percentage of requests to be aborted. Default 100%, if set 0, no requests will be aborted. Accuracy to 0.0001%.

@@ -152,7 +152,7 @@ func (*fault) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTP
 		}
 		if abort.GrpcStatus != nil {
 			routeCfgProto.Abort.ErrorType = &xdshttpfaultv3.FaultAbort_GrpcStatus{
-				GrpcStatus: uint32(*abort.GrpcStatus),
+				GrpcStatus: *abort.GrpcStatus,
 			}
 		}
 	}

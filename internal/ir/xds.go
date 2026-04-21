@@ -1655,7 +1655,7 @@ type FaultInjectionAbort struct {
 	// HTTPStatus defines the HTTP status code to be returned.
 	HTTPStatus *int32 `json:"httpStatus,omitempty" yaml:"httpStatus,omitempty"`
 	// GrpcStatus defines the gRPC status code to be returned.
-	GrpcStatus *int32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
+	GrpcStatus *uint32 `json:"grpcStatus,omitempty" yaml:"grpcStatus,omitempty"`
 	// Percentage defines the percentage of requests to be aborted.
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
 }

@@ -3520,7 +3520,7 @@ func (in *FaultInjectionAbort) DeepCopyInto(out *FaultInjectionAbort) {
 	}
 	if in.GrpcStatus != nil {
 		in, out := &in.GrpcStatus, &out.GrpcStatus
-		*out = new(int32)
+		*out = new(uint32)
 		**out = **in
 	}
 	if in.Percentage != nil {
