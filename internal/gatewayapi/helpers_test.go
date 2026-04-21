@@ -20,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -214,7 +213,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
 						Kind:  "Gateway",
-						Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
+						Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
 						MatchLabels: map[string]string{
 							"pick": "me",
 						},
@@ -426,7 +425,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
 						Kind:  "Gateway",
-						Group: ptr.To(gwapiv1.Group("bad-group")),
+						Group: new(gwapiv1.Group("bad-group")),
 						MatchLabels: map[string]string{
 							"pick": "me",
 						},
@@ -669,10 +668,10 @@ func TestGetServiceIPFamily(t *testing.T) {
 			name: "require dual stack",
 			service: &corev1.Service{
 				Spec: corev1.ServiceSpec{
-					IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+					IPFamilyPolicy: new(corev1.IPFamilyPolicyRequireDualStack),
 				},
 			},
-			expected: ptr.To(egv1a1.DualStack),
+			expected: new(egv1a1.DualStack),
 		},
 		{
 			name: "multiple ip families",
@@ -681,7 +680,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.DualStack),
+			expected: new(egv1a1.DualStack),
 		},
 		{
 			name: "ipv4 only",
@@ -690,7 +689,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.IPv4),
+			expected: new(egv1a1.IPv4),
 		},
 		{
 			name: "ipv6 only",
@@ -699,7 +698,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.IPv6),
+			expected: new(egv1a1.IPv6),
 		},
 		{
 			name: "no ip family specified",
@@ -834,7 +833,7 @@ func TestIrStringMatch(t *testing.T) {
 		{
 			name: "Exact",
 			match: egv1a1.StringMatch{
-				Type:  ptr.To(egv1a1.StringMatchExact),
+				Type:  new(egv1a1.StringMatchExact),
 				Value: matchValue,
 			},
 			expected: &ir.StringMatch{
@@ -845,7 +844,7 @@ func TestIrStringMatch(t *testing.T) {
 		{
 			name: "Prefix",
 			match: egv1a1.StringMatch{
-				Type:  ptr.To(egv1a1.StringMatchPrefix),
+				Type:  new(egv1a1.StringMatchPrefix),
 				Value: matchValue,
 			},
 			expected: &ir.StringMatch{
@@ -856,7 +855,7 @@ func TestIrStringMatch(t *testing.T) {
 		{
 			name: "Suffix",
 			match: egv1a1.StringMatch{
-				Type:  ptr.To(egv1a1.StringMatchSuffix),
+				Type:  new(egv1a1.StringMatchSuffix),
 				Value: matchValue,
 			},
 			expected: &ir.StringMatch{
@@ -867,7 +866,7 @@ func TestIrStringMatch(t *testing.T) {
 		{
 			name: "RegularExpression",
 			match: egv1a1.StringMatch{
-				Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+				Type:  new(egv1a1.StringMatchRegularExpression),
 				Value: matchValue,
 			},
 			expected: &ir.StringMatch{
@@ -878,7 +877,7 @@ func TestIrStringMatch(t *testing.T) {
 		{
 			name: "Unknown",
 			match: egv1a1.StringMatch{
-				Type:  ptr.To(stringMatchUnknown),
+				Type:  new(stringMatchUnknown),
 				Value: matchValue,
 			},
 			expected: &ir.StringMatch{

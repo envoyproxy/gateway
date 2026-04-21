@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	discoveryfake "k8s.io/client-go/discovery/fake"
 	clientgotesting "k8s.io/client-go/testing"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -116,7 +115,7 @@ func TestIsCustomBackendResource(t *testing.T) {
 		{
 			name:           "no extension backend GVKs configured",
 			extBackendGVKs: []schema.GroupVersionKind{},
-			group:          ptr.To(gwapiv1.Group("storage.example.io")),
+			group:          new(gwapiv1.Group("storage.example.io")),
 			kind:           "S3Backend",
 			expected:       false,
 		},
@@ -126,7 +125,7 @@ func TestIsCustomBackendResource(t *testing.T) {
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
 				{Group: "compute.example.io", Version: "v1alpha1", Kind: "LambdaBackend"},
 			},
-			group:    ptr.To(gwapiv1.Group("storage.example.io")),
+			group:    new(gwapiv1.Group("storage.example.io")),
 			kind:     "S3Backend",
 			expected: true,
 		},
@@ -135,7 +134,7 @@ func TestIsCustomBackendResource(t *testing.T) {
 			extBackendGVKs: []schema.GroupVersionKind{
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
 			},
-			group:    ptr.To(gwapiv1.Group("compute.example.io")),
+			group:    new(gwapiv1.Group("compute.example.io")),
 			kind:     "S3Backend",
 			expected: false,
 		},
@@ -144,7 +143,7 @@ func TestIsCustomBackendResource(t *testing.T) {
 			extBackendGVKs: []schema.GroupVersionKind{
 				{Group: "storage.example.io", Version: "v1alpha1", Kind: "S3Backend"},
 			},
-			group:    ptr.To(gwapiv1.Group("storage.example.io")),
+			group:    new(gwapiv1.Group("storage.example.io")),
 			kind:     "LambdaBackend",
 			expected: false,
 		},
@@ -228,10 +227,10 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			},
 			backendRefs: []gwapiv1.BackendObjectReference{
 				{
-					Group:     ptr.To(gwapiv1.Group("storage.example.io")),
-					Kind:      ptr.To(gwapiv1.Kind("S3Backend")),
+					Group:     new(gwapiv1.Group("storage.example.io")),
+					Kind:      new(gwapiv1.Kind("S3Backend")),
 					Name:      "s3-backend",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 			},
 			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
@@ -251,16 +250,16 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			},
 			backendRefs: []gwapiv1.BackendObjectReference{
 				{
-					Group:     ptr.To(gwapiv1.Group("storage.example.io")),
-					Kind:      ptr.To(gwapiv1.Kind("S3Backend")),
+					Group:     new(gwapiv1.Group("storage.example.io")),
+					Kind:      new(gwapiv1.Kind("S3Backend")),
 					Name:      "s3-backend",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 				{
-					Group:     ptr.To(gwapiv1.Group("compute.example.io")),
-					Kind:      ptr.To(gwapiv1.Kind("LambdaBackend")),
+					Group:     new(gwapiv1.Group("compute.example.io")),
+					Kind:      new(gwapiv1.Kind("LambdaBackend")),
 					Name:      "lambda-backend",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 			},
 			existingExtFilters: map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{
@@ -284,9 +283,9 @@ func TestProcessBackendRefsWithCustomBackends(t *testing.T) {
 			backendRefs: []gwapiv1.BackendObjectReference{
 				{
 					// Standard Service backend - should be skipped
-					Kind:      ptr.To(gwapiv1.Kind("Service")),
+					Kind:      new(gwapiv1.Kind("Service")),
 					Name:      "my-service",
-					Namespace: ptr.To(gwapiv1.Namespace("default")),
+					Namespace: new(gwapiv1.Namespace("default")),
 				},
 			},
 			existingExtFilters:      map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
@@ -523,7 +522,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 					Name:      "test-merge-gw",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(true),
+					MergeGateways: new(true),
 				},
 			},
 			gatewayNamespaceMode: true,
@@ -552,7 +551,7 @@ func TestProcessGatewayClassParamsRef(t *testing.T) {
 					Name:      "test-merge-gw",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					MergeGateways: ptr.To(true),
+					MergeGateways: new(true),
 				},
 			},
 			gatewayNamespaceMode: false,
@@ -655,7 +654,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "https://example.com/test.wasm",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 											Name: "ca-cert",
 										},
 									},
@@ -689,7 +688,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "https://example.com/test.wasm",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindSecret)),
+											Kind: new(gwapiv1.Kind(resource.KindSecret)),
 											Name: "ca-cert",
 										},
 									},
@@ -835,7 +834,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "https://example.com/test.wasm",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 											Name: "ca-ctb",
 										},
 									},
@@ -868,7 +867,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "oci://example.com/test.wasm:v1.0.0",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 											Name: "ca-ctb-image",
 										},
 									},
@@ -935,7 +934,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "https://example.com/test1.wasm",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindConfigMap)),
+											Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 											Name: "ca-cm-multi",
 										},
 									},
@@ -949,7 +948,7 @@ func TestProcessEnvoyExtensionPolicyObjectRefs(t *testing.T) {
 									URL: "oci://example.com/test2.wasm:v1.0.0",
 									TLS: &egv1a1.WasmCodeSourceTLSConfig{
 										CACertificateRef: gwapiv1.SecretObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(resource.KindClusterTrustBundle)),
+											Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 											Name: "ca-ctb-multi",
 										},
 									},
@@ -1659,7 +1658,7 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Name: ptr.To("merged-gc-svc"),
+								Name: new("merged-gc-svc"),
 							},
 						},
 					},
@@ -1705,7 +1704,7 @@ func TestProcessServiceClusterForGatewayClass(t *testing.T) {
 			r.processServiceClusterForGatewayClass(context.Background(), tc.envoyProxy, tc.gatewayClass, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
-				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+				Kind:      new(gwapiv1.Kind(resource.KindService)),
 				Namespace: gatewayapi.NamespacePtr(r.namespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
@@ -1761,7 +1760,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Name: ptr.To("my-gateway-svc"),
+								Name: new("my-gateway-svc"),
 							},
 						},
 					},
@@ -1809,7 +1808,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Name: ptr.To("my-gateway-svc"),
+								Name: new("my-gateway-svc"),
 							},
 						},
 					},
@@ -1845,7 +1844,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
-								Name: ptr.To("my-gateway-svc"),
+								Name: new("my-gateway-svc"),
 							},
 						},
 					},
@@ -1887,7 +1886,7 @@ func TestProcessServiceClusterForGateway(t *testing.T) {
 			r.processServiceClusterForGateway(context.Background(), tc.envoyProxy, tc.gateway, resourceMap)
 
 			expectedRef := gwapiv1.BackendObjectReference{
-				Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+				Kind:      new(gwapiv1.Kind(resource.KindService)),
 				Namespace: gatewayapi.NamespacePtr(tc.expectedSvcNamespace),
 				Name:      gwapiv1.ObjectName(tc.expectedSvcName),
 			}
@@ -1963,7 +1962,7 @@ func TestProcessBackendRefs(t *testing.T) {
 					Name:      "test-backend",
 				},
 				Spec: egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
 						CACertificateRefs: []gwapiv1.LocalObjectReference{
 							{
@@ -1984,7 +1983,7 @@ func TestProcessBackendRefs(t *testing.T) {
 					Name:      "test-backend",
 				},
 				Spec: egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
 						CACertificateRefs: []gwapiv1.LocalObjectReference{
 							{
@@ -2005,7 +2004,7 @@ func TestProcessBackendRefs(t *testing.T) {
 					Name:      "test-backend",
 				},
 				Spec: egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
 						CACertificateRefs: []gwapiv1.LocalObjectReference{
 							{
@@ -2088,7 +2087,7 @@ func TestProcessListenerSets(t *testing.T) {
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
-						Namespace: ptr.To(gwapiv1.Namespace("default")),
+						Namespace: new(gwapiv1.Namespace("default")),
 					},
 					Listeners: []gwapiv1.ListenerEntry{
 						{
@@ -2096,7 +2095,7 @@ func TestProcessListenerSets(t *testing.T) {
 							Protocol: gwapiv1.ProtocolType("HTTPS"),
 							Port:     gwapiv1.PortNumber(8080),
 							TLS: &gwapiv1.ListenerTLSConfig{
-								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								Mode: new(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
 								}},
@@ -2126,7 +2125,7 @@ func TestProcessListenerSets(t *testing.T) {
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
-						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+						Namespace: new(gwapiv1.Namespace("gateway")),
 					},
 					Listeners: []gwapiv1.ListenerEntry{
 						{
@@ -2134,10 +2133,10 @@ func TestProcessListenerSets(t *testing.T) {
 							Protocol: gwapiv1.ProtocolType("HTTPS"),
 							Port:     gwapiv1.PortNumber(8080),
 							TLS: &gwapiv1.ListenerTLSConfig{
-								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								Mode: new(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
-									Namespace: ptr.To(gwapiv1.Namespace("xls")),
+									Namespace: new(gwapiv1.Namespace("xls")),
 								}},
 							},
 						},
@@ -2165,7 +2164,7 @@ func TestProcessListenerSets(t *testing.T) {
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
-						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+						Namespace: new(gwapiv1.Namespace("gateway")),
 					},
 					Listeners: []gwapiv1.ListenerEntry{
 						{
@@ -2173,10 +2172,10 @@ func TestProcessListenerSets(t *testing.T) {
 							Protocol: gwapiv1.ProtocolType("HTTPS"),
 							Port:     gwapiv1.PortNumber(8443),
 							TLS: &gwapiv1.ListenerTLSConfig{
-								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								Mode: new(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
-									Namespace: ptr.To(gwapiv1.Namespace("secret")),
+									Namespace: new(gwapiv1.Namespace("secret")),
 								}},
 							},
 						},
@@ -2225,7 +2224,7 @@ func TestProcessListenerSets(t *testing.T) {
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("test-gateway"),
-						Namespace: ptr.To(gwapiv1.Namespace("gateway")),
+						Namespace: new(gwapiv1.Namespace("gateway")),
 					},
 					Listeners: []gwapiv1.ListenerEntry{
 						{
@@ -2233,10 +2232,10 @@ func TestProcessListenerSets(t *testing.T) {
 							Protocol: gwapiv1.ProtocolType("HTTPS"),
 							Port:     gwapiv1.PortNumber(8443),
 							TLS: &gwapiv1.ListenerTLSConfig{
-								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								Mode: new(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name:      gwapiv1.ObjectName("listener-cert"),
-									Namespace: ptr.To(gwapiv1.Namespace("secret")),
+									Namespace: new(gwapiv1.Namespace("secret")),
 								}},
 							},
 						},
@@ -2264,7 +2263,7 @@ func TestProcessListenerSets(t *testing.T) {
 				Spec: gwapiv1.ListenerSetSpec{
 					ParentRef: gwapiv1.ParentGatewayReference{
 						Name:      gwapiv1.ObjectName("other-gateway"),
-						Namespace: ptr.To(gwapiv1.Namespace("default")),
+						Namespace: new(gwapiv1.Namespace("default")),
 					},
 					Listeners: []gwapiv1.ListenerEntry{
 						{
@@ -2272,7 +2271,7 @@ func TestProcessListenerSets(t *testing.T) {
 							Protocol: gwapiv1.ProtocolType("HTTPS"),
 							Port:     gwapiv1.PortNumber(8080),
 							TLS: &gwapiv1.ListenerTLSConfig{
-								Mode: ptr.To(gwapiv1.TLSModeTerminate),
+								Mode: new(gwapiv1.TLSModeTerminate),
 								CertificateRefs: []gwapiv1.SecretObjectReference{{
 									Name: gwapiv1.ObjectName("listener-cert"),
 								}},
@@ -2413,7 +2412,7 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Kind: new(gwapiv1.Kind(resource.KindSecret)),
 									Name: gwapiv1.ObjectName("crl-secret"),
 								},
 							},
@@ -2432,7 +2431,7 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+									Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 									Name: gwapiv1.ObjectName("crl-configmap"),
 								},
 							},
@@ -2451,7 +2450,7 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+									Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 									Name: gwapiv1.ObjectName("crl-ctb"),
 								},
 							},
@@ -2470,11 +2469,11 @@ func TestProcessCTPCrlRefs(t *testing.T) {
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Kind: new(gwapiv1.Kind(resource.KindSecret)),
 									Name: gwapiv1.ObjectName("crl-secret"),
 								},
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+									Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 									Name: gwapiv1.ObjectName("crl-configmap"),
 								},
 							},
@@ -2587,7 +2586,7 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Kind: new(gwapiv1.Kind(resource.KindSecret)),
 								Name: gwapiv1.ObjectName("ca-secret"),
 							},
 						},
@@ -2604,7 +2603,7 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+								Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 								Name: gwapiv1.ObjectName("ca-configmap"),
 							},
 						},
@@ -2621,7 +2620,7 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindClusterTrustBundle),
+								Kind: new(gwapiv1.Kind(resource.KindClusterTrustBundle)),
 								Name: gwapiv1.ObjectName("ca-ctb"),
 							},
 						},
@@ -2638,11 +2637,11 @@ func TestProcessCTPCACertificateRefs(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Kind: new(gwapiv1.Kind(resource.KindSecret)),
 								Name: gwapiv1.ObjectName("ca-secret"),
 							},
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindConfigMap),
+								Kind: new(gwapiv1.Kind(resource.KindConfigMap)),
 								Name: gwapiv1.ObjectName("ca-configmap"),
 							},
 						},
@@ -2744,14 +2743,14 @@ func TestProcessClientTrafficPolicies(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Kind: new(gwapiv1.Kind(resource.KindSecret)),
 								Name: gwapiv1.ObjectName("ca-secret"),
 							},
 						},
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Kind: new(gwapiv1.Kind(resource.KindSecret)),
 									Name: gwapiv1.ObjectName("crl-secret"),
 								},
 							},
@@ -2772,7 +2771,7 @@ func TestProcessClientTrafficPolicies(t *testing.T) {
 					ClientValidation: &egv1a1.ClientValidationContext{
 						CACertificateRefs: []gwapiv1.SecretObjectReference{
 							{
-								Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+								Kind: new(gwapiv1.Kind(resource.KindSecret)),
 								Name: gwapiv1.ObjectName("ca-secret"),
 							},
 						},
@@ -2793,7 +2792,7 @@ func TestProcessClientTrafficPolicies(t *testing.T) {
 						Crl: &egv1a1.CrlContext{
 							Refs: []gwapiv1.SecretObjectReference{
 								{
-									Kind: ptr.To[gwapiv1.Kind](resource.KindSecret),
+									Kind: new(gwapiv1.Kind(resource.KindSecret)),
 									Name: gwapiv1.ObjectName("crl-secret"),
 								},
 							},

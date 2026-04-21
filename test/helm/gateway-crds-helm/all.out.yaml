@@ -22031,7 +22031,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: backends.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -22531,7 +22531,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -22682,6 +22682,7 @@ spec:
               compression:
                 description: |-
                   The compression config for the http streams.
+
                   Deprecated: Use Compressor instead.
                 items:
                   description: |-
@@ -23714,6 +23715,9 @@ spec:
                   This field cannot be set when targeting a parent resource (Gateway).
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for BackendTrafficPolicySpec
+                  rule: self != 'Replace'
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -24101,6 +24105,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object
@@ -24470,6 +24483,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object
@@ -25793,7 +25815,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: clienttrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -26505,6 +26527,7 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
+
                       Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:
@@ -27855,7 +27878,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoyextensionpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -30326,7 +30349,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoypatchpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -30837,7 +30860,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: envoyproxies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -31580,6 +31603,17 @@ spec:
                   This means that the port, protocol and hostname tuple must be unique for every listener.
                   If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
                 type: boolean
+              mergeType:
+                description: |-
+                  MergeType controls how this EnvoyProxy merges with less specific configurations
+                  in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
+                  If unset, this EnvoyProxy completely replaces less specific settings.
+                  Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
+                enum:
+                - Replace
+                - StrategicMerge
+                - JSONMerge
+                type: string
               preserveRouteOrder:
                 description: |-
                   PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API
@@ -45192,12 +45226,14 @@ spec:
                                       host:
                                         description: |-
                                           Host define the extension service hostname.
+
                                           Deprecated: Use BackendRefs instead.
                                         type: string
                                       port:
                                         default: 4317
                                         description: |-
                                           Port defines the port the extension service is exposed on.
+
                                           Deprecated: Use BackendRefs instead.
                                         format: int32
                                         minimum: 0
@@ -46862,12 +46898,14 @@ spec:
                                 host:
                                   description: |-
                                     Host define the service hostname.
+
                                     Deprecated: Use BackendRefs instead.
                                   type: string
                                 port:
                                   default: 4317
                                   description: |-
                                     Port defines the port the service is exposed on.
+
                                     Deprecated: Use BackendRefs instead.
                                   format: int32
                                   maximum: 65535
@@ -48404,6 +48442,7 @@ spec:
                           host:
                             description: |-
                               Host define the provider service hostname.
+
                               Deprecated: Use BackendRefs instead.
                             type: string
                           openTelemetry:
@@ -48507,6 +48546,7 @@ spec:
                             default: 4317
                             description: |-
                               Port defines the port the provider service is exposed on.
+
                               Deprecated: Use BackendRefs instead.
                             format: int32
                             minimum: 0
@@ -48865,7 +48905,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: httproutefilters.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -49359,7 +49399,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: securitypolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -52879,6 +52919,28 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                  includeRouteMetadata:
+                    description: |-
+                      IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
+                      external authorization service as context.
+
+                      This includes Envoy Gateway's built-in metadata for the selected route in
+                      the "envoy-gateway" metadata namespace.
+
+                      The metadata is exposed under the "resources" field as a list of route
+                      resource objects. For example:
+
+                      envoy-gateway:
+                        resources:
+                        - kind: HTTPRoute
+                          name: backend
+                          namespace: default
+                          annotations:
+                            foo: bar
+
+                      The resource object may include fields such as kind, namespace, name,
+                      sectionName, and supported route annotations.
+                    type: boolean
                   recomputeRoute:
                     description: |-
                       RecomputeRoute clears the route cache and recalculates the routing decision.
@@ -54557,6 +54619,9 @@ spec:
                   This field cannot be set when targeting a parent resource (Gateway).
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for SecurityPolicy
+                  rule: self != 'Replace'
               oidc:
                 description: OIDC defines the configuration for the OpenID Connect
                   (OIDC) authentication.
@@ -54787,6 +54852,22 @@ spec:
                       via the Authorization header Bearer scheme to the upstream.
                       If not specified, defaults to false.
                     type: boolean
+                  forwardIDToken:
+                    description: |-
+                      ForwardIDToken configures forwarding of the OIDC ID token to the upstream.
+
+                      If the configured header is "Authorization", EG forwards the ID token using
+                      the "Bearer " prefix. For any other header, EG forwards the raw token value.
+                      If not specified, the ID token will not be forwarded.
+                    properties:
+                      header:
+                        description: Header is the upstream request header that will
+                          carry the ID token.
+                        minLength: 1
+                        type: string
+                    required:
+                    - header
+                    type: object
                   logoutPath:
                     description: |-
                       The path to log a user out, clearing their credential cookies.
@@ -56244,6 +56325,11 @@ spec:
                 - message: only one of clientID or clientIDRef must be set
                   rule: (has(self.clientID) && !has(self.clientIDRef)) || (!has(self.clientID)
                     && has(self.clientIDRef))
+                - message: forwardAccessToken cannot be true when forwardIDToken.header
+                    is Authorization
+                  rule: '!(has(self.forwardAccessToken) && self.forwardAccessToken
+                    && has(self.forwardIDToken) && self.forwardIDToken.header.lowerAscii()
+                    == ''authorization'')'
               targetRef:
                 description: |-
                   TargetRef is the name of the resource this policy is being attached to.

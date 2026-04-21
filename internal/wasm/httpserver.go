@@ -30,7 +30,7 @@ const (
 
 var _ Cache = &HTTPServer{}
 
-type SeverOptions struct {
+type ServerOptions struct {
 	// Salt is used as a hash salt to generate an unguessable path for the Wasm module.
 	Salt []byte
 	// TLSConfig is the TLS configuration for the HTTP server.
@@ -41,7 +41,7 @@ type SeverOptions struct {
 }
 
 // setDefault sets the default values for the server options if they are not set.
-func (o *SeverOptions) setDefault() {
+func (o *ServerOptions) setDefault() {
 	if o.MaxFailedAttempts == 0 {
 		o.MaxFailedAttempts = defaultMaxFailedAttempts
 	}
@@ -55,7 +55,7 @@ func (o *SeverOptions) setDefault() {
 
 // HTTPServer wraps a local file cache and serves the Wasm modules over HTTP.
 type HTTPServer struct {
-	SeverOptions
+	ServerOptions
 	sync.Mutex
 	// map from the mapping path to the wasm file path in the local cache.
 	// The mapping path is a generated unguessable path to prevent unauthorized users
@@ -97,11 +97,11 @@ type wasmModuleEntry struct {
 // NewHTTPServerWithFileCache creates a HTTP server with a local file cache for Wasm modules.
 // The local file cache is used to store the Wasm modules downloaded from the original URL.
 // The HTTP server serves the cached Wasm modules over HTTP to the Envoy Proxies.
-func NewHTTPServerWithFileCache(serverOptions SeverOptions, cacheOptions CacheOptions, controllerNamespace string, logger logging.Logger) *HTTPServer {
+func NewHTTPServerWithFileCache(serverOptions ServerOptions, cacheOptions CacheOptions, controllerNamespace string, logger logging.Logger) *HTTPServer {
 	logger = logger.WithName("wasm-cache")
 	serverOptions.setDefault()
 	return &HTTPServer{
-		SeverOptions:        serverOptions,
+		ServerOptions:       serverOptions,
 		mappingPath2Cache:   make(map[string]wasmModuleEntry),
 		failedAttempts:      make(map[string]attemptEntry),
 		cache:               newLocalFileCache(cacheOptions, logger),
@@ -136,6 +136,7 @@ func (s *HTTPServer) Start(ctx context.Context) {
 		}
 	}()
 
+	// #nosec G118 - ctx is already cancelled; Background is intentional for graceful shutdown
 	go func() {
 		// waiting for shutdown
 		<-ctx.Done()

@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -211,7 +210,7 @@ var (
 		Name:     "happy",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("example"),
+			Exact: new("example"),
 		},
 		Destination: &happyRouteDestination,
 	}
@@ -219,14 +218,14 @@ var (
 		Name:     "invalid-backend",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("invalid-backend"),
+			Exact: new("invalid-backend"),
 		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
 		Name:     "weighted-invalid-backends",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("invalid-backends"),
+			Exact: new("invalid-backends"),
 		},
 		Destination: &happyRouteDestination,
 	}
@@ -235,16 +234,16 @@ var (
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("redirect"),
+			Exact: new("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:   ptr.To("https"),
-			Hostname: ptr.To("redirect.example.com"),
+			Scheme:   new("https"),
+			Hostname: new("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace: ptr.To("/redirect"),
+				FullReplace: new("/redirect"),
 			},
-			Port:       ptr.To(uint32(8443)),
-			StatusCode: ptr.To[int32](301),
+			Port:       new(uint32(8443)),
+			StatusCode: new(int32(301)),
 		},
 	}
 	// A direct response error is used when an invalid filter type is supplied
@@ -252,10 +251,10 @@ var (
 		Name:     "filter-error",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("filter-error"),
+			Exact: new("filter-error"),
 		},
 		DirectResponse: &CustomResponse{
-			StatusCode: ptr.To(uint32(500)),
+			StatusCode: new(uint32(500)),
 		},
 	}
 
@@ -263,41 +262,41 @@ var (
 		Name:     "redirect-bad-status-scheme-nopat",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("redirect"),
+			Exact: new("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:     ptr.To("err"),
-			Hostname:   ptr.To("redirect.example.com"),
+			Scheme:     new("err"),
+			Hostname:   new("redirect.example.com"),
 			Path:       &HTTPPathModifier{},
-			Port:       ptr.To(uint32(8443)),
-			StatusCode: ptr.To[int32](305),
+			Port:       new(uint32(8443)),
+			StatusCode: new(int32(305)),
 		},
 	}
 	redirectFilterBadPath = HTTPRoute{
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("redirect"),
+			Exact: new("redirect"),
 		},
 		Redirect: &Redirect{
-			Scheme:   ptr.To("https"),
-			Hostname: ptr.To("redirect.example.com"),
+			Scheme:   new("https"),
+			Hostname: new("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace:        ptr.To("/redirect"),
-				PrefixMatchReplace: ptr.To("/redirect"),
+				FullReplace:        new("/redirect"),
+				PrefixMatchReplace: new("/redirect"),
 			},
-			Port:       ptr.To(uint32(8443)),
-			StatusCode: ptr.To[int32](301),
+			Port:       new(uint32(8443)),
+			StatusCode: new(int32(301)),
 		},
 	}
 	directResponseBadStatus = HTTPRoute{
 		Name:     "redirect",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("redirect"),
+			Exact: new("redirect"),
 		},
 		DirectResponse: &CustomResponse{
-			StatusCode: ptr.To(uint32(799)),
+			StatusCode: new(uint32(799)),
 		},
 	}
 
@@ -305,15 +304,15 @@ var (
 		Name:     "rewrite",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("rewrite"),
+			Exact: new("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
 			Host: &HTTPHostModifier{
-				Name: ptr.To("rewrite.example.com"),
+				Name: new("rewrite.example.com"),
 			},
 			Path: &ExtendedHTTPPathModifier{
 				HTTPPathModifier: HTTPPathModifier{
-					FullReplace: ptr.To("/rewrite"),
+					FullReplace: new("/rewrite"),
 				},
 			},
 		},
@@ -323,16 +322,16 @@ var (
 		Name:     "rewrite",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("rewrite"),
+			Exact: new("rewrite"),
 		},
 		URLRewrite: &URLRewrite{
 			Host: &HTTPHostModifier{
-				Name: ptr.To("rewrite.example.com"),
+				Name: new("rewrite.example.com"),
 			},
 			Path: &ExtendedHTTPPathModifier{
 				HTTPPathModifier: HTTPPathModifier{
-					FullReplace:        ptr.To("/rewrite"),
-					PrefixMatchReplace: ptr.To("/rewrite"),
+					FullReplace:        new("/rewrite"),
+					PrefixMatchReplace: new("/rewrite"),
 				},
 			},
 		},
@@ -342,7 +341,7 @@ var (
 		Name:     "addheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("addheader"),
+			Exact: new("addheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -366,7 +365,7 @@ var (
 		Name:     "remheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("remheader"),
+			Exact: new("remheader"),
 		},
 		RemoveRequestHeaders: []string{
 			"x-request-header",
@@ -379,7 +378,7 @@ var (
 		Name:     "duplicateheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("duplicateheader"),
+			Exact: new("duplicateheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -404,7 +403,7 @@ var (
 		Name:     "addemptyheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("addemptyheader"),
+			Exact: new("addemptyheader"),
 		},
 		AddRequestHeaders: []AddHeader{
 			{
@@ -419,7 +418,7 @@ var (
 		Name:     "addheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("addheader"),
+			Exact: new("addheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -443,7 +442,7 @@ var (
 		Name:     "remheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("remheader"),
+			Exact: new("remheader"),
 		},
 		RemoveResponseHeaders: []string{
 			"x-request-header",
@@ -456,7 +455,7 @@ var (
 		Name:     "duplicateheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("duplicateheader"),
+			Exact: new("duplicateheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -481,7 +480,7 @@ var (
 		Name:     "addemptyheader",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("addemptyheader"),
+			Exact: new("addemptyheader"),
 		},
 		AddResponseHeaders: []AddHeader{
 			{
@@ -496,7 +495,7 @@ var (
 		Name:     "jwtauthen",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("jwtauthen"),
+			Exact: new("jwtauthen"),
 		},
 		Security: &SecurityFeatures{
 			JWT: &JWT{
@@ -515,7 +514,7 @@ var (
 		Name:     "mirrorfilter",
 		Hostname: "*",
 		PathMatch: &StringMatch{
-			Exact: ptr.To("mirrorfilter"),
+			Exact: new("mirrorfilter"),
 		},
 		Mirrors: []*MirrorPolicy{
 			{
@@ -811,7 +810,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: HTTPRoute{
 				Hostname: "*",
 				PathMatch: &StringMatch{
-					Exact: ptr.To("example"),
+					Exact: new("example"),
 				},
 				Destination: &happyRouteDestination,
 			},
@@ -822,7 +821,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: HTTPRoute{
 				Name: "invalid hostname",
 				PathMatch: &StringMatch{
-					Exact: ptr.To("example"),
+					Exact: new("example"),
 				},
 				Destination: &happyRouteDestination,
 			},
@@ -842,7 +841,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name: "empty name and invalid match",
 			input: HTTPRoute{
 				Hostname:      "*",
-				HeaderMatches: []*StringMatch{ptr.To(StringMatch{})},
+				HeaderMatches: []*StringMatch{new(StringMatch{})},
 				Destination:   &happyRouteDestination,
 			},
 			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
@@ -1022,7 +1021,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType: ptr.To(FQDN),
+						AddressType: new(FQDN),
 					},
 					{
 						Endpoints: []*DestinationEndpoint{
@@ -1031,7 +1030,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType: ptr.To(IP),
+						AddressType: new(IP),
 					},
 				},
 			},
@@ -1049,9 +1048,9 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType: ptr.To(FQDN),
+						AddressType: new(FQDN),
 						PreferLocal: &PreferLocalZone{
-							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: new(uint32(1))},
 						},
 					},
 					{
@@ -1061,7 +1060,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8082,
 							},
 						},
-						AddressType: ptr.To(FQDN),
+						AddressType: new(FQDN),
 					},
 				},
 			},
@@ -1079,9 +1078,9 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType: ptr.To(FQDN),
+						AddressType: new(FQDN),
 						PreferLocal: &PreferLocalZone{
-							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: ptr.To[uint32](1)},
+							Force: &ForceLocalZone{MinEndpointsInZoneThreshold: new(uint32(1))},
 						},
 					},
 				},
@@ -1100,7 +1099,7 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 								Port: 8080,
 							},
 						},
-						AddressType: ptr.To(FQDN),
+						AddressType: new(FQDN),
 						Filters:     &DestinationFilters{},
 					},
 				},
@@ -1336,7 +1335,7 @@ func TestValidateStringMatch(t *testing.T) {
 		{
 			name: "happy exact",
 			input: StringMatch{
-				Exact: ptr.To("example"),
+				Exact: new("example"),
 			},
 			want: nil,
 		},
@@ -1356,9 +1355,9 @@ func TestValidateStringMatch(t *testing.T) {
 		{
 			name: "multiple fields set",
 			input: StringMatch{
-				Exact:  ptr.To("example"),
+				Exact:  new("example"),
 				Name:   "example",
-				Prefix: ptr.To("example"),
+				Prefix: new("example"),
 			},
 			want: ErrStringMatchConditionInvalid,
 		},
@@ -1367,7 +1366,7 @@ func TestValidateStringMatch(t *testing.T) {
 			input: StringMatch{
 				Distinct: true,
 				Name:     "example",
-				Invert:   ptr.To(true),
+				Invert:   new(true),
 			},
 			want: ErrStringMatchInvertDistinctInvalid,
 		},
@@ -1400,7 +1399,7 @@ func TestValidateLoadBalancer(t *testing.T) {
 			name: "consistent hash with source IP hash policy",
 			input: LoadBalancer{
 				ConsistentHash: &ConsistentHash{
-					SourceIP: ptr.To(true),
+					SourceIP: new(true),
 				},
 			},
 			want: nil,
@@ -1565,15 +1564,15 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Duration(0)),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				}, &OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckTimeoutInvalid,
 		},
@@ -1583,15 +1582,15 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Duration(3)),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				}, &OutlierDetection{},
-				ptr.To[uint32](200),
+				new(uint32(200)),
 			},
 			want: ErrPanicThresholdInvalid,
 		},
@@ -1601,17 +1600,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Duration(0)),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodGet),
+						Method:           new(http.MethodGet),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckIntervalInvalid,
 		},
@@ -1621,18 +1620,18 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					InitialJitter:      ptr.To(gwapiv1.Duration("-1s")),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					InitialJitter:      new(gwapiv1.Duration("-1s")),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodGet),
+						Method:           new(http.MethodGet),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckInitialJitterInvalid,
 		},
@@ -1642,17 +1641,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](0),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(0)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodPatch),
+						Method:           new(http.MethodPatch),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckUnhealthyThresholdInvalid,
 		},
@@ -1662,17 +1661,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](0),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(0)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodPost),
+						Method:           new(http.MethodPost),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
@@ -1682,16 +1681,16 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodPut),
+						Method:           new(http.MethodPut),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHCHTTPHostInvalid,
 		},
@@ -1701,17 +1700,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To[uint32](3),
-					HealthyThreshold:   ptr.To[uint32](3),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "",
-						Method:           ptr.To(http.MethodPut),
+						Method:           new(http.MethodPut),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHCHTTPPathInvalid,
 		},
@@ -1721,17 +1720,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodConnect),
+						Method:           new(http.MethodConnect),
 						ExpectedStatuses: []HTTPStatus{200, 400},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHCHTTPMethodInvalid,
 		},
@@ -1741,17 +1740,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodDelete),
+						Method:           new(http.MethodDelete),
 						ExpectedStatuses: []HTTPStatus{},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHCHTTPExpectedStatusesInvalid,
 		},
@@ -1761,17 +1760,17 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodHead),
+						Method:           new(http.MethodHead),
 						ExpectedStatuses: []HTTPStatus{100, 600},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHTTPStatusInvalid,
 		},
@@ -1781,18 +1780,18 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:              "*",
 						Path:              "/healthz",
-						Method:            ptr.To(http.MethodHead),
+						Method:            new(http.MethodHead),
 						ExpectedStatuses:  []HTTPStatus{200},
 						RetriableStatuses: []HTTPStatus{503, 600},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHTTPStatusInvalid,
 		},
@@ -1802,18 +1801,18 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:              "*",
 						Path:              "/healthz",
-						Method:            ptr.To(http.MethodGet),
+						Method:            new(http.MethodGet),
 						ExpectedStatuses:  []HTTPStatus{200},
 						RetriableStatuses: []HTTPStatus{503, 429},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: nil,
 		},
@@ -1823,21 +1822,21 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					HTTP: &HTTPHealthChecker{
 						Host:             "*",
 						Path:             "/healthz",
-						Method:           ptr.To(http.MethodOptions),
+						Method:           new(http.MethodOptions),
 						ExpectedStatuses: []HTTPStatus{200, 300},
 						ExpectedResponse: &HealthCheckPayload{
-							Text:   ptr.To("foo"),
+							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1847,20 +1846,20 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					TCP: &TCPHealthChecker{
 						Send: &HealthCheckPayload{
-							Text:   ptr.To("foo"),
+							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},
 						Receive: &HealthCheckPayload{
-							Text: ptr.To("foo"),
+							Text: new("foo"),
 						},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1870,20 +1869,20 @@ func TestValidateHealthCheck(t *testing.T) {
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
 					Interval:           MetaV1DurationPtr(time.Second),
-					UnhealthyThreshold: ptr.To(uint32(3)),
-					HealthyThreshold:   ptr.To(uint32(3)),
+					UnhealthyThreshold: new(uint32(3)),
+					HealthyThreshold:   new(uint32(3)),
 					TCP: &TCPHealthChecker{
 						Send: &HealthCheckPayload{
-							Text: ptr.To("foo"),
+							Text: new("foo"),
 						},
 						Receive: &HealthCheckPayload{
-							Text:   ptr.To("foo"),
+							Text:   new("foo"),
 							Binary: []byte{'f', 'o', 'o'},
 						},
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckPayloadInvalid,
 		},
@@ -1895,7 +1894,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					Interval:         MetaV1DurationPtr(time.Duration(0)),
 					BaseEjectionTime: MetaV1DurationPtr(time.Second),
 				},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrOutlierDetectionIntervalInvalid,
 		},
@@ -1907,7 +1906,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					Interval:         MetaV1DurationPtr(time.Second),
 					BaseEjectionTime: MetaV1DurationPtr(time.Duration(0)),
 				},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrOutlierDetectionBaseEjectionTimeInvalid,
 		},
@@ -1920,7 +1919,7 @@ func TestValidateHealthCheck(t *testing.T) {
 					},
 				},
 				&OutlierDetection{},
-				ptr.To[uint32](10),
+				new(uint32(10)),
 			},
 			want: ErrHealthCheckOverridesPortInvalid,
 		},
@@ -1948,81 +1947,81 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 			input: JSONPatchOperation{
 				Op: TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
 			},
-			want: ptr.To("a patch operation must specify a path or jsonPath"),
+			want: new("a patch operation must specify a path or jsonPath"),
 		},
 		{
 			name: "replace with from",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("replace")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
 				Value: &apiextensionsv1.JSON{
 					Raw: []byte{},
 				},
-				From: ptr.To("/some/from"),
+				From: new("/some/from"),
 			},
-			want: ptr.To("the replace operation doesn't support a from attribute"),
+			want: new("the replace operation doesn't support a from attribute"),
 		},
 		{
 			name: "add with no value",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("add")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
 			},
-			want: ptr.To("the add operation requires a value"),
+			want: new("the add operation requires a value"),
 		},
 		{
 			name: "remove with from",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
-				From:     ptr.To("/some/from"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
+				From:     new("/some/from"),
 			},
-			want: ptr.To("value and from can't be specified with the remove operation"),
+			want: new("value and from can't be specified with the remove operation"),
 		},
 		{
 			name: "remove with value",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
 				Value: &apiextensionsv1.JSON{
 					Raw: []byte{},
 				},
 			},
-			want: ptr.To("value and from can't be specified with the remove operation"),
+			want: new("value and from can't be specified with the remove operation"),
 		},
 		{
 			name: "move without from",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("move")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
 			},
-			want: ptr.To("the move operation requires a valid from attribute"),
+			want: new("the move operation requires a valid from attribute"),
 		},
 		{
 			name: "copy with value",
 			input: JSONPatchOperation{
 				Op:       TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
-				JSONPath: ptr.To("$.some.json[@?name=='lala'].key"),
-				From:     ptr.To("/some/from"),
+				JSONPath: new("$.some.json[@?name=='lala'].key"),
+				From:     new("/some/from"),
 				Value: &apiextensionsv1.JSON{
 					Raw: []byte{},
 				},
 			},
-			want: ptr.To("the copy operation doesn't support a value attribute"),
+			want: new("the copy operation doesn't support a value attribute"),
 		},
 		{
 			name: "invalid operation",
 			input: JSONPatchOperation{
 				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("invalid")),
-				Path: ptr.To("/some/path"),
+				Path: new("/some/path"),
 			},
-			want: ptr.To("unsupported JSONPatch operation"),
+			want: new("unsupported JSONPatch operation"),
 		},
 		{
 			name: "valid test operation",
 			input: JSONPatchOperation{
 				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("test")),
-				Path: ptr.To("/some/path"),
+				Path: new("/some/path"),
 				Value: &apiextensionsv1.JSON{
 					Raw: []byte{},
 				},
@@ -2032,15 +2031,15 @@ func TestJSONPatchOperationValidation(t *testing.T) {
 			name: "valid remove operation",
 			input: JSONPatchOperation{
 				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("remove")),
-				Path: ptr.To("/some/path"),
+				Path: new("/some/path"),
 			},
 		},
 		{
 			name: "valid copy operation",
 			input: JSONPatchOperation{
 				Op:   TranslateJSONPatchOp(egv1a1.JSONPatchOperationType("copy")),
-				Path: ptr.To("/some/path"),
-				From: ptr.To("/some/other/path"),
+				Path: new("/some/path"),
+				From: new("/some/other/path"),
 			},
 		},
 	}
