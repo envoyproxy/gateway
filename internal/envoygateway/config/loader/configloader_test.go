@@ -95,14 +95,14 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 
 	var changed int32
 	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
-		c := atomic.AddInt32(&changed, 1)
-		// Only log if the hook context is still active to avoid panic
+		// Check if the hook context is canceled before incrementing
 		select {
 		case <-hookCtx.Done():
 			return nil
 		default:
-			t.Logf("config changed %d times", c)
 		}
+		c := atomic.AddInt32(&changed, 1)
+		t.Logf("config changed %d times", c)
 		if c > 1 {
 			resultChannel <- testResult{changed: c, extMgr: cfg.EnvoyGateway.ExtensionManager}
 			cancel()
