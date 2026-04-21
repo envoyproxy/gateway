@@ -78,7 +78,7 @@ secrets:
     metadata:
       name: sds-client-cert-default
       namespace: envoy-gateway-system
-    type: gateway.envoyproxy.io/sds-ref
+    type: gateway.envoyproxy.io/sds
     data:
       # /var/run/secrets/workload-spiffe-uds/socket
       url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
@@ -88,7 +88,7 @@ secrets:
     metadata:
       name: sds-client-cert-rootca
       namespace: default
-    type: gateway.envoyproxy.io/sds-ref
+    type: gateway.envoyproxy.io/sds
     data:
       # /var/run/secrets/workload-spiffe-uds/socket
       url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==

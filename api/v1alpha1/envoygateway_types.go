@@ -312,7 +312,7 @@ type ExtensionAPISettings struct {
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
 	DisableLua bool `json:"disableLua"`
-	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds-ref).
+	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
 	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
 
