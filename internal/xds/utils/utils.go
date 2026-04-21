@@ -15,7 +15,7 @@ import (
 )
 
 func MarshalResourcesToJSON(resources []types.Resource) ([]byte, error) {
-	msgs := make([]proto.Message, 0)
+	msgs := make([]proto.Message, 0, len(resources))
 	for _, resource := range resources {
 		msgs = append(msgs, resource.(proto.Message))
 	}

@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -123,13 +122,13 @@ func Test_translateRateLimitCost(t *testing.T) {
 	}{
 		{
 			name: "number",
-			cost: &egv1a1.RateLimitCostSpecifier{Number: ptr.To[uint64](1)},
-			exp:  &ir.RateLimitCost{Number: ptr.To[uint64](1)},
+			cost: &egv1a1.RateLimitCostSpecifier{Number: new(uint64(1))},
+			exp:  &ir.RateLimitCost{Number: new(uint64(1))},
 		},
 		{
 			name: "metadata",
 			cost: &egv1a1.RateLimitCostSpecifier{Metadata: &egv1a1.RateLimitCostMetadata{Namespace: "something.com", Key: "name"}},
-			exp:  &ir.RateLimitCost{Format: ptr.To(`%DYNAMIC_METADATA(something.com:name)%`)},
+			exp:  &ir.RateLimitCost{Format: new(`%DYNAMIC_METADATA(something.com:name)%`)},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -231,7 +230,7 @@ func TestBuildTrafficFeaturesRejectsRequestBufferWithHTTPUpgrade(t *testing.T) {
 		}
 		routePolicy := &egv1a1.BackendTrafficPolicy{
 			Spec: egv1a1.BackendTrafficPolicySpec{
-				MergeType: ptr.To(egv1a1.StrategicMerge),
+				MergeType: new(egv1a1.StrategicMerge),
 				HTTPUpgrade: []*egv1a1.ProtocolUpgradeConfig{
 					{Type: "CONNECT"},
 				},
@@ -264,63 +263,63 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			name: "basic passive health check",
 			policy: egv1a1.HealthCheck{
 				Passive: &egv1a1.PassiveHealthCheck{
-					Interval:             ptr.To(gwapiv1.Duration("10s")),
-					BaseEjectionTime:     ptr.To(gwapiv1.Duration("30s")),
-					MaxEjectionPercent:   ptr.To[int32](10),
-					Consecutive5xxErrors: ptr.To[uint32](5),
+					Interval:             new(gwapiv1.Duration("10s")),
+					BaseEjectionTime:     new(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:   new(int32(10)),
+					Consecutive5xxErrors: new(uint32(5)),
 				},
 			},
 			expected: &ir.OutlierDetection{
 				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:   ptr.To[int32](10),
-				Consecutive5xxErrors: ptr.To[uint32](5),
+				MaxEjectionPercent:   new(int32(10)),
+				Consecutive5xxErrors: new(uint32(5)),
 			},
 		},
 		{
 			name: "passive health check with failure percentage threshold",
 			policy: egv1a1.HealthCheck{
 				Passive: &egv1a1.PassiveHealthCheck{
-					Interval:                   ptr.To(gwapiv1.Duration("10s")),
-					BaseEjectionTime:           ptr.To(gwapiv1.Duration("30s")),
-					MaxEjectionPercent:         ptr.To[int32](10),
-					Consecutive5xxErrors:       ptr.To[uint32](5),
-					FailurePercentageThreshold: ptr.To[uint32](90),
+					Interval:                   new(gwapiv1.Duration("10s")),
+					BaseEjectionTime:           new(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:         new(int32(10)),
+					Consecutive5xxErrors:       new(uint32(5)),
+					FailurePercentageThreshold: new(uint32(90)),
 				},
 			},
 			expected: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:         ptr.To[int32](10),
-				Consecutive5xxErrors:       ptr.To[uint32](5),
-				FailurePercentageThreshold: ptr.To[uint32](90),
+				MaxEjectionPercent:         new(int32(10)),
+				Consecutive5xxErrors:       new(uint32(5)),
+				FailurePercentageThreshold: new(uint32(90)),
 			},
 		},
 		{
 			name: "passive health check with all fields",
 			policy: egv1a1.HealthCheck{
 				Passive: &egv1a1.PassiveHealthCheck{
-					SplitExternalLocalOriginErrors: ptr.To(true),
-					Interval:                       ptr.To(gwapiv1.Duration("10s")),
-					ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
-					ConsecutiveGatewayErrors:       ptr.To[uint32](2),
-					Consecutive5xxErrors:           ptr.To[uint32](5),
-					BaseEjectionTime:               ptr.To(gwapiv1.Duration("30s")),
-					MaxEjectionPercent:             ptr.To[int32](10),
-					FailurePercentageThreshold:     ptr.To[uint32](85),
-					AlwaysEjectOneEndpoint:         ptr.To(true),
+					SplitExternalLocalOriginErrors: new(true),
+					Interval:                       new(gwapiv1.Duration("10s")),
+					ConsecutiveLocalOriginFailures: new(uint32(3)),
+					ConsecutiveGatewayErrors:       new(uint32(2)),
+					Consecutive5xxErrors:           new(uint32(5)),
+					BaseEjectionTime:               new(gwapiv1.Duration("30s")),
+					MaxEjectionPercent:             new(int32(10)),
+					FailurePercentageThreshold:     new(uint32(85)),
+					AlwaysEjectOneEndpoint:         new(true),
 				},
 			},
 			expected: &ir.OutlierDetection{
-				SplitExternalLocalOriginErrors: ptr.To(true),
+				SplitExternalLocalOriginErrors: new(true),
 				Interval:                       ir.MetaV1DurationPtr(10 * time.Second),
-				ConsecutiveLocalOriginFailures: ptr.To[uint32](3),
-				ConsecutiveGatewayErrors:       ptr.To[uint32](2),
-				Consecutive5xxErrors:           ptr.To[uint32](5),
+				ConsecutiveLocalOriginFailures: new(uint32(3)),
+				ConsecutiveGatewayErrors:       new(uint32(2)),
+				Consecutive5xxErrors:           new(uint32(5)),
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:             ptr.To[int32](10),
-				FailurePercentageThreshold:     ptr.To[uint32](85),
-				AlwaysEjectOneEndpoint:         ptr.To(true),
+				MaxEjectionPercent:             new(int32(10)),
+				FailurePercentageThreshold:     new(uint32(85)),
+				AlwaysEjectOneEndpoint:         new(true),
 			},
 		},
 	}
@@ -368,14 +367,14 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("100")),
+					MinContentLength: new(resource.MustParse("100")),
 				},
 			},
 			expected: []*ir.Compression{
 				{
 					Type:             egv1a1.GzipCompressorType,
 					ChooseFirst:      true,
-					MinContentLength: ptr.To[uint32](100),
+					MinContentLength: new(uint32(100)),
 				},
 			},
 		},
@@ -385,14 +384,14 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("200")),
+					MinContentLength: new(resource.MustParse("200")),
 				},
 			},
 			expected: []*ir.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					ChooseFirst:      true,
-					MinContentLength: ptr.To[uint32](200),
+					MinContentLength: new(uint32(200)),
 				},
 			},
 		},
@@ -402,24 +401,24 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("50")),
+					MinContentLength: new(resource.MustParse("50")),
 				},
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("100")),
+					MinContentLength: new(resource.MustParse("100")),
 				},
 			},
 			expected: []*ir.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					ChooseFirst:      true,
-					MinContentLength: ptr.To[uint32](50),
+					MinContentLength: new(uint32(50)),
 				},
 				{
 					Type:             egv1a1.GzipCompressorType,
 					ChooseFirst:      false,
-					MinContentLength: ptr.To[uint32](100),
+					MinContentLength: new(uint32(100)),
 				},
 			},
 		},
@@ -429,21 +428,21 @@ func TestBuildCompression(t *testing.T) {
 				{
 					Type:             egv1a1.GzipCompressorType,
 					Gzip:             &egv1a1.GzipCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("100")),
+					MinContentLength: new(resource.MustParse("100")),
 				},
 			},
 			compressor: []*egv1a1.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					Brotli:           &egv1a1.BrotliCompressor{},
-					MinContentLength: ptr.To(resource.MustParse("200")),
+					MinContentLength: new(resource.MustParse("200")),
 				},
 			},
 			expected: []*ir.Compression{
 				{
 					Type:             egv1a1.BrotliCompressorType,
 					ChooseFirst:      true,
-					MinContentLength: ptr.To[uint32](200),
+					MinContentLength: new(uint32(200)),
 				},
 			},
 		},
@@ -472,9 +471,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "user",
-								Value: ptr.To("alice"),
+								Value: new("alice"),
 							},
 						},
 					},
@@ -489,7 +488,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "user",
-							Exact:  ptr.To("alice"),
+							Exact:  new("alice"),
 							Invert: nil,
 						},
 					},
@@ -533,15 +532,15 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 						Headers: []egv1a1.HeaderMatch{
 							{
 								Name:  "x-user-id",
-								Type:  ptr.To(egv1a1.HeaderMatchExact),
-								Value: ptr.To("alice"),
+								Type:  new(egv1a1.HeaderMatchExact),
+								Value: new("alice"),
 							},
 						},
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "user",
-								Value: ptr.To("alice"),
+								Value: new("alice"),
 							},
 						},
 					},
@@ -556,7 +555,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "user",
-							Exact:  ptr.To("alice"),
+							Exact:  new("alice"),
 							Invert: nil,
 						},
 					},
@@ -568,7 +567,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				HeaderMatches: []*ir.StringMatch{
 					{
 						Name:   "x-user-id",
-						Exact:  ptr.To("alice"),
+						Exact:  new("alice"),
 						Invert: nil,
 					},
 				},
@@ -583,14 +582,14 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 				ClientSelectors: []egv1a1.RateLimitSelectCondition{
 					{
 						SourceCIDR: &egv1a1.SourceMatch{
-							Type:  ptr.To(egv1a1.SourceMatchDistinct),
+							Type:  new(egv1a1.SourceMatchDistinct),
 							Value: "192.168.1.0/24",
 						},
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "user",
-								Value: ptr.To("alice"),
+								Value: new("alice"),
 							},
 						},
 					},
@@ -605,7 +604,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "user",
-							Exact:  ptr.To("alice"),
+							Exact:  new("alice"),
 							Invert: nil,
 						},
 					},
@@ -632,7 +631,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						SourceCIDR: &egv1a1.SourceMatch{
 							Value:  "192.168.0.0/24",
-							Invert: ptr.To(true),
+							Invert: new(true),
 						},
 					},
 				},
@@ -665,9 +664,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Type:  new(egv1a1.QueryParamMatchRegularExpression),
 								Name:  "user",
-								Value: ptr.To("alice.*"),
+								Value: new("alice.*"),
 							},
 						},
 					},
@@ -682,7 +681,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:      "user",
-							SafeRegex: ptr.To("alice.*"),
+							SafeRegex: new("alice.*"),
 							Invert:    nil,
 						},
 					},
@@ -704,7 +703,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type: ptr.To(egv1a1.QueryParamMatchDistinct),
+								Type: new(egv1a1.QueryParamMatchDistinct),
 								Name: "user",
 							},
 						},
@@ -741,10 +740,10 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:   ptr.To(egv1a1.QueryParamMatchExact),
+								Type:   new(egv1a1.QueryParamMatchExact),
 								Name:   "user",
-								Value:  ptr.To("alice"),
-								Invert: ptr.To(true),
+								Value:  new("alice"),
+								Invert: new(true),
 							},
 						},
 					},
@@ -759,8 +758,8 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "user",
-							Exact:  ptr.To("alice"),
-							Invert: ptr.To(true),
+							Exact:  new("alice"),
+							Invert: new(true),
 						},
 					},
 				},
@@ -781,9 +780,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Type:  new(egv1a1.QueryParamMatchRegularExpression),
 								Name:  "user",
-								Value: ptr.To("[invalid"),
+								Value: new("[invalid"),
 							},
 						},
 					},
@@ -804,9 +803,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:   ptr.To(egv1a1.QueryParamMatchDistinct),
+								Type:   new(egv1a1.QueryParamMatchDistinct),
 								Name:   "user",
-								Invert: ptr.To(true),
+								Invert: new(true),
 							},
 						},
 					},
@@ -827,9 +826,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "user",
-								Value: ptr.To(""),
+								Value: new(""),
 							},
 						},
 					},
@@ -850,9 +849,9 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchRegularExpression),
+								Type:  new(egv1a1.QueryParamMatchRegularExpression),
 								Name:  "user",
-								Value: ptr.To(""),
+								Value: new(""),
 							},
 						},
 					},
@@ -873,14 +872,14 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						QueryParams: []egv1a1.QueryParamMatch{
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "user",
-								Value: ptr.To("alice"),
+								Value: new("alice"),
 							},
 							{
-								Type:  ptr.To(egv1a1.QueryParamMatchExact),
+								Type:  new(egv1a1.QueryParamMatchExact),
 								Name:  "role",
-								Value: ptr.To("admin"),
+								Value: new("admin"),
 							},
 						},
 					},
@@ -895,14 +894,14 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "user",
-							Exact:  ptr.To("alice"),
+							Exact:  new("alice"),
 							Invert: nil,
 						},
 					},
 					{
 						StringMatch: ir.StringMatch{
 							Name:   "role",
-							Exact:  ptr.To("admin"),
+							Exact:  new("admin"),
 							Invert: nil,
 						},
 					},
@@ -942,7 +941,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := buildRateLimitRule(tc.rule)
+			got, err := buildRateLimitRule(&tc.rule)
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorMsg)
@@ -1109,7 +1108,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("Gateway"),
 									Name:  gwapiv1.ObjectName("gateway-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("http")),
+								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
 						RoutingType: &serviceRouting,
@@ -1121,7 +1120,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
 			gatewayNN:    gatewayNN,
-			listenerName: ptr.To(gwapiv1.SectionName("http")),
+			listenerName: new(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
 		{
@@ -1158,7 +1157,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("Gateway"),
 									Name:  gwapiv1.ObjectName("gateway-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("https")),
+								SectionName: new(gwapiv1.SectionName("https")),
 							},
 						},
 						RoutingType: &endpointRouting,
@@ -1170,7 +1169,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
 			gatewayNN:    gatewayNN,
-			listenerName: ptr.To(gwapiv1.SectionName("http")),
+			listenerName: new(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
 		{
@@ -1321,7 +1320,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("Gateway"),
 									Name:  gwapiv1.ObjectName("gateway-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("http")),
+								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
 						RoutingType: &endpointRouting,
@@ -1351,7 +1350,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:    "HTTPRoute",
 			routeNN:      routeNN,
 			gatewayNN:    gatewayNN,
-			listenerName: ptr.To(gwapiv1.SectionName("http")),
+			listenerName: new(gwapiv1.SectionName("http")),
 			expected:     &serviceRouting,
 		},
 		{
@@ -1388,7 +1387,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("HTTPRoute"),
 									Name:  gwapiv1.ObjectName("route-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+								SectionName: new(gwapiv1.SectionName("rule-0")),
 							},
 						},
 						RoutingType: &serviceRouting,
@@ -1400,7 +1399,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
 			gatewayNN:     gatewayNN,
-			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			routeRuleName: new(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
 		{
@@ -1419,7 +1418,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("HTTPRoute"),
 									Name:  gwapiv1.ObjectName("route-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("rule-1")),
+								SectionName: new(gwapiv1.SectionName("rule-1")),
 							},
 						},
 						RoutingType: &endpointRouting,
@@ -1449,7 +1448,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
 			gatewayNN:     gatewayNN,
-			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			routeRuleName: new(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
 		{
@@ -1468,7 +1467,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("HTTPRoute"),
 									Name:  gwapiv1.ObjectName("route-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+								SectionName: new(gwapiv1.SectionName("rule-0")),
 							},
 						},
 						RoutingType: &serviceRouting,
@@ -1687,7 +1686,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("Gateway"),
 									Name:  gwapiv1.ObjectName("gateway-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("http")),
+								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
 						RoutingType: &endpointRouting,
@@ -1724,7 +1723,7 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("HTTPRoute"),
 									Name:  gwapiv1.ObjectName("route-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+								SectionName: new(gwapiv1.SectionName("rule-0")),
 							},
 						},
 						RoutingType: &serviceRouting,
@@ -1736,8 +1735,8 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 			routeKind:     "HTTPRoute",
 			routeNN:       routeNN,
 			gatewayNN:     gatewayNN,
-			listenerName:  ptr.To(gwapiv1.SectionName("http")),
-			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			listenerName:  new(gwapiv1.SectionName("http")),
+			routeRuleName: new(gwapiv1.SectionName("rule-0")),
 			expected:      &serviceRouting,
 		},
 	}

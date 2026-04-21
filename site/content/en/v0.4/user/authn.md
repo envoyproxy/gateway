@@ -89,7 +89,7 @@ kubectl delete authenticationfilter/jwt-example
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
+Checkout the [Developer Guide](/community/develop/) to get involved in the project.
 
 [jwt]: https://tools.ietf.org/html/rfc7519
 [AuthenticationFilter]: ../api/config_types#authenticationfilter

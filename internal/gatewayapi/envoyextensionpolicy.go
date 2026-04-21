@@ -103,6 +103,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -112,7 +114,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		routeMatches := getPolicySelectorTargetMatches(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
@@ -130,7 +132,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -142,7 +144,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting xRoutes
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
 		for _, currTarget := range targetRefs {
@@ -150,7 +152,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -162,7 +164,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		gatewayMatches := getPolicySelectorTargetMatches(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
@@ -180,7 +182,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -192,7 +194,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
 		for _, currTarget := range targetRefs {
@@ -200,7 +202,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -608,7 +610,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						}
 						if failRoute {
 							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+								StatusCode: new(uint32(500)),
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
@@ -711,7 +713,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			}
 			if failRoute {
 				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
@@ -905,7 +907,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Request != nil {
 			extProcIR.RequestHeaderProcessing = true
 			if extProc.ProcessingMode.Request.Body != nil {
-				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
+				extProcIR.RequestBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
 
 			if extProc.ProcessingMode.Request.Attributes != nil {
@@ -916,7 +918,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Response != nil {
 			extProcIR.ResponseHeaderProcessing = true
 			if extProc.ProcessingMode.Response.Body != nil {
-				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+				extProcIR.ResponseBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
 			}
 
 			if extProc.ProcessingMode.Response.Attributes != nil {
@@ -1284,4 +1286,16 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
+	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

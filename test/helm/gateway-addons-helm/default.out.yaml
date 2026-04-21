@@ -46,8 +46,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -313,8 +313,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -333,14 +333,14 @@ data:
     - job_name: kubernetes-api-servers
       bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: endpointslice
       relabel_configs:
       - action: keep
         regex: default;kubernetes;https
         source_labels:
         - __meta_kubernetes_namespace
         - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
+        - __meta_kubernetes_endpointslice_port_name
       scheme: https
       tls_config:
         ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -487,7 +487,7 @@ data:
     - job_name: kubernetes-service-endpoints
       honor_labels: true
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: endpointslice
       relabel_configs:
       - action: keep
         regex: true
@@ -534,7 +534,7 @@ data:
     - job_name: kubernetes-service-endpoints-slow
       honor_labels: true
       kubernetes_sd_configs:
-      - role: endpoints
+      - role: endpointslice
       relabel_configs:
       - action: keep
         regex: true
@@ -663,6 +663,7 @@ data:
                   endpoint: 0.0.0.0:6831
                 thrift_http:
                   endpoint: 0.0.0.0:14268
+            opencensus: null
             otlp:
               protocols:
                 grpc:
@@ -10000,8 +10001,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 rules:
@@ -10107,8 +10108,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
 subjects:
@@ -10284,8 +10285,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10583,8 +10584,8 @@ metadata:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: v3.11.0
-    helm.sh/chart: prometheus-28.16.0
+    app.kubernetes.io/version: v3.11.2
+    helm.sh/chart: prometheus-29.2.1
     app.kubernetes.io/part-of: prometheus
   name: prometheus
   namespace: monitoring
@@ -10605,8 +10606,8 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: prometheus
         app.kubernetes.io/instance: gateway-addons-helm
-        app.kubernetes.io/version: v3.11.0
-        helm.sh/chart: prometheus-28.16.0
+        app.kubernetes.io/version: v3.11.2
+        helm.sh/chart: prometheus-29.2.1
         app.kubernetes.io/part-of: prometheus
     spec:
       enableServiceLinks: true
@@ -10641,7 +10642,7 @@ spec:
               readOnly: true
 
         - name: prometheus-server
-          image: "prom/prometheus:v3.11.0"
+          image: "prom/prometheus:v3.11.2"
           imagePullPolicy: "IfNotPresent"
           args:
             - --storage.tsdb.retention.time=15d
@@ -10881,7 +10882,7 @@ spec:
         app.kubernetes.io/name: tempo
         app.kubernetes.io/instance: gateway-addons-helm
       annotations:
-        checksum/config: 0898f7ca87563d700c35d7ea1824cd042cf93fb2f05e254d12a854aa97a5c5e5
+        checksum/config: 6adb3b32cdf74ea13067dd7baba57991ad7df001873357792a143dc450fd9dd5
     spec:
       serviceAccountName: tempo
       automountServiceAccountToken: true

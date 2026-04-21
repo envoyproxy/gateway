@@ -465,8 +465,7 @@ func TestException(t *testing.T) {
 }
 
 func TestUnexpectedFrag(t *testing.T) {
-	expr := jp.Expr{}
-	expr = append(expr, jp.Union{})
+	expr := jp.Expr{jp.Union{}}
 
 	_, err := expToPointer(expr)
 	if err == nil {

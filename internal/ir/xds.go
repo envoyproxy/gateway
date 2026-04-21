@@ -1469,6 +1469,11 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway route metadata to the external
+	// authorization service as route metadata context.
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
@@ -2493,6 +2498,12 @@ type LocalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// DefaultXRateLimitOption controls whether X-RateLimit response headers are emitted for
+	// the default bucket (requests not matching any rule).
+	// When nil, the default bucket inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	DefaultXRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"defaultXRateLimitOption,omitempty" yaml:"defaultXRateLimitOption,omitempty"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
@@ -2526,6 +2537,10 @@ type RateLimitRule struct {
 	// but the result is always success regardless of whether the limit was exceeded.
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+	// XRateLimitOption controls whether X-RateLimit response headers are emitted for this rule.
+	// When nil, the rule inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	XRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"xRateLimitOption,omitempty" yaml:"xRateLimitOption,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
