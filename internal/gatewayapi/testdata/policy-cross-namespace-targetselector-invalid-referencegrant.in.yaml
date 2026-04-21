@@ -2,7 +2,7 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    namespace: policy-target-a
+    namespace: policy-target-ns
     name: target-gateway
     labels:
       policy: selected
@@ -16,7 +16,7 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    namespace: policy-target-a
+    namespace: policy-target-ns
     name: target-route
   spec:
     parentRefs:
@@ -48,12 +48,12 @@ namespaces:
 - apiVersion: v1
   kind: Namespace
   metadata:
-    name: policy-target-a
+    name: policy-target-ns
 services:
 - apiVersion: v1
   kind: Service
   metadata:
-    namespace: policy-target-a
+    namespace: policy-target-ns
     name: target-service
   spec:
     ports:
@@ -65,7 +65,7 @@ endpointSlices:
   kind: EndpointSlice
   metadata:
     name: endpointslice-target-service
-    namespace: policy-target-a
+    namespace: policy-target-ns
     labels:
       kubernetes.io/service-name: target-service
   addressType: IPv4
