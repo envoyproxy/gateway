@@ -129,7 +129,7 @@ backendTrafficPolicies:
               type: PathPrefix
               value: "/user"
           limit:
-            requests: 10
+            requests: 4294967295
             unit: Hour
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
