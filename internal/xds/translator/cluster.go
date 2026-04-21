@@ -661,7 +661,7 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	}
 
 	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
-		od.MaxEjectionPercent = wrapperspb.UInt32(uint32(*outlierDetection.MaxEjectionPercent))
+		od.MaxEjectionPercent = wrapperspb.UInt32(*outlierDetection.MaxEjectionPercent)
 	}
 
 	if outlierDetection.ConsecutiveLocalOriginFailures != nil {
