@@ -119,7 +119,7 @@ backendTrafficPolicies:
               type: PathPrefix
               value: /user
           limit:
-            requests: 10
+            requests: 4294967295
             unit: Hour
       type: Global
     targetRef:
@@ -583,7 +583,7 @@ xdsIR:
                   invert: true
                   name: x-org-id
                 limit:
-                  requests: 10
+                  requests: 4294967295
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
                 pathMatch:
@@ -653,7 +653,7 @@ xdsIR:
                   invert: true
                   name: x-org-id
                 limit:
-                  requests: 10
+                  requests: 4294967295
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
                 pathMatch:
@@ -723,7 +723,7 @@ xdsIR:
                   invert: true
                   name: x-org-id
                 limit:
-                  requests: 10
+                  requests: 4294967295
                   unit: Hour
                 name: envoy-gateway/policy-for-gateway/rule/0
                 pathMatch:

@@ -5153,7 +5153,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `requests` | _integer_ |  true  |  |  |
+| `requests` | _integer_ |  true  |  | Requests is the number of requests (or cost units, when used with<br />cost-based rate limiting) allowed per Unit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
 
 

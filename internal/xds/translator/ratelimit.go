@@ -817,7 +817,7 @@ func buildRateLimitServiceDescriptors(route *ir.HTTPRoute) []*rlsconfv3.RateLimi
 
 	for rIdx, rule := range global.Rules {
 		rateLimitPolicy := &rlsconfv3.RateLimitPolicy{
-			RequestsPerUnit: uint32(rule.Limit.Requests),
+			RequestsPerUnit: rule.Limit.Requests,
 			Unit: rlsconfv3.RateLimitUnit(
 				rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 		}

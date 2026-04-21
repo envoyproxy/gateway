@@ -432,7 +432,12 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
-	Requests uint          `json:"requests"`
+	// Requests is the number of requests (or cost units, when used with
+	// cost-based rate limiting) allowed per Unit.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=4294967295
+	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }
 
