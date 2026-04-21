@@ -293,7 +293,8 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 				Namespace: ns,
 			})
 
-			count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, "health_checker_type")
+			// Scope to HC events from this test's route only.
+			count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, `health_checker_type.*http-with-hc-event-log`)
 			require.NoError(t, err, "loki query failed")
 			require.Equal(t, 0, count, "expected no HC events before HC-enabled route is active")
 		})
@@ -319,18 +320,24 @@ var BackendHealthCheckEventLogTest = suite.ConformanceTest{
 			suite.ControllerName, ancestorRef,
 		)
 
+		// The HC event JSON Envoy emits contains both "health_checker_type" and
+		// "cluster_name" (which includes the route name) on the same line.
+		// Matching both ensures we only count HC events from this test's cluster,
+		// not access logs or other lines that might mention the route name.
+		const hcLogMatch = `health_checker_type.*http-with-hc-event-log`
+
 		t.Run("health check events appear in logs", func(t *testing.T) {
 			http.AwaitConvergence(
 				t,
 				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
 				suite.TimeoutConfig.MaxTimeToConsistency,
 				func(_ time.Duration) bool {
-					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, "health_checker_type")
+					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
 					if err != nil {
 						tlog.Logf(t, "loki query error: %v", err)
 						return false
 					}
-					tlog.Logf(t, "loki match %q count=%d", "health_checker_type", count)
+					tlog.Logf(t, "loki match %q count=%d", hcLogMatch, count)
 					return count > 0
 				},
 			)
