@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -115,12 +114,12 @@ func TestCompositeManager_GetTranslationHookConfig(t *testing.T) {
 	t.Run("OR semantics merges all enabled types", func(t *testing.T) {
 		mgr1 := &mockManager{
 			translationConfig: &egv1a1.TranslationConfig{
-				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
+				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
 			},
 		}
 		mgr2 := &mockManager{
 			translationConfig: &egv1a1.TranslationConfig{
-				Route: &egv1a1.RouteTranslationConfig{IncludeAll: ptr.To(true)},
+				Route: &egv1a1.RouteTranslationConfig{IncludeAll: new(true)},
 			},
 		}
 		composite := NewCompositeManager([]namedManager{
@@ -140,16 +139,16 @@ func TestCompositeManager_GetTranslationHookConfig(t *testing.T) {
 	t.Run("OR semantics includes if at least one enables", func(t *testing.T) {
 		mgr1 := &mockManager{
 			translationConfig: &egv1a1.TranslationConfig{
-				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(false)},
-				Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
-				Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(false)},
+				Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: new(false)},
+				Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: new(false)},
 			},
 		}
 		mgr2 := &mockManager{
 			translationConfig: &egv1a1.TranslationConfig{
-				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
-				Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: ptr.To(false)},
-				Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: ptr.To(false)},
+				Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
+				Cluster:  &egv1a1.ClusterTranslationConfig{IncludeAll: new(false)},
+				Secret:   &egv1a1.SecretTranslationConfig{IncludeAll: new(false)},
 			},
 		}
 		composite := NewCompositeManager([]namedManager{
@@ -177,7 +176,7 @@ func TestCompositeManager_GetTranslationHookConfig_MixedNilAndNonNil(t *testing.
 	}
 	mgr2 := &mockManager{
 		translationConfig: &egv1a1.TranslationConfig{
-			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: ptr.To(true)},
+			Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
 		},
 	}
 
