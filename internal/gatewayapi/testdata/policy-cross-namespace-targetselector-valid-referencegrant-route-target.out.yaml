@@ -2,12 +2,18 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    name: selector-gateway
-    namespace: policy-target-ns
+    name: test-gateway
+    namespace: gateway-ns
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
+    - allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              team: blue
+      name: http
       port: 80
       protocol: HTTP
   status:
@@ -41,11 +47,12 @@ httpRoutes:
   metadata:
     labels:
       team: blue
-    name: selector-route
-    namespace: policy-target-ns
+    name: test-route
+    namespace: route-ns
   spec:
     parentRefs:
-    - name: selector-gateway
+    - name: test-gateway
+      namespace: gateway-ns
       sectionName: http
     rules:
     - backendRefs:
@@ -69,13 +76,14 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: selector-gateway
+        name: test-gateway
+        namespace: gateway-ns
         sectionName: http
 infraIR:
-  policy-target-ns/selector-gateway:
+  gateway-ns/test-gateway:
     proxy:
       listeners:
-      - name: policy-target-ns/selector-gateway/http
+      - name: gateway-ns/test-gateway/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -83,12 +91,12 @@ infraIR:
           servicePort: 80
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: selector-gateway
-          gateway.envoyproxy.io/owning-gateway-namespace: policy-target-ns
+          gateway.envoyproxy.io/owning-gateway-name: test-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: gateway-ns
         ownerReference:
           kind: GatewayClass
           name: envoy-gateway-class
-      name: policy-target-ns/selector-gateway
+      name: gateway-ns/test-gateway
       namespace: envoy-gateway-system
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -122,8 +130,8 @@ securityPolicies:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: selector-gateway
-        namespace: policy-target-ns
+        name: test-gateway
+        namespace: gateway-ns
         sectionName: http
       conditions:
       - lastTransitionTime: null
@@ -133,7 +141,7 @@ securityPolicies:
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 xdsIR:
-  policy-target-ns/selector-gateway:
+  gateway-ns/test-gateway:
     accessLog:
       json:
       - path: /dev/stdout
@@ -141,10 +149,10 @@ xdsIR:
       proxyServiceCluster:
         metadata:
           kind: Service
-          name: envoy-policy-target-ns-selector-gateway-e6838076
+          name: envoy-gateway-ns-test-gateway-85a70075
           namespace: envoy-gateway-system
           sectionName: "8080"
-        name: policy-target-ns/selector-gateway
+        name: gateway-ns/test-gateway
         settings:
         - addressType: IP
           endpoints:
@@ -153,10 +161,10 @@ xdsIR:
             zone: zone1
           metadata:
             kind: Service
-            name: envoy-policy-target-ns-selector-gateway-e6838076
+            name: envoy-gateway-ns-test-gateway-85a70075
             namespace: envoy-gateway-system
             sectionName: "8080"
-          name: policy-target-ns/selector-gateway
+          name: gateway-ns/test-gateway
           protocol: TCP
     http:
     - address: 0.0.0.0
@@ -165,10 +173,10 @@ xdsIR:
       - '*'
       metadata:
         kind: Gateway
-        name: selector-gateway
-        namespace: policy-target-ns
+        name: test-gateway
+        namespace: gateway-ns
         sectionName: http
-      name: policy-target-ns/selector-gateway/http
+      name: gateway-ns/test-gateway/http
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
@@ -177,9 +185,9 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: selector-route
-            namespace: policy-target-ns
-          name: httproute/policy-target-ns/selector-route/rule/0
+            name: test-route
+            namespace: route-ns
+          name: httproute/route-ns/test-route/rule/0
           settings:
           - addressType: IP
             endpoints:
@@ -188,18 +196,18 @@ xdsIR:
             metadata:
               kind: Service
               name: backend
-              namespace: policy-target-ns
+              namespace: route-ns
               sectionName: "8080"
-            name: httproute/policy-target-ns/selector-route/rule/0/backend/0
+            name: httproute/route-ns/test-route/rule/0/backend/0
             protocol: HTTP
             weight: 1
         hostname: '*'
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: selector-route
-          namespace: policy-target-ns
-        name: httproute/policy-target-ns/selector-route/rule/0/match/0/*
+          name: test-route
+          namespace: route-ns
+        name: httproute/route-ns/test-route/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
