@@ -1,4 +1,4 @@
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -16,7 +16,7 @@ rateLimits:
         descriptor_value: 192.168.0.10/32
 routeName: first-route
 ---
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
