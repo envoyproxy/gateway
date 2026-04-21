@@ -236,7 +236,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -342,7 +342,7 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -402,7 +402,6 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 }
 
 func resolveEnvoyExtensionPolicyGatewayTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
 	target policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
@@ -464,7 +463,6 @@ func resolveEnvoyExtensionPolicyGatewayTargetRef(
 }
 
 func resolveEnvoyExtensionPolicyRouteTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
 	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {

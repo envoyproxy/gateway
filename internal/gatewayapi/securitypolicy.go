@@ -308,7 +308,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveSecurityPolicyRouteTargetRef(currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -788,7 +788,6 @@ func resolveSecurityPolicyGatewayTargetRef(
 }
 
 func resolveSecurityPolicyRouteTargetRef(
-	policy *egv1a1.SecurityPolicy,
 	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
