@@ -1,0 +1,109 @@
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      logFormat:
+        textFormatSource:
+          inlineString: |
+            [%START_TIME%] %REQ(:METHOD)% req_proc=- resp_proc=-
+      path: /dev/stdout
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      logFormat:
+        jsonFormat:
+          method: '%REQ(:METHOD)%'
+          req_processor_latency_ns: '-'
+          resp_processor_latency_ns: '-'
+      path: /dev/stdout
+  address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              textFormatSource:
+                inlineString: |
+                  [%START_TIME%] %REQ(:METHOD)% req_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:latency_ns)% resp_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:latency_ns)%
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              jsonFormat:
+                method: '%REQ(:METHOD)%'
+                req_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:latency_ns)%'
+                resp_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:latency_ns)%'
+            path: /dev/stdout
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: req-proc.default:9000
+                clusterName: envoyextensionpolicy/default/my-eep/0/req-proc
+              timeout: 10s
+            processingMode:
+              requestBodyMode: BUFFERED
+              requestHeaderMode: SEND
+              requestTrailerMode: SKIP
+              responseHeaderMode: SKIP
+              responseTrailerMode: SKIP
+        - disabled: true
+          name: envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoyGrpc:
+                authority: resp-proc.default:9001
+                clusterName: envoyextensionpolicy/default/my-eep/1/resp-proc
+              timeout: 10s
+            processingMode:
+              requestHeaderMode: SKIP
+              requestTrailerMode: SKIP
+              responseBodyMode: STREAMED
+              responseHeaderMode: SEND
+              responseTrailerMode: SKIP
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: envoy-gateway/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: envoy-gateway/gateway-1/http
+  perConnectionBufferLimitBytes: 32768

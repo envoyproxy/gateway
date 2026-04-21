@@ -617,6 +617,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	return errs
 }
 
+
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
@@ -869,6 +870,10 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+	}
+
+	if extProc.Name != nil {
+		extProcIR.CustomName = *extProc.Name
 	}
 
 	if extProc.MessageTimeout != nil {

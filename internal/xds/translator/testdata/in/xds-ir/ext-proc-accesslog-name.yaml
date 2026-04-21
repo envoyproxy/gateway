@@ -1,0 +1,63 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% auth=%EG_EXT_FILTER_STATE(auth:latency_ns)% enrich=%EG_EXT_FILTER_STATE(enrichment:grpc_status_code)%
+  json:
+  - path: "/dev/stdout"
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ext_proc_auth_latency
+      value: "%EG_EXT_FILTER_STATE(auth:latency_ns)%"
+    - key: ext_proc_enrich_status
+      value: "%EG_EXT_FILTER_STATE(enrichment:grpc_status_code)%"
+    - key: unknown_ref
+      value: "%EG_EXT_FILTER_STATE(nonexistent:latency_ns)%"
+http:
+- name: "envoy-gateway/gateway-1/http"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    hostname: gateway.envoyproxy.io
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+        - addressType: IP
+          endpoints:
+            - host: 7.7.7.7
+              port: 8080
+          protocol: HTTP
+          weight: 1
+          name: httproute/default/httproute-1/rule/0/backend/0
+    envoyExtensions:
+      extProcs:
+        - name: envoyextensionpolicy/default/policy-for-route-1/extproc/0
+          customName: auth
+          authority: grpc-backend.default:9000
+          destination:
+            name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/default/policy-for-route-1/0/grpc-backend/backend/0
+        - name: envoyextensionpolicy/default/policy-for-route-2/extproc/0
+          customName: enrichment
+          authority: grpc-backend-2.default:9000
+          destination:
+            name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-2
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/default/policy-for-route-2/0/grpc-backend-2/backend/0

@@ -72,6 +72,14 @@ type ExtProcProcessingMode struct {
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
+	// Name is an optional user-defined identifier for this ext-proc instance.
+	// Used to reference this instance via %EG_EXT_FILTER_STATE(name:attribute)% in access log format strings.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=63
+	Name *string `json:"name,omitempty"`
+
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	// Default: 200ms
 	//

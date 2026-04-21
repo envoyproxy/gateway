@@ -1502,6 +1502,13 @@ spec:
                               Envoy HTTP filter namespaces
                             rule: self.all(f, !f.startsWith('envoy.filters.http'))
                       type: object
+                    name:
+                      description: |-
+                        Name is an optional user-defined identifier for this ext-proc instance.
+                        Used to reference this instance via %EG_EXT_FILTER_STATE(name:attribute)% in access log format strings.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
                     processingMode:
                       description: |-
                         ProcessingMode defines how request and response body is processed
