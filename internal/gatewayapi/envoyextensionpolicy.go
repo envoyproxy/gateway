@@ -855,8 +855,14 @@ func (t *Translator) buildExtProc(
 	// upstream (#8791).
 	backendRef := extProc.BackendRefs[0]
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
-	if backendRef.Group != nil && string(*backendRef.Group) == egv1a1.GroupName &&
-		backendRef.Kind != nil && string(*backendRef.Kind) == egv1a1.KindBackend {
+	// validateExtServiceBackendReference / ext_service.go already
+	// accept Kind: Backend with the group field omitted (defaulted to
+	// egv1a1.GroupName), so match the same relaxed shape here. Using
+	// strict non-nil pointer checks would skip a valid config and fall
+	// through to the misrouted <name>.<namespace>[:port] authority.
+	backendKind := KindDerefOr(backendRef.Kind, "")
+	backendGroup := GroupDerefOr(backendRef.Group, egv1a1.GroupName)
+	if backendKind == egv1a1.KindBackend && backendGroup == egv1a1.GroupName {
 		if backend := t.GetBackend(backendNamespace, string(backendRef.Name)); backend != nil {
 			for _, bep := range backend.Spec.Endpoints {
 				if bep.FQDN != nil {
