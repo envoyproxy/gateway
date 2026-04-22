@@ -851,6 +851,7 @@ _Appears in:_
 | `clientIPDetection` | _[ClientIPDetectionSettings](#clientipdetectionsettings)_ |  false  |  | ClientIPDetectionSettings provides configuration for determining the original client IP address for requests. |
 | `tls` | _[ClientTLSSettings](#clienttlssettings)_ |  false  |  | TLS settings configure TLS termination settings with the downstream client. |
 | `path` | _[PathSettings](#pathsettings)_ |  false  |  | Path enables managing how the incoming path set by clients can be normalized. |
+| `host` | _[HostSettings](#hostsettings)_ |  false  |  | Host enables managing how the Host/Authority header can be normalized. |
 | `headers` | _[HeaderSettings](#headersettings)_ |  false  |  | HeaderSettings provides configuration for header management. |
 | `timeout` | _[ClientTimeout](#clienttimeout)_ |  false  |  | Timeout settings for the client connections. |
 | `connection` | _[ClientConnection](#clientconnection)_ |  false  |  | Connection includes client connection settings. |
@@ -3113,6 +3114,7 @@ _Appears in:_
 | `requestID` | _[RequestIDAction](#requestidaction)_ |  false  |  | RequestID configures Envoy's behavior for handling the `X-Request-ID` header.<br />When omitted default behavior is `Generate` which builds the `X-Request-ID` for every request<br /> and ignores pre-existing values from the edge.<br />(An "edge request" refers to a request from an external client to the Envoy entrypoint.) |
 | `earlyRequestHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | EarlyRequestHeaders defines settings for early request header modification, before envoy performs<br />routing, tracing and built-in header manipulation. |
 | `lateResponseHeaders` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | LateResponseHeaders defines settings for global response header modification. |
+| `maxRequestHeaderBytes` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  false  |  | MaxRequestHeaderBytes defines the maximum number of bytes for request headers allowed.<br />Requests with larger header sizes will receive a 431 response.<br />For example, 80Ki, 100Ki, 1Mi etc.<br />Note that when the suffix is not provided, the value is interpreted as bytes.<br />The value must be at least 1Ki (1024 bytes). If not set, the default value is 60 KiB. |
 
 
 #### HealthCheck
@@ -3159,6 +3161,20 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path specifies the HTTP path to match on for health check requests. |
+
+
+#### HostSettings
+
+
+
+HostSettings provides configuration options for the Host/Authority header on the listener.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `stripPortMode` | _[StripPortMode](#stripportmode)_ |  false  |  | StripPortMode configures how ports are stripped from the Host/Authority<br />header before route matching.<br />"Any" strips the port unconditionally, "Matching" strips it only when<br />it matches the listener's port.<br />If not set, no port stripping is performed (Envoy default). |
 
 
 #### IPEndpoint
@@ -5808,6 +5824,21 @@ _Appears in:_
 | `Prefix` | StringMatchPrefix :the input string must start with the match value.<br /> | 
 | `Suffix` | StringMatchSuffix :the input string must end with the match value.<br /> | 
 | `RegularExpression` | StringMatchRegularExpression :The input string must match the regular expression<br />specified in the match value.<br />The regex string must adhere to the syntax documented in<br />https://github.com/google/re2/wiki/Syntax.<br /> | 
+
+
+#### StripPortMode
+
+_Underlying type:_ _string_
+
+StripPortMode defines the mode for stripping port from the Host header.
+
+_Appears in:_
+- [HostSettings](#hostsettings)
+
+| Value | Description |
+| ----- | ----------- |
+| `Any` | StripPortModeAny strips the port from the Host header unconditionally.<br /> | 
+| `Matching` | StripPortModeMatching strips the port only when it matches the listener's port.<br /> | 
 
 
 #### SubjectAltNames
