@@ -80,7 +80,7 @@ bug fixes: |
 # Enhancements that improve performance.
 performance improvements: |
   Reduce chances of listener drain due to Lua policy updates by migrating to LuaPerRoute.
-  Reduced Kubernetes API server calls by reusing the cached controller-runtime client from the controller manager for infrastructure reconciliation. Notably, ratelimit server creation can now be delayed until the first Gateway is created. In GatewayNamespaceMode, this may also increase memory usage because additional ServiceAccount and Deployment objects are kept in the cache.
+  Reduced Kubernetes API server calls by reusing the cached controller-runtime client from the controller manager for infrastructure reconciliation. Notably, ratelimit server creation/cleanup can now be delayed until the first Gateway is created. In GatewayNamespaceMode, this may also increase memory usage because additional ServiceAccount and Deployment objects are kept in the cache.
 
 # Deprecated features or APIs.
 deprecations: |
