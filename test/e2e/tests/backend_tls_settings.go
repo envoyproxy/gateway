@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
@@ -62,8 +61,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
 				},
 				TLSSettings: egv1a1.TLSSettings{
-					MinVersion:    ptr.To(egv1a1.TLSv13),
-					MaxVersion:    ptr.To(egv1a1.TLSv13),
+					MinVersion:    new(egv1a1.TLSv13),
+					MaxVersion:    new(egv1a1.TLSv13),
 					ALPNProtocols: []egv1a1.ALPNProtocol{"http/1.1"},
 				},
 			}
@@ -122,8 +121,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 
 			t.Logf("updating backend tls settings to use TLSv1.2 and custom cipher suites")
 			config.TLSSettings = egv1a1.TLSSettings{
-				MinVersion:    ptr.To(egv1a1.TLSv12),
-				MaxVersion:    ptr.To(egv1a1.TLSv12),
+				MinVersion:    new(egv1a1.TLSv12),
+				MaxVersion:    new(egv1a1.TLSv12),
 				ALPNProtocols: nil, // default ALPN protocols, which means h2 preferred over http/1.1.
 				Ciphers:       []string{"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"},
 			}
@@ -170,8 +169,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
 				},
 				TLSSettings: egv1a1.TLSSettings{
-					MinVersion: ptr.To(egv1a1.TLSv13),
-					MaxVersion: ptr.To(egv1a1.TLSv13),
+					MinVersion: new(egv1a1.TLSv13),
+					MaxVersion: new(egv1a1.TLSv13),
 				},
 			}
 			err = UpdateProxyConfig(suite.Client, proxyNN, config)
@@ -239,8 +238,8 @@ var BackendTLSSettingsTest = suite.ConformanceTest{
 					Namespace: gatewayapi.NamespacePtr(ConformanceInfraNamespace),
 				},
 				TLSSettings: egv1a1.TLSSettings{
-					MinVersion:    ptr.To(egv1a1.TLSv13),
-					MaxVersion:    ptr.To(egv1a1.TLSv13),
+					MinVersion:    new(egv1a1.TLSv13),
+					MaxVersion:    new(egv1a1.TLSv13),
 					ALPNProtocols: []egv1a1.ALPNProtocol{"http/1.1"}, // alpn will be overridden by backend clientTLS settings
 				},
 			}

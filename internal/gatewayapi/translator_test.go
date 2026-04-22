@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -178,7 +177,7 @@ func TestTranslate(t *testing.T) {
 					},
 				}
 				if strings.Contains(inputFile, "enable-zone-discovery") {
-					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+					svc.Spec.TrafficDistribution = new("PreferClose")
 				}
 				resources.Services = append(resources.Services, svc)
 
@@ -197,24 +196,24 @@ func TestTranslate(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     ptr.To("http"),
-							Port:     ptr.To[int32](8080),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("http"),
+							Port:     new(int32(8080)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 						{
-							Name:     ptr.To("https"),
-							Port:     ptr.To[int32](8443),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("https"),
+							Port:     new(int32(8443)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 						{
-							Name:     ptr.To("tcp"),
-							Port:     ptr.To[int32](8163),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("tcp"),
+							Port:     new(int32(8163)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 						{
-							Name:     ptr.To("udp"),
-							Port:     ptr.To[int32](8162),
-							Protocol: ptr.To(corev1.ProtocolUDP),
+							Name:     new("udp"),
+							Port:     new(int32(8162)),
+							Protocol: new(corev1.ProtocolUDP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -223,7 +222,7 @@ func TestTranslate(t *testing.T) {
 								"7.7.7.7",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: ptr.To(true),
+								Ready: new(true),
 							},
 						},
 					},
@@ -231,10 +230,10 @@ func TestTranslate(t *testing.T) {
 
 				// TODO: Add zone information by default
 				if strings.Contains(inputFile, "enable-zone-discovery") {
-					svc.Spec.TrafficDistribution = ptr.To("PreferClose")
+					svc.Spec.TrafficDistribution = new("PreferClose")
 					zoneIdx := rune('a' + i)
 					zone := fmt.Sprintf("%s%c", "antarctica-east1", zoneIdx)
-					endptSlice.Endpoints[0].Zone = ptr.To(zone)
+					endptSlice.Endpoints[0].Zone = new(zone)
 				}
 				resources.EndpointSlices = append(resources.EndpointSlices, endptSlice)
 			}
@@ -277,9 +276,9 @@ func TestTranslate(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     ptr.To("http"),
-							Port:     ptr.To[int32](8080),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("http"),
+							Port:     new(int32(8080)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -288,7 +287,7 @@ func TestTranslate(t *testing.T) {
 								"7.6.5.4",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: ptr.To(true),
+								Ready: new(true),
 							},
 						},
 					},
@@ -314,7 +313,7 @@ func TestTranslate(t *testing.T) {
 								Port:        4317,
 								TargetPort:  intstr.IntOrString{IntVal: 4317},
 								Protocol:    corev1.ProtocolTCP,
-								AppProtocol: ptr.To("grpc"),
+								AppProtocol: new("grpc"),
 							},
 							{
 								Name:       "zipkin",
@@ -342,14 +341,14 @@ func TestTranslate(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     ptr.To("grpc"),
-							Port:     ptr.To[int32](4317),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("grpc"),
+							Port:     new(int32(4317)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 						{
-							Name:     ptr.To("zipkin"),
-							Port:     ptr.To[int32](9411),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("zipkin"),
+							Port:     new(int32(9411)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -358,7 +357,7 @@ func TestTranslate(t *testing.T) {
 								"8.7.6.5",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: ptr.To(true),
+								Ready: new(true),
 							},
 						},
 					},
@@ -404,9 +403,9 @@ func TestTranslate(t *testing.T) {
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Name:     ptr.To("http"),
-						Port:     ptr.To[int32](8080),
-						Protocol: ptr.To(corev1.ProtocolTCP),
+						Name:     new("http"),
+						Port:     new(int32(8080)),
+						Protocol: new(corev1.ProtocolTCP),
 					},
 				},
 				Endpoints: []discoveryv1.Endpoint{
@@ -415,9 +414,9 @@ func TestTranslate(t *testing.T) {
 							"7.6.5.4",
 						},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(true),
+							Ready: new(true),
 						},
-						Zone: ptr.To("zone1"),
+						Zone: new("zone1"),
 					},
 				},
 			}
@@ -471,8 +470,6 @@ func TestTranslate(t *testing.T) {
 
 			got, _ := translator.Translate(resources)
 			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
-
-			got.EnvoyPatchPolicies = resources.EnvoyPatchPolicies
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -587,24 +584,24 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     ptr.To("http"),
-								Port:     ptr.To[int32](8080),
-								Protocol: ptr.To(corev1.ProtocolTCP),
+								Name:     new("http"),
+								Port:     new(int32(8080)),
+								Protocol: new(corev1.ProtocolTCP),
 							},
 							{
-								Name:     ptr.To("https"),
-								Port:     ptr.To[int32](8443),
-								Protocol: ptr.To(corev1.ProtocolTCP),
+								Name:     new("https"),
+								Port:     new(int32(8443)),
+								Protocol: new(corev1.ProtocolTCP),
 							},
 							{
-								Name:     ptr.To("tcp"),
-								Port:     ptr.To[int32](8163),
-								Protocol: ptr.To(corev1.ProtocolTCP),
+								Name:     new("tcp"),
+								Port:     new(int32(8163)),
+								Protocol: new(corev1.ProtocolTCP),
 							},
 							{
-								Name:     ptr.To("udp"),
-								Port:     ptr.To[int32](8162),
-								Protocol: ptr.To(corev1.ProtocolUDP),
+								Name:     new("udp"),
+								Port:     new(int32(8162)),
+								Protocol: new(corev1.ProtocolUDP),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -613,7 +610,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 									"7.7.7.7",
 								},
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: ptr.To(true),
+									Ready: new(true),
 								},
 							},
 						},
@@ -659,9 +656,9 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     ptr.To("http"),
-							Port:     ptr.To[int32](8080),
-							Protocol: ptr.To(corev1.ProtocolTCP),
+							Name:     new("http"),
+							Port:     new(int32(8080)),
+							Protocol: new(corev1.ProtocolTCP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -670,7 +667,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 								"7.6.5.4",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: ptr.To(true),
+								Ready: new(true),
 							},
 						},
 					},
@@ -716,9 +713,9 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 				AddressType: discoveryv1.AddressTypeIPv4,
 				Ports: []discoveryv1.EndpointPort{
 					{
-						Name:     ptr.To("http"),
-						Port:     ptr.To[int32](8080),
-						Protocol: ptr.To(corev1.ProtocolTCP),
+						Name:     new("http"),
+						Port:     new(int32(8080)),
+						Protocol: new(corev1.ProtocolTCP),
 					},
 				},
 				Endpoints: []discoveryv1.Endpoint{
@@ -727,9 +724,9 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 							"7.6.5.4",
 						},
 						Conditions: discoveryv1.EndpointConditions{
-							Ready: ptr.To(true),
+							Ready: new(true),
 						},
-						Zone: ptr.To("zone1"),
+						Zone: new("zone1"),
 					},
 				},
 			}
@@ -933,8 +930,6 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 
 	translator := &Translator{}
 
-	var testcases []*testcase
-
 	baseCase := func() *testcase {
 		return &testcase{
 			name: "reference covered by reference grant (all resources of kind)",
@@ -974,60 +969,59 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		}
 	}
 
-	testcases = append(testcases, baseCase())
+	mutateBaseCase := func(modify func(*testcase)) *testcase {
+		tc := baseCase()
+		modify(tc)
+		return tc
+	}
 
-	modified := baseCase()
-	modified.name = "reference covered by reference grant (named resource)"
-	modified.referenceGrant.Spec.To[0].Name = ObjectNamePtr("tls-secret-1")
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "no reference grants"
-	modified.referenceGrant = nil
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from namespace)"
-	modified.referenceGrant.Spec.From[0].Namespace = "wrong-namespace"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from kind)"
-	modified.referenceGrant.Spec.From[0].Kind = "WrongKind"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong from group)"
-	modified.referenceGrant.Spec.From[0].Group = "wrong.group.k8s.io"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to name)"
-	modified.referenceGrant.Spec.To[0].Name = ObjectNamePtr("wrong-name")
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to namespace)"
-	modified.referenceGrant.Namespace = "wrong-namespace"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to kind)"
-	modified.referenceGrant.Spec.To[0].Kind = "WrongKind"
-	modified.want = false
-	testcases = append(testcases, modified)
-
-	modified = baseCase()
-	modified.name = "reference not covered by reference grant (wrong to group)"
-	modified.referenceGrant.Spec.To[0].Group = "wrong.group.k8s.io"
-	modified.want = false
-	testcases = append(testcases, modified)
+	testcases := []*testcase{
+		baseCase(),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference covered by reference grant (named resource)"
+			tc.referenceGrant.Spec.To[0].Name = ObjectNamePtr("tls-secret-1")
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "no reference grants"
+			tc.referenceGrant = nil
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from namespace)"
+			tc.referenceGrant.Spec.From[0].Namespace = "wrong-namespace"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from kind)"
+			tc.referenceGrant.Spec.From[0].Kind = "WrongKind"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong from group)"
+			tc.referenceGrant.Spec.From[0].Group = "wrong.group.k8s.io"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to name)"
+			tc.referenceGrant.Spec.To[0].Name = ObjectNamePtr("wrong-name")
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to namespace)"
+			tc.referenceGrant.Namespace = "wrong-namespace"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to kind)"
+			tc.referenceGrant.Spec.To[0].Kind = "WrongKind"
+			tc.want = false
+		}),
+		mutateBaseCase(func(tc *testcase) {
+			tc.name = "reference not covered by reference grant (wrong to group)"
+			tc.referenceGrant.Spec.To[0].Group = "wrong.group.k8s.io"
+			tc.want = false
+		}),
+	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1087,7 +1081,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							UseListenerPortAsContainerPort: ptr.To(false),
+							UseListenerPortAsContainerPort: new(false),
 						},
 					},
 				},
@@ -1101,7 +1095,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							UseListenerPortAsContainerPort: ptr.To(true),
+							UseListenerPortAsContainerPort: new(true),
 						},
 					},
 				},

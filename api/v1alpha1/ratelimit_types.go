@@ -71,6 +71,23 @@ type LocalRateLimit struct {
 	Rules []RateLimitRule `json:"rules"`
 }
 
+// XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+// Valid values are "Off" and "DraftVersion03".
+// This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+//
+// +kubebuilder:validation:Enum=Off;DraftVersion03
+type XRateLimitHeadersOption string
+
+const (
+	// XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,
+	// regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Disabled"
+
+	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
+	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDraftVersion03 XRateLimitHeadersOption = "DraftVersion03"
+)
+
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
@@ -119,6 +136,12 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+	// If not set, the rule inherits the listener-level setting (default behavior).
+	//
+	// +optional
+	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
 type RateLimitCost struct {
@@ -409,7 +432,12 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
-	Requests uint          `json:"requests"`
+	// Requests is the number of requests (or cost units, when used with
+	// cost-based rate limiting) allowed per Unit.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=4294967295
+	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }
 

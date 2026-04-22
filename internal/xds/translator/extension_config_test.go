@@ -16,7 +16,6 @@ import (
 	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
@@ -59,12 +58,12 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 		},
 		{
 			name:                     "explicitly enabled",
-			enableListenersAndRoutes: ptr.To(true),
+			enableListenersAndRoutes: new(true),
 			expectListenersAndRoutes: true,
 		},
 		{
 			name:                     "explicitly disabled",
-			enableListenersAndRoutes: ptr.To(false),
+			enableListenersAndRoutes: new(false),
 			expectListenersAndRoutes: false,
 		},
 	}

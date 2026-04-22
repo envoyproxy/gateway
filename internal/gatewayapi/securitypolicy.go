@@ -117,6 +117,8 @@ func (t *Translator) ProcessSecurityPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
+	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Map of attached Policy to Gateway. Used for policy merge process.
@@ -138,7 +140,7 @@ func (t *Translator) ProcessSecurityPolicies(
 	t.buildGatewayPolicyMapForSecurity(securityPolicies, gateways, gatewayMap, gatewayPolicyMap)
 
 	// Process the policies targeting RouteRules (HTTP + TCP)
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -146,7 +148,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -156,7 +158,7 @@ func (t *Translator) ProcessSecurityPolicies(
 		}
 	}
 	// Process the policies targeting xRoutes (HTTP + TCP)
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -164,7 +166,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -174,7 +176,7 @@ func (t *Translator) ProcessSecurityPolicies(
 		}
 	}
 	// Process the policies targeting Listeners
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -182,7 +184,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -192,7 +194,7 @@ func (t *Translator) ProcessSecurityPolicies(
 		}
 	}
 	// Process the policies targeting Gateways
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -200,7 +202,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -971,7 +973,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		case resource.KindHTTPRoute, resource.KindGRPCRoute:
 			var (
 				hasBaseErrs    = errs != nil
-				directResponse = &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+				directResponse = &ir.CustomResponse{StatusCode: new(uint32(500))}
 			)
 			for _, listener := range parentRefCtx.listeners {
 				// If policyTargetListener is set, only apply to the specific listener
@@ -1150,7 +1152,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	policyTarget := irStringKey(policy.Namespace, string(target.Name))
 	routesWithDirectResponse := sets.New[string]()
 	hasBaseErrs := errs != nil
-	directResponse := &ir.CustomResponse{StatusCode: ptr.To(uint32(500))}
+	directResponse := &ir.CustomResponse{StatusCode: new(uint32(500))}
 	for _, h := range x.HTTP {
 		gatewayName := extractGatewayNameFromListener(h.Name)
 		if t.MergeGateways && gatewayName != policyTarget {
@@ -2189,14 +2191,15 @@ func (t *Translator) buildExtAuth(
 	}
 
 	extAuth := &ir.ExtAuth{
-		Name:              irConfigName(policy),
-		HeadersToExtAuth:  policy.Spec.ExtAuth.HeadersToExtAuth,
-		ContextExtensions: contextExtensions,
-		FailOpen:          policy.Spec.ExtAuth.FailOpen,
-		Traffic:           traffic,
-		RecomputeRoute:    policy.Spec.ExtAuth.RecomputeRoute,
-		Timeout:           parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
-		StatusOnError:     policy.Spec.ExtAuth.StatusOnError,
+		Name:                 irConfigName(policy),
+		HeadersToExtAuth:     policy.Spec.ExtAuth.HeadersToExtAuth,
+		ContextExtensions:    contextExtensions,
+		FailOpen:             policy.Spec.ExtAuth.FailOpen,
+		Traffic:              traffic,
+		RecomputeRoute:       policy.Spec.ExtAuth.RecomputeRoute,
+		IncludeRouteMetadata: policy.Spec.ExtAuth.IncludeRouteMetadata,
+		Timeout:              parseExtAuthTimeout(policy.Spec.ExtAuth.Timeout),
+		StatusOnError:        policy.Spec.ExtAuth.StatusOnError,
 	}
 
 	if http != nil {
@@ -2476,5 +2479,17 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 		return routePolicy, nil
 	}
 
-	return utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
+	return utils.Merge(parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
+}
+
+// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
+	copies := make([]*egv1a1.SecurityPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

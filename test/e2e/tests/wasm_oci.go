@@ -30,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -393,8 +392,8 @@ func createEEPForWasmTest(
 
 			Wasm: []egv1a1.Wasm{
 				{
-					Name:   ptr.To("wasm-filter"),
-					RootID: ptr.To("my_root_id"),
+					Name:   new("wasm-filter"),
+					RootID: new("my_root_id"),
 					Code: egv1a1.WasmCodeSource{
 						Type: egv1a1.ImageWasmCodeSourceType,
 						Image: &egv1a1.ImageWasmCodeSource{

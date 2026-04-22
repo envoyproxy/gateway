@@ -1,0 +1,34 @@
+date: April 16, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+  Returning 500 direct responses for HTTPRoute and GRPCRoute with invalid filters.
+  Set HTTPRoute Accepted status to False when RequestMirror filter is used together with DirectResponse or RequestRedirect filters.
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed propagation of HTTPFilter translation errors to the outer layer.
+  Fixed 500 errors caused by partially invalid BackendRefs; traffic is now correctly routed between valid backends and 500 responses according to their configured weights.
+  Fixed SecurityPolicy BasicAuth validation to reject invalid {SHA} htpasswd entries.
+  Fixed GRPCRoute not detecting conflicting RequestMirror and DirectResponse filters, which caused the mirror to be silently dropped.
+  Fixed Basic Authentication failing when htpasswd secrets use CRLF line endings by normalizing to LF before passing to Envoy.
+  Fixed GRPCRoute RequestMirror filter backend not being indexed, causing "service not found" errors for mirror targets that exist in the cluster.
+  Fixed xRoute status condition when route has mirror filter and the mirror backend has no endpoints.
+  Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
+  Fixed false metric increments on no-op delete and HPA reconcile paths.
+  Fixed missing failure-path metric recording for delete and HPA reconcile operations.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |
+  Improved rate limit e2e test reliability by handling transient network errors during round trips.

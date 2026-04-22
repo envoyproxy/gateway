@@ -15,7 +15,6 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"k8s.io/utils/ptr"
 )
 
 // DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
@@ -34,7 +33,7 @@ func DefaultKubernetesDaemonSetStrategy() *appsv1.DaemonSetUpdateStrategy {
 
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
 func DefaultKubernetesContainerImage(image string) *string {
-	return ptr.To(image)
+	return new(image)
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.

@@ -1469,6 +1469,11 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway route metadata to the external
+	// authorization service as route metadata context.
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
@@ -1817,7 +1822,8 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1850,6 +1856,27 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 		}
 	}
 	return false
+}
+
+// HasMixedUpstreamProtocolRequirements returns true if destination settings require
+// mutually exclusive cluster-level upstream protocol configuration.
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+	hasForceHTTP1Upstream := false
+	hasHTTP2Upstream := false
+
+	for _, setting := range r.Settings {
+		if setting == nil {
+			continue
+		}
+		if setting.ForceHTTP1Upstream {
+			hasForceHTTP1Upstream = true
+		}
+		if setting.Protocol == HTTP2 || setting.Protocol == GRPC {
+			hasHTTP2Upstream = true
+		}
+	}
+
+	return hasForceHTTP1Upstream && hasHTTP2Upstream
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1901,8 +1928,11 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// ForceHTTP1Upstream requires Envoy to use explicit HTTP/1.1 upstream protocol selection.
+	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
+	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
+	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
@@ -2493,6 +2523,12 @@ type LocalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// DefaultXRateLimitOption controls whether X-RateLimit response headers are emitted for
+	// the default bucket (requests not matching any rule).
+	// When nil, the default bucket inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	DefaultXRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"defaultXRateLimitOption,omitempty" yaml:"defaultXRateLimitOption,omitempty"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
@@ -2526,6 +2562,10 @@ type RateLimitRule struct {
 	// but the result is always success regardless of whether the limit was exceeded.
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+	// XRateLimitOption controls whether X-RateLimit response headers are emitted for this rule.
+	// When nil, the rule inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	XRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"xRateLimitOption,omitempty" yaml:"xRateLimitOption,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -2586,7 +2626,7 @@ type RateLimitUnit egv1a1.RateLimitUnit
 // +k8s:deepcopy-gen=true
 type RateLimitValue struct {
 	// Requests are the number of requests that need to be rate limited.
-	Requests uint `json:"requests" yaml:"requests"`
+	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
@@ -3008,7 +3048,7 @@ type OutlierDetection struct {
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
-	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	MaxEjectionPercent *uint32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.

@@ -56,6 +56,17 @@ var GRPCExtAuthTest = suite.ConformanceTest{
 						"Authorization": "Bearer token1",
 					},
 				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "www.example.com",
+						Path: "/grpc",
+						Headers: map[string]string{
+							"x-current-user":            "user1",
+							"x-eg-route-name":           "http-with-ext-auth",
+							"x-eg-route-annotation-foo": "bar",
+						},
+					},
+				},
 				Response: http.Response{
 					StatusCodes: []int{200},
 				},

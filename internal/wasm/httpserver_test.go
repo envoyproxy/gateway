@@ -330,7 +330,7 @@ func setupFakeRegistry(host string) error {
 func startLocalHTTPServer(ctx context.Context, cacheDir string, maxFailedAttempts int, failedAttemptResetDelay, failedAttemptsResetInterval time.Duration) (*HTTPServer, error) {
 	logger := logging.DefaultLogger(os.Stdout, egv1a1.LogLevelInfo)
 	s := NewHTTPServerWithFileCache(
-		SeverOptions{
+		ServerOptions{
 			Salt:                        []byte("salt"),
 			MaxFailedAttempts:           maxFailedAttempts,
 			FailedAttemptResetDelay:     failedAttemptResetDelay,

@@ -55,6 +55,7 @@ http:
               - name: foo
                 value: YmFy
             statusOnError: 500
+            includeRouteMetadata: true
       - name: httproute/default/httproute-1/rule/1/match/0/www_foo_com
         hostname: www.foo.com
         isHTTP2: false

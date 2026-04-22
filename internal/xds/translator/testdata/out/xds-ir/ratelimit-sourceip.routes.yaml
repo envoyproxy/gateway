@@ -10,77 +10,93 @@
       name: first-route
       route:
         cluster: first-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: first-route
-              descriptorValue: first-route
-          - remoteAddressMatch:
-              addressMatcher:
-                ranges:
-                - addressPrefix: 192.168.0.0
-                  prefixLen: 16
-              descriptorKey: masked_remote_address
-              descriptorValue: 192.168.0.0/16
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: first-route
+                descriptorValue: first-route
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: masked_remote_address
+                descriptorValue: 192.168.0.0/16
     - match:
         path: example
       name: second-route
       route:
         cluster: second-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: second-route
-              descriptorValue: second-route
-          - remoteAddressMatch:
-              addressMatcher:
-                ranges:
-                - addressPrefix: 192.168.0.0
-                  prefixLen: 24
-              descriptorKey: masked_remote_address
-              descriptorValue: 192.168.0.0/24
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: second-route
+                descriptorValue: second-route
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 24
+                descriptorKey: masked_remote_address
+                descriptorValue: 192.168.0.0/24
     - match:
         path: test
       name: third-route
       route:
         cluster: third-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: third-route
-              descriptorValue: third-route
-          - genericKey:
-              descriptorKey: rule-0-match--1
-              descriptorValue: rule-0-match--1
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: third-route
+                descriptorValue: third-route
+            - genericKey:
+                descriptorKey: rule-0-match--1
+                descriptorValue: rule-0-match--1
     - match:
         path: distinct
       name: fourth-route
       route:
         cluster: fourth-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: fourth-route
-              descriptorValue: fourth-route
-          - remoteAddressMatch:
-              addressMatcher:
-                ranges:
-                - addressPrefix: 192.168.0.0
-                  prefixLen: 16
-              descriptorKey: masked_remote_address
-              descriptorValue: 192.168.0.0/16
-          - remoteAddressMatch:
-              addressMatcher:
-                ranges:
-                - addressPrefix: 192.168.0.0
-                  prefixLen: 16
-              descriptorKey: remote_address
-              descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: fourth-route
+                descriptorValue: fourth-route
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: masked_remote_address
+                descriptorValue: 192.168.0.0/16
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: remote_address
+                descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'

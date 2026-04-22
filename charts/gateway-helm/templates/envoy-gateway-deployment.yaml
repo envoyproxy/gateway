@@ -59,6 +59,9 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
+        {{- with .Values.deployment.envoyGateway.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
         livenessProbe:
