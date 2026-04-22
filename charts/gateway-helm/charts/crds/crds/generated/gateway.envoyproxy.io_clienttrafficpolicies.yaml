@@ -710,6 +710,20 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                     type: object
+                  maxRequestHeaderBytes:
+                    allOf:
+                    - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      MaxRequestHeaderBytes defines the maximum number of bytes for request headers allowed.
+                      Requests with larger header sizes will receive a 431 response.
+                      For example, 80Ki, 100Ki, 1Mi etc.
+                      Note that when the suffix is not provided, the value is interpreted as bytes.
+                      The value must be at least 1Ki (1024 bytes). If not set, the default value is 60 KiB.
+                    x-kubernetes-int-or-string: true
                   preserveXRequestID:
                     description: |-
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
@@ -806,6 +820,22 @@ spec:
                     type: string
                 required:
                 - path
+                type: object
+              host:
+                description: Host enables managing how the Host/Authority header can
+                  be normalized.
+                properties:
+                  stripPortMode:
+                    description: |-
+                      StripPortMode configures how ports are stripped from the Host/Authority
+                      header before route matching.
+                      "Any" strips the port unconditionally, "Matching" strips it only when
+                      it matches the listener's port.
+                      If not set, no port stripping is performed (Envoy default).
+                    enum:
+                    - Any
+                    - Matching
+                    type: string
                 type: object
               http1:
                 description: HTTP1 provides HTTP/1 configuration on the listener.

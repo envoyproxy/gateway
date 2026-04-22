@@ -400,6 +400,24 @@ func (t *Translator) addHCMToXDSListener(
 		RequestIdExtension:            buildRequestIDExtension(irListener.RequestID),
 	}
 
+	// Set max request headers size if configured. The IR already holds the value in KB.
+	if irListener.Headers != nil && irListener.Headers.MaxRequestHeadersKB != nil {
+		mgr.MaxRequestHeadersKb = &wrapperspb.UInt32Value{Value: *irListener.Headers.MaxRequestHeadersKB}
+	}
+
+	// Strip port from Host/Authority header if configured.
+	// StripAnyHostPort uses the strip_port_mode oneof — must be assigned outside the struct
+	// literal to avoid a typed-nil that silently breaks xDS translation.
+	// StripMatchingHostPort is a standalone bool field (not part of the oneof).
+	if irListener.Host != nil && irListener.Host.StripPortMode != nil {
+		switch *irListener.Host.StripPortMode {
+		case ir.StripPortModeAny:
+			mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{StripAnyHostPort: true}
+		case ir.StripPortModeMatching:
+			mgr.StripMatchingHostPort = true
+		}
+	}
+
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.
 	// This ensures the correct scheme is sent to backends using TLS when enabled.
 	if irListener.MatchBackendScheme {

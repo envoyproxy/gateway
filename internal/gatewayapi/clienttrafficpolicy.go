@@ -532,6 +532,12 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		// Translate Path Settings
 		translatePathSettings(policy.Spec.Path, httpIR)
 
+		// Translate Host Settings
+		if err = translateHostSettings(policy.Spec.Host, httpIR); err != nil {
+			err = perr.WithMessage(err, "Host")
+			errs = errors.Join(errs, err)
+		}
+
 		// Translate HTTP1 Settings
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
 			err = perr.WithMessage(err, "HTTP1")
@@ -782,7 +788,34 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		httpIR.Headers.LateRemoveResponseHeadersOnMatch = removeOnMatch
 	}
 
+	if headerSettings.MaxRequestHeaderBytes != nil {
+		bytes, ok := headerSettings.MaxRequestHeaderBytes.AsInt64()
+		if !ok {
+			errs = errors.Join(errs, fmt.Errorf("invalid MaxRequestHeaderBytes value %s",
+				headerSettings.MaxRequestHeaderBytes.String()))
+		} else if bytes < 1024 {
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderBytes must be at least 1Ki (1024 bytes), got %s",
+				headerSettings.MaxRequestHeaderBytes.String()))
+		} else {
+			kb := uint32(bytes / 1024)
+			httpIR.Headers.MaxRequestHeadersKB = &kb
+		}
+	}
+
 	return errs
+}
+
+func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPListener) error {
+	if hostSettings == nil {
+		return nil
+	}
+	if hostSettings.StripPortMode != nil {
+		mode := ir.StripPortMode(*hostSettings.StripPortMode)
+		httpIR.Host = &ir.HostSettings{
+			StripPortMode: &mode,
+		}
+	}
+	return nil
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {

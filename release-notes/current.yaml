@@ -13,6 +13,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added `maxRequestHeaderBytes` to `ClientTrafficPolicy.headers` and `stripPortMode` to new `ClientTrafficPolicy.host` section for configuring maximum request header size and host port stripping without EnvoyPatchPolicy.
   Added support for configuring optional health check configuration.
   Added support for shadow mode in local rate limiting.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.

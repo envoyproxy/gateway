@@ -308,6 +308,8 @@ type HTTPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// Headers configures special header management for the listener
 	Headers *HeaderSettings `json:"headers,omitempty" yaml:"headers,omitempty"`
+	// Host configures host/authority header normalization for the listener
+	Host *HostSettings `json:"host,omitempty" yaml:"host,omitempty"`
 	// ProxyProtocol provides proxy protocol configuration.
 	ProxyProtocol *ProxyProtocolSettings `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	// ClientIPDetection controls how the original client IP address is determined for requests.
@@ -811,6 +813,27 @@ type HeaderSettings struct {
 
 	// LateRemoveResponseHeadersOnMatch defines header name matchers that would remove headers after envoy response processing.
 	LateRemoveResponseHeadersOnMatch []*StringMatch `json:"lateRemoveResponseHeadersOnMatch,omitempty" yaml:"lateRemoveResponseHeadersOnMatch,omitempty"`
+
+	// MaxRequestHeadersKB defines the maximum size of request headers in kilobytes.
+	// If not set, the default value is 60 KiB.
+	MaxRequestHeadersKB *uint32 `json:"maxRequestHeadersKB,omitempty" yaml:"maxRequestHeadersKB,omitempty"`
+}
+
+// StripPortMode defines the mode for stripping port from the Host header.
+type StripPortMode string
+
+const (
+	// StripPortModeAny strips the port from the Host header unconditionally.
+	StripPortModeAny StripPortMode = "Any"
+	// StripPortModeMatching strips the port only when it matches the listener's port.
+	StripPortModeMatching StripPortMode = "Matching"
+)
+
+// HostSettings provides configuration related to host/authority header normalization on the listener.
+// +k8s:deepcopy-gen=true
+type HostSettings struct {
+	// StripPortMode defines how ports are stripped from the Host/Authority header.
+	StripPortMode *StripPortMode `json:"stripPortMode,omitempty" yaml:"stripPortMode,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
