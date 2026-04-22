@@ -23225,6 +23225,8 @@ spec:
                         description: MaxEjectionPercent sets the maximum percentage
                           of hosts in a cluster that can be ejected.
                         format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                       splitExternalLocalOriginErrors:
                         default: false
@@ -28693,6 +28695,8 @@ spec:
                                   description: MaxEjectionPercent sets the maximum
                                     percentage of hosts in a cluster that can be ejected.
                                   format: int32
+                                  maximum: 100
+                                  minimum: 0
                                   type: integer
                                 splitExternalLocalOriginErrors:
                                   default: false
@@ -42968,6 +42972,8 @@ spec:
                                                       of hosts in a cluster that can
                                                       be ejected.
                                                     format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   splitExternalLocalOriginErrors:
                                                     default: false
@@ -44492,6 +44498,8 @@ spec:
                                                       of hosts in a cluster that can
                                                       be ejected.
                                                     format: int32
+                                                    maximum: 100
+                                                    minimum: 0
                                                     type: integer
                                                   splitExternalLocalOriginErrors:
                                                     default: false
@@ -46188,6 +46196,8 @@ spec:
                                                 the maximum percentage of hosts in
                                                 a cluster that can be ejected.
                                               format: int32
+                                              maximum: 100
+                                              minimum: 0
                                               type: integer
                                             splitExternalLocalOriginErrors:
                                               default: false
@@ -47789,6 +47799,8 @@ spec:
                                           percentage of hosts in a cluster that can
                                           be ejected.
                                         format: int32
+                                        maximum: 100
+                                        minimum: 0
                                         type: integer
                                       splitExternalLocalOriginErrors:
                                         default: false
@@ -50845,6 +50857,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -52241,6 +52255,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -53914,6 +53930,8 @@ spec:
                                             maximum percentage of hosts in a cluster
                                             that can be ejected.
                                           format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         splitExternalLocalOriginErrors:
                                           default: false
@@ -55610,6 +55628,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
