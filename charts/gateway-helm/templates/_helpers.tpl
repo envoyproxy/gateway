@@ -202,7 +202,7 @@ The default Envoy Gateway configuration.
   {{- $deployment := dict "container" $container }}
   {{- if or .Values.global.imagePullSecrets .Values.global.images.envoyProxy.pullSecrets }}
     {{- $pullSecretsYaml := include "eg.envoyProxy.image.pullSecrets" . }}
-    {{- $pullSecrets := dict "imagePullSecrets" ($pullSecretsYaml | fromYamlArray) }}
+    {{- $pullSecrets := dict "imagePullSecrets" ($pullSecretsYaml | fromYaml).imagePullSecrets }}
     {{- $_ := set $deployment "pod" $pullSecrets }}
   {{- end }}
   {{- $kubernetes := dict "envoyDeployment" $deployment }}
