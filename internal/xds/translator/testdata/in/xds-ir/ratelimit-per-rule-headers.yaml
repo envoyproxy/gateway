@@ -1,0 +1,167 @@
+globalResources:
+  envoyClientCertificate:
+    name: envoy-gateway-system/envoy
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+    certificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+http:
+- address: 0.0.0.0
+  externalPort: 80
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-1
+        namespace: default
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-1
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: gateway.envoyproxy.io
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+      policies:
+      - kind: BackendTrafficPolicy
+        name: policy-for-route
+        namespace: default
+    name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+    traffic:
+      rateLimit:
+        global:
+          rules:
+          - headerMatches:
+            - distinct: false
+              exact: one
+              name: x-user-id
+            limit:
+              requests: 10
+              unit: Hour
+            name: default/policy-for-route/rule/0
+            xRateLimitOption: Disabled
+          - headerMatches:
+            - distinct: false
+              exact: two
+              name: x-user-id
+            limit:
+              requests: 20
+              unit: Hour
+            name: default/policy-for-route/rule/1
+            xRateLimitOption: DraftVersion03
+          - headerMatches:
+            - distinct: false
+              exact: three
+              name: x-user-id
+            limit:
+              requests: 30
+              unit: Hour
+            name: default/policy-for-route/rule/2
+- address: 0.0.0.0
+  externalPort: 8080
+  hostnames:
+  - '*'
+  metadata:
+    kind: Gateway
+    name: gateway-1
+    namespace: envoy-gateway
+    sectionName: http-8080
+  name: envoy-gateway/gateway-1/http-8080
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 8080
+  routes:
+  - destination:
+      metadata:
+        kind: HTTPRoute
+        name: httproute-2
+        namespace: default
+      name: httproute/default/httproute-2/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        metadata:
+          kind: Service
+          name: service-2
+          namespace: default
+          sectionName: "8080"
+        name: httproute/default/httproute-2/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    hostname: gateway.envoyproxy.io
+    isHTTP2: false
+    metadata:
+      kind: HTTPRoute
+      name: httproute-2
+      namespace: default
+      policies:
+      - kind: BackendTrafficPolicy
+        name: policy-for-route-2
+        namespace: default
+    name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 4294967295
+            unit: Second
+          rules:
+          - headerMatches:
+            - distinct: false
+              exact: one
+              name: x-user-id
+            limit:
+              requests: 10
+              unit: Hour
+            name: default/policy-for-route-2/rule/0
+            xRateLimitOption: Disabled
+          - headerMatches:
+            - distinct: false
+              exact: two
+              name: x-user-id
+            limit:
+              requests: 20
+              unit: Hour
+            name: default/policy-for-route-2/rule/1
+            xRateLimitOption: DraftVersion03
+          - headerMatches:
+            - distinct: false
+              exact: three
+              name: x-user-id
+            limit:
+              requests: 30
+              unit: Hour
+            name: default/policy-for-route-2/rule/2
