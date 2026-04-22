@@ -109,12 +109,23 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 		r.Logger,
 		message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
+			// Check if context is done before logging to avoid writing to test output after test completes
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			val := update.Value
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to delete infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to delete infra")
+					}
 					errChan <- err
 				}
 			} else {
@@ -123,18 +134,33 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 				// e.g.https://github.com/envoyproxy/gateway/issues/3044 --- Invalid Listener
 				//     https://github.com/envoyproxy/gateway/issues/7735 --- Invalid EnvoyProxy
 				if len(val.Proxy.Listeners) == 0 {
-					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					}
 					return
 				}
 
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to create new infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to create new infra")
+					}
 					errChan <- err
 				}
 			}
 		},
 	)
-	r.Logger.Info("infra subscriber shutting down")
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		r.Logger.Info("infra subscriber shutting down")
+	}
 }
 
 func (r *Runner) enableRateLimitInfra(ctx context.Context) {
