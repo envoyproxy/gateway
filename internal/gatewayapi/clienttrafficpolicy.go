@@ -796,7 +796,11 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 		} else if bytes < 1024 {
 			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderBytes must be at least 1Ki (1024 bytes), got %s",
 				headerSettings.MaxRequestHeaderBytes.String()))
+		} else if bytes/1024 > math.MaxUint32 {
+			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderBytes value %s exceeds maximum",
+				headerSettings.MaxRequestHeaderBytes.String()))
 		} else {
+			// Floor division matches Envoy's KB granularity. Use Ki suffix (e.g. 80Ki) for aligned values.
 			kb := uint32(bytes / 1024)
 			httpIR.Headers.MaxRequestHeadersKB = &kb
 		}
