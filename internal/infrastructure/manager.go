@@ -9,8 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
@@ -24,31 +22,6 @@ var (
 	_ Manager = (*kubernetes.Infra)(nil)
 	_ Manager = (*host.Infra)(nil)
 )
-
-type kubernetesClientContextKey struct{}
-
-type kubernetesClientHolder struct {
-	client client.Client
-}
-
-func WithKubernetesClientHolder(ctx context.Context) context.Context {
-	return context.WithValue(ctx, kubernetesClientContextKey{}, &kubernetesClientHolder{})
-}
-
-func SetKubernetesClient(ctx context.Context, cli client.Client) {
-	holder, _ := ctx.Value(kubernetesClientContextKey{}).(*kubernetesClientHolder)
-	if holder != nil {
-		holder.client = cli
-	}
-}
-
-func KubernetesClientFromContext(ctx context.Context) client.Client {
-	holder, _ := ctx.Value(kubernetesClientContextKey{}).(*kubernetesClientHolder)
-	if holder == nil {
-		return nil
-	}
-	return holder.client
-}
 
 // Manager provides the scaffolding for managing infrastructure.
 type Manager interface {
@@ -68,9 +41,11 @@ type Manager interface {
 func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (mgr Manager, err error) {
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		cli := KubernetesClientFromContext(ctx)
+		// The kubernetes client is created in the provider runner and stored in the server config.
+		// It's available here because the infrastructure runner is started after the provider runner in the server startup sequence.
+		cli := cfg.KubernetesClient.Get()
 		if cli == nil {
-			return nil, fmt.Errorf("kubernetes client not found in context")
+			return nil, fmt.Errorf("kubernetes client not found in server config")
 		}
 		mgr = kubernetes.NewInfra(cli, cfg, errors)
 	case egv1a1.ProviderTypeCustom:

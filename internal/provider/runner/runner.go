@@ -13,7 +13,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider"
 	"github.com/envoyproxy/gateway/internal/provider/file"
@@ -55,7 +54,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			return fmt.Errorf("failed to create kubernetes provider: %w", err)
 		}
 		if kubeProvider, ok := p.(*kubernetes.Provider); ok {
-			infrastructure.SetKubernetesClient(ctx, kubeProvider.GetClient())
+			// Store the Kubernetes client created by the provider in the server config so that it can be used by the
+			// infrastructure runner to reconcile the Envoy Proxy and rate limit infra resources.
+			r.KubernetesClient.Set(kubeProvider.GetClient())
 		}
 	case egv1a1.ProviderTypeCustom:
 		p, err = r.createCustomResourceProvider(ctx, errNotifier)
