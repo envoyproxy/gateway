@@ -1,4 +1,4 @@
-costSpecified: false
+hasSharedRule: true
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -19,7 +19,7 @@ rateLimits:
           name: x-user-id
 routeName: first-route
 ---
-costSpecified: false
+hasSharedRule: true
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -40,7 +40,7 @@ rateLimits:
           name: x-user-id
 routeName: second-route
 ---
-costSpecified: false
+hasSharedRule: true
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -61,7 +61,7 @@ rateLimits:
           name: x-user-id
 routeName: third-route
 ---
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:

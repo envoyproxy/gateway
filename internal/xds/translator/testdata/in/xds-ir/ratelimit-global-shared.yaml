@@ -53,6 +53,14 @@ http:
                     requests: 5
                     unit: second
                   shared: true
+                - name: "test-namespace/test-policy-1/rule/1"
+                  headerMatches:
+                    - name: "x-org-id"
+                      exact: "one"
+                  limit:
+                    requests: 5
+                    unit: second
+                  shared: true
         pathMatch:
           exact: "foo/baz"
         destination:
