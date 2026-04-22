@@ -35,7 +35,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -307,7 +307,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -10249,7 +10249,7 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -10363,7 +10363,7 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -10510,7 +10510,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -10738,7 +10738,7 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.0
+    helm.sh/chart: opentelemetry-collector-0.150.1
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
     app.kubernetes.io/version: "0.149.0"
@@ -10758,7 +10758,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 5d69c4f04d5294a81effe4d3162bfc5e2050131c0f2b7bd233ebb445813ca347
+        checksum/config: 832cf0b3720268f03a6c812d26c71bed5c7b87d5ed77904081e49ccaefc21d08
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
