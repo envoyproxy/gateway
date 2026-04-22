@@ -3220,7 +3220,7 @@ func (in *OutlierDetection) DeepCopyInto(out *OutlierDetection) {
 	}
 	if in.MaxEjectionPercent != nil {
 		in, out := &in.MaxEjectionPercent, &out.MaxEjectionPercent
-		*out = new(int32)
+		*out = new(uint32)
 		**out = **in
 	}
 	if in.FailurePercentageThreshold != nil {
