@@ -72,8 +72,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
+			
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-all-ips", Namespace: ns},
 				suite.ControllerName, gwapiv1.ParentReference{
@@ -173,8 +172,6 @@ var RateLimitCIDRInvertMatchAlwaysEnforceTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-invert-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 			ratelimitHeader := make(map[string]string)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
@@ -241,8 +238,6 @@ var RateLimitCIDRInvertAlwaysExemptTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-invert-always-exempt", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/never-limited",
@@ -273,8 +268,6 @@ var RateLimitMethodMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "method-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-method-match", Namespace: ns},
@@ -364,8 +357,6 @@ var RateLimitPathMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "path-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-path-match", Namespace: ns},
@@ -482,8 +473,6 @@ var RateLimitHeaderMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		// TODO: this seems not right,
 		// BTP targets to HTTPRoute instead of Gateway,
@@ -570,8 +559,6 @@ var GlobalRateLimitHeaderInvertMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-anded-headers-with-invert", Namespace: ns},
@@ -668,8 +655,6 @@ var RateLimitHeadersDisabled = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "ratelimit-headers-disabled", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-headers-disabled-btp", Namespace: ns},
@@ -768,8 +753,6 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit-based-jwt-claims", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-specific-user", Namespace: ns},
@@ -912,8 +895,6 @@ var RateLimitMultipleListenersTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "eg-rate-limit", Namespace: ns}
 			gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-all-ips", Namespace: ns},
@@ -978,8 +959,6 @@ var RateLimitHeadersAndCIDRMatchTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "header-and-cidr-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-headers-and-cidr", Namespace: ns},
@@ -1105,8 +1084,6 @@ var UsageRateLimitTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "usage-rate-limit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "usage-rate-limit", Namespace: ns},
@@ -1185,8 +1162,6 @@ var RateLimitGlobalSharedCidrMatchTest = suite.ConformanceTest{
 
 			// Get gateway address for the second route
 			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-all-ips", Namespace: ns},
@@ -1264,8 +1239,6 @@ var RateLimitGlobalSharedGatewayHeaderMatchTest = suite.ConformanceTest{
 
 			// Get gateway address for the second route
 			gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
-			// Wait for the ratelimit server to be running and ready.
-			WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-header-match-gateway", Namespace: ns},
@@ -1377,8 +1350,6 @@ var RateLimitGlobalMergeTest = suite.ConformanceTest{
 
 		gwAddr1 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route1NN)
 		gwAddr2 := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), route2NN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-headers-route-policy", Namespace: ns},
@@ -1577,8 +1548,6 @@ var RateLimitGlobalShadowModeTest = suite.ConformanceTest{
 		shadowRouteNN := types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "shadow-mode-ratelimit", Namespace: ns},
@@ -1633,8 +1602,6 @@ var RateLimitQueryParametersTest = suite.ConformanceTest{
 		routeNN := types.NamespacedName{Name: "query-parameters-ratelimit", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-		// Wait for the ratelimit server to be running and ready.
-		WaitForPods(t, suite.Client, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &PodReady)
 
 		BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 			types.NamespacedName{Name: "ratelimit-query-parameters", Namespace: ns},
