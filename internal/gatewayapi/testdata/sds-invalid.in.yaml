@@ -1,0 +1,256 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: gateway-1
+      namespace: envoy-gateway
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: spire-uds
+      namespace: envoy-gateway-system
+    spec:
+      endpoints:
+        - unix:
+            path: /var/run/secrets/workload-spiffe-uds/socket
+      type: Endpoints
+backendTLSPolicies:
+  # Test case 1: Multiple SDS reference secrets (should be rejected)
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-multiple-sds
+      namespace: default
+    spec:
+      targetRefs:
+        - kind: Service
+          name: service-1
+      validation:
+        caCertificateRefs:
+          - name: sds-ref-1
+            kind: Secret
+          - name: sds-ref-2
+            kind: Secret
+        hostname: example.com
+  # Test case 2: Mixing SDS with ConfigMap (should be rejected)
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-sds-with-configmap
+      namespace: default
+    spec:
+      targetRefs:
+        - kind: Service
+          name: service-2
+      validation:
+        caCertificateRefs:
+          - name: sds-ref-1
+            kind: Secret
+          - name: ca-configmap
+            kind: ConfigMap
+        hostname: example.com
+  # Test case 3: Mixing SDS with regular Secret (should be rejected)
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-sds-with-secret
+      namespace: default
+    spec:
+      targetRefs:
+        - kind: Service
+          name: service-3
+      validation:
+        caCertificateRefs:
+          - name: sds-ref-1
+            kind: Secret
+          - name: regular-ca-secret
+            kind: Secret
+        hostname: example.com
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-1
+      namespace: default
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/service1"
+          backendRefs:
+            - name: service-1
+              port: 8080
+        - matches:
+            - path:
+                type: Exact
+                value: "/service2"
+          backendRefs:
+            - name: service-2
+              port: 8080
+        - matches:
+            - path:
+                type: Exact
+                value: "/service3"
+          backendRefs:
+            - name: service-3
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: service-1
+      namespace: default
+    spec:
+      clusterIP: 10.11.12.13
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 8080
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: service-2
+      namespace: default
+    spec:
+      clusterIP: 10.11.12.14
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 8080
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: service-3
+      namespace: default
+    spec:
+      clusterIP: 10.11.12.15
+      ports:
+        - port: 8080
+          name: http
+          protocol: TCP
+          targetPort: 8080
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-1
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "10.244.0.11"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-2
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-2
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "10.244.0.12"
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-service-3
+      namespace: default
+      labels:
+        kubernetes.io/service-name: service-3
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "10.244.0.13"
+        conditions:
+          ready: true
+secrets:
+  # SDS reference secrets
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-ref-1
+      namespace: default
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==  # /var/run/secrets/workload-spiffe-uds/socket
+      secretName: Uk9PVENB  # ROOTCA
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-ref-2
+      namespace: default
+    type: gateway.envoyproxy.io/sds
+    data:
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==  # /var/run/secrets/workload-spiffe-uds/socket
+      secretName: Uk9PVENBMg==  # ROOTCA2
+  # Regular secret with CA certificate
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: regular-ca-secret
+      namespace: default
+    type: Opaque
+    data:
+      ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVQWw2UWJFSGFLaWxVSzhUT3ppM2xJS2kxMDFRd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RU5NQXNHQTFVRUF3d0VkR1Z6ZERFVE1CRUdBMVVFQ2d3S1pYaGhiWEJzWlMxSmJtTXdIaGNOTWpRdwpOekU1TVRRd09UUXhXaGNOTWprd056RTRNVFF3T1RReFdqQWpNUTB3Q3dZRFZRUUREQVIwWlhOME1STXdFUVlEClZRUUtEQXBsZUdGdGNHeGxMVWx1WXpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUIKQU1OdWRiamhkQXo4Ky9zSjJvaFA2T0ZNQ3Z0WWpQMXJPQUtTZFh1RGtVOXNNd09uakUrZk5FZGl5VTBpcDBPeQpwQWtNR0RqbFFXZDQvRGxIN0hvV3o3UVJVSGt5emo0eWhONG5jSTlOMXZzQXdoaGQvNFM2WngwTE1YeTRvL0k4ClB2YnpjNFVjbUhBMlFGS2VpWGtoWEd1YkFVYWtEUjR4TGVSR3J4ZlhqaStPUmZwemY2V1pRNS9QWjRnMFdJZ3QKblhjZDFINVdGeTlOSUtCaGxJekJSZk1JMjMwT1BuNnNibkpiR1paZy8rQ29Ia2VFNDJzQ3VRQjFKZjVpcFlsNgoyNWJJSXVhcE9CaldMaDJYNWhsT1BvbWowOGxTUSsyd2VHNTdvRmVNOEgxbitxTFRuYU9jRmtoL3NLdGlvOEd1ClQ4REt1T1pINlVGN3pLL3ZGb1VDQXdFQUFhTlRNRkV3SFFZRFZSME9CQllFRkZxMWp3eHZPN1o5cHZBY1ZybGgKN01OZFdONGxNQjhHQTFVZEl3UVlNQmFBRkZxMWp3eHZPN1o5cHZBY1ZybGg3TU5kV040bE1BOEdBMVVkRXdFQgovd1FGTUFNQkFmOHdEUVlKS29aSWh2Y05BUUVMQlFBRGdnRUJBRjNERVVmcnc1a0YzbnZXRzkyMHNEQW01cC9PCmNsdCtCbXpnclF2UmtKOTdjWWl3akZKU2s3dmFXNk1UZk1pS2pRSE1mN2J3L1R5QlBPb3ROZy82OHRHZ2s1S3YKcmJ0RGxMWHJ5eXZNZ3VWVDJBOUVNd1dTQzBCR3JNRzRldlhqNG56U3dNTFh1aFhtRE5LbndHcmc1QnpwbHhONwpqMnp4NkFreXp4T3FOY2tKa0l2dW1oOHFkZXRGaU9rQ09pcFJ1SDF0RjdPbWk4WnBuY2E5a2czZzJhUlBOVTJqCkNybTdpRjVTQjJBM3dVLzQ2citaaHZRdFlCQWp6OVB1UmlGcUZQcmduNWF6VU5qcFRlS2RqZGxNcWRKMGlLRGcKY0Jaa3U5eEp3aDJQL3RWbGlaelorNWo0MExhMzY2QW1KUGdCSkFRRGdpWHNySUl6MC9qZHdNRT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+configMaps:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: ca-configmap
+      namespace: default
+    data:
+      ca.crt: |
+        -----BEGIN CERTIFICATE-----
+        MIIDJzCCAg+gAwIBAgIUAl6QbEHaKilUK8TOzi3lIKi101QwDQYJKoZIhvcNAQEL
+        BQAwIzENMAsGA1UEAwwEdGVzdDETMBEGA1UECgwKZXhhbXBsZS1JbmMwHhcNMjQw
+        NzE5MTQwOTQxWhcNMjkwNzE4MTQwOTQxWjAjMQ0wCwYDVQQDDAR0ZXN0MRMwEQYD
+        VQQKDApFeGFtcGxlLUluYzCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+        AMNudbjhdAz8+/sJ2ohP6OFMCvtYjP1rOAKSdXuDkU9sMwOnjE+fNEdiyU0ip0Oy
+        pAkMGDjlQWd4/DlH7HoWz7QRUHkyzj4yhN4ncI9N1vsAwhHd/4S6Zx0LMXy4o/I8
+        Pvbzc4UcmHA2QFKeiXkhXGubAUakDR4xLeRGrxfXji+ORfpzf6WZQ5/PZ4g0WIgt
+        nXcd1H5WFy9NIKBhlIzBRfMI230OPn6sbnJbGZZg/+CoHkeE42sCuQB1Jf5ipYl6
+        25bIIuapOBjWLh2X5hlOPomj08lSQ+2weG57oFeM8H1n+qLTnaOcFkh/sKtio8Gu
+        T8DKuOZH6UF7zK/vFoUCAwEAAaNTMFEwHQYDVR0OBBYEFFq1jwxvO7Z9pvAcVrlh
+        7MNdWN4lMB8GA1UdIwQYMBaAFFq1jwxvO7Z9pvAcVrlh7MNdWN4lMA8GA1UdEwEB
+        /wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAF3DEUfrw5kF3nvWG920sDAm5p/O
+        clt+BmzgrQvRkJ97cYiwjFJSk7vaW6MTfMiKjQHMf7bw/TyBPOotNg/68tGgk5Kv
+        rbtDlLXryyvMguVT2A9EMwWSC0BGrMG4evXj4nzSwMLXuhXmDNKnwGrg5BzplxN7
+        j2zx6AkyxxOqNckJkIvumh8qdetFiOkCOipRuH1tF7Omi8Zpnca9kg3g2aRPNU2j
+        Crm7iF5SB2A3wU/46r+ZhvQtYBAjz9PuRiFqFPrgn5azUNjpTeKdjdlMqdJ0iKDg
+        cBZku9xJwh2P/tVliZyZ+5j40La366AmJPgBJAQDgiXsrIIz0/jdwME=
+        -----END CERTIFICATE-----
