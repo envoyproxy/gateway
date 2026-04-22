@@ -3257,6 +3257,11 @@ func (in *ExtAuth) DeepCopyInto(out *ExtAuth) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.IncludeRouteMetadata != nil {
+		in, out := &in.IncludeRouteMetadata, &out.IncludeRouteMetadata
+		*out = new(bool)
+		**out = **in
+	}
 	if in.ContextExtensions != nil {
 		in, out := &in.ContextExtensions, &out.ContextExtensions
 		*out = make([]*ContextExtension, len(*in))
@@ -7136,6 +7141,11 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 	if in.ShadowMode != nil {
 		in, out := &in.ShadowMode, &out.ShadowMode
 		*out = new(bool)
+		**out = **in
+	}
+	if in.XRateLimitHeaders != nil {
+		in, out := &in.XRateLimitHeaders, &out.XRateLimitHeaders
+		*out = new(XRateLimitHeadersOption)
 		**out = **in
 	}
 }

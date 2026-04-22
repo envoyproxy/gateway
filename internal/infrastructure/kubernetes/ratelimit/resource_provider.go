@@ -186,6 +186,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
 			Name:      InfraName,
+			Labels:    rateLimitLabels(),
 		},
 	}
 

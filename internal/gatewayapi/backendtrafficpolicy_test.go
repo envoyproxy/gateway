@@ -272,7 +272,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			expected: &ir.OutlierDetection{
 				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:   new(int32(10)),
+				MaxEjectionPercent:   new(uint32(10)),
 				Consecutive5xxErrors: new(uint32(5)),
 			},
 		},
@@ -290,7 +290,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 			expected: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:         new(int32(10)),
+				MaxEjectionPercent:         new(uint32(10)),
 				Consecutive5xxErrors:       new(uint32(5)),
 				FailurePercentageThreshold: new(uint32(90)),
 			},
@@ -317,7 +317,7 @@ func TestBuildPassiveHealthCheck(t *testing.T) {
 				ConsecutiveGatewayErrors:       new(uint32(2)),
 				Consecutive5xxErrors:           new(uint32(5)),
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:             new(int32(10)),
+				MaxEjectionPercent:             new(uint32(10)),
 				FailurePercentageThreshold:     new(uint32(85)),
 				AlwaysEjectOneEndpoint:         new(true),
 			},
@@ -941,7 +941,7 @@ func TestBuildRateLimitRuleQueryParams(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := buildRateLimitRule(tc.rule)
+			got, err := buildRateLimitRule(&tc.rule)
 			if tc.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tc.errorMsg)
