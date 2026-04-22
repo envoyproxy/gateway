@@ -64,12 +64,10 @@ spec:
         {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
+        startupProbe:
+          {{- toYaml .Values.deployment.envoyGateway.startupProbe | nindent 10 }}
         livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 8081
-          initialDelaySeconds: 15
-          periodSeconds: 20
+          {{- toYaml .Values.deployment.envoyGateway.livenessProbe | nindent 10 }}
         name: envoy-gateway
         ports:
         {{- range .Values.deployment.ports }}
@@ -81,11 +79,7 @@ spec:
           containerPort: 9443
         {{- end }}
         readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 8081
-          initialDelaySeconds: 5
-          periodSeconds: 10
+          {{- toYaml .Values.deployment.envoyGateway.readinessProbe | nindent 10 }}
         resources:
           {{- toYaml .Values.deployment.envoyGateway.resources | nindent 10 }}
         securityContext:
