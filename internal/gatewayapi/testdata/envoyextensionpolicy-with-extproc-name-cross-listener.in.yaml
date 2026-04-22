@@ -7,9 +7,15 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
+    - name: http-8080
       protocol: HTTP
-      port: 80
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-8081
+      protocol: HTTP
+      port: 8081
       allowedRoutes:
         namespaces:
           from: All
@@ -25,7 +31,7 @@ httpRoutes:
     parentRefs:
     - namespace: default
       name: gateway-1
-      sectionName: http
+      sectionName: http-8080
     rules:
     - matches:
       - path:
@@ -44,7 +50,7 @@ httpRoutes:
     parentRefs:
     - namespace: default
       name: gateway-1
-      sectionName: http
+      sectionName: http-8081
     rules:
     - matches:
       - path:
@@ -109,8 +115,8 @@ endpointSlices:
     conditions:
       ready: true
 envoyExtensionPolicies:
-# Two policies on different routes of the same listener assign the same custom name "auth".
-# The first (oldest) policy wins; the second gets an Overridden condition.
+# Two policies on routes bound to different listeners use the same custom name "auth".
+# Each listener has its own HCM, so the name registries are independent — no conflict.
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
@@ -126,7 +132,6 @@ envoyExtensionPolicies:
       backendRefs:
       - name: grpc-backend-1
         port: 9000
-# policy-for-httproute-2 reuses "auth" — same listener, same name → Overridden condition.
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:

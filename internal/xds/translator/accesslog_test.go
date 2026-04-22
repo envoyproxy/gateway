@@ -92,13 +92,13 @@ func TestResolveEGExtFilterStateOperators(t *testing.T) {
 			if tt.name == "resolves with nil extProcs list — replaced with dash" {
 				eps = nil
 			}
-			got := resolveEGExtFilterStateOperators(tt.format, eps)
+			got := resolveEGOperators(tt.format, eps)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
 
-func TestCollectHCMExtensionsForLogExpansion(t *testing.T) {
+func TestCollectListenerExtProcs(t *testing.T) {
 	ep0 := ir.ExtProc{Name: "ep0", CustomName: "auth"}
 	ep1 := ir.ExtProc{Name: "ep1", CustomName: "enrichment"}
 
@@ -120,7 +120,7 @@ func TestCollectHCMExtensionsForLogExpansion(t *testing.T) {
 		},
 	}
 
-	got := collectHCMExtensionsForLogExpansion(listener)
+	got := collectListenerExtProcs(listener)
 	assert.Len(t, got, 2)
 	names := []string{got[0].Name, got[1].Name}
 	assert.Contains(t, names, "ep0")

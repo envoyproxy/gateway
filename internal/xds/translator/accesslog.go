@@ -90,10 +90,13 @@ func init() {
 // Optional trailing :<format_args> mirrors %FILTER_STATE% args and is passed through verbatim.
 var egExtFilterStateRe = regexp.MustCompile(`%EG_EXT_FILTER_STATE\(([^:]+):([^):]+)((?::[^)]*)*)\)%`)
 
-// resolveEGExtFilterStateOperators rewrites %EG_EXT_FILTER_STATE(name:attr)% to the
-// canonical %FILTER_STATE(<filter-name>:attr)% operator. Unresolved names become "-".
-func resolveEGExtFilterStateOperators(format string, extensions []ir.ExtProc) string {
-	if !strings.Contains(format, "%EG_EXT_FILTER_STATE(") {
+const egOperatorPrefix = "%EG_EXT_FILTER_STATE("
+
+// resolveEGOperators rewrites all EG-synthetic access log operators to their canonical Envoy equivalents.
+// Currently handles %EG_EXT_FILTER_STATE(name:attr)% → %FILTER_STATE(<filter-name>:attr)%.
+// Operators that cannot be resolved (no matching ext-proc) are replaced with "-".
+func resolveEGOperators(format string, extensions []ir.ExtProc) string {
+	if !strings.Contains(format, egOperatorPrefix) {
 		return format
 	}
 	return egExtFilterStateRe.ReplaceAllStringFunc(format, func(match string) string {
@@ -109,9 +112,105 @@ func resolveEGExtFilterStateOperators(format string, extensions []ir.ExtProc) st
 	})
 }
 
-// collectHCMExtensionsForLogExpansion returns deduplicated ext-proc instances across all
-// routes on the listener, for use in %EG_EXT_FILTER_STATE(...)% operator resolution.
-func collectHCMExtensionsForLogExpansion(irListener *ir.HTTPListener) []ir.ExtProc {
+// hasUnresolvedEGOperators reports whether any access log entry in the slice
+// still contains unresolved EG-synthetic operators (e.g. %EG_EXT_FILTER_STATE(...)%).
+func hasUnresolvedEGOperators(logs []*accesslog.AccessLog) bool {
+	for _, al := range logs {
+		if accessLogEntryHasUnresolvedEGOperators(al) {
+			return true
+		}
+	}
+	return false
+}
+
+func accessLogEntryHasUnresolvedEGOperators(al *accesslog.AccessLog) bool {
+	fal := &fileaccesslog.FileAccessLog{}
+	if err := al.GetTypedConfig().UnmarshalTo(fal); err != nil {
+		return false
+	}
+	lf := fal.GetLogFormat()
+	if lf == nil {
+		return false
+	}
+	switch f := lf.GetFormat().(type) {
+	case *cfgcore.SubstitutionFormatString_TextFormatSource:
+		return strings.Contains(f.TextFormatSource.GetInlineString(), egOperatorPrefix)
+	case *cfgcore.SubstitutionFormatString_JsonFormat:
+		for _, v := range f.JsonFormat.GetFields() {
+			if strings.Contains(v.GetStringValue(), egOperatorPrefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// resolveAccessLogs resolves EG-synthetic operators in a slice of access log entries using
+// the supplied extensions. Unresolved operators are replaced with "-". Returns the patched slice.
+func resolveAccessLogs(logs []*accesslog.AccessLog, extensions []ir.ExtProc) ([]*accesslog.AccessLog, error) {
+	result := make([]*accesslog.AccessLog, len(logs))
+	for i, al := range logs {
+		patched, err := patchAccessLogEntry(al, extensions)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = patched
+	}
+	return result, nil
+}
+
+func patchAccessLogEntry(al *accesslog.AccessLog, extensions []ir.ExtProc) (*accesslog.AccessLog, error) {
+	fal := &fileaccesslog.FileAccessLog{}
+	if err := al.GetTypedConfig().UnmarshalTo(fal); err != nil {
+		return al, nil // not a file access log — nothing to patch
+	}
+	lf := fal.GetLogFormat()
+	if lf == nil {
+		return al, nil
+	}
+
+	changed := false
+	switch f := lf.GetFormat().(type) {
+	case *cfgcore.SubstitutionFormatString_TextFormatSource:
+		orig := f.TextFormatSource.GetInlineString()
+		resolved := resolveEGOperators(orig, extensions)
+		if resolved != orig {
+			f.TextFormatSource = &cfgcore.DataSource{
+				Specifier: &cfgcore.DataSource_InlineString{InlineString: resolved},
+			}
+			changed = true
+		}
+	case *cfgcore.SubstitutionFormatString_JsonFormat:
+		for k, v := range f.JsonFormat.GetFields() {
+			orig := v.GetStringValue()
+			resolved := resolveEGOperators(orig, extensions)
+			if resolved != orig {
+				f.JsonFormat.Fields[k] = &structpb.Value{
+					Kind: &structpb.Value_StringValue{StringValue: resolved},
+				}
+				changed = true
+			}
+		}
+	}
+
+	if !changed {
+		return al, nil
+	}
+
+	newAny, err := proto.ToAnyWithValidation(fal)
+	if err != nil {
+		return nil, err
+	}
+	return &accesslog.AccessLog{
+		Name:       al.Name,
+		Filter:     al.Filter,
+		ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: newAny},
+	}, nil
+}
+
+// collectListenerExtProcs returns the deduplicated ext-proc instances across all routes
+// on a single IR listener, for use in %EG_EXT_FILTER_STATE(...)% operator resolution.
+func collectListenerExtProcs(irListener *ir.HTTPListener) []ir.ExtProc {
 	seen := map[string]struct{}{}
 	var result []ir.ExtProc
 	for _, route := range irListener.Routes {
@@ -155,7 +254,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType, ex
 		}
 
 		format := *text.Format
-		format = resolveEGExtFilterStateOperators(format, extensions)
+		format = resolveEGOperators(format, extensions)
 
 		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
 			LogFormat: &cfgcore.SubstitutionFormatString{
@@ -214,7 +313,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType, ex
 		for _, entry := range jsonLogFields {
 			jsonFormat.Fields[entry.Key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: resolveEGExtFilterStateOperators(entry.Value, extensions),
+					StringValue: resolveEGOperators(entry.Value, extensions),
 				},
 			}
 		}

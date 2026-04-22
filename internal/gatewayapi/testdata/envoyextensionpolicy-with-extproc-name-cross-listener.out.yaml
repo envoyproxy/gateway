@@ -21,7 +21,7 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: default
-        sectionName: http
+        sectionName: http-8080
       conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
@@ -56,20 +56,18 @@ envoyExtensionPolicies:
         kind: Gateway
         name: gateway-1
         namespace: default
-        sectionName: http
+        sectionName: http-8081
       conditions:
-      - lastTransitionTime: null
-        message: ext-proc name(s) [auth] already claimed on listener default/gateway-1/http
-          by an older policy; %EG_EXT_FILTER_STATE% access log operator will not resolve
-          for this policy; spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: Warnings
-        status: "True"
-        type: Warning
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -83,12 +81,18 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
-      name: http
-      port: 80
+      name: http-8080
+      port: 8080
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http-8081
+      port: 8081
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -105,7 +109,30 @@ gateways:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
-      name: http
+      name: http-8080
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-8081
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -123,7 +150,7 @@ httpRoutes:
     parentRefs:
     - name: gateway-1
       namespace: default
-      sectionName: http
+      sectionName: http-8080
     rules:
     - backendRefs:
       - name: service-1
@@ -148,7 +175,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: default
-        sectionName: http
+        sectionName: http-8080
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -160,7 +187,7 @@ httpRoutes:
     parentRefs:
     - name: gateway-1
       namespace: default
-      sectionName: http
+      sectionName: http-8081
     rules:
     - backendRefs:
       - name: service-1
@@ -185,17 +212,23 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: default
-        sectionName: http
+        sectionName: http-8081
 infraIR:
   default/gateway-1:
     proxy:
       listeners:
-      - name: default/gateway-1/http
+      - name: default/gateway-1/http-8080
         ports:
-        - containerPort: 10080
-          name: http-80
+        - containerPort: 8080
+          name: http-8080
           protocol: HTTP
-          servicePort: 80
+          servicePort: 8080
+      - name: default/gateway-1/http-8081
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -233,19 +266,19 @@ xdsIR:
           protocol: TCP
     http:
     - address: 0.0.0.0
-      externalPort: 80
+      externalPort: 8080
       hostnames:
       - '*'
       metadata:
         kind: Gateway
         name: gateway-1
         namespace: default
-        sectionName: http
-      name: default/gateway-1/http
+        sectionName: http-8080
+      name: default/gateway-1/http-8080
       path:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
-      port: 10080
+      port: 8080
       routes:
       - destination:
           metadata:
@@ -301,6 +334,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http-8081
+      name: default/gateway-1/http-8081
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+      routes:
       - destination:
           metadata:
             kind: HTTPRoute
@@ -323,6 +371,7 @@ xdsIR:
         envoyExtensions:
           extProcs:
           - authority: grpc-backend-2.default:9000
+            customName: auth
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy

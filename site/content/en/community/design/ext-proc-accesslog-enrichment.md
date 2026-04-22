@@ -54,9 +54,19 @@ The `%EG_EXT_FILTER_STATE(name:attr)%` provides **cleaner NACK protection**: an 
 
 ### 4. Conflict resolution for shared names
 
-When multiple EEPs on the same listener use the same `name`, the operator can only resolve to one instance per HCM. Resolution is first-match: `collectHCMExtensionsForLogExpansion` deduplicates by IR name across all routes; `resolveEGExtFilterStateOperators` picks the first match on the user-assigned name. Ordering follows policy creation timestamp (oldest first), consistent with other same-scope conflict resolution in EG.
+`%EG_EXT_FILTER_STATE(name:attr)%` resolves to a specific Envoy filter state key, which is tied to a single ext-proc instance in the HCM filter chain. Two ext-proc instances sharing the same user-assigned `name` in the same HCM filter chain are inherently ambiguous.
 
-No warning condition is set on the policy — the route's ext-proc still executes normally and writes its own filter state; only the access log expansion is affected. A warning would be misleading for the valid sharing pattern described below.
+Each Gateway listener translates to an IR `HTTPListener`. At xDS build time, each IR `HTTPListener` becomes an HCM and is attached to either a named `FilterChain` (TLS listeners, where SNI-based matching selects the chain) or the `DefaultFilterChain` (non-TLS listeners). Multiple routes under the same listener all share the same HCM and therefore the same ext-proc filter chain.
+
+An `EnvoyExtensionPolicy` targeting an `HTTPRoute` attaches ext-proc filters to every IR route matched by that route, under every IR listener those routes belong to. Because all those routes share the same HCM at xDS time, two EEPs on the same listener that both assign the same `name` will produce two ext-proc instances with the same user name in the same HCM filter chain — the ambiguous case.
+
+Conflict detection must happen before the IR is written, at the point where EG knows which IR listener a route belongs to. This is `translateEnvoyExtensionPolicyForRoute` in the Gateway API translation layer. EEPs are processed in creation-timestamp order (oldest first). A `nameRegistry` keyed by IR listener name tracks the first owner of each `name` per listener. When a later EEP claims a name already owned by a different ext-proc on the same IR listener, its `CustomName` is cleared in the IR so the access-log resolver never sees the duplicate. A `Warning` condition with reason `AmbiguousDefinition` is set on the losing policy.
+
+When [`MergeGateways`](https://gateway.envoyproxy.io/docs/api/extension_types/#mergegatewaysconfig) is enabled, all gateways under the same `GatewayClass` share a single IR key. Non-TLS listeners on the same address and port are merged into a single `DefaultFilterChain` with a shared HCM at xDS time. However, each gateway still produces its own IR `HTTPListener` — they are distinct entries in the IR, looked up separately during translation.
+
+Because the `nameRegistry` is scoped to individual IR listeners, name collisions **across** IR listeners (i.e. across merged gateways) are not detected, and no `Warning` condition is set. At xDS translation time, the IR listener belonging to the **oldest merged gateway** creates the shared HCM first and resolves its operators. Subsequent IR listeners patch the same HCM and resolve only operators that remain unresolved — first-writer-wins. Operators that go unresolved after all listeners are processed are replaced with `"-"`.
+
+In practice: when using `MergeGateways` with non-TLS listeners, ensure names are unique across all merged gateways, or accept that the oldest gateway's ext-proc instance takes precedence with no warning issued.
 
 ### 5. Users opt in to what gets logged
 
@@ -68,9 +78,11 @@ Named after the underlying Envoy mechanism (`FILTER_STATE`) rather than the spec
 
 ## Sharing Names Across Policies
 
-Sharing a `name` across EEPs on the **same listener** is generally not recommended — only the first-matched instance is used for access log expansion.
+Sharing a `name` across EEPs on the **same listener** is generally not recommended — only the oldest policy's instance is used for access log expansion, and the newer policy receives a `Warning` condition with reason `AmbiguousDefinition`.
 
 The pattern works correctly when the sharing EEPs target routes on **separate listeners** (each listener has its own isolated HCM and filter chain). A common case: the same ext-proc logic is deployed in multiple namespaces for access-control reasons, each team's routes served by their own listener. A single `EnvoyProxy` format string then works uniformly across all of them, with each listener resolving the name against its own ext-proc instance independently.
+
+When `MergeGateways` is enabled, non-TLS listeners on the same port share one HCM, so the isolated-listener guarantee does not hold for those listeners. See [MergeGateways (non-TLS)](#mergeGateways-non-tls) above for ordering and warning behaviour.
 
 ## Scope and Future Work
 

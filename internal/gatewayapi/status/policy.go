@@ -94,6 +94,13 @@ func SetDeprecatedFieldsWarningForPolicyAncestor(policyStatus *gwapiv1.PolicySta
 	SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, egv1a1.PolicyReasonDeprecatedField, buildDeprecationWarningMessage(deprecatedFields), generation)
 }
 
+// SetWarningForPolicyAncestors sets or appends a warning condition for all ancestor references.
+func SetWarningForPolicyAncestors(policyStatus *gwapiv1.PolicyStatus, ancestorRefs []*gwapiv1.ParentReference, controllerName string, reason gwapiv1.PolicyConditionReason, message string, generation int64) {
+	for _, ancestorRef := range ancestorRefs {
+		SetWarningForPolicyAncestor(policyStatus, ancestorRef, controllerName, reason, message, generation)
+	}
+}
+
 // SetWarningForPolicyAncestor sets or appends a warning condition for a specific ancestor reference.
 func SetWarningForPolicyAncestor(policyStatus *gwapiv1.PolicyStatus, ancestorRef *gwapiv1.ParentReference, controllerName string, reason gwapiv1.PolicyConditionReason, message string, generation int64) {
 	if message == "" {

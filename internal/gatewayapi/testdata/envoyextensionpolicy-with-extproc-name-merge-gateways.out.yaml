@@ -2,6 +2,43 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
+    creationTimestamp: "2024-02-01T00:00:00Z"
+    name: policy-for-httproute-2
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-2
+        port: 9000
+      name: auth
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    creationTimestamp: "2024-03-01T00:00:00Z"
     name: policy-for-httproute-1
     namespace: default
   spec:
@@ -34,47 +71,11 @@ envoyExtensionPolicies:
         status: "True"
         type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
-    name: policy-for-httproute-2
-    namespace: default
-  spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-2
-        port: 9000
-      name: auth
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: ext-proc name(s) [auth] already claimed on listener default/gateway-1/http
-          by an older policy; %EG_EXT_FILTER_STATE% access log operator will not resolve
-          for this policy; spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: Warnings
-        status: "True"
-        type: Warning
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
+    creationTimestamp: "2024-01-01T00:00:00Z"
     name: gateway-1
     namespace: default
   spec:
@@ -83,12 +84,54 @@ gateways:
     - allowedRoutes:
         namespaces:
           from: All
+      hostname: www.foo.com
       name: http
       port: 80
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    creationTimestamp: "2024-06-01T00:00:00Z"
+    name: gateway-2
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: www.bar.com
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -158,7 +201,7 @@ httpRoutes:
     hostnames:
     - www.bar.com
     parentRefs:
-    - name: gateway-1
+    - name: gateway-2
       namespace: default
       sectionName: http
     rules:
@@ -183,12 +226,22 @@ httpRoutes:
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
-        name: gateway-1
+        name: gateway-2
         namespace: default
         sectionName: http
 infraIR:
-  default/gateway-1:
+  envoy-gateway-class:
     proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: test
+          namespace: envoy-gateway-system
+        spec:
+          logging: {}
+          mergeGateways: true
+        status: {}
       listeners:
       - name: default/gateway-1/http
         ports:
@@ -198,15 +251,14 @@ infraIR:
           servicePort: 80
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-          gateway.envoyproxy.io/owning-gateway-namespace: default
+          gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
         ownerReference:
           kind: GatewayClass
           name: envoy-gateway-class
-      name: default/gateway-1
+      name: envoy-gateway-class
       namespace: envoy-gateway-system
 xdsIR:
-  default/gateway-1:
+  envoy-gateway-class:
     accessLog:
       json:
       - path: /dev/stdout
@@ -214,10 +266,10 @@ xdsIR:
       proxyServiceCluster:
         metadata:
           kind: Service
-          name: envoy-default-gateway-1-bfd08ef4
+          name: envoy-envoy-gateway-class-3b1df594
           namespace: envoy-gateway-system
           sectionName: "8080"
-        name: default/gateway-1
+        name: envoy-gateway-class
         settings:
         - addressType: IP
           endpoints:
@@ -226,16 +278,16 @@ xdsIR:
             zone: zone1
           metadata:
             kind: Service
-            name: envoy-default-gateway-1-bfd08ef4
+            name: envoy-envoy-gateway-class-3b1df594
             namespace: envoy-gateway-system
             sectionName: "8080"
-          name: default/gateway-1
+          name: envoy-gateway-class
           protocol: TCP
     http:
     - address: 0.0.0.0
       externalPort: 80
       hostnames:
-      - '*'
+      - www.foo.com
       metadata:
         kind: Gateway
         name: gateway-1
@@ -301,6 +353,21 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /foo
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - www.bar.com
+      metadata:
+        kind: Gateway
+        name: gateway-2
+        namespace: default
+        sectionName: http
+      name: default/gateway-2/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
       - destination:
           metadata:
             kind: HTTPRoute
@@ -323,6 +390,7 @@ xdsIR:
         envoyExtensions:
           extProcs:
           - authority: grpc-backend-2.default:9000
+            customName: auth
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy

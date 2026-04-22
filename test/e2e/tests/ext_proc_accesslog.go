@@ -95,9 +95,14 @@ var ExtProcAccessLogTest = suite.ConformanceTest{
 				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
 				Name:      gwapiv1.ObjectName(gwNN.Name),
 			}
+			// eep1 wins the name — accepted with no warning.
 			EnvoyExtensionPolicyMustBeAccepted(t, suite.Client,
-				types.NamespacedName{Name: "ext-proc-accesslog-eep2", Namespace: ns},
+				types.NamespacedName{Name: "ext-proc-accesslog-eep1", Namespace: ns},
 				suite.ControllerName, ancestorRef)
+			// eep2 loses the name — accepted but carries an AmbiguousDefinition warning.
+			EnvoyExtensionPolicyMustHaveWarning(t, suite.Client,
+				types.NamespacedName{Name: "ext-proc-accesslog-eep2", Namespace: ns},
+				suite.ControllerName, ancestorRef, "auth-proc")
 
 			// Both routes execute their own ext-proc (per-route override); access log
 			// operator resolution uses first-match. Match per-path to verify both log.

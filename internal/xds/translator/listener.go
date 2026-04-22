@@ -349,7 +349,7 @@ func (t *Translator) addHCMToXDSListener(
 	http3Listener bool,
 	connection *ir.ClientConnection,
 ) error {
-	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute, collectHCMExtensionsForLogExpansion(irListener))
+	al, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeRoute, collectListenerExtProcs(irListener))
 	if err != nil {
 		return err
 	}

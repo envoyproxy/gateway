@@ -103,6 +103,12 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	// extProcNameRegistry tracks first-claimant-wins ownership of ext-proc CustomNames
+	// per IR listener. The first (oldest) policy to register a name wins; later policies
+	// that reuse the same name on the same listener have their CustomName cleared so the
+	// access-log resolver never sees the duplicate.
+	extProcNameRegistry := newNameRegistry()
+
 	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
 
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
@@ -128,7 +134,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -148,7 +154,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				}
 
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
-					routeMap, gatewayRouteMap, policy, currTarget)
+					routeMap, gatewayRouteMap, extProcNameRegistry, policy, currTarget)
 			}
 		}
 	}
@@ -207,6 +213,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	xdsIR resource.XdsIRMap,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
+	extProcNameRegistry *nameRegistry,
 	policy *egv1a1.EnvoyExtensionPolicy,
 	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 ) {
@@ -272,7 +279,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	}
 
 	// Set conditions for translation error if it got any
-	if err := t.translateEnvoyExtensionPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, resources); err != nil {
+	if err := t.translateEnvoyExtensionPolicyForRoute(policy, ancestorRefs, targetedRoute, currTarget, xdsIR, resources, extProcNameRegistry); err != nil {
 		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 			ancestorRefs,
 			t.GatewayControllerName,
@@ -504,10 +511,12 @@ func resolveEnvoyExtensionPolicyRouteTargetRef(
 
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
+	ancestorRefs []*gwapiv1.ParentReference,
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
+	extProcNameRegistry *nameRegistry,
 ) error {
 	var (
 		wasms                                                 []ir.Wasm
@@ -594,6 +603,30 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
+							// Detect ext-proc CustomName conflicts at the listener scope.
+							// First (oldest) policy to claim a name wins; later policies
+							// have their CustomName cleared so the access-log resolver
+							// never sees the duplicate.
+							var conflictedNames []string
+							for i := range extProcs {
+								if extProcs[i].CustomName == "" {
+									continue
+								}
+								if _, isNew := extProcNameRegistry.claim(irListener.Name, extProcs[i].CustomName, extProcs[i].Name); !isNew {
+									conflictedNames = append(conflictedNames, extProcs[i].CustomName)
+									extProcs[i].CustomName = ""
+								}
+							}
+							if len(conflictedNames) > 0 {
+								status.SetWarningForPolicyAncestors(&policy.Status,
+									ancestorRefs,
+									t.GatewayControllerName,
+									egv1a1.PolicyReasonAmbiguousDefinition,
+									fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by an older policy; %%EG_EXT_FILTER_STATE%% access log operator will not resolve for this policy",
+										conflictedNames, irListener.Name),
+									policy.Generation,
+								)
+							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
 								Wasms:          wasms,
