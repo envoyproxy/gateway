@@ -101,6 +101,10 @@ type Translator struct {
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
+	// SDSSecretRefEnabled is true if EnvoyProxy can reference SDS secrets using the sds-ref type Secret.
+	// This could be enabled by Envoy Gateway configuration.
+	SDSSecretRefEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
