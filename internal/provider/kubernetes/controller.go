@@ -142,16 +142,16 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 	var extServerPoliciesGVKs []schema.GroupVersionKind
 	var extGVKs []schema.GroupVersionKind
 	var extBackendGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.ExtensionManager != nil {
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
+	for _, em := range cfg.EnvoyGateway.GetExtensionManagers() {
+		for _, rsrc := range em.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
+		for _, rsrc := range em.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
 		}
-		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+		for _, rsrc := range em.BackendResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extBackendGVKs = append(extBackendGVKs, gvk)
 		}
@@ -207,7 +207,7 @@ func newGatewayAPIController(ctx context.Context, mgr manager.Manager, cfg *conf
 		// Subscribe to resource updates
 		r.subscribeToResources(ctx)
 		// Update status
-		go r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		go r.updateStatusFromSubscriptions(ctx, len(cfg.EnvoyGateway.GetExtensionManagers()) > 0)
 		r.log.Info("started")
 		// Close resources if the context is done.
 		<-ctx.Done()

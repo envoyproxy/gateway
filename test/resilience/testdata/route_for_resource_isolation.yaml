@@ -1,0 +1,31 @@
+apiVersion: ext-a.example.io/v1
+kind: FooFilter
+metadata:
+  name: test-foo
+  namespace: gateway-resilience
+spec:
+  value: "test-value"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: isolation-route
+  namespace: gateway-resilience
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["www.isolation.com"]
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /isolate
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: ext-a.example.io
+            kind: FooFilter
+            name: test-foo
+      backendRefs:
+        - name: backend
+          port: 8080
