@@ -149,5 +149,5 @@ func shouldWaitForRateLimit(runTest string) bool {
 	if runTest != "" {
 		return rateLimitTests.Has(runTest)
 	}
-	return false
+	return true
 }
