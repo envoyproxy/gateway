@@ -61,6 +61,28 @@ deployment:
       runAsUser: 65532
       seccompProfile:
         type: RuntimeDefault
+    startupProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      failureThreshold: 30
+      periodSeconds: 1
+      successThreshold: 1
+      timeoutSeconds: 1
+    livenessProbe:
+      httpGet:
+        path: /healthz
+        port: 8081
+      periodSeconds: 20
+      successThreshold: 1
+      timeoutSeconds: 1
+    readinessProbe:
+      httpGet:
+        path: /readyz
+        port: 8081
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
   ports:
     - name: grpc
       port: 18000
@@ -109,6 +131,7 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+      kubernetes: {}
     logging:
       level:
         default: info
