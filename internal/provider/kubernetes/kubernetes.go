@@ -194,25 +194,27 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		Label:                 labels.SelectorFromSet(proxy.EnvoyAppLabel()),
 	}
 
-	// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
-	// If not, we only watch the controller namespace to avoid unnecessary RBAC permissions.
-	// A label selector is still applied in both cases to limit the cache to only the resources owned by EG to reduce memory and sync churn.
 	namesReq, err := labels.NewRequirement("app.kubernetes.io/name", selection.In,
 		[]string{"envoy", "envoy-ratelimit"})
 	if err != nil {
 		panic(err)
 	}
 	managedSelector := labels.NewSelector().Add(*namesReq)
+
+	// If GatewayNamespaceMode is enabled, we need to watch all namespaces for the envoy proxy infrastructure resources.
+	// If not, we only watch the controller namespace to avoid unnecessary RBAC permissions.
+	// A label selector is still applied in both cases to limit the cache to only the resources owned by EG to reduce memory and sync churn.
 	if svrCfg.EnvoyGateway.GatewayNamespaceMode() {
 		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
-		// are needed to watch for changes, and EG controller's labels can vary across install methods (for example Helm nameOverride/custom chart naming).
-		// Filtering these kinds by labels can hide the controller objects from the cache.
+		// are needed to watch for changes, and EG controller's labels can be customized by users while installation
+		// and may not be present in the cache.
 		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 		}
 		mgrOpts.Cache.ByObject[&appsv1.Deployment{}] = cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 		}
+		// Filtering these envoy proxy and ratelimit infra resources by labels to reduce the cache size and memory usage.
 		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Label:                 managedSelector,
@@ -226,6 +228,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			Label:                 managedSelector,
 		}
 	} else {
+		// Keep ServiceAccount/Deployment unfiltered because the Envoy Gateway controller service account and deployment
+		// are needed to watch for changes, and EG controller's labels can be customized by users while installation
+		// and may not be present in the cache.
 		mgrOpts.Cache.ByObject[&corev1.ServiceAccount{}] = cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Namespaces: map[string]cache.Config{
@@ -238,6 +243,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 				svrCfg.ControllerNamespace: {},
 			},
 		}
+		// Filtering these envoy proxy and ratelimit infra resources by labels to reduce the cache size and memory usage.
 		mgrOpts.Cache.ByObject[&appsv1.DaemonSet{}] = cache.ByObject{
 			UnsafeDisableDeepCopy: new(true),
 			Label:                 managedSelector,

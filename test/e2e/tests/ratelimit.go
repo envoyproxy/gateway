@@ -72,7 +72,7 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-			
+
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
 				types.NamespacedName{Name: "ratelimit-all-ips", Namespace: ns},
 				suite.ControllerName, gwapiv1.ParentReference{
