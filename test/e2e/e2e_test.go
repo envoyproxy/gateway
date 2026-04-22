@@ -83,10 +83,6 @@ func TestE2E(t *testing.T) {
 		skipTests = nil
 	}
 
-	if shouldWaitForRateLimit(*flags.RunTest) {
-		tests.WaitForPods(t, c, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &tests.PodReady)
-	}
-
 	cSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
 		Client:               c,
 		RestConfig:           cfg,
@@ -114,6 +110,9 @@ func TestE2E(t *testing.T) {
 	})
 	timedTests := WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder)
 	cSuite.Setup(t, timedTests)
+	if shouldWaitForRateLimit(*flags.RunTest) {
+		tests.WaitForPods(t, c, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &tests.PodReady)
+	}
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
 	} else {
