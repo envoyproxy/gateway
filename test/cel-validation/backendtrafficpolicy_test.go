@@ -1053,6 +1053,55 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "grpcStatus 16 (max valid value) is accepted",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							GrpcStatus: new(int32(16)),
+							Percentage: new(float32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "grpcStatus 17 (exceeds max) is rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					FaultInjection: &egv1a1.FaultInjection{
+						Abort: &egv1a1.FaultInjectionAbort{
+							GrpcStatus: new(int32(17)),
+							Percentage: new(float32(20)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.faultInjection.abort.grpcStatus: Invalid value:",
+				"should be less than or equal to 16",
+			},
+		},
+		{
 			desc: "httpStatus and grpcStatus are set at least one",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{
