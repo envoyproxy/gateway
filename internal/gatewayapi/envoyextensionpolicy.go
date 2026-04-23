@@ -116,14 +116,14 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
+		allowed, denied := resolvePolicySelectorTargets(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -175,14 +175,14 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
+		allowed, denied := resolvePolicySelectorTargets(
 			currPolicy.Spec.TargetSelectors,
-			routes,
+			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {

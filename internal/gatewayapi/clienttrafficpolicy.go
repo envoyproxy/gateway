@@ -204,7 +204,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
+		allowed, denied := resolvePolicySelectorTargets(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
@@ -212,7 +212,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			currPolicy.Namespace,
 			t.GetNamespace,
 		)
-		targetRefs := getPolicyTargetRefsFromMatches(
+		targetRefs := composePolicyTargetRefs(
 			allowed,
 			currPolicy.Spec.GetTargetRefs(),
 			currPolicy.Namespace,

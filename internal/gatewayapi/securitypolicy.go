@@ -143,14 +143,14 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting RouteRules (HTTP + TCP)
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
+		allowed, denied := resolvePolicySelectorTargets(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -199,14 +199,14 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
+		allowed, denied := resolvePolicySelectorTargets(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
