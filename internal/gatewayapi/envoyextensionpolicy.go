@@ -127,7 +127,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
-				policy = currPolicy
+				policy = policyCopies[i]
 				res = append(res, policy)
 				handledPolicies[policyName] = policy
 			}
@@ -186,7 +186,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
-				policy = currPolicy
+				policy = policyCopies[i]
 				res = append(res, policy)
 				handledPolicies[policyName] = policy
 			}

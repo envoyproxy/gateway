@@ -220,7 +220,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
-				policy = currPolicy
+				policy = policyCopies[i]
 				res = append(res, policy)
 				handledPolicies[policyName] = policy
 			}

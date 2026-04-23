@@ -154,7 +154,7 @@ func (t *Translator) ProcessSecurityPolicies(
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
-				policy = currPolicy
+				policy = policyCopies[i]
 				handledPolicies[policyName] = policy
 				res = append(res, policy)
 			}
@@ -210,7 +210,7 @@ func (t *Translator) ProcessSecurityPolicies(
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
-				policy = currPolicy
+				policy = policyCopies[i]
 				handledPolicies[policyName] = policy
 				res = append(res, policy)
 			}
