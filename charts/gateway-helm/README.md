@@ -70,6 +70,7 @@ helm uninstall eg -n envoy-gateway-system
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
+| deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
 | deployment.envoyGateway.image.repository | string | `""` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |

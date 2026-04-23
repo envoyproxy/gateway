@@ -312,6 +312,8 @@ type ExtensionAPISettings struct {
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
 	DisableLua bool `json:"disableLua"`
+	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
+	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -785,12 +787,14 @@ type ExtensionService struct {
 	BackendEndpoint `json:",inline"`
 
 	// Host define the extension service hostname.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional

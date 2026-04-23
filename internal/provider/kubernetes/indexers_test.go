@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -37,7 +36,7 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "service-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -63,7 +62,7 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "service-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -73,9 +72,9 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									Type: gwapiv1.GRPCRouteFilterRequestMirror,
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
-											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Kind: new(gwapiv1.Kind("Service")),
 											Name: "mirror-service",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -101,7 +100,7 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "service-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -111,10 +110,10 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									Type: gwapiv1.GRPCRouteFilterRequestMirror,
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
-											Kind:      ptr.To(gwapiv1.Kind("Service")),
-											Namespace: ptr.To(gwapiv1.Namespace("other-ns")),
+											Kind:      new(gwapiv1.Kind("Service")),
+											Namespace: new(gwapiv1.Namespace("other-ns")),
 											Name:      "mirror-service",
-											Port:      ptr.To(gwapiv1.PortNumber(8080)),
+											Port:      new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -140,7 +139,7 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "service-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -150,9 +149,9 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									Type: gwapiv1.GRPCRouteFilterRequestMirror,
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
-											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Kind: new(gwapiv1.Kind("Service")),
 											Name: "mirror-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -160,9 +159,9 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									Type: gwapiv1.GRPCRouteFilterRequestMirror,
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
-											Kind: ptr.To(gwapiv1.Kind("Service")),
+											Kind: new(gwapiv1.Kind("Service")),
 											Name: "mirror-2",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -188,7 +187,7 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "service-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},
@@ -223,9 +222,9 @@ func TestBackendGRPCRouteIndexFunc(t *testing.T) {
 								{
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Kind: ptr.To(gwapiv1.Kind(egv1a1.KindBackend)),
+											Kind: new(gwapiv1.Kind(egv1a1.KindBackend)),
 											Name: "backend-1",
-											Port: ptr.To(gwapiv1.PortNumber(8080)),
+											Port: new(gwapiv1.PortNumber(8080)),
 										},
 									},
 								},

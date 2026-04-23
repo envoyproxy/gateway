@@ -94,7 +94,7 @@ these types of cross-namespace references. Envoy Gateway supports the following 
   namespace.
 - Allowing a Gateway's [SecretObjectReference][] to reference a secret in a different namespace.
 
-[system design]: ../../../contributions/design/system-design
+[system design]: /community/design/system-design
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#gatewayclass
 [parameters reference]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#parametersreference
@@ -111,7 +111,7 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [TLSRoute]: https://gateway-api.sigs.k8s.io/reference/1.3/spec/#tlsroute
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#referencegrant
 [SecretObjectReference]: https://gateway-api.sigs.k8s.io/reference/1.3/spec#secretobjectreference
-[rate limiting]: ../../../contributions/design/rate-limit
+[rate limiting]: /community/design/rate-limit
 [request authentication]: ../security/jwt-authentication
 [EnvoyProxy]: ../../../api/extension_types#envoyproxy
 [resolving conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/?h=conflict#conflicts

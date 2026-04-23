@@ -18,7 +18,7 @@ Kubernetes-based application gateway.
 * [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
 * [Quickstart](https://gateway.envoyproxy.io/latest/tasks/quickstart/) to use Envoy Gateway in a few simple steps.
-* [Roadmap](https://gateway.envoyproxy.io/contributions/roadmap/)
+* [Roadmap](https://gateway.envoyproxy.io/community/roadmap/)
 * [Compatibility Matrix](https://gateway.envoyproxy.io/news/releases/matrix/)
 
 ## Contact
@@ -30,8 +30,8 @@ Kubernetes-based application gateway.
 ## Contributing
 
 * [Code of conduct](/CODE_OF_CONDUCT.md)
-* [Contributing guide](https://gateway.envoyproxy.io/contributions/contributing/)
-* [Developer guide](https://gateway.envoyproxy.io/contributions/develop/)
+* [Contributing guide](https://gateway.envoyproxy.io/community/contributing/)
+* [Developer guide](https://gateway.envoyproxy.io/community/develop/)
 
 ## Security Reporting
 

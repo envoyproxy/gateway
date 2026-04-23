@@ -128,7 +128,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.LeaseDuration = ptr.To(ld)
+			mgrOpts.LeaseDuration = new(ld)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
@@ -136,7 +136,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RetryPeriod = ptr.To(rp)
+			mgrOpts.RetryPeriod = new(rp)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
@@ -144,9 +144,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RenewDeadline = ptr.To(rd)
+			mgrOpts.RenewDeadline = new(rd)
 		}
-		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
+		mgrOpts.Controller = config.Controller{NeedLeaderElection: new(false)}
 	}
 
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
@@ -154,7 +154,7 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		if err != nil {
 			return nil, err
 		}
-		mgrOpts.Cache.SyncPeriod = ptr.To(csp)
+		mgrOpts.Cache.SyncPeriod = new(csp)
 	}
 
 	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
@@ -162,29 +162,29 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
 			// Disable deepcopy for read only resources
 			&corev1.Secret{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&corev1.ConfigMap{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 				Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
 			},
 			&corev1.Service{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&discoveryv1.EndpointSlice{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&appsv1.Deployment{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&corev1.Node{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&gwapiv1b1.ReferenceGrant{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 			&appsv1.DaemonSet{}: {
-				UnsafeDisableDeepCopy: ptr.To(true),
+				UnsafeDisableDeepCopy: new(true),
 			},
 		}
 	}

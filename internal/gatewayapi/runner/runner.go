@@ -177,7 +177,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
-		wasm.SeverOptions{
+		wasm.ServerOptions{
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
@@ -265,6 +265,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
 					ControllerNamespace:             r.ControllerNamespace,
 					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),

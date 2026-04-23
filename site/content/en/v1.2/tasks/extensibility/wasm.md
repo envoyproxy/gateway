@@ -180,7 +180,7 @@ kubectl delete envoyextensionpolicy/wasm-test
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../../contributions/develop) to get involved in the project.
+Checkout the [Developer Guide](/community/develop) to get involved in the project.
 
 [EnvoyExtensionPolicy]: ../../../api/extension_types#envoyextensionpolicy
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

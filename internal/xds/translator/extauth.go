@@ -24,6 +24,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
+
 func init() {
 	registerHTTPFilter(&extAuth{})
 }
@@ -106,6 +108,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 
 	if extAuth.RecomputeRoute != nil {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
+	}
+
+	if extAuth.IncludeRouteMetadata != nil && *extAuth.IncludeRouteMetadata {
+		config.RouteMetadataContextNamespaces = extAuthRouteMetadataContextNamespaces
 	}
 
 	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
@@ -253,14 +259,21 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		if !routeContainsExtAuth(route) {
 			continue
 		}
-		if route.Security.ExtAuth.HTTP != nil {
+		if http := route.Security.ExtAuth.HTTP; http != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, http.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
+			grpc := route.Security.ExtAuth.GRPC
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, grpc.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
