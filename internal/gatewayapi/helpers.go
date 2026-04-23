@@ -777,6 +777,26 @@ type policySelectorTargetMatches[T client.Object] struct {
 	Denied  []policySelectorTargetMatch[T]
 }
 
+func isRouteRule(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is not nil, then it's a route rule.
+	return target.Kind != resource.KindGateway && target.SectionName != nil
+}
+
+func isRoute(target policyTargetReferenceWithSectionName) bool {
+	// If the target is not a gateway and the section name is nil, then it's a route.
+	return target.Kind != resource.KindGateway && target.SectionName == nil
+}
+
+func isGateway(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is nil, then it's a gateway.
+	return target.Kind == resource.KindGateway && target.SectionName == nil
+}
+
+func isListener(target policyTargetReferenceWithSectionName) bool {
+	// If the target is a gateway and the section name is not nil, then it's a listener.
+	return target.Kind == resource.KindGateway && target.SectionName != nil
+}
+
 func selectorFromTargetSelector(selector egv1a1.TargetSelector) labels.Selector {
 	l, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels:      selector.MatchLabels,
@@ -927,7 +947,8 @@ func getPolicySelectorTargetMatches[T client.Object](
 				crossNamespaceFrom{
 					group:     egv1a1.GroupVersion.Group,
 					kind:      policyKind,
-					namespace: policyNamespace},
+					namespace: policyNamespace,
+				},
 				crossNamespaceTo{
 					group:     gvk.Group,
 					kind:      gvk.Kind,
@@ -978,9 +999,9 @@ func getPolicyTargetRefs[T client.Object](
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
-		 policyKind,
-		 policyNamespace,
-		 namespaceLookup)
+		policyKind,
+		policyNamespace,
+		namespaceLookup)
 	return getPolicyTargetRefsFromMatches(matches, targetRefs.GetTargetRefs(), policyNamespace)
 }
 

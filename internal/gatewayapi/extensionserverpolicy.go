@@ -63,7 +63,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
-			gateway := resolveExtServerPolicyGatewayTargetRef(&policy, currTarget, gatewayMap)
+			gateway := resolveExtServerPolicyGatewayTargetRef(currTarget, gatewayMap)
 			if gateway == nil {
 				// unable to find a matching Gateway for policy
 				continue
@@ -128,11 +128,11 @@ func extractTargetRefs(
 	return ret, nil
 }
 
-func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target policyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
+func resolveExtServerPolicyGatewayTargetRef(target policyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: policy.GetNamespace(),
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 

@@ -144,13 +144,13 @@ func (t *Translator) ProcessSecurityPolicies(
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		routeMatches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			currPolicy.Spec.TargetSelectors,
 			routes,
-			 resources.ReferenceGrants,
-			 currPolicy.Kind,
-			 currPolicy.Namespace,
-			 t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(routeMatches,currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+			resources.ReferenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		targetRefs := getPolicyTargetRefsFromMatches(routeMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(routeMatches.Denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -161,8 +161,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			setPolicyTargetRefNotPermittedStatus(&policy.Status, routeMatches.Denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is defined, then it's a route rule.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
+			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -185,8 +184,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			currPolicy.Namespace,
 			t.GetNamespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
+			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -202,13 +200,13 @@ func (t *Translator) ProcessSecurityPolicies(
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		gatewayMatches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
-			 currPolicy.Kind,
-			 currPolicy.Namespace,
-			 t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches,currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(gatewayMatches.Denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -219,8 +217,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			setPolicyTargetRefNotPermittedStatus(&policy.Status, gatewayMatches.Denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is defined, then it's a listener.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
+			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -237,7 +234,7 @@ func (t *Translator) ProcessSecurityPolicies(
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		gatewayMatches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
@@ -245,8 +242,7 @@ func (t *Translator) ProcessSecurityPolicies(
 			t.GetNamespace)
 		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is not defined, then it's a gateway.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
+			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -278,12 +274,12 @@ func (t *Translator) buildGatewayPolicyMapForSecurity(
 ) {
 	for _, currPolicy := range securityPolicies {
 		gatewayMatches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
-			 gateways,
-			  referenceGrants,
-			  currPolicy.Kind,
-			  currPolicy.Namespace,
-			  t.GetNamespace)
+			currPolicy.Spec.TargetSelectors,
+			gateways,
+			referenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {

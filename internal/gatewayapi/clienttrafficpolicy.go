@@ -205,7 +205,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		matches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
