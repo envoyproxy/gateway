@@ -2461,8 +2461,6 @@ spec:
                   - message: exactly one of response or redirect must be specified
                     rule: (has(self.response) && !has(self.redirect)) || (!has(self.response)
                       && has(self.redirect))
-                  - message: redirect is not supported for Local response source
-                    rule: (!has(self.source) || self.source != 'Local') || !has(self.redirect)
                 type: array
               retry:
                 description: |-

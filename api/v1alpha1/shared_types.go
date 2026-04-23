@@ -795,7 +795,6 @@ const (
 
 // ResponseOverride defines the configuration to override specific responses with a custom one.
 // +kubebuilder:validation:XValidation:rule="(has(self.response) && !has(self.redirect)) || (!has(self.response) && has(self.redirect))",message="exactly one of response or redirect must be specified"
-// +kubebuilder:validation:XValidation:rule="(!has(self.source) || self.source != 'Local') || !has(self.redirect)",message="redirect is not supported for Local response source"
 type ResponseOverride struct {
 	// Match configuration.
 	Match CustomResponseMatch `json:"match"`
