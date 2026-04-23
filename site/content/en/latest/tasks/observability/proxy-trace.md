@@ -347,6 +347,18 @@ spec:
 EOF
 ```
 
+### Tempo and appProtocol
+
+When using Grafana Tempo it is important to note that the [tempo-distributed Helm chart](https://github.com/grafana/helm-charts/tree/main/charts/tempo-distributed)
+will omit a `appProtocol` in the `tempo-distributor` Service. Without this protocol hint, Envoy will send traces to Tempo using the wrong protocol: HTTP, instead of GRPC.
+
+You can add the protocol hint to the `tempo-distributor` Service, by supplying these values to the "tempo-distributed" Helm chart:
+
+```yaml
+distributor:
+  appProtocol:
+    grpc: grpc
+=======
 ### Sampler
 
 For OpenTelemetry tracing, you can configure the sampler using the `openTelemetry.sampler` field.
