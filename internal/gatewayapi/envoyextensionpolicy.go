@@ -116,8 +116,14 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		routeMatches := getPolicySelectorTargetMatches(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
+		routeMatches := getPolicySelectorTargetMatches(
+			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			routes,
+			resources.ReferenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		targetRefs := getPolicyTargetRefsFromMatches(routeMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(routeMatches.Denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -146,7 +152,12 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting xRoutes
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
+			routes,
+			resources.ReferenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace, t.GetNamespace)
 		for _, currTarget := range targetRefs {
 			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
@@ -166,8 +177,14 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		gatewayMatches := getPolicySelectorTargetMatches(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
+		gatewayMatches := getPolicySelectorTargetMatches(
+			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
+			routes,
+			resources.ReferenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		if len(gatewayMatches.Denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
@@ -196,7 +213,13 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting Gateways
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, crossNamespaceFrom{group: egv1a1.GroupVersion.Group, kind: "EnvoyExtensionPolicy", namespace: currPolicy.Namespace}, resources.ReferenceGrants, currPolicy.Namespace, t.GetNamespace)
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
+			gateways,
+			resources.ReferenceGrants,
+			currPolicy.Kind,
+			currPolicy.Namespace,
+			t.GetNamespace)
 		for _, currTarget := range targetRefs {
 			// If the target is a gateway and the section name is not defined, then it's a gateway.
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {

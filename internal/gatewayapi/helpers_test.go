@@ -901,12 +901,8 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 			results := getPolicyTargetRefs(
 				tc.policy,
 				tc.targets,
-				crossNamespaceFrom{
-					group:     egv1a1.GroupVersion.Group,
-					kind:      "BackendTrafficPolicy",
-					namespace: "default",
-				},
 				tc.grants,
+				egv1a1.KindBackendTrafficPolicy,
 				"default",
 				func(name string) *corev1.Namespace {
 					return namespaceMap[name]

@@ -205,28 +205,17 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		matches := getPolicySelectorTargetMatches(
-			currPolicy.Spec.PolicyTargetReferences,
+			currPolicy.Spec.PolicyTargetReferences.TargetSelectors,
 			gateways,
-			crossNamespaceFrom{
-				group:     egv1a1.GroupVersion.Group,
-				kind:      "ClientTrafficPolicy",
-				namespace: currPolicy.Namespace,
-			},
 			resources.ReferenceGrants,
+			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace,
 		)
-		targetRefs := getPolicyTargetRefs(
-			currPolicy.Spec.PolicyTargetReferences,
-			gateways,
-			crossNamespaceFrom{
-				group:     egv1a1.GroupVersion.Group,
-				kind:      "ClientTrafficPolicy",
-				namespace: currPolicy.Namespace,
-			},
-			resources.ReferenceGrants,
+		targetRefs := getPolicyTargetRefsFromMatches(
+			matches,
+			currPolicy.Spec.GetTargetRefs(),
 			currPolicy.Namespace,
-			t.GetNamespace,
 		)
 		if len(matches.Denied) > 0 {
 			policy, found := handledPolicies[policyName]

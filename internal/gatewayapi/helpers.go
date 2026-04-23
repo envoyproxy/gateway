@@ -843,6 +843,8 @@ func targetNamespaceMatches(
 	return targetSelectorNamespacesMatch(selector.Namespaces, policyNamespace, targetNamespace, targetNamespaceLabels)
 }
 
+// isCrossNamespacePolicyTargetRefAllowed checks if a cross-namespace reference from a policy in one namespace to a target
+// in another namespace is allowed by a ReferenceGrant in the target namespace.
 func isCrossNamespacePolicyTargetRefAllowed(
 	from crossNamespaceFrom,
 	to crossNamespaceTo,
@@ -882,18 +884,19 @@ func isCrossNamespacePolicyTargetRefAllowed(
 	return false
 }
 
+// getPolicySelectorTargetMatches returns a list of policy target refs that are allowed and denied by the policy's TargetSelectors.
 func getPolicySelectorTargetMatches[T client.Object](
-	policy egv1a1.PolicyTargetReferences,
+	targetSelectors []egv1a1.TargetSelector,
 	potentialTargets []T,
-	from crossNamespaceFrom,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
 ) policySelectorTargetMatches[T] {
 	allowedDedup := sets.New[targetRefWithTimestamp]()
 	deniedDedup := sets.New[policyTargetReferenceWithSectionName]()
 	matches := policySelectorTargetMatches[T]{}
-	for _, currSelector := range policy.TargetSelectors {
+	for _, currSelector := range targetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
 			gvk := obj.GetObjectKind().GroupVersionKind()
@@ -902,6 +905,7 @@ func getPolicySelectorTargetMatches[T client.Object](
 				continue
 			}
 
+			// Check if the target object's namespace matches the selector's namespace criteria.
 			if !targetNamespaceMatches(currSelector, policyNamespace, obj.GetNamespace(), namespaceLookup) {
 				continue
 			}
@@ -913,12 +917,17 @@ func getPolicySelectorTargetMatches[T client.Object](
 				Namespace: gwapiv1.Namespace(obj.GetNamespace()),
 			}
 
+			// Check if the target object's labels match the selector's label criteria.
 			if !labelSelector.Matches(labels.Set(obj.GetLabels())) {
 				continue
 			}
 
+			// Check if cross-namespace reference is allowed if the policy and target are in different namespaces.
 			if !isCrossNamespacePolicyTargetRefAllowed(
-				from,
+				crossNamespaceFrom{
+					group:     egv1a1.GroupVersion.Group,
+					kind:      policyKind,
+					namespace: policyNamespace},
 				crossNamespaceTo{
 					group:     gvk.Group,
 					kind:      gvk.Kind,
@@ -956,15 +965,34 @@ func getPolicySelectorTargetMatches[T client.Object](
 	return matches
 }
 
+// getPolicyTargetRefs returns a list of policy target refs that are allowed by the policy's TargetSelectors.
 func getPolicyTargetRefs[T client.Object](
-	policy egv1a1.PolicyTargetReferences,
+	targetRefs egv1a1.PolicyTargetReferences,
 	potentialTargets []T,
-	from crossNamespaceFrom,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
 ) []policyTargetReferenceWithSectionName {
-	matches := getPolicySelectorTargetMatches(policy, potentialTargets, from, referenceGrants, policyNamespace, namespaceLookup)
+	matches := getPolicySelectorTargetMatches(
+		targetRefs.TargetSelectors,
+		potentialTargets,
+		referenceGrants,
+		 policyKind,
+		 policyNamespace,
+		 namespaceLookup)
+	return getPolicyTargetRefsFromMatches(matches, targetRefs.GetTargetRefs(), policyNamespace)
+}
+
+// getPolicyTargetRefsFromMatches returns a list of policy target refs that are allowed by the policy's TargetSelectors, including:
+// 1. Target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
+// 2. Plain target refs specified in the policy.
+func getPolicyTargetRefsFromMatches[T client.Object](
+	matches policySelectorTargetMatches[T],
+	targetRefs []gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	policyNamespace string,
+) []policyTargetReferenceWithSectionName {
+	// First add the target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
 	selectorsList := make([]targetRefWithTimestamp, 0, len(matches.Allowed))
 	for _, match := range matches.Allowed {
 		selectorsList = append(selectorsList, targetRefWithTimestamp{
@@ -979,12 +1007,13 @@ func getPolicyTargetRefs[T client.Object](
 	for i, v := range selectorsList {
 		ret[i] = v.policyTargetReferenceWithSectionName
 	}
+
 	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
 	// to targets that were already found via the selectors. Only add them to the returned list if
 	// they are not yet there. Always add them at the end.
 	fastLookup := sets.New(ret...)
 	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
-	for _, v := range policy.GetTargetRefs() {
+	for _, v := range targetRefs {
 		if v == emptyTargetRef {
 			// This can happen when the targetRef structure is read from extension server policies
 			continue

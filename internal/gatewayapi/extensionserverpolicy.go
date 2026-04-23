@@ -117,12 +117,8 @@ func extractTargetRefs(
 	ret := getPolicyTargetRefs(
 		targetRefs,
 		gateways,
-		crossNamespaceFrom{
-			group:     policy.GroupVersionKind().Group,
-			kind:      policy.GroupVersionKind().Kind,
-			namespace: policy.GetNamespace(),
-		},
 		referenceGrants,
+		policy.GetKind(),
 		policy.GetNamespace(),
 		namespaceLookup,
 	)
