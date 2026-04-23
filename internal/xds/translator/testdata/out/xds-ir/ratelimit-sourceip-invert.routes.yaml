@@ -10,18 +10,22 @@
       name: first-route
       route:
         cluster: first-route-dest
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: first-route
-              descriptorValue: first-route
-          - remoteAddressMatch:
-              addressMatcher:
-                invertMatch: true
-                ranges:
-                - addressPrefix: 192.168.0.0
-                  prefixLen: 24
-              descriptorKey: masked_remote_address
-              descriptorValue: invert:192.168.0.0/24
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: first-listener
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: first-route
+                descriptorValue: first-route
+            - remoteAddressMatch:
+                addressMatcher:
+                  invertMatch: true
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 24
+                descriptorKey: masked_remote_address
+                descriptorValue: invert:192.168.0.0/24

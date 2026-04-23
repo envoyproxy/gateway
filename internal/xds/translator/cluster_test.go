@@ -155,7 +155,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			input: &ir.OutlierDetection{
 				Interval:             ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:     ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:   new(int32(10)),
+				MaxEjectionPercent:   new(uint32(10)),
 				Consecutive5xxErrors: new(uint32(5)),
 			},
 			expected: &clusterv3.OutlierDetection{
@@ -170,7 +170,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 			input: &ir.OutlierDetection{
 				Interval:                   ir.MetaV1DurationPtr(10 * time.Second),
 				BaseEjectionTime:           ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:         new(int32(10)),
+				MaxEjectionPercent:         new(uint32(10)),
 				Consecutive5xxErrors:       new(uint32(5)),
 				FailurePercentageThreshold: new(uint32(90)),
 			},
@@ -192,7 +192,7 @@ func TestBuildXdsOutlierDetection(t *testing.T) {
 				ConsecutiveGatewayErrors:       new(uint32(2)),
 				Consecutive5xxErrors:           new(uint32(5)),
 				BaseEjectionTime:               ir.MetaV1DurationPtr(30 * time.Second),
-				MaxEjectionPercent:             new(int32(10)),
+				MaxEjectionPercent:             new(uint32(10)),
 				FailurePercentageThreshold:     new(uint32(85)),
 				AlwaysEjectOneEndpoint:         new(true),
 			},
