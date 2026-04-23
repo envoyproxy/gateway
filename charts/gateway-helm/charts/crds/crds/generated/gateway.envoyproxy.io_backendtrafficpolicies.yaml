@@ -697,6 +697,8 @@ spec:
                         description: MaxEjectionPercent sets the maximum percentage
                           of hosts in a cluster that can be ejected.
                         format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                       splitExternalLocalOriginErrors:
                         default: false
@@ -1545,6 +1547,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -1923,6 +1931,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-

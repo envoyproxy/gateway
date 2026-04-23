@@ -29,47 +29,51 @@
       name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
       route:
         cluster: httproute/default/httproute-1/rule/0
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-              descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
-          xRatelimitOption: "OFF"
-        - actions:
-          - genericKey:
-              descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-              descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-          - headerValueMatch:
-              descriptorKey: rule-1-match-0
-              descriptorValue: rule-1-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: two
-          xRatelimitOption: DRAFT_VERSION_03
-        - actions:
-          - genericKey:
-              descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-              descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-          - headerValueMatch:
-              descriptorKey: rule-2-match-0
-              descriptorValue: rule-2-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: three
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: envoy-gateway/gateway-1/http
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+                descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
+            xRatelimitOption: "OFF"
+          - actions:
+            - genericKey:
+                descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+                descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+            - headerValueMatch:
+                descriptorKey: rule-1-match-0
+                descriptorValue: rule-1-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+            xRatelimitOption: DRAFT_VERSION_03
+          - actions:
+            - genericKey:
+                descriptorKey: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+                descriptorValue: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+            - headerValueMatch:
+                descriptorKey: rule-2-match-0
+                descriptorValue: rule-2-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: three
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/http-8080
   virtualHosts:

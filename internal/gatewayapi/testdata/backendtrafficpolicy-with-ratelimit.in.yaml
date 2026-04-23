@@ -33,9 +33,17 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
+    - name: http-app1
       protocol: HTTP
       port: 80
+      hostname: app1.gateway.envoyproxy.io
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: http-app2
+      protocol: HTTP
+      port: 80
+      hostname: app2.gateway.envoyproxy.io
       allowedRoutes:
         namespaces:
           from: All
@@ -88,12 +96,9 @@ httpRoutes:
     namespace: default
     name: httproute-1
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-2
-      sectionName: http
     rules:
     - matches:
       - path:
@@ -129,7 +134,7 @@ backendTrafficPolicies:
               type: PathPrefix
               value: "/user"
           limit:
-            requests: 10
+            requests: 4294967295
             unit: Hour
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
