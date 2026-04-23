@@ -99,6 +99,15 @@ var BackendTrafficPolicyCrossNamespaceTest = suite.ConformanceTest{
 					Host: "denied.cross-namespace-btp.example.com",
 					Path: "/",
 				},
+				// Set the expected request properties to empty strings since the test uses a direct response HTTP filter.
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host:    "",
+						Method:  "",
+						Path:    "",
+						Headers: nil,
+					},
+				},
 				Response: http.Response{
 					StatusCodes: []int{200},
 				},
