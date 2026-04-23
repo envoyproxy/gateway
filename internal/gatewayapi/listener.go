@@ -151,7 +151,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
 				if ns != gtw.Namespace {
 					// check reference grant
-					if !t.validateCrossNamespaceRef(
+					if !isCrossNamespacePolicyTargetRefAllowed(
 						crossNamespaceFrom{
 							group:     gwapiv1.GroupName,
 							kind:      string(resource.KindGateway),

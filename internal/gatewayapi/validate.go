@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -140,7 +139,7 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 	resources *resource.Resources, routeKind gwapiv1.Kind,
 ) status.Error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespacePolicyTargetRefAllowed(
 			crossNamespaceFrom{
 				group:     gwapiv1.GroupName,
 				kind:      string(routeKind),
@@ -411,7 +410,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				fromKind = resource.KindListenerSet
 			}
 
-			if !t.validateCrossNamespaceRef(
+			if !isCrossNamespacePolicyTargetRefAllowed(
 				crossNamespaceFrom{
 					group:     fromGroup,
 					kind:      fromKind,
@@ -833,10 +832,6 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 	}
 }
 
-func (t *Translator) validateCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*gwapiv1b1.ReferenceGrant) bool {
-	return isCrossNamespacePolicyTargetRefAllowed(from, to, referenceGrants)
-}
-
 // Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address
 func (t *Translator) validateHostname(hostname string) error {
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
@@ -951,7 +946,7 @@ func (t *Translator) validateSecretObjectRef(
 				from.namespace)
 		}
 
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespacePolicyTargetRefAllowed(
 			from,
 			crossNamespaceTo{
 				group:     "",
@@ -1066,7 +1061,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	// check if the cross-namespace reference is permitted
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" &&
 		string(*backendRef.Namespace) != ownerNamespace {
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespacePolicyTargetRefAllowed(
 			crossNamespaceFrom{
 				group:     egv1a1.GroupName,
 				kind:      policyKind,
