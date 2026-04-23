@@ -907,7 +907,7 @@ func getPolicySelectorTargetMatches[T client.Object](
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
-) (allowed []policySelectorTargetMatch[T], denied []policySelectorTargetMatch[T]) {
+) (allowed, denied []policySelectorTargetMatch[T]) {
 	allowedDedup := sets.New[targetRefWithTimestamp]()
 	deniedDedup := sets.New[policyTargetReferenceWithSectionName]()
 	for _, currSelector := range targetSelectors {
@@ -989,7 +989,7 @@ func getPolicyTargetRefs[T client.Object](
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
 ) []policyTargetReferenceWithSectionName {
-	allowed,_ := getPolicySelectorTargetMatches(
+	allowed, _ := getPolicySelectorTargetMatches(
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
@@ -1092,19 +1092,6 @@ func setPolicyTargetRefNotPermittedStatus[T client.Object](
 			})
 		}
 	}
-}
-
-func namespaceForPolicyTargetRef[T client.Object](
-	target policyTargetReferenceWithSectionName,
-	defaultNamespace string,
-	matches []policySelectorTargetMatch[T],
-) string {
-	for _, match := range matches {
-		if match.Ref == target {
-			return match.Object.GetNamespace()
-		}
-	}
-	return defaultNamespace
 }
 
 // Sets *target to value if and only if *target is nil

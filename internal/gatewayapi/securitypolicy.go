@@ -143,7 +143,7 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting RouteRules (HTTP + TCP)
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied	 := getPolicySelectorTargetMatches(
+		allowed, denied := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
@@ -224,32 +224,22 @@ func (t *Translator) ProcessSecurityPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed)
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
 	}
 	// Process the policies targeting Gateways
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := getPolicySelectorTargetMatches(
-			currPolicy.Spec.TargetSelectors,
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = currPolicy
-				handledPolicies[policyName] = policy
-				res = append(res, policy)
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
-		}
+
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -258,9 +248,8 @@ func (t *Translator) ProcessSecurityPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed) //TODO
 
-				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
+				t.processSecurityPolicyForGateway(resources, xdsIR, gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
 	}
@@ -282,20 +271,19 @@ func (t *Translator) buildGatewayPolicyMapForSecurity(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 ) {
 	for _, currPolicy := range securityPolicies {
-		allowed, _ := getPolicySelectorTargetMatches(
-			currPolicy.Spec.TargetSelectors,
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			referenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {
 				// Check if the gateway exists
 				key := types.NamespacedName{
 					Name:      string(currTarget.Name),
-					Namespace: namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed),
+					Namespace: string(currTarget.Namespace),
 				}
 				gateway, ok := gatewayMap[key]
 				if !ok {
@@ -583,14 +571,13 @@ func (t *Translator) processSecurityPolicyForGateway(
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.SecurityPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-	targetNamespace string,
 ) {
 	var (
 		targetedGateway *GatewayContext
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(currTarget, targetNamespace, gatewayMap)
+	targetedGateway, resolveErr = resolveSecurityPolicyGatewayTargetRef(currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the SecurityPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -759,13 +746,12 @@ func validateBasicAuth(_ *egv1a1.BasicAuth) error {
 
 func resolveSecurityPolicyGatewayTargetRef(
 	target policyTargetReferenceWithSectionName,
-	targetNamespace string,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Find the Gateway
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: targetNamespace,
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 

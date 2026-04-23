@@ -355,9 +355,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed) //TODO
 				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
 	}
@@ -365,14 +364,14 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Gateways
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, _ := getPolicySelectorTargetMatches(
-			currPolicy.Spec.TargetSelectors,
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
-			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+			t.GetNamespace,
+		)
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -381,9 +380,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed)
 				t.processBackendTrafficPolicyForGateway(xdsIR,
-					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
+					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget)
 			}
 		}
 	}
@@ -405,20 +403,19 @@ func (t *Translator) buildGatewayPolicyMap(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 ) {
 	for _, currPolicy := range backendTrafficPolicies {
-		allowed, _ := getPolicySelectorTargetMatches(
-			currPolicy.Spec.TargetSelectors,
+		targetRefs := getPolicyTargetRefs(
+			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			referenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {
 				// Check if the gateway exists
 				key := types.NamespacedName{
 					Name:      string(currTarget.Name),
-					Namespace: namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed),
+					Namespace: string(currTarget.Namespace),
 				}
 				gateway, ok := gatewayMap[key]
 				if !ok {
@@ -650,7 +647,6 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
-	targetNamespace string,
 ) {
 	var (
 		targetedGateway *GatewayContext
@@ -658,7 +654,7 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 	)
 
 	// Negative statuses have already been assigned so it's safe to skip
-	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(currTarget, targetNamespace, gatewayMap)
+	targetedGateway, resolveErr = resolveBackendTrafficPolicyGatewayTargetRef(currTarget, gatewayMap)
 	if targetedGateway == nil {
 		return
 	}
@@ -725,13 +721,12 @@ func (t *Translator) processBackendTrafficPolicyForGateway(
 
 func resolveBackendTrafficPolicyGatewayTargetRef(
 	target policyTargetReferenceWithSectionName,
-	targetNamespace string,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: targetNamespace,
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 
