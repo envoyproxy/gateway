@@ -124,6 +124,41 @@ var RateLimitCIDRMatchTest = suite.ConformanceTest{
 				t.Errorf("failed to get expected response for the last (fourth) request: %v", err)
 			}
 		})
+
+		t.Run("merge listener should be blocked", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "cidr-ratelimit", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "ratelimit-gateway", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+				kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+			BackendTrafficPolicyMustBeAccepted(t, suite.Client,
+				types.NamespacedName{Name: "ratelimit-all-ips", Namespace: ns},
+				suite.ControllerName, gwapiv1.ParentReference{
+					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+					Kind:      gatewayapi.KindPtr(resource.KindGateway),
+					Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+					Name:      gwapiv1.ObjectName(gwNN.Name),
+				})
+
+			// ratelimit-gateway serves for both app1.example.com and app2.example.com, and the CIDR rule should apply to both hostnames,
+			// requests to both hostnames should be rate limited, and we should see the header in responses.
+			for _, host := range []string{"app1.example.com", "app2.example.com"} {
+				MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &http.ExpectedResponse{
+					Request: http.Request{
+						Path: "/",
+						Host: host,
+					},
+					Response: http.Response{
+						StatusCodes: []int{429},
+						Headers: map[string]string{
+							"X-Ratelimit-Limit": "3, 3;w=3600",
+						},
+					},
+					Namespace: ns,
+				})
+			}
+		})
 	},
 }
 
