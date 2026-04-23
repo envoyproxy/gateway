@@ -1428,6 +1428,7 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 	// Set the Overlap warning condition only on parentRefs whose listeners
 	// match an IR listener where the overlap was detected.
 	for rKey, info := range routeByKey {
+		routeStatus := GetRouteStatus(info.route)
 		// Collect all conflicts for this route across the parentRefs that have overlaps.
 		for _, parentRef := range info.parentRefs {
 			var conflicts map[string]struct{}
@@ -1452,6 +1453,7 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 				}
 			}
 			if len(conflicts) == 0 {
+				status.RemoveRouteStatusCondition(routeStatus, parentRef.routeParentStatusIdx, status.RouteConditionRouteRulesOverlap)
 				continue
 			}
 
@@ -1463,7 +1465,6 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 
 			msg := fmt.Sprintf("Overlapping match conditions with route(s): %s", strings.Join(conflictNames, ", "))
 
-			routeStatus := GetRouteStatus(info.route)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
 				info.route.GetGeneration(),
@@ -1484,11 +1485,27 @@ func (t *Translator) checkRouteOverlaps(httpRoutes []*HTTPRouteContext, grpcRout
 func buildOverlapKey(r *ir.HTTPRoute) overlapKey {
 	return overlapKey{
 		hostname: r.Hostname,
-		path:     stringMatchKey(r.PathMatch, false),
+		path:     pathMatchKey(r.PathMatch),
 		headers:  stringMatchSliceKey(r.HeaderMatches, true),
 		query:    stringMatchSliceKey(r.QueryParamMatches, false),
 		cookies:  stringMatchSliceKey(r.CookieMatches, false),
 	}
+}
+
+// pathMatchKey serializes route path matches the same way they are interpreted
+// by the xDS translator: no path match is equivalent to prefix "/", and
+// non-root prefixes have one trailing slash trimmed before translation.
+func pathMatchKey(s *ir.StringMatch) string {
+	if s == nil {
+		return stringMatchKey(&ir.StringMatch{Prefix: new("/")}, false)
+	}
+	if s.Prefix == nil || *s.Prefix == "/" {
+		return stringMatchKey(s, false)
+	}
+
+	normalized := s.DeepCopy()
+	normalized.Prefix = new(strings.TrimSuffix(*s.Prefix, "/"))
+	return stringMatchKey(normalized, false)
 }
 
 // stringMatchKey serializes a StringMatch into a canonical string.
@@ -1551,8 +1568,8 @@ func stringMatchSliceKey(s []*ir.StringMatch, lowercaseName bool) string {
 func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
-		// Typed objects fetched via controller-runtime clients typically have an
-		// empty TypeMeta, so fall back to a type-based lookup to keep Kind reliable.
+		// Typed objects fetched via controller-runtime clients have an empty
+		// TypeMeta; fall back to a type-based lookup so Kind stays reliable.
 		kind = kindForObject(obj)
 	}
 	metadata := &ir.ResourceMetadata{
@@ -1570,17 +1587,13 @@ func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) 
 // kindForObject returns the Kind string for a known Gateway API or Kubernetes
 // object type. Returns an empty string for unknown types.
 func kindForObject(obj client.Object) string {
+	// Route wrapper types (HTTPRouteContext, GRPCRouteContext, etc.) report
+	// their Kind via the RouteContext interface; the switch below matches the
+	// raw types only.
+	if r, ok := obj.(RouteContext); ok {
+		return string(r.GetRouteType())
+	}
 	switch obj.(type) {
-	case *gwapiv1.HTTPRoute:
-		return resource.KindHTTPRoute
-	case *gwapiv1.GRPCRoute:
-		return resource.KindGRPCRoute
-	case *gwapiv1a2.TLSRoute:
-		return resource.KindTLSRoute
-	case *gwapiv1a2.TCPRoute:
-		return resource.KindTCPRoute
-	case *gwapiv1a2.UDPRoute:
-		return resource.KindUDPRoute
 	case *gwapiv1.Gateway:
 		return resource.KindGateway
 	case *corev1.Service:

@@ -32,6 +32,17 @@ func SetRouteStatusCondition(route *gwapiv1.RouteStatus, routeParentStatusIdx in
 	route.Parents[routeParentStatusIdx].Conditions = MergeConditions(route.Parents[routeParentStatusIdx].Conditions, cond)
 }
 
+// RemoveRouteStatusCondition removes conditionType from the given parent's
+// Conditions if present. The pre-check avoids meta.RemoveStatusCondition's
+// unconditional slice reallocation when the condition is absent.
+func RemoveRouteStatusCondition(route *gwapiv1.RouteStatus, routeParentStatusIdx int, conditionType gwapiv1.RouteConditionType) {
+	conds := &route.Parents[routeParentStatusIdx].Conditions
+	if meta.FindStatusCondition(*conds, string(conditionType)) == nil {
+		return
+	}
+	meta.RemoveStatusCondition(conds, string(conditionType))
+}
+
 // TruncateRouteParents trims RouteStatus.Parents down to at most 32 entries.
 // The first 31 parents are shown as-is.
 // The last 32nd parent is shown as-is and gets the Aggregated condition.
