@@ -12,10 +12,12 @@
         cluster: route-dest
         requestMirrorPolicies:
         - cluster: mirror-route-dest
+          disableShadowHostSuffixAppend: true
           runtimeFraction:
             defaultValue:
               numerator: 100
         - cluster: mirror-route-dest1
+          disableShadowHostSuffixAppend: true
           runtimeFraction:
             defaultValue:
               numerator: 100

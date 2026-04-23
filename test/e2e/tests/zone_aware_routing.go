@@ -8,15 +8,15 @@
 package tests
 
 import (
-	"fmt"
-	"regexp"
+	"math"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/conformance/utils/http"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -25,32 +25,36 @@ func init() {
 
 var ZoneAwareRoutingTest = suite.ConformanceTest{
 	ShortName:   "ZoneAwareRouting",
-	Description: "Resource with Zone Aware Routing enabled",
-	Manifests:   []string{"testdata/zone-aware-routing.yaml"},
+	Description: "Test Zone Aware Routing is working",
+	Manifests: []string{
+		"testdata/zone-aware-routing-backendref-enabled.yaml",
+		"testdata/zone-aware-routing-btp-force-local-zone.yaml",
+		"testdata/zone-aware-routing-btp-no-force-local-zone.yaml",
+		"testdata/zone-aware-routing-deployments.yaml",
+		"testdata/zone-aware-routing-gateways.yaml",
+	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("only local zone should get requests", func(t *testing.T) {
-			const sendRequests = 50
-
-			ns := "gateway-conformance-infra"
-			zoneAwareRoute := types.NamespacedName{Name: "zone-aware-http-route", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig,
-				suite.ControllerName,
-				kubernetes.NewGatewayRef(gwNN), zoneAwareRoute)
-
-			podReady := corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
-			WaitForPods(t, suite.Client, ns, map[string]string{"app": "zone-aware-backend"}, corev1.PodRunning, podReady)
-
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path: "/",
-				},
-				Response: http.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
+		t.Run("topology aware routing - only local zone should get requests", func(t *testing.T) {
+			// Pods from the backend-local deployment have affinity
+			// for the Envoy Proxy pods so should receive all requests.
+			expected := map[string]int{
+				"zone-aware-backend-local":    sendRequests,
+				"zone-aware-backend-nonlocal": 0,
 			}
-			req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+			runWeightedBackendTest(t, suite, nil, "topology-aware-routing", "/topology-aware-routing", "zone-aware-backend", expected)
+		})
+		t.Run("BackendTrafficPolicy - ForceLocalZone - only local zone should get requests", func(t *testing.T) {
+			BackendTrafficPolicyMustBeAccepted(t,
+				suite.Client,
+				types.NamespacedName{Name: "btp-force-local-zone", Namespace: "gateway-conformance-infra"},
+				suite.ControllerName,
+				gwapiv1.ParentReference{
+					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+					Kind:      gatewayapi.KindPtr(resource.KindGateway),
+					Namespace: gatewayapi.NamespacePtr("gateway-conformance-infra"),
+					Name:      gwapiv1.ObjectName("same-namespace"),
+				},
+			)
 
 			// Pods from the backend-local deployment have affinity
 			// for the Envoy Proxy pods so should receive all requests.
@@ -58,47 +62,53 @@ var ZoneAwareRoutingTest = suite.ConformanceTest{
 				"zone-aware-backend-local":    sendRequests,
 				"zone-aware-backend-nonlocal": 0,
 			}
-			reqMap := make(map[string]int)
-			for i := 0; i < sendRequests; i++ {
-				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(req)
-				if err != nil {
-					t.Errorf("failed to get expected response: %v", err)
-				}
+			runWeightedBackendTest(t, suite, nil, "btp-force-local-zone", "/btp-force-local-zone", "zone-aware-backend", expected)
+		})
+		t.Run("BackendTrafficPolicy - No ForceLocalZone - local zone should get around 75% of requests", func(t *testing.T) {
+			BackendTrafficPolicyMustBeAccepted(t,
+				suite.Client,
+				types.NamespacedName{Name: "btp-no-force-local-zone", Namespace: "gateway-conformance-infra"},
+				suite.ControllerName,
+				gwapiv1.ParentReference{
+					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+					Kind:      gatewayapi.KindPtr(resource.KindGateway),
+					Namespace: gatewayapi.NamespacePtr("gateway-conformance-infra"),
+					Name:      gwapiv1.ObjectName("same-namespace"),
+				},
+			)
 
-				if err := http.CompareRequest(t, &req, cReq, cResp, expectedResponse); err != nil {
-					t.Errorf("failed to compare request and response: %v", err)
-				}
-
-				podName := cReq.Pod
-				if len(podName) == 0 {
-					// it shouldn't be missing here
-					t.Errorf("failed to get pod header in response: %v", err)
-				} else {
-					// all we need is the pod Name prefix
-					podNamePrefix := ZoneAwareRoutingExtractPodNamePrefix(podName)
-					reqMap[podNamePrefix]++
-				}
+			// Pods from the backend-local deployment have affinity for the Envoy Proxy pods.
+			// ForceLocal is not used, and overall we have 4 backend pods, 3 local and 1 non-local.
+			// Distribution of upstream is 75% local, 25% non-local. Distribution of envoy is 100% local.
+			// Expect local upstream to get around 75% of traffic.
+			expected := map[string]int{
+				"zone-aware-backend-local":    int(math.Round(sendRequests * .75)),
+				"zone-aware-backend-nonlocal": int(math.Round(sendRequests * .25)),
 			}
+			runWeightedBackendTest(t, suite, nil, "btp-no-force-local-zone", "/btp-no-force-local-zone", "zone-aware-backend", expected)
+		})
+		t.Run("BackendTrafficPolicy - No ForceLocalZone - Hardcoded service name in EnvoyProxy - local zone should get around 75% of requests", func(t *testing.T) {
+			BackendTrafficPolicyMustBeAccepted(t,
+				suite.Client,
+				types.NamespacedName{Name: "btp-no-force-local-zone-hardcoded-svc-name", Namespace: "gateway-conformance-infra"},
+				suite.ControllerName,
+				gwapiv1.ParentReference{
+					Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+					Kind:      gatewayapi.KindPtr(resource.KindGateway),
+					Namespace: gatewayapi.NamespacePtr("gateway-conformance-infra"),
+					Name:      gwapiv1.ObjectName("zone-aware-routing-gtw"),
+				},
+			)
 
-			// We iterate over the actual traffic Map with podNamePrefix as the key to get the actual traffic.
-			for prefix, actual := range reqMap {
-				expect := expected[prefix]
-				if actual != expect {
-					t.Errorf("The actual traffic distribution between zones is not consistent with the expected: %v", reqMap)
-				}
+			// Pods from the backend-local deployment have affinity for the Envoy Proxy pods.
+			// ForceLocal is not used, and overall we have 4 backend pods, 3 local and 1 non-local.
+			// Distribution of upstream is 75% local, 25% non-local. Distribution of envoy is 100% local.
+			// Expect local upstream to get around 75% of traffic.
+			expected := map[string]int{
+				"zone-aware-backend-local":    int(math.Round(sendRequests * .75)),
+				"zone-aware-backend-nonlocal": int(math.Round(sendRequests * .25)),
 			}
+			runWeightedBackendTest(t, suite, &types.NamespacedName{Name: "zone-aware-routing-gtw", Namespace: "gateway-conformance-infra"}, "btp-no-force-local-zone-hardcoded-svc-name", "/btp-no-force-local-zone-hardcoded-svc-name", "zone-aware-backend", expected)
 		})
 	},
-}
-
-// ZoneAwareRoutingExtractPodNamePrefix extracts the Pod Name prefix
-func ZoneAwareRoutingExtractPodNamePrefix(podName string) string {
-	pattern := regexp.MustCompile(`zone-aware-backend-(.+?)-`)
-	match := pattern.FindStringSubmatch(podName)
-	if len(match) > 1 {
-		version := match[1]
-		return fmt.Sprintf("zone-aware-backend-%s", version)
-	}
-
-	return podName
 }

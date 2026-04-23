@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 var (
@@ -41,12 +42,12 @@ type Manager interface {
 }
 
 // NewManager returns a new infrastructure Manager.
-func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger) (mgr Manager, err error) {
+func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (mgr Manager, err error) {
 	switch cfg.EnvoyGateway.Provider.Type {
 	case egv1a1.ProviderTypeKubernetes:
-		mgr, err = newManagerForKubernetes(cfg)
+		mgr, err = newManagerForKubernetes(cfg, errors)
 	case egv1a1.ProviderTypeCustom:
-		mgr, err = newManagerForCustom(ctx, cfg, logger)
+		mgr, err = newManagerForCustom(ctx, cfg, logger, errors)
 	}
 
 	if err != nil {
@@ -55,21 +56,21 @@ func NewManager(ctx context.Context, cfg *config.Server, logger logging.Logger) 
 	return mgr, nil
 }
 
-func newManagerForKubernetes(cfg *config.Server) (Manager, error) {
+func newManagerForKubernetes(cfg *config.Server, errors message.RunnerErrorNotifier) (Manager, error) {
 	clientConfig := clicfg.GetConfigOrDie()
 	clientConfig.QPS, clientConfig.Burst = cfg.EnvoyGateway.Provider.Kubernetes.Client.RateLimit.GetQPSAndBurst()
 	cli, err := client.New(clientConfig, client.Options{Scheme: envoygateway.GetScheme()})
 	if err != nil {
 		return nil, err
 	}
-	return kubernetes.NewInfra(cli, cfg), nil
+	return kubernetes.NewInfra(cli, cfg, errors), nil
 }
 
-func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging.Logger) (Manager, error) {
+func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging.Logger, errors message.RunnerErrorNotifier) (Manager, error) {
 	infra := cfg.EnvoyGateway.Provider.Custom.Infrastructure
 	switch infra.Type {
 	case egv1a1.InfrastructureProviderTypeHost:
-		return host.NewInfra(ctx, cfg, logger)
+		return host.NewInfra(ctx, cfg, logger, errors)
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
 	}

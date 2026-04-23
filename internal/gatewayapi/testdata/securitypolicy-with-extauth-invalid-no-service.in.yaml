@@ -13,12 +13,40 @@ gateways:
           allowedRoutes:
             namespaces:
               from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-2
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-3
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: httproute-1     # should return 500 because the ext auth in the attached policy is fail close.
     spec:
       hostnames:
         - www.foo.com
@@ -33,17 +61,93 @@ httpRoutes:
           backendRefs:
             - name: service-1
               port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2     # should not return 500 because the ext auth in the attached policy is fail open.
+    spec:
+      hostnames:
+        - www.bar.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /bar
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-3     # should return 500 because the ext auth is invalid with failopen, and the basic auth is invalid.
+    spec:
+      hostnames:
+        - www.baz.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /baz
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-4     # should not return 500 because the ext auth is invalid with failopen.
+    spec:
+      hostnames:
+        - www.qux.com
+      parentRefs:
+        - namespace: default
+          name: gateway-2
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /qux
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-5     # should return 500 because the ext auth is invalid with failopen, and the basic auth is invalid.
+    spec:
+      hostnames:
+        - www.quux.com
+      parentRefs:
+        - namespace: default
+          name: gateway-3
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /quux
+          backendRefs:
+            - name: service-1
+              port: 8080
 securityPolicies:
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:
       namespace: default
-      name: policy-for-gateway
+      name: policy-for-httproute-1
     spec:
       targetRef:
         group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
+        kind: HTTPRoute
+        name: httproute-1
       extAuth:
         http:
           backendRefs:
@@ -54,3 +158,89 @@ securityPolicies:
             - header1
             - header2
         failOpen: false
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-httproute-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-2
+      extAuth:
+        http:
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 80
+          headersToBackend:
+            - header1
+            - header2
+        failOpen: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-httproute-3
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-3
+      basicAuth:
+        users:
+          name: "users-secret1"
+      extAuth:
+        http:
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 80
+          headersToBackend:
+            - header1
+            - header2
+        failOpen: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-gateway-2
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+      extAuth:
+        http:
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 80
+          headersToBackend:
+            - header1
+            - header2
+        failOpen: true
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-gateway-3
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-3
+      basicAuth:
+        users:
+          name: "users-secret1"
+      extAuth:
+        http:
+          backendRefs:
+            - name: http-backend
+              namespace: default
+              port: 80
+          headersToBackend:
+            - header1
+            - header2
+        failOpen: true

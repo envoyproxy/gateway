@@ -11,13 +11,18 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/pkg/features"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, DynamicResolverBackendTest)
+	ConformanceTests = append(ConformanceTests,
+		DynamicResolverBackendTest,
+		DynamicResolverBackendWithTLSTest,
+		DynamicResolverBackendWithClusterTrustBundleTest)
 }
 
 var DynamicResolverBackendTest = suite.ConformanceTest{
@@ -25,26 +30,23 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 	Description: "Routes with a backend ref to a dynamic resolver backend",
 	Manifests: []string{
 		"testdata/httproute-with-dynamic-resolver-backend.yaml",
-		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
-		"testdata/httproute-with-dynamic-resolver-backend-with-tls-system-ca.yaml",
 	},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		ns := "gateway-conformance-infra"
-		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ns}
-		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ns})
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
+		routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend", Namespace: ConformanceInfraNamespace}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver", Namespace: ConformanceInfraNamespace})
 
 		t.Run("route to service foo", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Host: "test-service-foo.gateway-conformance-infra",
+					Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
@@ -52,20 +54,193 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 		t.Run("route to service bar", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
-					Host: "test-service-bar.gateway-conformance-infra",
+					Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
 					Path: "/",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
-				Namespace: ns,
+				Namespace: ConformanceInfraNamespace,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("route to service with TLS", func(t *testing.T) {
+		t.Run("route to external service with app protocol", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-with-app-protocol", Namespace: ConformanceInfraNamespace}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-with-app-protocol", Namespace: ConformanceInfraNamespace})
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request: http.Request{
+					Host: "httpbin.org",
+					Path: "/status/200",
+				},
+				Response: http.Response{
+					StatusCodes: []int{502}, // request will fail because httpbin.org doesn't support http2.0
+				},
+			})
+
+			req := http.MakeRequest(t, &http.ExpectedResponse{
+				Request: http.Request{
+					Host: "gateway.envoyproxy.io", // gateway website supports http2.0
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+			}, gwAddr, "HTTP", "http")
+			http.WaitForConsistentResponse(t, suite.RoundTripper, req, http.ExpectedResponse{
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+			}, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency)
+		})
+		t.Run("route to loopback address should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "127.0.0.1",
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to header with default dns cache", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-default-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-1": "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-default-dns-cache",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to header with custom dns cache", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+					},
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-bar.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-custom-dns-cache",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to literal name", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-literal-name",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Host: "test-service-foo.gateway-conformance-infra.svc.cluster.local",
+						Path: "/host-rewrite-literal-name",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to loopback address at a specific port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-default-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-1": "127.0.0.1:19002",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to loopback address at the default port should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "localhost",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+		t.Run("host rewrite to forbidden hosts should be blocked", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "non-existent-host",
+					Path: "/host-rewrite-custom-dns-cache",
+					Headers: map[string]string{
+						"x-dynamic-host-header-2": "forbidden.com",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{403},
+				},
+				Namespace: ConformanceInfraNamespace,
+			}
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	},
+}
+
+var DynamicResolverBackendWithTLSTest = suite.ConformanceTest{
+	ShortName:   "DynamicResolverBackendWithTLS",
+	Description: "Routes with a backend ref to a dynamic resolver backend",
+	Manifests: []string{
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls-system-ca.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		t.Run("TLS", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls", Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{
@@ -74,16 +249,16 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					Path: "/with-tls",
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
-		t.Run("route to service with TLS using system CA", func(t *testing.T) {
+		t.Run("SystemCA", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "httproute-with-dynamic-resolver-backend-tls-system-trust-store", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-dynamic-resolver-tls-system-trust-store", Namespace: ns})
 
 			expectedResponse := http.ExpectedResponse{
@@ -97,9 +272,43 @@ var DynamicResolverBackendTest = suite.ConformanceTest{
 					},
 				},
 				Response: http.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+	},
+}
+
+var DynamicResolverBackendWithClusterTrustBundleTest = suite.ConformanceTest{
+	ShortName:   "DynamicResolverBackendWithClusterTrustBundle",
+	Description: "Routes with a backend ref to a dynamic resolver backend",
+	Manifests: []string{
+		"testdata/httproute-with-dynamic-resolver-backend-with-tls.yaml",
+		"testdata/httproute-with-dynamic-resolver-backend-with-clustertrustbundle.yaml",
+	},
+	Features: []features.FeatureName{
+		ClusterTrustBundleFeature,
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		gwNN := types.NamespacedName{Name: AllNamespacesGateway, Namespace: ns}
+		t.Run("ClusterTrustBundle", func(t *testing.T) {
+			routeNN := types.NamespacedName{Name: "httproute-clustertrustbundle", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			BackendMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-clustertrustbundle", Namespace: ns})
+
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Host: "backend-dynamic-resolver-tls.gateway-conformance-infra.svc.cluster.local:443",
+					Path: "/with-clustertrustbundle",
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 	},

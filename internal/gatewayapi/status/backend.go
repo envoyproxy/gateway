@@ -14,8 +14,6 @@
 package status
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -33,10 +31,10 @@ func computeBackendAcceptedCondition(be *egv1a1.Backend, accepted bool, msg stri
 	case true:
 		return newCondition(string(egv1a1.BackendReasonAccepted), metav1.ConditionTrue,
 			string(egv1a1.BackendConditionAccepted),
-			"The Backend was accepted", time.Now(), be.Generation)
+			"The Backend was accepted", be.Generation)
 	default:
 		return newCondition(string(egv1a1.BackendReasonInvalid), metav1.ConditionFalse,
 			string(egv1a1.BackendConditionAccepted),
-			msg, time.Now(), be.Generation)
+			msg, be.Generation)
 	}
 }

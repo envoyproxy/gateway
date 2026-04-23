@@ -72,7 +72,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers))",message="at least one of clientCIDRs, jwt, or headers must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations))",message="at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -82,9 +82,17 @@ type Principal struct {
 	//
 	// The client IP is inferred from the X-Forwarded-For header, a custom header,
 	// or the proxy protocol.
-	// You can use the `ClientIPDetection` or the `EnableProxyProtocol` field in
+	// You can use the `ClientIPDetection` or the `ProxyProtocol` field in
 	// the `ClientTrafficPolicy` to configure how the client IP is detected.
 	//
+	// For TCPRoute targets (raw TCP connections), HTTP headers such as
+	// X-Forwarded-For are not available. The client IP is obtained from the
+	// TCP connection's peer address. If intermediaries (load balancers, NAT)
+	// terminate or proxy TCP, the original client IP will only be available
+	// if the intermediary preserves the source address (for example by
+	// enabling the PROXY protocol or avoiding SNAT). Ensure your L4 proxy is
+	// configured to preserve the source IP to enable correct client-IP
+	// matching for TCPRoute targets.
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	ClientCIDRs []CIDR `json:"clientCIDRs,omitempty"`
@@ -102,6 +110,65 @@ type Principal struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=256
 	Headers []AuthorizationHeaderMatch `json:"headers,omitempty"`
+
+	// ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
+	// This field is supported for HTTPRoute and GRPCRoute authorization.
+	// It is not supported for TCPRoute targets.
+	//
+	// If multiple entries are specified,  one of the ClientIPGeoLocation entries must match for the rule to match.
+	//
+	// The client IP is inferred from the X-Forwarded-For header or a custom header.
+	// You can use the `ClientIPDetection` field in the `ClientTrafficPolicy` to configure the client IP detection.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
+}
+
+// ClientIPGeoLocation specifies geolocation-based match criteria for authorization.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.country) || has(self.region) || has(self.city) || has(self.asn) || has(self.isp) || has(self.anonymous)",message="at least one of country, region, city, asn, isp, or anonymous must be specified"
+type ClientIPGeoLocation struct {
+	// Country is the country ISO code associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=2
+	// +kubebuilder:validation:Pattern=`^[A-Za-z]{2}$`
+	Country *string `json:"country,omitempty"`
+
+	// Region is the region ISO code associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=16
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9-]+$`
+	Region *string `json:"region,omitempty"`
+
+	// City is the city associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	City *string `json:"city,omitempty"`
+
+	// ASN is the autonomous system number associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	ASN *uint32 `json:"asn,omitempty"`
+
+	// ISP is the internet service provider associated with the client IP.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	ISP *string `json:"isp,omitempty"`
+
+	// Anonymous matches anonymous network detection signals.
+	//
+	// +optional
+	Anonymous *GeoIPAnonymousMatch `json:"anonymous,omitempty"`
 }
 
 // AuthorizationHeaderMatch specifies how to match against the value of an HTTP header within a authorization rule.
@@ -152,8 +219,8 @@ type JWTPrincipal struct {
 
 	// Scopes are a special type of claim in a JWT token that represents the permissions of the client.
 	//
-	// The value of the scopes field should be a space delimited string that is expected in the scope parameter,
-	// as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
+	// The value of the scopes field should be a space delimited string that is expected in the
+	// scope (or scp) claim, as defined in RFC 6749: https://datatracker.ietf.org/doc/html/rfc6749#page-23.
 	//
 	// If multiple scopes are specified, all scopes must match for the rule to match.
 	//
@@ -190,7 +257,7 @@ type JWTClaim struct {
 	// If multiple values are specified, one of the values must match for the rule to match.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:MaxItems=128
 	Values []string `json:"values"`
 }
 

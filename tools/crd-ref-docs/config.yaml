@@ -11,26 +11,26 @@ processor:
 
 render:
   # Version of Kubernetes to use when generating links to Kubernetes API documentation.
-  kubernetesVersion: 1.29
+  kubernetesVersion: 1.32
   knownTypes:
     - name: BackendObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.BackendObjectReference
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference
     - name: SecretObjectReference
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#secretobjectreference
     - name: LocalPolicyTargetReferenceWithSectionName
       package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReferenceWithSectionName
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localpolicytargetreferencewithsectionname
     - name: LocalPolicyTargetReference
-      package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.LocalPolicyTargetReference
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#localpolicytargetreference
     - name: Duration
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Duration
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration
     - name: PolicyStatus
-      package: sigs.k8s.io/gateway-api/apis/v1alpha2
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.PolicyStatus
+      package: sigs.k8s.io/gateway-api/apis/v1
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#policystatus
     - name: Fraction
       package: sigs.k8s.io/gateway-api/apis/v1
-      link: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.Fraction
+      link: https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction

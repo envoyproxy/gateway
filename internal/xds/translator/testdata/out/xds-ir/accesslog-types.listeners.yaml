@@ -116,7 +116,7 @@
         values:
         - key: k8s.namespace.name
           value:
-            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -146,7 +146,7 @@
         values:
         - key: k8s.namespace.name
           value:
-            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
         - key: k8s.pod.name
           value:
             stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -276,7 +276,7 @@
               values:
               - key: k8s.namespace.name
                 value:
-                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -302,7 +302,7 @@
               values:
               - key: k8s.namespace.name
                 value:
-                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAMESPACE)%'
               - key: k8s.pod.name
                 value:
                   stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
@@ -332,6 +332,17 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+            upstreamLog:
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      Upstream access log: [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%\n
+                path: /dev/stdout
+            upstreamLogOptions:
+              flushUpstreamLogOnUpstreamStream: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -344,5 +355,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: envoy-gateway/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http
   perConnectionBufferLimitBytes: 32768

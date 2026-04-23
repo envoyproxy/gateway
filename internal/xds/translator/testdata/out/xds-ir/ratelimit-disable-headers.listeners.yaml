@@ -17,6 +17,7 @@
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            disableXEnvoyRatelimitedHeader: true
             domain: first-listener
             rateLimitService:
               grpcService:
@@ -39,5 +40,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: first-listener
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768

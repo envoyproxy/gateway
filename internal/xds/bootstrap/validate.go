@@ -10,6 +10,7 @@ import (
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/testing/protocmp"
 
@@ -59,9 +60,10 @@ func Validate(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		return err
 	}
 
-	// Ensure dynamic resources config is same
+	// Ensure dynamic resources config is same except for initial_fetch_timeout
 	if userBootstrap.DynamicResources == nil ||
-		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
+		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform(),
+			protocmp.IgnoreFields(&corev3.ConfigSource{}, "initial_fetch_timeout")) != "" {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 

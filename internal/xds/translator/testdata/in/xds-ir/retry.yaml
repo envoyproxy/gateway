@@ -21,6 +21,7 @@ http:
     traffic:
       retry:
         numRetries: 5
+        numAttemptsPerPriority: 0
         retryOn:
           httpStatusCodes:
           - 429
@@ -57,9 +58,11 @@ http:
     traffic:
       retry:
         numRetries: 5
+        numAttemptsPerPriority: 3
         retryOn:
           triggers:
           - reset
+          - reset-before-request
           - connect-failure
     destination:
       name: "first-route-dest"

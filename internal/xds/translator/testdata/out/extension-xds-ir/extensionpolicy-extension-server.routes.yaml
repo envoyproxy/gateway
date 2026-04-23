@@ -1,0 +1,5 @@
+- name: extension-injected-route
+  responseHeadersToAdd:
+  - header:
+      key: x-extension-injected
+      value: route

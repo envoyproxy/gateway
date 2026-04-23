@@ -1,0 +1,120 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: tracing-otel-custom-service-name
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: tracing-otel-custom-service-name
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing-otel-custom-service-name
+  namespace: gateway-conformance-infra
+spec:
+  ipFamily: IPv4
+  telemetry:
+    tracing:
+      provider:
+        backendRefs:
+          - name: my-otel-collector
+            namespace: monitoring
+            port: 4317
+        serviceName: my-custom-service
+      tags:
+        "provider": "otel"
+        "k8s.cluster.name": "envoy-gateway"
+        "k8s.pod.name": "%ENVIRONMENT(ENVOY_POD_NAME)%"
+        "k8s.namespace.name": "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"
+  shutdown:
+    drainTimeout: 5s
+    minDrainDuration: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: tracing-otel-custom-service-name
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: tracing-otel-custom-service-name
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /custom-service
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+# This's generally a copy of otel-collector service
+# with removing appProtocol from port 4317.
+# this should be worked because we assure that OpenTelemetry
+# running in GRPC.
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-otel-collector
+  namespace: monitoring
+  labels:
+    helm.sh/chart: opentelemetry-collector-0.117.3
+    app.kubernetes.io/name: opentelemetry-collector
+    app.kubernetes.io/instance: gateway-addons-helm
+    app.kubernetes.io/version: "0.120.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: standalone-collector
+    component: standalone-collector
+spec:
+  type: ClusterIP
+  ports:
+
+    - name: datadog
+      port: 8126
+      targetPort: 8126
+      protocol: TCP
+    - name: envoy-als
+      port: 9000
+      targetPort: 9000
+      protocol: TCP
+      appProtocol: grpc
+    - name: jaeger-compact
+      port: 6831
+      targetPort: 6831
+      protocol: UDP
+    - name: jaeger-grpc
+      port: 14250
+      targetPort: 14250
+      protocol: TCP
+    - name: jaeger-thrift
+      port: 14268
+      targetPort: 14268
+      protocol: TCP
+    - name: otlp
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    - name: zipkin
+      port: 9411
+      targetPort: 9411
+      protocol: TCP
+  selector:
+    app.kubernetes.io/instance: eg-addons
+    app.kubernetes.io/name: opentelemetry-collector
+    component: standalone-collector
+  internalTrafficPolicy: Cluster

@@ -58,6 +58,7 @@ envoyextensionpolicies:
   metadata:
     namespace: envoy-gateway
     name: policy-for-gateway  # This policy should attach httproute-2
+    generation: 10
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -73,6 +74,7 @@ envoyextensionpolicies:
   metadata:
     namespace: default
     name: policy-for-http-route   # This policy should attach httproute-1
+    generation: 20
   spec:
     targetRef:
       group: gateway.networking.k8s.io

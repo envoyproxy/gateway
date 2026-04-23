@@ -20,7 +20,8 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR *message.InfraIR
+	InfraIR      *message.InfraIR
+	RunnerErrors *message.RunnerErrors
 }
 
 type Runner struct {
@@ -50,16 +51,18 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		r.Logger.Info("provider is not specified, no infrastructure is available")
 		return nil
 	}
-
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger)
+	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
 	}
 
-	sub := r.InfraIR.Subscribe(ctx)
-	initInfra := func() {
-		go r.subscribeToProxyInfraIR(ctx, sub)
+	// This is a blocking function that subscribes to the infraIR and initializes the infrastructure.
+	subscribeInitInfraAndCloseInfraIRMessage := func() {
+		// Subscribe and Close in same goroutine to avoid race condition.
+		sub := r.InfraIR.Subscribe(ctx)
+		go r.updateProxyInfraFromSubscription(ctx, sub)
 
 		// Enable global ratelimit if it has been configured.
 		if r.EnvoyGateway.RateLimit != nil {
@@ -73,6 +76,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 			}()
 		}
 		r.Logger.Info("started")
+		<-ctx.Done()
+		r.InfraIR.Close()
+		r.Logger.Info("shutting down")
 	}
 
 	// When leader election is active, infrastructure initialization occurs only upon acquiring leadership
@@ -82,44 +88,79 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		go func() {
 			select {
 			case <-ctx.Done():
+				// As a follower EG instance close infraIR when the context is done.
+				r.InfraIR.Close()
 				return
 			case <-r.Elected:
-				initInfra()
+				// As a leader EG instance subscribe to infraIR to initialize the infrastructure and Close when the context is done.
+				subscribeInitInfraAndCloseInfraIRMessage()
 			}
 		}()
-		return
+	} else {
+		// Since leader election is disabled subscribe to infraIR to initialize the infrastructure and Close when the context is done.
+		go subscribeInitInfraAndCloseInfraIRMessage()
 	}
-	initInfra()
-	return
+	return err
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
+func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-chan watchable.Snapshot[string, *ir.Infra]) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(egv1a1.LogComponentInfrastructureRunner), Message: "infra-ir"}, sub,
+	message.HandleSubscription(
+		r.Logger,
+		message.Metadata{Runner: r.Name(), Message: message.InfraIRMessageName}, sub,
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
-			r.Logger.Info("received an update")
+			// Check if context is done before logging to avoid writing to test output after test completes
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
 			val := update.Value
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to delete infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to delete infra")
+					}
 					errChan <- err
 				}
 			} else {
 				// Manage the proxy infra.
+				// Skip creating or updating infra if the Infra IR without any listener.
+				// e.g.https://github.com/envoyproxy/gateway/issues/3044 --- Invalid Listener
+				//     https://github.com/envoyproxy/gateway/issues/7735 --- Invalid EnvoyProxy
 				if len(val.Proxy.Listeners) == 0 {
-					r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Info("Infra IR was updated, but no listeners were found. Skipping infra creation.")
+					}
 					return
 				}
 
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to create new infra")
+					select {
+					case <-ctx.Done():
+						return
+					default:
+						r.Logger.Error(err, "failed to create new infra")
+					}
 					errChan <- err
 				}
 			}
 		},
 	)
-	r.Logger.Info("infra subscriber shutting down")
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		r.Logger.Info("infra subscriber shutting down")
+	}
 }
 
 func (r *Runner) enableRateLimitInfra(ctx context.Context) {

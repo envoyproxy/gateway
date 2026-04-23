@@ -1,0 +1,104 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          hostname: "*.envoyproxy.io"
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: mirror-direct-response
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /mirror-direct-response
+          backendRefs:
+            - name: service-1
+              port: 8080
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+            - type: ExtensionRef
+              extensionRef:
+                group: gateway.envoyproxy.io
+                kind: HTTPRouteFilter
+                name: mirror-direct-response
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /valid
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: mirror-request-redirect
+    spec:
+      hostnames:
+        - gateway.envoyproxy.io
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /mirror-redirect
+          filters:
+            - type: RequestMirror
+              requestMirror:
+                backendRef:
+                  kind: Service
+                  name: service-1
+                  port: 8080
+            - type: RequestRedirect
+              requestRedirect:
+                scheme: https
+                statusCode: 302
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /valid
+          backendRefs:
+            - name: service-2
+              port: 8080
+httpFilters:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: HTTPRouteFilter
+    metadata:
+      name: mirror-direct-response
+      namespace: default
+    spec:
+      directResponse:
+        statusCode: 404
+        contentType: text/plain
+        body:
+          type: Inline
+          inline: "blocked"

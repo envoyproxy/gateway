@@ -1,8 +1,7 @@
 backendTLSPolicies:
-- apiVersion: gateway.networking.k8s.io/v1alpha3
+- apiVersion: gateway.networking.k8s.io/v1
   kind: BackendTLSPolicy
   metadata:
-    creationTimestamp: null
     name: example-com-tls-policy
     namespace: envoy-gateway-system
   spec:
@@ -21,6 +20,11 @@ backendTLSPolicies:
         name: eg
       conditions:
       - lastTransitionTime: null
+        message: Resolved all the Object references.
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
@@ -30,7 +34,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
@@ -50,7 +53,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    creationTimestamp: null
     name: ext-proc-example
     namespace: envoy-gateway-system
   spec:
@@ -60,6 +62,8 @@ envoyExtensionPolicies:
         kind: Service
         name: grpc-ext-proc
         port: 9002
+        weight: 1
+      failOpen: false
       processingMode:
         request: {}
         response:
@@ -77,9 +81,7 @@ envoyExtensionPolicies:
         namespace: envoy-gateway-system
       conditions:
       - lastTransitionTime: null
-        message: |-
-          Wasm: wasm cache is not initialized
-          ExtProc: service envoy-gateway-system/grpc-ext-proc not found.
+        message: 'ExtProc: service envoy-gateway-system/grpc-ext-proc not found.'
         reason: Invalid
         status: "False"
         type: Accepted
@@ -88,7 +90,6 @@ gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -103,7 +104,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
   spec:
@@ -144,7 +144,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:

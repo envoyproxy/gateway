@@ -22,7 +22,12 @@ gatewayClass:
     - gateway-exists-finalizer.gateway.networking.k8s.io
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  status: {}
+  status:
+    conditions:
+    - type: Accepted
+      status: "True"
+      reason: Accepted
+      Message: Valid GatewayClass
 gateways:
 - kind: Gateway
   apiVersion: gateway.networking.k8s.io/v1

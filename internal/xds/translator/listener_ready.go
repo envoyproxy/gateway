@@ -31,7 +31,7 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 	}
 	hcmFilters = append(hcmFilters, healthcheckFilter)
 
-	router, err := filters.GenerateRouterFilter(false)
+	router, err := filters.GenerateRouterFilter(false, nil)
 	if err != nil {
 		return nil, err
 	}

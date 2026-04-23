@@ -4,7 +4,7 @@ tools.srcdir = tools/src
 # Shell scripts
 # =============
 #
-tools/whitenoise = $(tools.bindir)/whitenoise
+tools/sync-docs-codeowners = $(tools.bindir)/sync-docs-codeowners
 $(tools.bindir)/%: $(tools.srcdir)/%.sh
 	mkdir -p $(@D)
 	install $< $@
@@ -19,13 +19,21 @@ tools/release-notes-docs = $(tools.bindir)/release-notes-docs
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@
-	$@/bin/pip3 install -r $< || (rm -rf $@; exit 1)
+	$@/bin/pip3 install --trusted-host pypi.org --trusted-host files.pythonhosted.org --disable-pip-version-check -r $< || (rm -rf $@; exit 1)
 $(tools.bindir)/%: $(tools.bindir)/%.d/venv	
 	@if [ -e $(tools.srcdir)/$*/$*.sh ]; then \
 		ln -sf ../../$(tools.srcdir)/$*/$*.sh $@; \
 	else \
 		ln -sf $*.d/venv/bin/$* $@; \
 	fi
+
+# kube-api-linter
+# ===============
+#
+tools/kube-api-linter = $(tools.bindir)/kube-api-linter
+$(tools/kube-api-linter):
+	cd $(CURDIR)/tools && \
+	go build -buildmode=plugin -o bin/kube-api-linter.so sigs.k8s.io/kube-api-linter/pkg/plugin
 
 ifneq ($(GOOS),windows)
 # Shellcheck
@@ -47,10 +55,23 @@ tools/bin/$(notdir $(SHELLCHECK_TXZ)):
 	tar -C $(@D) -Jxmf $< --strip-components=1 shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
 endif
 
+# npm-based tools
+# ================
+#
+tools/markdownlint = tools/node_modules/.bin/markdownlint
+tools/linkinator = tools/node_modules/.bin/linkinator
+tools/node_modules/.bin/%: tools/package-lock.json tools/package.json
+	cd tools && npm ci
+
 tools.clean: # Remove all tools
 	@$(LOG_TARGET)
 	rm -rf $(tools.bindir)
+	rm -rf tools/node_modules
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: tools.clean
+
+.PHONY: reclaim-storage
+reclaim-storage: ## Removes unnecessary packages and artifacts from GitHub Actions Runner
+	bash ./tools/hack/reclaim-storage.sh

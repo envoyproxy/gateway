@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type MetricSinkType string
 
 const (
@@ -41,6 +43,31 @@ type ProxyMetrics struct {
 	//
 	// +optional
 	EnableRequestResponseSizesStats *bool `json:"enableRequestResponseSizesStats,omitempty"`
+
+	// EnableGRPCStats enables the gRPC stats filter on listeners.
+	// This is enabled by default for GRPCRoute and opt-in for HTTPRoute.
+	// In general, gRPC traffic should be handled via GRPCRoute, but there are cases where
+	// users want to route gRPC using HTTPRoute for its richer matching capabilities.
+	// Therefore, we enable this behavior only when it is explicitly opted in.
+	//
+	// +optional
+	EnableGRPCStats *bool `json:"enableGRPCStats,omitempty"`
+
+	// ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.
+	// For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html
+	// The supported operators for this pattern are:
+	// `%ROUTE_NAME%`: name of Gateway API xRoute resource
+	// `%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource
+	// `%ROUTE_KIND%`: kind of Gateway API xRoute resource
+	// `%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section
+	// `%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section
+	// `%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>|<NAMESPACE>/<NAME>|...` format
+	// Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.
+	// Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`
+	// Example: `httproute/my-ns/my-route/rule/0`
+	//
+	// +optional
+	ClusterStatName *string `json:"clusterStatName,omitempty"`
 }
 
 // ProxyMetricSink defines the sink of metrics.
@@ -70,11 +97,13 @@ type ProxyMetricSink struct {
 type ProxyOpenTelemetrySink struct {
 	BackendCluster `json:",inline"`
 	// Host define the service hostname.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
@@ -82,8 +111,27 @@ type ProxyOpenTelemetrySink struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
-
-	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
+	// ReportCountersAsDeltas configures the OpenTelemetry sink to report
+	// counters as delta temporality instead of cumulative.
+	//
+	// +optional
+	ReportCountersAsDeltas *bool `json:"reportCountersAsDeltas,omitempty"`
+	// ReportHistogramsAsDeltas configures the OpenTelemetry sink to report
+	// histograms as delta temporality instead of cumulative.
+	// Required for backends like Elastic that drop cumulative histograms.
+	//
+	// +optional
+	ReportHistogramsAsDeltas *bool `json:"reportHistogramsAsDeltas,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
+	// ResourceAttributes is a set of labels that describe the source of metrics.
+	// It's recommended to follow semantic conventions: https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/
+	// +optional
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
 }
 
 type ProxyPrometheusProvider struct {

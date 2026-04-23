@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -145,11 +144,11 @@ func TestDecode(t *testing.T) {
 											Value: "env_b_value",
 										},
 									},
-									Image:     ptr.To("envoyproxy/ratelimit:latest"),
+									Image:     new("envoyproxy/ratelimit:latest"),
 									Resources: egv1a1.DefaultResourceRequirements(),
 									SecurityContext: &corev1.SecurityContext{
-										RunAsUser:                ptr.To[int64](2000),
-										AllowPrivilegeEscalation: ptr.To(false),
+										RunAsUser:                new(int64(2000)),
+										AllowPrivilegeEscalation: new(false),
 									},
 								},
 								Pod: &egv1a1.KubernetesPodSpec{
@@ -158,9 +157,9 @@ func TestDecode(t *testing.T) {
 										"key2": "val2",
 									},
 									SecurityContext: &corev1.PodSecurityContext{
-										RunAsUser:           ptr.To[int64](1000),
-										RunAsGroup:          ptr.To[int64](3000),
-										FSGroup:             ptr.To[int64](2000),
+										RunAsUser:           new(int64(1000)),
+										RunAsGroup:          new(int64(3000)),
+										FSGroup:             new(int64(2000)),
 										FSGroupChangePolicy: func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }(corev1.FSGroupChangeOnRootMismatch),
 									},
 								},
@@ -195,9 +194,7 @@ func TestDecode(t *testing.T) {
 					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
 					Gateway:  egv1a1.DefaultGateway(),
 					RateLimit: &egv1a1.RateLimit{
-						Timeout: &metav1.Duration{
-							Duration: 10000000,
-						},
+						Timeout:    new(gwapiv1.Duration("10ms")),
 						FailClosed: true,
 						Backend: egv1a1.RateLimitDatabaseBackend{
 							Type: egv1a1.RedisBackendType,
@@ -333,10 +330,10 @@ func TestDecode(t *testing.T) {
 						Type: egv1a1.ProviderTypeKubernetes,
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 							LeaderElection: &egv1a1.LeaderElection{
-								Disable:       ptr.To(true),
-								LeaseDuration: ptr.To(gwapiv1.Duration("1s")),
-								RenewDeadline: ptr.To(gwapiv1.Duration("2s")),
-								RetryPeriod:   ptr.To(gwapiv1.Duration("3s")),
+								Disable:       new(true),
+								LeaseDuration: new(gwapiv1.Duration("1s")),
+								RenewDeadline: new(gwapiv1.Duration("2s")),
+								RetryPeriod:   new(gwapiv1.Duration("3s")),
 							},
 						},
 					},
@@ -358,10 +355,92 @@ func TestDecode(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyGatewayKubernetesProvider{
 							Client: &egv1a1.KubernetesClient{
 								RateLimit: &egv1a1.KubernetesClientRateLimit{
-									QPS:   ptr.To[int32](500),
-									Burst: ptr.To[int32](1000),
+									QPS:   new(int32(500)),
+									Burst: new(int32(1000)),
 								},
 							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "standalone-extension-server.yaml",
+			out: &egv1a1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyGateway,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: &egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: &egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeFile,
+								File: &egv1a1.EnvoyGatewayFileResourceProvider{
+									Paths: []string{
+										"/tmp/envoy-gateway-test",
+									},
+								},
+							},
+							Infrastructure: &egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type: egv1a1.InfrastructureProviderTypeHost,
+								Host: &egv1a1.EnvoyGatewayHostInfrastructureProvider{},
+							},
+						},
+					},
+					Logging: egv1a1.DefaultEnvoyGatewayLogging(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Resources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "CustomRouteFilterResource",
+							},
+						},
+						BackendResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "storage.example.io",
+								Version: "v1",
+								Kind:    "S3Bucket",
+							},
+						},
+						PolicyResources: []egv1a1.GroupVersionKind{
+							{
+								Group:   "gateway.example.io",
+								Version: "v1alpha1",
+								Kind:    "ExampleExtPolicy",
+							},
+						},
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{
+									egv1a1.XDSHTTPListener,
+									egv1a1.XDSRoute,
+									egv1a1.XDSVirtualHost,
+									egv1a1.XDSCluster,
+									egv1a1.XDSTranslation,
+								},
+							},
+						},
+						Service: &egv1a1.ExtensionService{
+							BackendEndpoint: egv1a1.BackendEndpoint{
+								FQDN: &egv1a1.FQDNEndpoint{
+									Hostname: "127.0.0.1",
+									Port:     5005,
+								},
+							},
+						},
+					},
+					ExtensionAPIs: &egv1a1.ExtensionAPISettings{
+						EnableBackend:          true,
+						EnableEnvoyPatchPolicy: false,
+					},
+					RuntimeFlags: &egv1a1.RuntimeFlags{
+						Enabled: []egv1a1.RuntimeFlag{
+							"XDSNameSchemeV2",
 						},
 					},
 				},

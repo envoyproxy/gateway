@@ -4,6 +4,7 @@ clientTrafficPolicies:
   metadata:
     namespace: envoy-gateway
     name: target-gateway-1
+    generation: 10
   spec:
     connection: {}
     targetRef:
@@ -15,6 +16,7 @@ clientTrafficPolicies:
   metadata:
     namespace: envoy-gateway
     name: target-gateway-1-section-http-1
+    generation: 20
   spec:
     connection:
       bufferLimit: 50M

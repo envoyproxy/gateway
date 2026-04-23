@@ -1,0 +1,5 @@
+config:
+  envoyGateway:
+    runtimeFlags:
+      enabled:
+      - XDSNameSchemeV2

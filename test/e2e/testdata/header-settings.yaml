@@ -18,6 +18,26 @@ spec:
           value: "early"
       remove:
         - "early-removed-header"
+      removeOnMatch:
+        - value: "early-removed-regex-.*"
+          type: RegularExpression
+    lateResponseHeaders:
+      add:
+        - name: "late-added-header"
+          value: "late"
+      set:
+        - name: "late-set-header"
+          value: "late"
+      addIfAbsent:
+        - name: "late-add-if-absent-header"
+          value: "late-default"
+        - name: "late-add-if-absent-existing"
+          value: "late-default"
+      remove:
+        - "late-removed-header"
+      removeOnMatch:
+        - value: "late-removed-regex-.*"
+          type: RegularExpression
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -42,6 +62,70 @@ spec:
                 value: late
               - name: early-removed-header
                 value: late
+              - name: early-removed-regex-header
+                value: late
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-late-headers
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /late-header
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            add:
+              - name: late-added-header
+                value: filter
+              - name: late-set-header
+                value: filter
+              - name: late-removed-header
+                value: filter
+              - name: late-removed-regex-header
+                value: filter
+              - name: late-add-if-absent-existing
+                value: filter
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-multi-value-headers
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /multi-value-header
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: custom-request-header
+                value: bar,baz
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: Cache-Control
+                value: private,no-store
+            add:
+              - name: custom-response-header
+                value: one,two
       backendRefs:
         - name: infra-backend-v1
           port: 8080

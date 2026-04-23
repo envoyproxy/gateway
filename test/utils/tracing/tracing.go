@@ -27,20 +27,23 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
-func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse httputils.ExpectedResponse, tags map[string]string) {
+func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr string, expectedResponse *httputils.ExpectedResponse, tags map[string]string) {
+	if expectedResponse == nil {
+		t.Fatalf("expected response cannot be nil")
+	}
 	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-		func(ctx context.Context) (bool, error) {
-			preCount, err := queryTraceFromTempo(t, suite.Client, tags)
+		func(_ context.Context) (bool, error) {
+			preCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 			if err != nil {
 				tlog.Logf(t, "failed to get trace count from tempo: %v", err)
 				return false, nil
 			}
 
-			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, *expectedResponse)
 
 			// looks like we need almost 15 seconds to get the trace from Tempo?
-			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(ctx context.Context) (done bool, err error) {
-				curCount, err := queryTraceFromTempo(t, suite.Client, tags)
+			err = wait.PollUntilContextTimeout(context.TODO(), time.Second, 15*time.Second, true, func(_ context.Context) (done bool, err error) {
+				curCount, err := QueryTraceFromTempo(t, suite.Client, tags)
 				if err != nil {
 					tlog.Logf(t, "failed to get curCount count from tempo: %v", err)
 					return false, nil
@@ -63,8 +66,8 @@ func ExpectedTraceCount(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr 
 	}
 }
 
-// queryTraceFromTempo queries span count from tempo
-func queryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
+// QueryTraceFromTempo queries span count from tempo
+func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",

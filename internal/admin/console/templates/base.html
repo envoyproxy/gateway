@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}} - Envoy Gateway Admin</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                🚀 Envoy Gateway Admin
+            </div>
+            <nav class="nav">
+                <a href="/">Dashboard</a>
+                <a href="/server_info">Server Info</a>
+                <a href="/config_dump">Config Dump</a>
+                <a href="/stats">Stats</a>
+                <a href="/pprof">Profiling</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        {{template "content" .}}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 Envoy Gateway. Built with ❤️ by the Envoy Gateway community.</p>
+        <p>
+            <a href="https://gateway.envoyproxy.io/" target="_blank">Documentation</a> |
+            <a href="https://github.com/envoyproxy/gateway" target="_blank">GitHub</a>
+        </p>
+    </footer>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>

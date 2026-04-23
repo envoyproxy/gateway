@@ -35,7 +35,7 @@ securityPolicies:
       name: gateway-1
     oidc:
       provider:
-        issuer: "https://httpbin.org/"
+        issuer: "https://gateway.envoyproxy.io"
       clientID: "client1.apps.foo.bar.com"
       clientSecret:
         name: "client1-secret"

@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ include "eg.fullname" . }}-certgen
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
@@ -18,6 +18,13 @@ spec:
     metadata:
       labels:
         app: certgen
+        {{- if .Values.certgen.job.pod.labels }}
+          {{- toYaml .Values.certgen.job.pod.labels | nindent 8 -}}
+        {{- end }}
+      {{- if .Values.certgen.job.pod.annotations }}
+      annotations:
+        {{- toYaml .Values.certgen.job.pod.annotations | nindent 8 -}}
+      {{- end }}
     spec:
       containers:
       {{- $args := .Values.certgen.job.args }}

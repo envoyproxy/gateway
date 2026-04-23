@@ -1,0 +1,119 @@
+# Test SecurityPolicy with Rmote JWKS using BackendSettings for backend configuration, but without BackendRefs.
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    jwt:
+      providers:
+      - name: foobar
+        issuer: https://foo.bar.com
+        audiences:
+        - foo.bar.com
+        remoteJWKS:
+          backendSettings:
+            retry:
+              numRetries: 3
+              perRetry:
+                backOff:
+                  baseInterval: 1s
+                  maxInterval: 5s
+              retryOn:
+                triggers: ["5xx", "gateway-error", "reset"]
+            circuitBreaker:
+              maxConnections: 2048
+              maxPendingRequests: 1
+              maxParallelRequests: 4294967295
+              maxParallelRetries: 1024
+              maxRequestsPerConnection: 1
+            connection:
+              bufferLimit: 100M
+            dns:
+              dnsRefreshRate: 30s
+              lookupFamily: IPv4AndIPv6
+            loadBalancer:
+              type: ConsistentHash
+              consistentHash:
+                type: SourceIP
+            tcpKeepalive:
+              probes: 3
+              idleTime: 20m
+              interval: 60s
+            timeout:
+              tcp:
+                connectTimeout: 15s
+              http:
+                connectionIdleTimeout: 16s
+                maxConnectionDuration: 17s
+                requestTimeout: 5s
+            proxyProtocol:
+              version: V2
+            healthCheck:
+              active:
+                timeout: "500ms"
+                interval: "3s"
+                unhealthyThreshold: 3
+                healthyThreshold: 1
+                type: HTTP
+                http:
+                  path: "/healthz"
+                  method: "GET"
+                  expectedStatuses:
+                  - 200
+                  - 300
+                  expectedResponse:
+                    type: Binary
+                    binary: RXZlcnl0aGluZyBPSw==
+              passive:
+                baseEjectionTime: 160s
+                interval: 2s
+                maxEjectionPercent: 100
+                consecutive5XxErrors: 5
+                consecutiveGatewayErrors: 0
+                consecutiveLocalOriginFailures: 5
+                splitExternalLocalOriginErrors: false
+          uri: https://foo.bar.com/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: claim-header
+          claim: claim

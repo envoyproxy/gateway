@@ -6,6 +6,8 @@
 package ratelimit
 
 import (
+	"time"
+
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -24,13 +26,15 @@ func UnitToSeconds(unit egv1a1.RateLimitUnit) int64 {
 		seconds = 60 * 60
 	case egv1a1.RateLimitUnitDay:
 		seconds = 60 * 60 * 24
+	case egv1a1.RateLimitUnitMonth:
+		seconds = 60 * 60 * 24 * 30
+	case egv1a1.RateLimitUnitYear:
+		seconds = 60 * 60 * 24 * 365
 	}
 	return seconds
 }
 
 func UnitToDuration(unit ir.RateLimitUnit) *durationpb.Duration {
 	seconds := UnitToSeconds(egv1a1.RateLimitUnit(unit))
-	return &durationpb.Duration{
-		Seconds: seconds,
-	}
+	return durationpb.New(time.Duration(seconds) * time.Second)
 }

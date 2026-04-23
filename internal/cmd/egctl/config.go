@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -37,9 +38,9 @@ var (
 )
 
 const (
-	adminPort          = 19000   // TODO: make this configurable until EG support
-	rateLimitDebugPort = 6070    // TODO: make this configurable until EG support
-	containerName      = "envoy" // TODO: make this configurable until EG support
+	adminPort            = 19000 // TODO: make this configurable until EG support
+	rateLimitDebugPort   = 6070  // TODO: make this configurable until EG support
+	configRequestTimeout = 30 * time.Second
 )
 
 type aggregatedConfigDump map[string]map[string]protoreflect.ProtoMessage
@@ -67,7 +68,8 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 		return nil, err
 	}
 
-	podConfigDumps := make(aggregatedConfigDump, 0)
+	podConfigDumps := make(aggregatedConfigDump)
+	mu := sync.Mutex{}
 	// Initialize the map with namespaces
 	for _, pod := range pods {
 		if _, ok := podConfigDumps[pod.Namespace]; !ok {
@@ -99,7 +101,9 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 				return
 			}
 
+			mu.Lock()
 			podConfigDumps[pod.Namespace][pod.Name] = configDump
+			mu.Unlock()
 		}()
 	}
 
@@ -123,10 +127,10 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 		if err != nil {
 			return nil, err
 		}
-		for _, i := range namespaces.Items {
-			podList, err := c.PodsForSelector(i.Name, proxy.EnvoyAppLabelSelector()...)
+		for i := range namespaces.Items {
+			podList, err := c.PodsForSelector(namespaces.Items[i].Name, proxy.EnvoyAppLabelSelector()...)
 			if err != nil {
-				return nil, fmt.Errorf("list pods failed in ns %s: %w", i.Name, err)
+				return nil, fmt.Errorf("list pods failed in ns %s: %w", namespaces.Items[i].Name, err)
 			}
 
 			if len(podList.Items) == 0 {
@@ -167,10 +171,10 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 		pods = podList.Items
 	}
 
-	podsNamespacedNames := []types.NamespacedName{}
-	for _, pod := range pods {
-		podNsName := utils.NamespacedName(&pod)
-		if pod.Status.Phase != "Running" {
+	podsNamespacedNames := make([]types.NamespacedName, 0, len(pods))
+	for i := range pods {
+		podNsName := utils.NamespacedName(&pods[i])
+		if pods[i].Status.Phase != "Running" {
 			return podsNamespacedNames, fmt.Errorf("pod %s is not running", podNsName)
 		}
 
@@ -240,7 +244,10 @@ func configDumpRequest(address string, includeEds bool) ([]byte, error) {
 	if includeEds {
 		url = fmt.Sprintf("%s?include_eds", url)
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), configRequestTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}

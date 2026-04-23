@@ -15,7 +15,7 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -64,7 +64,10 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.path: Invalid value: \"object\": If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set."},
+			wantErrors: []string{
+				"spec.urlRewrite.path: Invalid value:",
+				": If HTTPPathModifier type is ReplaceRegexMatch, replaceRegexMatch field needs to be set.",
+			},
 		},
 		{
 			desc: "invalid RegexHTTPPathModifier missing pattern and substitution",
@@ -92,7 +95,7 @@ func TestHTTPRouteFilter(t *testing.T) {
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 						Hostname: &egv1a1.HTTPHostnameModifier{
 							Type:   egv1a1.HeaderHTTPHostnameModifier,
-							Header: ptr.To("foo"),
+							Header: new("foo"),
 						},
 					},
 				}
@@ -113,6 +116,36 @@ func TestHTTPRouteFilter(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "Valid appendXForwardedHost false",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: new("foo"),
+						},
+						AppendXForwardedHost: new(false),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid appendXForwardedHost true",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
+						Hostname: &egv1a1.HTTPHostnameModifier{
+							Type:   egv1a1.HeaderHTTPHostnameModifier,
+							Header: new("foo"),
+						},
+						AppendXForwardedHost: new(true),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "invalid Header missing settings",
 			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
 				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
@@ -123,7 +156,10 @@ func TestHTTPRouteFilter(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be specified for Header type"},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": header must be specified for Header type",
+			},
 		},
 		{
 			desc: "invalid SetFromBackend type",
@@ -132,12 +168,64 @@ func TestHTTPRouteFilter(t *testing.T) {
 					URLRewrite: &egv1a1.HTTPURLRewriteFilter{
 						Hostname: &egv1a1.HTTPHostnameModifier{
 							Type:   egv1a1.BackendHTTPHostnameModifier,
-							Header: ptr.To("foo"),
+							Header: new("foo"),
 						},
 					},
 				}
 			},
-			wantErrors: []string{"spec.urlRewrite.hostname: Invalid value: \"object\": header must be nil if the type is not Header"},
+			wantErrors: []string{
+				"spec.urlRewrite.hostname: Invalid value:",
+				": header must be nil if the type is not Header",
+			},
+		},
+		{
+			desc: "Valid DirectResponse with header add",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: new(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Add: []gwapiv1.HTTPHeader{
+								{Name: "X-Custom-Header", Value: "value"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Valid DirectResponse with header set",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: new(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Set: []gwapiv1.HTTPHeader{
+								{Name: "X-Custom-Header", Value: "value"},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "Invalid DirectResponse with header remove",
+			mutate: func(httproutefilter *egv1a1.HTTPRouteFilter) {
+				httproutefilter.Spec = egv1a1.HTTPRouteFilterSpec{
+					DirectResponse: &egv1a1.HTTPDirectResponseFilter{
+						StatusCode: new(200),
+						Header: &gwapiv1.HTTPHeaderFilter{
+							Remove: []string{"X-Header-To-Remove"},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.directResponse.header: Invalid value:",
+				": header.remove is not supported for DirectResponse",
+			},
 		},
 	}
 

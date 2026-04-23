@@ -86,6 +86,7 @@ backendTrafficPolicies:
       name: httproute-1
     retry:
       numRetries: 5
+      numAttemptsPerPriority: 1
       retryOn:
         httpStatusCodes:
         - 429

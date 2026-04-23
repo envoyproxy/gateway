@@ -7,13 +7,15 @@ package translator
 
 import (
 	"embed"
+	"encoding/json"
+	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
@@ -21,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -45,31 +48,16 @@ type testFileConfig struct {
 	requireEnvoyPatchPolicies bool
 	dnsDomain                 string
 	errMsg                    string
+	runtimeFlags              *egv1a1.RuntimeFlags
+}
+
+type rateLimitOutput struct {
+	RouteName     string               `json:"routeName" yaml:"routeName"`
+	RateLimits    []*routev3.RateLimit `json:"rateLimits" yaml:"rateLimits"`
+	HasSharedRule bool                 `json:"hasSharedRule" yaml:"hasSharedRule"`
 }
 
 func TestTranslateXds(t *testing.T) {
-	// this is a hack to make sure EG render same output on macos and linux
-	defaultCertificateName = "/etc/ssl/certs/ca-certificates.crt"
-	defer func() {
-		defaultCertificateName = func() string {
-			switch runtime.GOOS {
-			case "darwin":
-				// TODO: maybe automatically get the keychain cert? That might be macOS version dependent.
-				// For now, we'll just use the root cert installed by Homebrew: brew install ca-certificates.
-				//
-				// See:
-				// * https://apple.stackexchange.com/questions/226375/where-are-the-root-cas-stored-on-os-x
-				// * https://superuser.com/questions/992167/where-are-digital-certificates-physically-stored-on-a-mac-os-x-machine
-				return "/opt/homebrew/etc/ca-certificates/cert.pem"
-			default:
-				// This is the default location for the system trust store
-				// on Debian derivatives like the envoy-proxy image being used by the infrastructure
-				// controller.
-				// See https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/security/ssl
-				return "/etc/ssl/certs/ca-certificates.crt"
-			}
-		}()
-	}()
 	testConfigs := map[string]testFileConfig{
 		"ratelimit-custom-domain": {
 			dnsDomain: "example-cluster.local",
@@ -82,26 +70,21 @@ func TestTranslateXds(t *testing.T) {
 		},
 		"jsonpatch-with-jsonpath-invalid": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "no jsonPointers were found while evaluating the jsonPath",
 		},
 		"jsonpatch-add-op-empty-jsonpath": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "a patch operation must specify a path or jsonPath",
 		},
 		"jsonpatch-missing-resource": {
 			requireEnvoyPatchPolicies: true,
 		},
 		"jsonpatch-invalid-patch": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "unable to unmarshal xds resource",
 		},
 		"jsonpatch-add-op-without-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "the add operation requires a value",
 		},
 		"jsonpatch-move-op-with-value": {
 			requireEnvoyPatchPolicies: true,
-			errMsg:                    "value and from can't be specified with the remove operation",
 		},
 		"http-route-invalid": {
 			errMsg: "validation failed for xds resource",
@@ -133,10 +116,16 @@ func TestTranslateXds(t *testing.T) {
 		"tracing-unknown-provider-type": {
 			errMsg: "unknown tracing provider type: AwesomeTelemetry",
 		},
+		"xds-name-scheme-v2": {
+			runtimeFlags: &egv1a1.RuntimeFlags{
+				Enabled: []egv1a1.RuntimeFlag{egv1a1.XDSNameSchemeV2},
+			},
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "xds-ir", "*.yaml"))
 	require.NoError(t, err)
+	keep := make(sets.Set[string])
 
 	for _, inputFile := range inputFiles {
 		inputFileName := testName(inputFile)
@@ -157,12 +146,36 @@ func TestTranslateXds(t *testing.T) {
 
 			x := requireXdsIRFromInputTestData(t, inputFile)
 			tr := &Translator{
+				ControllerNamespace: "envoy-gateway-system",
 				GlobalRateLimit: &GlobalRateLimitSettings{
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
-				FilterOrder: x.FilterOrder,
+				FilterOrder:  x.FilterOrder,
+				RuntimeFlags: cfg.runtimeFlags,
 			}
 			tCtx, err := tr.Translate(x)
+
+			// Handle EnvoyPatchPolicy statuses first, even if there are errors
+			// because errors are captured in the policy status conditions
+			if cfg.requireEnvoyPatchPolicies {
+				got := tCtx.EnvoyPatchPolicyStatuses
+				for _, e := range got {
+					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
+				}
+				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".envoypatchpolicies.yaml")
+					out, err := yaml.Marshal(got)
+					require.NoError(t, err)
+					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
+				}
+
+				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
+				want := xtypes.EnvoyPatchPolicyStatuses{}
+				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
+				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+				require.Empty(t, cmp.Diff(want, got, opts))
+			}
+
 			if !strings.HasSuffix(inputFileName, "partial-invalid") && len(cfg.errMsg) == 0 {
 				t.Log(inputFileName)
 				require.NoError(t, err)
@@ -177,6 +190,10 @@ func TestTranslateXds(t *testing.T) {
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
 			if test.OverrideTestData() {
+				keep.Insert(inputFileName + ".listeners.yaml")
+				keep.Insert(inputFileName + ".routes.yaml")
+				keep.Insert(inputFileName + ".clusters.yaml")
+				keep.Insert(inputFileName + ".endpoints.yaml")
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", inputFileName+".listeners.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", inputFileName+".routes.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", inputFileName+".clusters.yaml")))
@@ -190,29 +207,35 @@ func TestTranslateXds(t *testing.T) {
 			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok && len(secrets) > 0 {
 				if test.OverrideTestData() {
+					keep.Insert(inputFileName + ".secrets.yaml")
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
-
-			if cfg.requireEnvoyPatchPolicies {
-				got := tCtx.EnvoyPatchPolicyStatuses
-				for _, e := range got {
-					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
-				}
-				if test.OverrideTestData() {
-					out, err := yaml.Marshal(got)
-					require.NoError(t, err)
-					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", inputFileName+".envoypatchpolicies.yaml")))
-				}
-
-				in := requireTestDataOutFile(t, "xds-ir", inputFileName+".envoypatchpolicies.yaml")
-				want := xtypes.EnvoyPatchPolicyStatuses{}
-				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
-				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-				require.Empty(t, cmp.Diff(want, got, opts))
-			}
 		})
+	}
+
+	if test.OverrideTestData() {
+		cleanupOutdatedTestData(t, filepath.Join("testdata", "out", "xds-ir"), keep)
+	}
+}
+
+func cleanupOutdatedTestData(t *testing.T, dir string, keep sets.Set[string]) {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	require.NoError(t, err)
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if filepath.Ext(name) != ".yaml" {
+			continue
+		}
+		if _, ok := keep[name]; ok {
+			continue
+		}
+		require.NoError(t, os.Remove(filepath.Join(dir, name)))
 	}
 }
 
@@ -237,15 +260,53 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 	}
 }
 
+func TestBuildRouteRateLimits(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "ratelimit-config", "*.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			// Get listeners from the test data
+			listeners := requireXdsIRListenersFromInputTestData(t, inputFile)
+
+			var outputs []rateLimitOutput
+
+			// Process each route to get rate limit actions
+			for _, listener := range listeners {
+				for _, route := range listener.Routes {
+					rateLimits, hasSharedRule := buildRouteRateLimits(route)
+
+					output := rateLimitOutput{
+						RouteName:     route.Name,
+						RateLimits:    rateLimits,
+						HasSharedRule: hasSharedRule,
+					}
+					outputs = append(outputs, output)
+				}
+			}
+			if test.OverrideTestData() {
+				require.NoError(t, file.Write(requireRouteRateLimitsToYAMLString(t, outputs), filepath.Join("testdata", "out", "ratelimit-config", inputFileName+".routes.yaml")))
+			}
+			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", inputFileName+".routes.yaml"), requireRouteRateLimitsToYAMLString(t, outputs))
+		})
+	}
+}
+
 // Simulate various extension server hooks and ensure that the translator returns the original resources
 // when configured to failOpen
 func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 	testConfigs := map[string]testFileConfig{
-		"http-route-extension-route-error":       {},
-		"http-route-extension-virtualhost-error": {},
-		"http-route-extension-listener-error":    {},
-		"http-route-extension-translate-error":   {},
-		"multiple-listeners-same-port-error":     {},
+		"http-route-extension-route-error":                 {},
+		"http-route-extension-virtualhost-error":           {},
+		"http-route-extension-listener-error":              {},
+		"http-route-extension-translate-error":             {},
+		"multiple-listeners-same-port-error":               {},
+		"http-route-custom-backend":                        {},
+		"http-route-custom-backends-multiple":              {},
+		"http-route-custom-backends-partial":               {},
+		"http-route-custom-backend-error":                  {},
+		"http-route-custom-backend-multiple-backend-error": {},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*.yaml"))
@@ -276,6 +337,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -287,20 +355,37 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
+							egv1a1.XDSCluster,
+							egv1a1.XDSEndpoints,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: new(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: new(true),
+							},
 						},
 					},
 				},
 			}
 
-			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
 			require.NoError(t, err)
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
@@ -356,6 +441,15 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 		"multiple-listeners-same-port-error": {
 			errMsg: "rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources",
 		},
+		"extensionpolicy-extension-server-error": {
+			errMsg: "rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test",
+		},
+		"http-route-custom-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool target port number is 0",
+		},
+		"http-route-custom-backend-multiple-backend-error": {
+			errMsg: "rpc error: code = Unknown desc = inference pool only support one per rule",
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
@@ -386,6 +480,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Kind:    "examplefilter",
 					},
 				},
+				BackendResources: []egv1a1.GroupVersionKind{
+					{
+						Group:   "inference.networking.x-k8s.io",
+						Version: "v1alpha2",
+						Kind:    "InferencePool",
+					},
+				},
 				PolicyResources: []egv1a1.GroupVersionKind{
 					{
 						Group:   "bar.example.io",
@@ -397,20 +498,36 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 						Version: "v1alpha1",
 						Kind:    "Bar",
 					},
+					{
+						Group:   "security.example.io",
+						Version: "v1alpha1",
+						Kind:    "ExampleExtPolicy",
+					},
 				},
 				Hooks: &egv1a1.ExtensionHooks{
 					XDSTranslator: &egv1a1.XDSTranslatorHooks{
 						Post: []egv1a1.XDSTranslatorHook{
+							egv1a1.XDSCluster,
 							egv1a1.XDSRoute,
 							egv1a1.XDSVirtualHost,
 							egv1a1.XDSHTTPListener,
+							egv1a1.XDSEndpoints,
 							egv1a1.XDSTranslation,
+						},
+						// Enable listeners and routes for PostTranslateModifyHook for these tests
+						Translation: &egv1a1.TranslationConfig{
+							Listener: &egv1a1.ListenerTranslationConfig{
+								IncludeAll: new(true),
+							},
+							Route: &egv1a1.RouteTranslationConfig{
+								IncludeAll: new(true),
+							},
 						},
 					},
 				},
 			}
 
-			extMgr, closeFunc, err := registry.NewInMemoryManager(ext, &testingExtensionServer{})
+			extMgr, closeFunc, err := registry.NewInMemoryManager(&ext, &testingExtensionServer{})
 			require.NoError(t, err)
 			defer closeFunc()
 			tr.ExtensionManager = &extMgr
@@ -431,7 +548,7 @@ func requireXdsIRFromInputTestData(t *testing.T, name string) *ir.Xds {
 	content, err := inFiles.ReadFile(name)
 	require.NoError(t, err)
 	x := &ir.Xds{}
-	err = yaml.Unmarshal(content, x)
+	err = yaml.Unmarshal(content, x, yaml.DisallowUnknownFields)
 	require.NoError(t, err)
 	return x
 }
@@ -462,7 +579,15 @@ func requireXdsIRListenersFromInputTestData(t *testing.T, name string) []*ir.HTT
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
 	elems := append([]string{"testdata", "out"}, name...)
-	content, err := outFiles.ReadFile(filepath.Join(elems...))
+	path := filepath.Join(elems...)
+
+	content, err := outFiles.ReadFile(path)
+	// read from FS if overriding, and file does not exist in go embed
+	if err != nil && test.OverrideTestData() && strings.Contains(err.Error(), "file does not exist") {
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		return string(content)
+	}
 	require.NoError(t, err)
 	return string(content)
 }
@@ -490,10 +615,28 @@ func requireRateLimitConfigsToYAMLString(t *testing.T, configs []*ratelimitv3.Ra
 	return result
 }
 
+func requireRouteRateLimitsToYAMLString(t *testing.T, rlOutputs []rateLimitOutput) string {
+	if len(rlOutputs) == 0 {
+		return ""
+	}
+
+	results := make([]string, 0, len(rlOutputs))
+	for _, output := range rlOutputs {
+		jsonBytes, err := json.Marshal(output)
+		require.NoError(t, err)
+		yamlBytes, err := yaml.JSONToYAML(jsonBytes)
+		require.NoError(t, err)
+
+		results = append(results, string(yamlBytes))
+	}
+
+	return strings.Join(results, "---\n")
+}
+
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
 	jsonBytes, err := utils.MarshalResourcesToJSON(resources)
 	require.NoError(t, err)
 	data, err := yaml.JSONToYAML(jsonBytes)
 	require.NoError(t, err)
-	return string(data)
+	return test.NormalizeCertPath(string(data))
 }

@@ -1,0 +1,86 @@
+name: Create Monthly Release Issue
+
+on:
+  schedule:
+    # Run on the 1st of every month at 9:00 AM UTC
+    - cron: '0 9 1 * *'
+  workflow_dispatch:  # Allow manual triggering for testing
+
+permissions:
+  issues: write
+
+jobs:
+  create-release-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Collect supported versions from hugo.toml
+        id: versions
+        run: |
+          TODAY=$(date +%Y-%m-%d)
+
+          # Extract version/eol pairs from hugo.toml, skipping "latest"
+          ACTIVE_VERSIONS=()
+          VERSION=""
+          VERSION_RE='version[[:space:]]*=[[:space:]]*"([^"]+)"'
+          EOL_RE='eol[[:space:]]*=[[:space:]]*"([^"]+)"'
+          while IFS= read -r line; do
+            if [[ "$line" =~ $VERSION_RE ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+            fi
+            if [[ "$line" =~ $EOL_RE ]]; then
+              EOL="${BASH_REMATCH[1]}"
+              if [[ "$VERSION" != "latest" && ! "$EOL" < "$TODAY" ]]; then
+                ACTIVE_VERSIONS+=("$VERSION")
+              fi
+              VERSION=""
+            fi
+          done < site/hugo.toml
+
+          printf '%s\n' "Supported versions (EOL on or after ${TODAY}):" "${ACTIVE_VERSIONS[@]}"
+
+          # Export as JSON array for the matrix
+          JSON=$(printf '%s\n' "${ACTIVE_VERSIONS[@]}" | jq -R . | jq -sc .)
+          echo "matrix=${JSON}" >> $GITHUB_OUTPUT
+          echo "month_name=$(date +%B)" >> $GITHUB_OUTPUT
+          echo "year=$(date +%Y)" >> $GITHUB_OUTPUT
+
+      - name: Read issue template
+        id: template
+        run: |
+          TEMPLATE_CONTENT=$(awk '/^---$/,/^---$/{if (!/^---$/) next} /^---$/{p++; next} p==2' .github/ISSUE_TEMPLATE/release.md)
+
+          {
+            echo 'content<<EOF'
+            echo "$TEMPLATE_CONTENT"
+            echo 'EOF'
+          } >> $GITHUB_OUTPUT
+
+      - name: Create release issues for supported versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TEMPLATE_CONTENT: ${{ steps.template.outputs.content }}
+        run: |
+          MONTH_NAME="${{ steps.versions.outputs.month_name }}"
+          YEAR="${{ steps.versions.outputs.year }}"
+          VERSIONS='${{ steps.versions.outputs.matrix }}'
+
+          for VERSION in $(echo "$VERSIONS" | jq -r '.[]'); do
+            echo "Creating release issue for ${VERSION}.x ..."
+            BODY="## Patch Release Checklist for ${VERSION}.x (${MONTH_NAME} ${YEAR})
+
+          ${TEMPLATE_CONTENT}
+
+          ---
+          *This issue was automatically created by the monthly release workflow.*"
+
+            # Replace placeholder version with the actual release version
+            BODY="${BODY//v1.x.x/${VERSION}.x}"
+
+            gh issue create \
+              --title "Patch Release ${VERSION}.x for ${MONTH_NAME} ${YEAR}" \
+              --label "release-process" \
+              --body "$BODY"
+          done

@@ -59,7 +59,7 @@ spec:
     spec:
       serviceAccountName: backend-2
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: backend-2
           ports:
@@ -120,7 +120,7 @@ spec:
     spec:
       serviceAccountName: backend-2
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: backend-2
           ports:
@@ -440,5 +440,5 @@ spec:
 
 [Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
-[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#backendref
+[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httprequestmirrorfilter

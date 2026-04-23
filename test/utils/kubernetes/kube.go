@@ -18,7 +18,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -105,6 +104,13 @@ func (ka *KubeActions) ManageEgress(ctx context.Context, ip, namespace, policyNa
 }
 
 func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentName, namespace string, replicas int32, timeout time.Duration, prefix bool) error {
+	if err := ka.ScaleDeployment(ctx, deploymentName, namespace, replicas, prefix); err != nil {
+		return err
+	}
+	return ka.WaitForDeploymentReplicaCount(ctx, deploymentName, namespace, replicas, timeout, prefix)
+}
+
+func (ka *KubeActions) ScaleDeployment(ctx context.Context, deploymentName, namespace string, replicas int32, prefix bool) error {
 	// Get the current deployment
 	deployment := &appsv1.Deployment{}
 	if prefix {
@@ -130,7 +136,7 @@ func (ka *KubeActions) ScaleDeploymentAndWait(ctx context.Context, deploymentNam
 	}
 
 	fmt.Printf("Deployment %s scaled to %d replicas\n", deployment.Name, replicas)
-	return ka.WaitForDeploymentReplicaCount(ctx, deployment.Name, namespace, replicas, timeout, false)
+	return nil
 }
 
 func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replicas int32) error {
@@ -144,7 +150,7 @@ func (ka *KubeActions) ScaleEnvoyProxy(envoyProxyName, namespace string, replica
 	}
 	envoyProxy.Spec.Provider.Kubernetes = &egv1a1.EnvoyProxyKubernetesProvider{
 		EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
-			Replicas: ptr.To[int32](replicas),
+			Replicas: new(replicas),
 		},
 	}
 
@@ -263,9 +269,10 @@ func (ka *KubeActions) getDepByPrefix(ctx context.Context, prefix, namespace str
 	}
 
 	// Search for the deployment with the specified prefix
-	for _, dep := range deployments.Items {
+	for i := range deployments.Items {
+		dep := &deployments.Items[i]
 		if len(dep.Name) >= len(prefix) && dep.Name[:len(prefix)] == prefix {
-			return &dep, nil
+			return dep, nil
 		}
 	}
 	return nil, errors.New("deployment not found")

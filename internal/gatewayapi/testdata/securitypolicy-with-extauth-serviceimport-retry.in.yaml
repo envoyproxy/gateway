@@ -1,0 +1,208 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: default
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      hostnames:
+        - www.foo.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /foo1
+          backendRefs:
+            - name: service-1
+              port: 8080
+        - matches:
+            - path:
+                value: /foo2
+          backendRefs:
+            - name: service-2
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-2
+    spec:
+      hostnames:
+        - www.bar.com
+      parentRefs:
+        - namespace: default
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: /bar
+          backendRefs:
+            - name: service-3
+              port: 8080
+serviceImports:
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      name: http-backend
+      namespace: envoy-gateway
+    spec:
+      ips:
+        - 7.7.7.7
+      ports:
+        - port: 80
+          name: http
+          # Missing protocol here is intentional to test the default protocol handling.
+  - apiVersion: multicluster.x-k8s.io/v1alpha1
+    kind: ServiceImport
+    metadata:
+      name: grpc-backend
+      namespace: default
+    spec:
+      ips:
+        - 8.8.8.8
+      ports:
+        - port: 9000
+          name: grpc
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-http-backend
+      namespace: envoy-gateway
+      labels:
+        multicluster.kubernetes.io/service-name: http-backend
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+    endpoints:
+      - addresses:
+          - 7.7.7.7
+        conditions:
+          ready: true
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: endpointslice-grpc-backend
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: grpc-backend
+    addressType: IPv4
+    ports:
+      - name: grpc
+        protocol: TCP
+        port: 9000
+    endpoints:
+      - addresses:
+          - 8.8.8.8
+        conditions:
+          ready: true
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: ReferenceGrant
+    metadata:
+      namespace: envoy-gateway
+      name: referencegrant-1
+    spec:
+      from:
+        - group: gateway.envoyproxy.io
+          kind: SecurityPolicy
+          namespace: default
+      to:
+        - group: multicluster.x-k8s.io
+          kind: ServiceImport
+securityPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      name: policy-for-http-route-1
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: httproute-1
+      extAuth:
+        failOpen: true
+        headersToExtAuth:
+          - header1
+          - header2
+        grpc:
+          backendRefs:
+            - group: multicluster.x-k8s.io
+              kind: ServiceImport
+              name: grpc-backend
+              port: 9000
+          backendSettings:
+            retry:
+              numRetries: 2
+              retryOn:
+                triggers:
+                  - 5xx
+                  - unavailable
+                  - internal
+                  - deadline-exceeded
+              perRetry:
+                timeout: "3s"
+                backOff:
+                  baseInterval: "0.2s"
+                  maxInterval: "3s"
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      namespace: default
+      # This will only apply to the httproute-2
+      name: policy-for-gateway-1
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      extAuth:
+        failOpen: false
+        http:
+          backendRefs:
+            - Group: multicluster.x-k8s.io
+              Kind: ServiceImport
+              Name: http-backend
+              Namespace: envoy-gateway
+              Port: 80
+          Path: /auth
+          headersToBackend:
+            - header1
+            - header2
+          backendSettings:
+            retry:
+              numRetries: 2
+              retryOn:
+                triggers:
+                  - 5xx
+                  - unavailable
+                  - internal
+                  - deadline-exceeded
+              perRetry:
+                timeout: "3s"
+                backOff:
+                  baseInterval: "0.2s"
+                  maxInterval: "3s"

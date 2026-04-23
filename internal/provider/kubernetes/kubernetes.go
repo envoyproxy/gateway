@@ -8,8 +8,13 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -20,12 +25,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	ec "github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -59,16 +67,53 @@ var (
 	webhookTLSPort = 9443
 )
 
-// New creates a new Provider from the provided EnvoyGateway.
-func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources *message.ProviderResources) (*Provider, error) {
-	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
+// cacheReadyCheck returns a healthz.Checker that verifies the manager's cache has synced.
+// This ensures the control plane has populated its cache with all resources from the API server
+// before reporting ready. This prevents serving inconsistent xDS configuration to Envoy proxies
+// when running multiple control plane replicas during periods of resource churn.
+func cacheReadyCheck(mgr manager.Manager) healthz.Checker {
+	return func(req *http.Request) error {
+		// Use a short timeout to avoid blocking the health check indefinitely.
+		// The readiness probe will retry periodically until the cache syncs.
+		ctx, cancel := context.WithTimeout(req.Context(), 1*time.Second)
+		defer cancel()
 
+		// WaitForCacheSync returns true if the cache has synced, false if the context is cancelled.
+		if !mgr.GetCache().WaitForCacheSync(ctx) {
+			return fmt.Errorf("cache not synced yet")
+		}
+
+		return nil
+	}
+}
+
+func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
+	resources *message.ProviderResources, errNotifier message.RunnerErrorNotifier,
+) (*Provider, error) {
+	return newProvider(ctx, restCfg, svrCfg, nil, resources, errNotifier)
+}
+
+// newProvider creates a new Provider from the provided EnvoyGateway.
+func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
+	metricsOpts *metricsserver.Options,
+	resources *message.ProviderResources, _ message.RunnerErrorNotifier,
+) (*Provider, error) {
+	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:                  envoygateway.GetScheme(),
 		Logger:                  svrCfg.Logger.Logger,
 		HealthProbeBindAddress:  healthProbeBindAddress,
 		LeaderElectionID:        "5b9825d2.gateway.envoyproxy.io",
 		LeaderElectionNamespace: svrCfg.ControllerNamespace,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				Unstructured: true,
+			},
+		},
+	}
+
+	if metricsOpts != nil {
+		mgrOpts.Metrics = *metricsOpts
 	}
 
 	log.SetLogger(mgrOpts.Logger)
@@ -83,7 +128,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.LeaseDuration = ptr.To(ld)
+			mgrOpts.LeaseDuration = new(ld)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RetryPeriod != nil {
@@ -91,7 +136,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RetryPeriod = ptr.To(rp)
+			mgrOpts.RetryPeriod = new(rp)
 		}
 
 		if svrCfg.EnvoyGateway.Provider.Kubernetes.LeaderElection.RenewDeadline != nil {
@@ -99,10 +144,55 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			if err != nil {
 				return nil, err
 			}
-			mgrOpts.RenewDeadline = ptr.To(rd)
+			mgrOpts.RenewDeadline = new(rd)
 		}
-		mgrOpts.Controller = config.Controller{NeedLeaderElection: ptr.To(false)}
+		mgrOpts.Controller = config.Controller{NeedLeaderElection: new(false)}
 	}
+
+	if svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod != nil {
+		csp, err := time.ParseDuration(string(*svrCfg.EnvoyGateway.Provider.Kubernetes.CacheSyncPeriod))
+		if err != nil {
+			return nil, err
+		}
+		mgrOpts.Cache.SyncPeriod = new(csp)
+	}
+
+	// Limit the cache to only Envoy proxy Pods to reduce memory and sync churn.
+	if mgrOpts.Cache.ByObject == nil {
+		mgrOpts.Cache.ByObject = map[client.Object]cache.ByObject{
+			// Disable deepcopy for read only resources
+			&corev1.Secret{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&corev1.ConfigMap{}: {
+				UnsafeDisableDeepCopy: new(true),
+				Transform:             composeTransforms(cache.TransformStripManagedFields(), transformConfigMapData),
+			},
+			&corev1.Service{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&discoveryv1.EndpointSlice{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&appsv1.Deployment{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&corev1.Node{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&gwapiv1b1.ReferenceGrant{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+			&appsv1.DaemonSet{}: {
+				UnsafeDisableDeepCopy: new(true),
+			},
+		}
+	}
+	// ProxyTopologyInjector is the only component that interacts with Pods.
+	mgrOpts.Cache.ByObject[&corev1.Pod{}] = cache.ByObject{
+		Label: labels.SelectorFromSet(proxy.EnvoyAppLabel()),
+	}
+	mgrOpts.Cache.DefaultTransform = cache.TransformStripManagedFields()
 
 	if svrCfg.EnvoyGateway.NamespaceMode() {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
@@ -118,6 +208,7 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 			Port:     webhookTLSPort,
 		})
 	}
+
 	mgr, err := ctrl.NewManager(restCfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
@@ -126,8 +217,10 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 	if svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector == nil || !ptr.Deref(svrCfg.EnvoyGateway.Provider.Kubernetes.TopologyInjector.Disable, false) {
 		mgr.GetWebhookServer().Register("/inject-pod-topology", &webhook.Admission{
 			Handler: &ProxyTopologyInjector{
-				Client:  mgr.GetClient(),
-				Decoder: admission.NewDecoder(mgr.GetScheme()),
+				Client:    mgr.GetClient(),
+				APIReader: mgr.GetAPIReader(),
+				Logger:    svrCfg.Logger.WithName("proxy-topology-injector"),
+				Decoder:   admission.NewDecoder(mgr.GetScheme()),
 			},
 		})
 	}
@@ -146,8 +239,8 @@ func New(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server, resources
 		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
 
-	// Add ready check health probes.
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// Add ready check to wait for a successful sync of the cache.
+	if err := mgr.AddReadyzCheck("cache-sync", cacheReadyCheck(mgr)); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 

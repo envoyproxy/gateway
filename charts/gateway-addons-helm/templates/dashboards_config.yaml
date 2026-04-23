@@ -6,6 +6,9 @@ metadata:
   {{- with .Values.dashboard.labels }}
   labels: {{- . | toYaml | nindent 4 }}
   {{- end }}
+  {{- with .Values.dashboard.annotations }}
+  annotations: {{- . | toYaml | nindent 4 }}
+  {{- end }}
 data:
   {{- $files := .Files }}
   {{- range $path, $_ := $files.Glob "dashboards/*.json" }}

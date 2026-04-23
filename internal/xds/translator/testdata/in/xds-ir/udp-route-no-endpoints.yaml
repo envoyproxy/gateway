@@ -1,0 +1,13 @@
+# UDP route with no endpoints, this will happen when the Gateway API translator failed to resolve the backendRefs
+udp:
+- name: "udp-route"
+  address: "0.0.0.0"
+  port: 10162
+  route:
+    destination:
+      metadata:
+        kind: UDPRoute
+        name: udproute-1
+        namespace: default
+      name: udproute/default/udproute-1/rule/-1
+    name: udproute/default/udproute-1

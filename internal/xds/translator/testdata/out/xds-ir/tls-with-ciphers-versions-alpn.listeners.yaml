@@ -75,6 +75,7 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: first-listener
   perConnectionBufferLimitBytes: 32768
 - address:
@@ -123,5 +124,6 @@
             tlsMaximumProtocolVersion: TLSv1_2
             tlsMinimumProtocolVersion: TLSv1_0
         disableStatefulSessionResumption: true
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: second-listener
   perConnectionBufferLimitBytes: 32768

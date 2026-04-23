@@ -29,13 +29,14 @@
                 normalizePayloadInMetadata:
                   spaceDelimitedClaims:
                   - scope
+                  - scp
                 payloadInMetadata: foobar
                 remoteJwks:
                   asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: securitypolicy/default/policy-for-route/jwt/0
-                    timeout: 10s
+                    timeout: 5s
                     uri: https://foo.bar.com/jwt/public-key/jwks.json
                   retryPolicy:
                     numRetries: 3
@@ -62,5 +63,6 @@
         statPrefix: http-10080
         useRemoteAddress: true
     name: default/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: default/gateway-1/http
   perConnectionBufferLimitBytes: 32768

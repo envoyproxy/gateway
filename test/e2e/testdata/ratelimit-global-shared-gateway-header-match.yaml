@@ -57,7 +57,6 @@ spec:
   rateLimit:
     type: Global
     global:
-      shared: true
       rules:
         - clientSelectors:
             - headers:
@@ -67,3 +66,4 @@ spec:
           limit:
             requests: 3
             unit: Hour
+          shared: true

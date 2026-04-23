@@ -1,0 +1,36 @@
+<!-- layouts/shortcodes/benchmark-dashboard.html -->
+{{- $apiBase := .Get "apiBase" | default site.Params.benchmark.apiBase -}}
+{{- $version := .Get "version" | default "latest" -}}
+{{- $theme := .Get "theme" | default "light" -}}
+{{- $showHeader := .Get "showHeader" | default "false" -}}
+{{- $showVersionSelector := .Get "showVersionSelector" | default "true" -}}
+{{- $showSummaryCards := .Get "showSummaryCards" | default "true" -}}
+{{- $tabs := .Get "tabs" | default "overview,latency,resources" -}}
+{{- $containerClass := .Get "class" | default "my-8" -}}
+
+<!-- Always load CSS to make it available for Shadow DOM -->
+<link rel="stylesheet" href="{{ "/css/benchmark-dashboard.css" | relURL }}">
+
+<div
+  data-react-component="benchmark-dashboard"
+  data-api-base="{{ $apiBase }}"
+  data-version="{{ $version }}"
+  data-theme="{{ $theme }}"
+  data-show-header="{{ $showHeader }}"
+  data-show-version-selector="{{ $showVersionSelector }}"
+  data-show-summary-cards="{{ $showSummaryCards }}"
+  data-tabs="{{ $tabs }}"
+  data-container-class="{{ $containerClass }}"
+  class="benchmark-dashboard-container {{ $containerClass }}"
+>
+  <!-- Loading placeholder -->
+  <div class="flex items-center justify-center py-12">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+    <span class="text-gray-600">Loading Benchmark Dashboard...</span>
+  </div>
+</div>
+
+<!-- Only load JS if not on a standalone page (which loads shadow DOM version via body-end.html) -->
+{{ if not .Page.Params.includeBenchmark }}
+<script type="module" src="{{ "/js/benchmark-dashboard.js" | relURL }}"></script>
+{{ end }}

@@ -6,11 +6,8 @@
 package resource
 
 import (
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -31,7 +28,8 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 	if service.ExternalTrafficPolicy == nil {
 		service.ExternalTrafficPolicy = egv1a1.DefaultKubernetesServiceExternalTrafficPolicy()
 	}
-	if *service.Type == egv1a1.ServiceTypeLoadBalancer {
+	switch *service.Type {
+	case egv1a1.ServiceTypeLoadBalancer:
 		if service.LoadBalancerClass != nil {
 			serviceSpec.LoadBalancerClass = service.LoadBalancerClass
 		}
@@ -45,17 +43,11 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
 		}
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
+	case egv1a1.ServiceTypeNodePort:
+		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
 	}
 
 	return serviceSpec
-}
-
-// CompareSvc compares the Service resource and ignores specific fields that may have been modified by other actors.
-func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
-	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
-		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
-		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"),
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Finalizers"))
 }
 
 // ExpectedContainerEnv returns expected container envs.
@@ -80,8 +72,8 @@ func ExpectedContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev
 // ExpectedVolumes returns expected deployment volumes.
 func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
-		for index, e := range volumes {
-			if e.Name == volume.Name {
+		for index := range volumes {
+			if volumes[index].Name == volume.Name {
 				volumes[index] = volume
 				return
 			}
@@ -90,8 +82,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 		volumes = append(volumes, volume)
 	}
 
-	for _, envVar := range pod.Volumes {
-		amendFunc(envVar)
+	for i := range pod.Volumes {
+		amendFunc(pod.Volumes[i])
 	}
 
 	return volumes
@@ -100,8 +92,8 @@ func ExpectedVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []c
 // ExpectedContainerVolumeMounts returns expected container volume mounts.
 func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	amendFunc := func(volumeMount corev1.VolumeMount) {
-		for index, e := range volumeMounts {
-			if e.Name == volumeMount.Name {
+		for index := range volumeMounts {
+			if volumeMounts[index].Name == volumeMount.Name {
 				volumeMounts[index] = volumeMount
 				return
 			}
@@ -120,15 +112,15 @@ func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, vo
 // DefaultSecurityContext returns a default security context with minimal privileges.
 func DefaultSecurityContext() *corev1.SecurityContext {
 	return &corev1.SecurityContext{
-		AllowPrivilegeEscalation: ptr.To(false),
+		AllowPrivilegeEscalation: new(false),
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{
 				"ALL",
 			},
 		},
-		Privileged:             ptr.To(false),
-		ReadOnlyRootFilesystem: ptr.To(true),
-		RunAsNonRoot:           ptr.To(true),
+		Privileged:             new(false),
+		ReadOnlyRootFilesystem: new(true),
+		RunAsNonRoot:           new(true),
 		SeccompProfile: &corev1.SeccompProfile{
 			Type: "RuntimeDefault",
 		},

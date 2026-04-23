@@ -2,7 +2,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -39,4 +38,4 @@ http:
       compression:
       - type: Brotli
       - type: Gzip
-      - type: Brotli
+      - type: Zstd

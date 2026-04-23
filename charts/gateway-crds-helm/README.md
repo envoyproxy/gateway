@@ -1,8 +1,21 @@
 # gateway-crds-helm
 
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 1.16.0](https://img.shields.io/badge/AppVersion-1.16.0-informational?style=flat-square)
+![Version: v0.0.0-latest](https://img.shields.io/badge/Version-v0.0.0--latest-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: latest](https://img.shields.io/badge/AppVersion-latest-informational?style=flat-square)
 
-A Helm chart for Kubernetes
+A Helm chart for Envoy Gateway CRDs
+
+**Homepage:** <https://gateway.envoyproxy.io/>
+
+## Maintainers
+
+| Name | Email | Url |
+| ---- | ------ | --- |
+| envoy-gateway-steering-committee |  | <https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md> |
+| envoy-gateway-maintainers |  | <https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS> |
+
+## Source Code
+
+* <https://github.com/envoyproxy/gateway>
 
 ## Usage
 
@@ -17,15 +30,20 @@ If you do, make sure that you don't install the CRDs again when installing the E
 Once Helm has been set up correctly, install the chart from dockerhub:
 
 ``` shell
-    helm install gateway-crds oci://docker.io/envoyproxy/gateway-crds-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm --set 'crds.gatewayAPI.enabled=true' --set 'crds.envoyGateway.enabled=true' \
+    --version v0.0.0-latest | kubectl apply --server-side -f -
 ```
+
+**Note**: We're using `helm template` piped into `kubectl apply` instead of `helm install` due to a [known Helm limitation](https://github.com/helm/helm/pull/12277)
+related to large CRDs in the `templates/` directory.
 
 You can find all helm chart release in [Dockerhub](https://hub.docker.com/r/envoyproxy/gateway-crds-helm/tags)
 
 To uninstall the chart:
 
 ``` shell
-    helm uninstall gateway-crds -n envoy-gateway-system
+helm template eg-crds oci://docker.io/envoyproxy/gateway-crds-helm \
+    --version v0.0.0-latest | kubectl delete --server-side -f -
 ```
 
 ## Values
@@ -33,5 +51,6 @@ To uninstall the chart:
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | crds.envoyGateway.enabled | bool | `false` |  |
+| crds.gatewayAPI.channel | string | `"experimental"` |  |
 | crds.gatewayAPI.enabled | bool | `false` |  |
 

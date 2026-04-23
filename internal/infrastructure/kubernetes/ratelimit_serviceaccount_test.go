@@ -10,9 +10,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +21,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
+	"github.com/envoyproxy/gateway/internal/message"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
@@ -50,9 +49,15 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       "envoy-ratelimit",
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							Kind:       ratelimit.ResourceKindServiceAccount,
@@ -72,9 +77,15 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Kind:       "ServiceAccount",
 					APIVersion: "v1",
 				},
+				AutomountServiceAccountToken: new(false),
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       "envoy-ratelimit",
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							Kind:       ratelimit.ResourceKindServiceAccount,
@@ -104,31 +115,31 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 					Build()
 			}
 
-			cfg, err := config.New(os.Stdout)
+			cfg, err := config.New(os.Stdout, os.Stderr)
 			require.NoError(t, err)
 			cfg.ControllerNamespace = tc.ns
 
-			kube := NewInfra(cli, cfg)
+			errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+			kube := NewInfra(cli, cfg, errorNotifier)
 			kube.EnvoyGateway.RateLimit = rl
 
 			ownerReferenceUID := map[string]types.UID{
 				ratelimit.ResourceKindServiceAccount: "foo.bar",
 			}
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, ownerReferenceUID)
 
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: kube.Namespace,
+					Namespace: kube.ControllerNamespace,
 					Name:      ratelimit.InfraName,
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
-			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			assert.True(t, cmp.Equal(tc.want, actual, opts))
+			testutil.CmpResources(t, tc.want, actual)
 		})
 	}
 }
@@ -158,7 +169,7 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
+			r := ratelimit.NewResourceRender(kube.ControllerNamespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 

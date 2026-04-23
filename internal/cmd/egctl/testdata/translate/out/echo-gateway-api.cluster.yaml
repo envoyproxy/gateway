@@ -2,7 +2,6 @@ gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
   metadata:
-    creationTimestamp: null
     name: eg
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -17,7 +16,6 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: eg
     namespace: envoy-gateway-system
   spec:
@@ -58,7 +56,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
@@ -106,8 +103,7 @@ xds:
         circuitBreakers:
           thresholds:
           - maxRetries: 1024
-        commonLbConfig:
-          localityWeightedLbConfig: {}
+        commonLbConfig: {}
         connectTimeout: 10s
         dnsLookupFamily: V4_PREFERRED
         edsClusterConfig:
@@ -116,7 +112,21 @@ xds:
             resourceApiVersion: V3
           serviceName: httproute/envoy-gateway-system/backend/rule/0
         ignoreHealthOnHostRemoval: true
-        lbPolicy: LEAST_REQUEST
+        loadBalancingPolicy:
+          policies:
+          - typedExtensionConfig:
+              name: envoy.load_balancing_policies.least_request
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                localityLbConfig:
+                  localityWeightedLbConfig: {}
+        metadata:
+          filterMetadata:
+            envoy-gateway:
+              resources:
+              - kind: HTTPRoute
+                name: backend
+                namespace: envoy-gateway-system
         name: httproute/envoy-gateway-system/backend/rule/0
         perConnectionBufferLimitBytes: 32768
         type: EDS

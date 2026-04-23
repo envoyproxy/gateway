@@ -278,8 +278,8 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but th
 ## Rewrite URL Path with Regex
 
 In addition to core Gateway-API rewrite options, Envoy Gateway supports extended rewrite options through the [HTTPRouteFilter][] API.
-The `HTTPRouteFilter` API can be configured to use [RE2][]-compatible regex matchers and substitutions to rewrite a portion of the url. 
-In the example below, requests sent to `http://${GATEWAY_HOST}/service/xxx/yyy` (where `xxx` is a single path portion and `yyy` is one or more path portions) 
+The `HTTPRouteFilter` API can be configured to use [RE2][]-compatible regex matchers and substitutions to rewrite a portion of the url.
+In the example below, requests sent to `http://${GATEWAY_HOST}/service/xxx/yyy` (where `xxx` is a single path portion and `yyy` is one or more path portions)
 are rewritten to `http://${GATEWAY_HOST}/yyy/instance/xxx`. The entire path is matched and rewritten using capture groups.
 
 {{< tabpane text=true >}}
@@ -378,7 +378,7 @@ kubectl get httproute/http-filter-url-regex-rewrite -o yaml
 ```
 
 Querying `http://${GATEWAY_HOST}/service/foo/v1/api` should rewrite the request to
-`http://${GATEWAY_HOST}/service/foo/v1/api`.
+`http://${GATEWAY_HOST}/v1/api/instance/foo`.
 
 ```console
 $ curl -L -vvv --header "Host: path.regex.rewrite.example" "http://${GATEWAY_HOST}/service/foo/v1/api"
@@ -562,7 +562,7 @@ The `HTTPRouteFilter` API can be configured to rewrite the Host header value to:
 - The value of a different request header
 - The DNS name of the backend that the request is routed to
 
-In the following example, the host header is rewritten to the value of the x-custom-host header. 
+In the following example, the host header is rewritten to the value of the x-custom-host header.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -601,7 +601,7 @@ spec:
   urlRewrite:
     hostname:
       type: Header
-      header: x-custom-host      
+      header: x-custom-host
 EOF
 ```
 
@@ -643,7 +643,7 @@ spec:
   urlRewrite:
     hostname:
       type: Header
-      header: x-custom-host   
+      header: x-custom-host
 ```
 
 {{% /tab %}}
@@ -655,7 +655,7 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-header-host-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}/header` and providing a custom host rewrite header x-custom-host should rewrite the 
+Querying `http://${GATEWAY_HOST}/header` and providing a custom host rewrite header x-custom-host should rewrite the
 request host header to the value of the x-custom-host header.
 
 ```console
@@ -690,10 +690,58 @@ $ curl -L -vvv --header "Host: host.header.rewrite.example" --header "x-custom-h
 ...
 ```
 
-You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided 
-`x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header. 
+You can see that the host is rewritten from `host.header.rewrite.example`, to the value of the provided
+`x-custom-host` header `foo`. The original host header is preserved in the `X-Forwarded-Host` header.
 
+## Disabling X-Forwarded-Host Header
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter
+By default, when hostname rewriting is configured, Envoy Gateway appends the original `Host` header value to the
+`X-Forwarded-Host` header on upstream requests. You can disable this behavior by setting `appendXForwardedHost` to
+`false` in the [HTTPRouteFilter][] API.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-no-xfh
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host
+    appendXForwardedHost: false
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: host-rewrite-no-xfh
+spec:
+  urlRewrite:
+    hostname:
+      type: Header
+      header: x-custom-host
+    appendXForwardedHost: false
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+When `appendXForwardedHost` is set to `false`, the `X-Forwarded-Host` header will not be added to the upstream
+request even though the host is being rewritten. This is useful when the upstream service does not need or should
+not receive the original host information.
+
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/1.4/spec#httpurlrewritefilter
 [HTTPRouteFilter]: ../../../api/extension_types#httproutefilter
 [RE2]: https://github.com/google/re2/wiki/Syntax

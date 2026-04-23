@@ -18,6 +18,7 @@ func newDashboardCommand() *cobra.Command {
 	}
 
 	c.AddCommand(newEnvoyDashboardCmd())
+	c.AddCommand(newEnvoyGatewayDashboardCmd())
 
 	return c
 }

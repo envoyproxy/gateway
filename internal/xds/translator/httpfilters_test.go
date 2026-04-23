@@ -11,7 +11,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -28,8 +27,10 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterHeaderMutation),
 				httpFilterForTest(egv1a1.EnvoyFilterJWTAuthn),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterWasm + "/envoyextensionpolicy/default/policy-for-http-route-1/2"),
 				httpFilterForTest(egv1a1.EnvoyFilterRateLimit),
@@ -45,9 +46,11 @@ func Test_sortHTTPFilters(t *testing.T) {
 				httpFilterForTest(egv1a1.EnvoyFilterBuffer),
 			},
 			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterCustomResponse),
 				httpFilterForTest(wellknown.HealthCheck),
 				httpFilterForTest(egv1a1.EnvoyFilterFault),
 				httpFilterForTest(egv1a1.EnvoyFilterCORS),
+				httpFilterForTest(egv1a1.EnvoyFilterHeaderMutation),
 				httpFilterForTest(egv1a1.EnvoyFilterExtAuthz + "/securitypolicy/default/policy-for-http-route-1"),
 				httpFilterForTest(egv1a1.EnvoyFilterBasicAuth),
 				httpFilterForTest(egv1a1.EnvoyFilterOAuth2 + "/securitypolicy/default/policy-for-http-route-1"),
@@ -86,11 +89,11 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:  egv1a1.EnvoyFilterFault,
-					After: ptr.To(egv1a1.EnvoyFilterCORS),
+					After: new(egv1a1.EnvoyFilterCORS),
 				},
 				{
 					Name:   egv1a1.EnvoyFilterRateLimit,
-					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+					Before: new(egv1a1.EnvoyFilterJWTAuthn),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -133,7 +136,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:   egv1a1.EnvoyFilterRateLimit,
-					Before: ptr.To(egv1a1.EnvoyFilterWasm),
+					Before: new(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -176,7 +179,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:  egv1a1.EnvoyFilterJWTAuthn,
-					After: ptr.To(egv1a1.EnvoyFilterWasm),
+					After: new(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -219,7 +222,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:   egv1a1.EnvoyFilterWasm,
-					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+					Before: new(egv1a1.EnvoyFilterJWTAuthn),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -262,7 +265,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:  egv1a1.EnvoyFilterWasm,
-					After: ptr.To(egv1a1.EnvoyFilterRateLimit),
+					After: new(egv1a1.EnvoyFilterRateLimit),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -305,7 +308,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:   egv1a1.EnvoyFilterWasm,
-					Before: ptr.To(egv1a1.EnvoyFilterExtProc),
+					Before: new(egv1a1.EnvoyFilterExtProc),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -348,7 +351,7 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:  egv1a1.EnvoyFilterExtProc,
-					After: ptr.To(egv1a1.EnvoyFilterWasm),
+					After: new(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{
@@ -391,19 +394,19 @@ func Test_sortHTTPFilters(t *testing.T) {
 			filterOrder: []egv1a1.FilterPosition{
 				{
 					Name:   egv1a1.EnvoyFilterLocalRateLimit,
-					Before: ptr.To(egv1a1.EnvoyFilterJWTAuthn),
+					Before: new(egv1a1.EnvoyFilterJWTAuthn),
 				},
 				{
 					Name:  egv1a1.EnvoyFilterLocalRateLimit,
-					After: ptr.To(egv1a1.EnvoyFilterCORS),
+					After: new(egv1a1.EnvoyFilterCORS),
 				},
 				{
 					Name:   egv1a1.EnvoyFilterWasm,
-					Before: ptr.To(egv1a1.EnvoyFilterOAuth2),
+					Before: new(egv1a1.EnvoyFilterOAuth2),
 				},
 				{
 					Name:   egv1a1.EnvoyFilterExtProc,
-					Before: ptr.To(egv1a1.EnvoyFilterWasm),
+					Before: new(egv1a1.EnvoyFilterWasm),
 				},
 			},
 			want: []*hcmv3.HttpFilter{

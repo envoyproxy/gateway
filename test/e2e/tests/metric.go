@@ -10,6 +10,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -39,7 +41,7 @@ var MetricTest = suite.ConformanceTest{
 		ns := "gateway-conformance-infra"
 		routeNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
 		gwNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
 		t.Run("prometheus", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
@@ -47,7 +49,7 @@ var MetricTest = suite.ConformanceTest{
 					Path: "/prom",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -57,12 +59,15 @@ var MetricTest = suite.ConformanceTest{
 			// let's check the metric
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
-						Namespace: "envoy-gateway-system",
-						Name:      "same-namespace-gw-metrics",
-					}, 19001, "/stats/prometheus"); err != nil {
+					pql := fmt.Sprintf(`envoy_cluster_default_total_match_count{app_kubernetes_io_component="proxy", app_kubernetes_io_managed_by="envoy-gateway", app_kubernetes_io_name="envoy", envoy_cluster_name="xds_cluster", gateway_envoyproxy_io_owning_gateway_name="%s"}`, "same-namespace")
+					v, err := prometheus.QueryPrometheus(suite.Client, pql)
+					if err != nil {
 						tlog.Logf(t, "failed to get metric: %v", err)
 						return false, nil
+					}
+					if v != nil {
+						tlog.Logf(t, "got expected value: %v", v)
+						return true, nil
 					}
 					return true, nil
 				}); err != nil {
@@ -76,7 +81,7 @@ var MetricTest = suite.ConformanceTest{
 					Path: "/prom",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -150,6 +155,9 @@ var MetricCompressorTest = suite.ConformanceTest{
 		t.Run("brotli", func(t *testing.T) {
 			runMetricCompressorTest(t, suite, ns, egv1a1.BrotliCompressorType)
 		})
+		t.Run("zstd", func(t *testing.T) {
+			runMetricCompressorTest(t, suite, ns, egv1a1.ZstdCompressorType)
+		})
 	},
 }
 
@@ -161,7 +169,8 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 
 	routeNN := types.NamespacedName{Name: routeName, Namespace: ns}
 	gwNN := types.NamespacedName{Name: gtwName, Namespace: ns}
-	gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+	gwHost := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+	gwAddr := net.JoinHostPort(gwHost, "80")
 
 	// make sure listener is ready
 	expectedResponse := httputils.ExpectedResponse{
@@ -169,31 +178,14 @@ func runMetricCompressorTest(t *testing.T, suite *suite.ConformanceTestSuite, ns
 			Path: checkPath,
 		},
 		Response: httputils.Response{
-			StatusCode: 200,
+			StatusCodes: []int{200},
 		},
 		Namespace: ns,
 	}
 	httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-	// make sure compression work as expected
-	statsNN := types.NamespacedName{Namespace: "envoy-gateway-system", Name: fmt.Sprintf("%s-gtw-metrics", compressor)}
-	var statsHost string
-	if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
-		addr, err := ServiceHost(suite.Client, statsNN, 19001)
-		if err != nil {
-			tlog.Logf(t, "failed to get service host %s: %v", statsNN, err)
-			return false, nil
-		}
-		if addr != "" {
-			statsHost = addr
-			return true, nil
-		}
-		return false, nil
-	}); err != nil {
-		t.Errorf("failed to get service host %s: %v", statsNN, err)
-		return
-	}
-
+	// stats exposed at port 19001
+	statsHost := strings.Replace(gwAddr, ":80", ":19001", 1)
 	statsAddr := fmt.Sprintf("http://%s/stats/prometheus", statsHost)
 	tlog.Logf(t, "check stats from %s", statsAddr)
 

@@ -10,5 +10,11 @@
       name: mirror-route
       route:
         cluster: route-dest
+        requestMirrorPolicies:
+        - cluster: mirror-route-dest
+          disableShadowHostSuffixAppend: true
+          runtimeFraction:
+            defaultValue:
+              numerator: 100
         upgradeConfigs:
         - upgradeType: websocket

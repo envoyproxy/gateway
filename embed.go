@@ -11,31 +11,31 @@ import (
 )
 
 var (
-	//go:embed charts/gateway-helm/crds/gatewayapi-crds.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/gatewayapi-crds.yaml
 	gatewayAPICRDs []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_backends.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_backends.yaml
 	backendCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_backendtrafficpolicies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_backendtrafficpolicies.yaml
 	backendTrafficPolicyCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_clienttrafficpolicies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_clienttrafficpolicies.yaml
 	clientTrafficPolicyCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_envoyextensionpolicies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_envoyextensionpolicies.yaml
 	envoyExtensionPolicyCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_envoypatchpolicies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_envoypatchpolicies.yaml
 	envoyPatchPolicyCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_envoyproxies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_envoyproxies.yaml
 	envoyProxyCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_httproutefilters.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_httproutefilters.yaml
 	httpRouteFilterCRD []byte
 
-	//go:embed charts/gateway-helm/crds/generated/gateway.envoyproxy.io_securitypolicies.yaml
+	//go:embed charts/gateway-helm/charts/crds/crds/generated/gateway.envoyproxy.io_securitypolicies.yaml
 	securityPolicyCRD []byte
 )
 

@@ -8,13 +8,25 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if not .TopologyInjectorDisabled }}
 cluster_manager:
-  local_cluster_name: local_cluster
+  local_cluster_name: {{ .ServiceClusterName }}
+{{- end }}
 node:
   locality:
-    zone: "$(ENVOY_SERVICE_ZONE)"
-{{- if .StatsMatcher  }}
+    zone: $(ENVOY_SERVICE_ZONE)
 stats_config:
+  use_all_default_tags: true
+  stats_tags:
+  - regex: \.zone(\.(([^\.]+)\.))
+    tag_name: from_zone
+  - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+    tag_name: to_zone
+  - regex: "^cluster(\\..+\\.(.+))\\.total_match_count$"
+    tag_name: socket_match_name
+  - regex: "circuit_breakers\\.((.+?)\\.).+"
+    tag_name: priority
+{{- if .StatsMatcher  }}
   stats_matcher:
     inclusion_list:
       patterns:
@@ -50,9 +62,11 @@ dynamic_resources:
     set_node_on_first_message_only: true
   lds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
   cds_config:
     ads: {}
+    initial_fetch_timeout: 0s
     resource_api_version: V3
 {{- if .OtelMetricSinks }}
 stats_sinks:
@@ -63,6 +77,32 @@ stats_sinks:
     grpc_service:
       envoy_grpc:
         cluster_name: otel_metric_sink_{{ $idx }}
+        {{- if $sink.Authority }}
+        authority: {{ $sink.Authority }}
+        {{- end }}
+      {{- if $sink.Headers }}
+      initial_metadata:
+      {{- range $sink.Headers }}
+      - key: "{{ .Name }}"
+        value: "{{ .Value }}"
+      {{- end }}
+      {{- end }}
+    {{- if $sink.ReportCountersAsDeltas }}
+    report_counters_as_deltas: true
+    {{- end }}
+    {{- if $sink.ReportHistogramsAsDeltas }}
+    report_histograms_as_deltas: true
+    {{- end }}
+    {{- if $sink.ResourceAttributes }}
+    resource_detectors:
+    - name: envoy.tracers.opentelemetry.resource_detectors.static_config
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.resource_detectors.v3.StaticConfigResourceDetectorConfig
+        attributes:
+        {{- range $key, $value := $sink.ResourceAttributes }}
+          {{ $key }}: "{{ $value }}"
+        {{- end }}
+    {{- end }}
 {{- end }}
 {{- end }}
 static_resources:
@@ -130,6 +170,12 @@ static_resources:
                 typed_config:
                   "@type": type.googleapis.com/envoy.extensions.compression.brotli.compressor.v3.Brotli
               {{- end }}
+              {{- if eq .PrometheusCompressionLibrary "Zstd"}}
+              compressor_library:
+                name: text_optimized
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.compression.zstd.compressor.v3.Zstd
+              {{- end }}
           {{- end }}
           - name: envoy.filters.http.router
             typed_config:
@@ -170,25 +216,46 @@ static_resources:
               socket_address:
                 address: {{ $sink.Address }}
                 port_value: {{ $sink.Port }}
+    {{- if $sink.TLS }}
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        {{- if $sink.TLS.SNI }}
+        sni: {{ $sink.TLS.SNI }}
+        {{- end }}
+        {{- if $sink.TLS.CACertificate }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              inline_bytes: {{ $sink.TLS.CACertificate | base64 }}
+        {{- else if $sink.TLS.UseSystemTrustStore }}
+        common_tls_context:
+          validation_context:
+            trusted_ca:
+              filename: {{ $.SystemCACertPath }}
+        {{- end }}
+    {{- end }}
   {{- end }}
+  {{- if not .TopologyInjectorDisabled }}
   - connect_timeout: 10s
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: local_cluster
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                {{- /* fake lb_endpoint to satisfy zone aware routing requirements */}}
-                address: 127.0.0.1
-                port_value: 10080
-          load_balancing_weight: 1
-        load_balancing_weight: 1
-        locality:
-          zone: "$(ENVOY_SERVICE_ZONE)"
-    name: local_cluster
-    type: STATIC
+    eds_cluster_config:
+      eds_config:
+        ads: {}
+        resource_api_version: 'V3'
+      service_name: {{ .ServiceClusterName }}
+    load_balancing_policy:
+      policies:
+      - typed_extension_config:
+          name: 'envoy.load_balancing_policies.least_request'
+          typed_config:
+            '@type': 'type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest'
+            locality_lb_config:
+              zone_aware_lb_config:
+                min_cluster_size: '1'
+    name: {{ .ServiceClusterName }}
+    type: EDS
+  {{- end }}
   - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster
@@ -220,6 +287,10 @@ static_resources:
                 "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
                 credential:
                   name: jwt-sa-bearer
+                  sds_config:
+                    path_config_source:
+                      path: {{ .ServiceAccountTokenPath }}
+                    resource_api_version: V3
             overwrite: true
         - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
           typed_config:
@@ -248,69 +319,6 @@ static_resources:
               path_config_source:
                 path: {{ .SdsTrustedCAPath }}
               resource_api_version: V3
-  - name: wasm_cluster
-    type: STRICT_DNS
-    connect_timeout: 10s
-    load_assignment:
-      cluster_name: wasm_cluster
-      endpoints:
-      - load_balancing_weight: 1
-        lb_endpoints:
-        - load_balancing_weight: 1
-          endpoint:
-            address:
-              socket_address:
-                address: {{ .WasmServer.Address }}
-                port_value: {{ .WasmServer.Port }}
-    typed_extension_protocol_options:
-      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-        explicit_http_config:
-          http2_protocol_options: {}
-  {{- if .GatewayNamespaceMode }}
-        http_filters:
-        - name: envoy.filters.http.credential_injector
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.credential_injector.v3.CredentialInjector
-            credential:
-              name: envoy.http.injected_credentials.generic
-              typed_config:
-                "@type": type.googleapis.com/envoy.extensions.http.injected_credentials.generic.v3.Generic
-                credential:
-                  name: jwt-sa-bearer
-            overwrite: true
-        - name: envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.http.upstream_codec.v3.UpstreamCodec
-  {{- end }}
-    transport_socket:
-      name: envoy.transport_sockets.tls
-      typed_config:
-        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-        common_tls_context:
-          tls_params:
-            tls_maximum_protocol_version: TLSv1_3
-  {{- if not .GatewayNamespaceMode }}
-          tls_certificate_sds_secret_configs:
-          - name: xds_certificate
-            sds_config:
-              path_config_source:
-                path: {{ .SdsCertificatePath }}
-              resource_api_version: V3
-  {{- end }}
-          validation_context_sds_secret_config:
-            name: xds_trusted_ca
-            sds_config:
-              path_config_source:
-                path: {{ .SdsTrustedCAPath }}
-              resource_api_version: V3
-  {{- if .GatewayNamespaceMode }}
-  secrets:
-  - name: jwt-sa-bearer
-    generic_secret:
-      secret:
-        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
-  {{- end }}
 overload_manager:
   refresh_interval: 0.25s
   resource_monitors:

@@ -18,7 +18,7 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: default
-    name: httproute-1
+    name: httproute-1   # should return 500 because the ext proc in the attached policy is failclose.
   spec:
     hostnames:
     - www.foo.com
@@ -33,19 +33,133 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2    # should not return 500 because the ext proc in the attached policy is failopen.
+  spec:
+    hostnames:
+    - www.bar.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /bar
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3   # should return 500 because there are two ext procs in the attached policy, one failopen and one failclose.
+  spec:
+    hostnames:
+    - www.baz.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /baz
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4   # should return 500 because there are one invalid ext procs with failopen and one invalid lua in the attached policy.
+  spec:
+    hostnames:
+    - www.qux.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /qux
+      backendRefs:
+      - name: service-1
+        port: 8080
 envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
     namespace: default
-    name: policy-for-gateway
+    name: policy-for-httproute-1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
-      kind: Gateway
-      name: gateway-1
+      kind: HTTPRoute
+      name: httproute-1
     extProc:
     - backendRefs:
       - name: grpc-backend
         namespace: envoy-gateway
         port: 9000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    extProc:
+    - failOpen: true
+      backendRefs:
+      - name: grpc-backend
+        namespace: envoy-gateway
+        port: 9000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-3
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-1
+        namespace: envoy-gateway
+        port: 9000
+      failOpen: true
+    - backendRefs:
+      - name: grpc-backend-2
+        namespace: envoy-gateway
+        port: 9000
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-4
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+    extProc:
+    - failOpen: true
+      backendRefs:
+      - name: grpc-backend-2
+        namespace: envoy-gateway
+        port: 9000
+    lua:
+    - type: Inline
+      inline: "function envoy_on_response(response_handle)
+    response_handle:UnknownApi()
+    end"

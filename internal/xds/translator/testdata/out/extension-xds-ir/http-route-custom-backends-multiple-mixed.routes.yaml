@@ -1,0 +1,49 @@
+- ignorePortInHostMatching: true
+  name: multiple-custom-backends-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: multiple-custom-backends-listener/*
+    routes:
+    - match:
+        pathSeparatedPrefix: /s3
+      name: s3-route
+      responseHeadersToAdd:
+      - header:
+          key: mock-extension-was-here-route-name
+          value: s3-route
+      - header:
+          key: mock-extension-was-here-route-hostnames
+          value: '*'
+      - header:
+          key: mock-extension-was-here-extensionRef-name
+          value: inference-pool
+      - header:
+          key: mock-extension-was-here-extensionRef-namespace
+      - header:
+          key: mock-extension-was-here-extensionRef-kind
+          value: InferencePool
+      - header:
+          key: mock-extension-was-here-extensionRef-apiversion
+          value: inference.networking.x-k8s.io/v1alpha2
+      - header:
+          key: mock-extension-was-here-route-name
+          value: s3-route
+      - header:
+          key: mock-extension-was-here-route-hostnames
+          value: '*'
+      - header:
+          key: mock-extension-was-here-extensionRef-name
+          value: inference-pool-2
+      - header:
+          key: mock-extension-was-here-extensionRef-namespace
+      - header:
+          key: mock-extension-was-here-extensionRef-kind
+          value: InferencePool
+      - header:
+          key: mock-extension-was-here-extensionRef-apiversion
+          value: inference.networking.x-k8s.io/v1alpha2
+      route:
+        cluster: custom-backend-dest
+        upgradeConfigs:
+        - upgradeType: websocket

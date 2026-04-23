@@ -40,7 +40,7 @@ GRAFANA_IP=$(kubectl get svc grafana -n monitoring -o jsonpath='{.status.loadBal
 To visualise metrics from Prometheus, we have to connect Grafana with Prometheus. If you installed Grafana from the command
 from prerequisites sections, the prometheus datasource should be already configured.
 
-You can also add the data source manually by following the instructions from [Grafana Docs](https://grafana.com/docs/grafana/latest/datasources/prometheus/configure-prometheus-data-source/).
+You can also add the data source manually by following the instructions from [Grafana Docs](https://grafana.com/docs/grafana/latest/datasources/prometheus/configure/).
 
 ## Accessing Grafana
 

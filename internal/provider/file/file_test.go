@@ -16,16 +16,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/message"
+	testutil "github.com/envoyproxy/gateway/internal/utils/test"
 )
 
 const (
@@ -68,7 +68,7 @@ func newResourcesParam2() *resourcesParam {
 }
 
 func newFileProviderConfig(paths []string) (*config.Server, error) {
-	cfg, err := config.New(os.Stdout)
+	cfg, err := config.New(os.Stdout, os.Stderr)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +83,10 @@ func newFileProviderConfig(paths []string) (*config.Server, error) {
 				},
 			},
 		},
+	}
+	cfg.EnvoyGateway.ExtensionAPIs = &egv1a1.ExtensionAPISettings{
+		EnableBackend:          true,
+		EnableEnvoyPatchPolicy: true,
 	}
 	return cfg, nil
 }
@@ -101,7 +105,8 @@ func TestFileProvider(t *testing.T) {
 	cfg, err := newFileProviderConfig([]string{watchFilePath, watchDirPath})
 	require.NoError(t, err)
 	pResources := new(message.ProviderResources)
-	fp, err := New(ctx, cfg, pResources)
+	errorNotifier := message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}}
+	fp, err := New(ctx, cfg, pResources, errorNotifier)
 	require.NoError(t, err)
 	// Start file provider.
 	go func() {
@@ -125,7 +130,9 @@ func TestFileProvider(t *testing.T) {
 
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("rename the watched file then rename it back", func(t *testing.T) {
@@ -147,7 +154,9 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("remove the watched file", func(t *testing.T) {
@@ -169,7 +178,9 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("rename the file then rename it back in watched dir", func(t *testing.T) {
@@ -192,7 +203,9 @@ func TestFileProvider(t *testing.T) {
 		resources := pResources.GetResourcesByGatewayClass("eg-1")
 		want := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want)
-		cmpResources(t, want, resources)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want, resources, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("update file content in watched dir", func(t *testing.T) {
@@ -219,12 +232,16 @@ func TestFileProvider(t *testing.T) {
 		resources1 := pResources.GetResourcesByGatewayClass("eg-1")
 		want1 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.1.yaml", want1)
-		cmpResources(t, want1, resources1)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want1, resources1, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 
 		resources2 := pResources.GetResourcesByGatewayClass("eg-2")
 		want2 := &resource.Resources{}
 		mustUnmarshal(t, "testdata/resources.2.yaml", want2)
-		cmpResources(t, want2, resources2)
+		// Ignore GatewayClass status as it's set asynchronously and creates race conditions
+		testutil.CmpResources(t, want2, resources2, cmpopts.IgnoreFields(gwapiv1.GatewayClassStatus{}, "Conditions"),
+			cmpopts.IgnoreFields(resource.Resources{}, "Secrets"))
 	})
 
 	t.Run("remove all files in watched dir", func(t *testing.T) {
@@ -286,13 +303,4 @@ func mustUnmarshal(t *testing.T, path string, out interface{}) {
 	content, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.NoError(t, yaml.UnmarshalStrict(content, out, yaml.DisallowUnknownFields))
-}
-
-func cmpResources(t *testing.T, x, y interface{}) {
-	opts := []cmp.Option{
-		cmpopts.IgnoreFields(resource.Resources{}, "serviceMap"),
-		cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion"),
-		cmpopts.EquateEmpty(),
-	}
-	require.Empty(t, cmp.Diff(x, y, opts...))
 }

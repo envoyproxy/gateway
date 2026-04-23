@@ -1,4 +1,5 @@
-- name: first-policy
+- generation: 1
+  name: first-policy
   namespace: default
   status:
     ancestors:
@@ -9,7 +10,8 @@
         namespace: default
       conditions:
       - lastTransitionTime: null
-        message: The add operation requires a value
+        message: The add operation requires a value.
+        observedGeneration: 1
         reason: Invalid
         status: "False"
         type: Programmed

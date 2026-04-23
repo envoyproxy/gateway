@@ -25,9 +25,11 @@ xds:
             transportApiVersion: V3
           cdsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
           ldsConfig:
             ads: {}
+            initialFetchTimeout: 0s
             resourceApiVersion: V3
         layeredRuntime:
           layers:
@@ -61,21 +63,22 @@ xds:
             name: prometheus_stats
             type: STATIC
           - connectTimeout: 10s
-            loadAssignment:
-              clusterName: local_cluster
-              endpoints:
-              - lbEndpoints:
-                - endpoint:
-                    address:
-                      socketAddress:
-                        address: 127.0.0.1
-                        portValue: 10080
-                  loadBalancingWeight: 1
-                loadBalancingWeight: 1
-                locality:
-                  zone: $(ENVOY_SERVICE_ZONE)
+            edsClusterConfig:
+              edsConfig:
+                ads: {}
+                resourceApiVersion: V3
+              serviceName: local_cluster
+            loadBalancingPolicy:
+              policies:
+              - typedExtensionConfig:
+                  name: envoy.load_balancing_policies.least_request
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                    localityLbConfig:
+                      zoneAwareLbConfig:
+                        minClusterSize: "1"
             name: local_cluster
-            type: STATIC
+            type: EDS
           - connectTimeout: 10s
             loadAssignment:
               clusterName: xds_cluster
@@ -117,44 +120,6 @@ xds:
                     connectionKeepalive:
                       interval: 30s
                       timeout: 5s
-          - connectTimeout: 10s
-            loadAssignment:
-              clusterName: wasm_cluster
-              endpoints:
-              - lbEndpoints:
-                - endpoint:
-                    address:
-                      socketAddress:
-                        address: envoy-gateway
-                        portValue: 18002
-                  loadBalancingWeight: 1
-                loadBalancingWeight: 1
-            name: wasm_cluster
-            transportSocket:
-              name: envoy.transport_sockets.tls
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-                commonTlsContext:
-                  tlsCertificateSdsSecretConfigs:
-                  - name: xds_certificate
-                    sdsConfig:
-                      pathConfigSource:
-                        path: /sds/xds-certificate.json
-                      resourceApiVersion: V3
-                  tlsParams:
-                    tlsMaximumProtocolVersion: TLSv1_3
-                  validationContextSdsSecretConfig:
-                    name: xds_trusted_ca
-                    sdsConfig:
-                      pathConfigSource:
-                        path: /sds/xds-trusted-ca.json
-                      resourceApiVersion: V3
-            type: STRICT_DNS
-            typedExtensionProtocolOptions:
-              envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-                '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-                explicitHttpConfig:
-                  http2ProtocolOptions: {}
           listeners:
           - address:
               socketAddress:
@@ -188,6 +153,17 @@ xds:
                           cluster: prometheus_stats
                   statPrefix: eg-stats-http
             name: envoy-gateway-proxy-stats-0.0.0.0-19001
+        statsConfig:
+          statsTags:
+          - regex: \.zone(\.(([^\.]+)\.))
+            tagName: from_zone
+          - regex: \.zone\.[^\.]+\.(([^\.]+)\.)
+            tagName: to_zone
+          - regex: ^cluster(\..+\.(.+))\.total_match_count$
+            tagName: socket_match_name
+          - regex: circuit_breakers\.((.+?)\.).+
+            tagName: priority
+          useAllDefaultTags: true
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:
@@ -204,6 +180,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: httproute/default/backend/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: grpcroute/default/backend/rule/0
@@ -218,6 +202,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: grpcroute/default/backend/rule/0/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "9000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tcproute/default/backend/rule/-1
@@ -232,6 +224,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: tcproute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: tlsroute/default/backend/rule/-1
@@ -246,6 +246,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: tlsroute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
           clusterName: udproute/default/backend/rule/-1
@@ -260,6 +268,14 @@ xds:
             loadBalancingWeight: 1
             locality:
               region: udproute/default/backend/rule/-1/backend/0
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: Service
+                    name: backend
+                    namespace: default
+                    sectionName: "3000"
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -267,8 +283,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -277,7 +292,21 @@ xds:
               resourceApiVersion: V3
             serviceName: httproute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: HTTPRoute
+                  name: backend
+                  namespace: default
           name: httproute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -286,8 +315,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -296,7 +324,21 @@ xds:
               resourceApiVersion: V3
             serviceName: grpcroute/default/backend/rule/0
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: GRPCRoute
+                  name: backend
+                  namespace: default
           name: grpcroute/default/backend/rule/0
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -312,8 +354,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -322,7 +363,21 @@ xds:
               resourceApiVersion: V3
             serviceName: tcproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TCPRoute
+                  name: backend
+                  namespace: default
           name: tcproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -331,8 +386,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -341,7 +395,21 @@ xds:
               resourceApiVersion: V3
             serviceName: tlsroute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: TLSRoute
+                  name: backend
+                  namespace: default
           name: tlsroute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -350,8 +418,7 @@ xds:
           circuitBreakers:
             thresholds:
             - maxRetries: 1024
-          commonLbConfig:
-            localityWeightedLbConfig: {}
+          commonLbConfig: {}
           connectTimeout: 10s
           dnsLookupFamily: V4_PREFERRED
           edsClusterConfig:
@@ -360,7 +427,21 @@ xds:
               resourceApiVersion: V3
             serviceName: udproute/default/backend/rule/-1
           ignoreHealthOnHostRemoval: true
-          lbPolicy: LEAST_REQUEST
+          loadBalancingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.least_request
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+                  localityLbConfig:
+                    localityWeightedLbConfig: {}
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: UDPRoute
+                  name: backend
+                  namespace: default
           name: udproute/default/backend/rule/-1
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -506,6 +587,7 @@ xds:
                   statPrefix: http-10080
                   useRemoteAddress: true
               name: default/eg/http
+            maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -617,6 +699,7 @@ xds:
                   statPrefix: http-8080
                   useRemoteAddress: true
               name: default/eg/grpc
+            maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -700,6 +783,7 @@ xds:
                   cluster: tcproute/default/backend/rule/-1
                   statPrefix: tcp-1234
               name: tcproute/default/backend
+            maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -790,6 +874,7 @@ xds:
             - name: envoy.filters.listener.tls_inspector
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+            maxConnectionsToAcceptPerSocketEvent: 1
             name: default/eg/tls-passthrough
             perConnectionBufferLimitBytes: 32768
       - activeState:

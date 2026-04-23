@@ -66,12 +66,14 @@ type PackageTool struct {
 	logger Printer
 }
 
-func NewPackageTool() *PackageTool {
+func NewPackageTool(valueFiles ...string) *PackageTool {
 	return &PackageTool{
 		envSettings:  cli.New(),
 		actionConfig: &action.Configuration{},
 		chartName:    "oci://docker.io/envoyproxy/gateway-helm",
-		valuesOpts:   &values.Options{},
+		valuesOpts: &values.Options{
+			ValueFiles: valueFiles,
+		},
 	}
 }
 
@@ -178,11 +180,16 @@ func (pt *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
 	return egChart, nil
 }
 
-// extractCRDs Extract the CRDs part of the chart
+// extractCRDs Extract the CRDs part of the chart and its sub-charts
 func (pt *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
-	crdResInfo := make([]*resource.Info, 0, len(ch.CRDObjects()))
+	allCRDs := ch.CRDObjects()
+	for _, dep := range ch.Dependencies() {
+		allCRDs = append(allCRDs, dep.CRDObjects()...)
+	}
 
-	for _, crd := range ch.CRDObjects() {
+	crdResInfo := make([]*resource.Info, 0, len(allCRDs))
+
+	for _, crd := range allCRDs {
 		resInfo, err := pt.actionConfig.KubeClient.Build(bytes.NewBufferString(string(crd.File.Data)), false)
 		if err != nil {
 			return nil, err
@@ -256,6 +263,7 @@ func (pt *PackageTool) RunInstall(opts *PackageOptions) error {
 		return err
 	}
 
+	pt.logger.Println(fmt.Sprintf("Install with values: %v", egChartValues))
 	pt.setInstallOptions(opts)
 	release, err := pt.actionInstall.Run(egChart, egChartValues)
 	if err != nil {

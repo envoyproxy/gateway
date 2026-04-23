@@ -16,29 +16,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
-
-	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = internalconf.EnvoyGatewaySuite.SkipTests
-	opts.SupportedFeatures = internalconf.EnvoyGatewaySuite.SupportedFeatures
-	opts.ExemptFeatures = internalconf.EnvoyGatewaySuite.ExemptFeatures
+	opts := conformanceOpts(t)
+
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 	)
+
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if opts.RunTest != "" {
+		opts.SkipTests = nil
+	}
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, opts.ConformanceProfiles)
@@ -58,11 +58,12 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("error generating conformance profile report: %v", err)
 	}
 
-	err = experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
+	// use to trigger the experimental conformance report
+	err = experimentalConformanceReport(t.Logf, report, *flags.ReportOutput)
 	require.NoError(t, err)
 }
 
-func experimentalConformanceReport(logf func(string, ...any), report conformancev1.ConformanceReport, output string) error {
+func experimentalConformanceReport(logf func(string, ...any), report *conformancev1.ConformanceReport, output string) error {
 	rawReport, err := yaml.Marshal(report)
 	if err != nil {
 		return err

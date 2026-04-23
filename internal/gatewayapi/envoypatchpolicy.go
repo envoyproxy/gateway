@@ -7,11 +7,9 @@ package gatewayapi
 
 import (
 	"fmt"
-	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -19,55 +17,75 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) {
-	// Sort based on priority
-	sort.Slice(envoyPatchPolicies, func(i, j int) bool {
-		return envoyPatchPolicies[i].Spec.Priority < envoyPatchPolicies[j].Spec.Priority
-	})
+func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR resource.XdsIRMap) []*egv1a1.EnvoyPatchPolicy {
+	// EnvoyPatchPolicies are already sorted by the provider layer (priority, then timestamp, then name)
+	policyCopies := envoyPatchPolicyCopiesWithStatusDeepCopy(envoyPatchPolicies)
+	res := make([]*egv1a1.EnvoyPatchPolicy, 0, len(envoyPatchPolicies))
 
-	for _, policy := range envoyPatchPolicies {
+	for i := range envoyPatchPolicies {
+		policy := policyCopies[i]
+		res = append(res, policy)
 		var (
-			policy       = policy.DeepCopy()
-			ancestorRefs []gwapiv1a2.ParentReference
-			resolveErr   *status.PolicyResolveError
-			targetKind   string
-			irKey        string
+			ancestorRef gwapiv1.ParentReference
+			resolveErr  *status.PolicyResolveError
+			targetKind  string
+			irKey       string
+			gwXdsIR     *ir.Xds
+			ok          bool
 		)
 
+		refGroup, refKind, refName := policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, policy.Spec.TargetRef.Name
 		if t.MergeGateways {
 			targetKind = resource.KindGatewayClass
-			irKey = string(t.GatewayClassName)
-
-			ancestorRefs = []gwapiv1a2.ParentReference{
-				{
-					Group: GroupPtr(gwapiv1.GroupName),
-					Kind:  KindPtr(targetKind),
-					Name:  policy.Spec.TargetRef.Name,
-				},
+			// if ref GatewayClass name is not same as t.GatewayClassName, it will be skipped in L74.
+			irKey = string(refName)
+			ancestorRef = gwapiv1.ParentReference{
+				Group: GroupPtr(gwapiv1.GroupName),
+				Kind:  KindPtr(targetKind),
+				Name:  refName,
 			}
+
+			gwXdsIR, ok = xdsIR[irKey]
+			if !ok {
+				// The TargetRef GatewayClass is not an accepted GatewayClass, then skip processing.
+				message := fmt.Sprintf(
+					"TargetRef.Group:%s TargetRef.Kind:%s TargetRef.Namespace:%s TargetRef.Name:%s not found or not accepted (MergeGateways=%t).",
+					refGroup, refKind, policy.Namespace, string(refName), t.MergeGateways,
+				)
+				resolveErr = &status.PolicyResolveError{
+					Reason:  gwapiv1.PolicyReasonInvalid,
+					Message: message,
+				}
+				status.SetResolveErrorForPolicyAncestor(&policy.Status,
+					&ancestorRef,
+					t.GatewayControllerName,
+					policy.Generation,
+					resolveErr,
+				)
+				continue
+			}
+
 		} else {
 			targetKind = resource.KindGateway
 			gatewayNN := types.NamespacedName{
 				Namespace: policy.Namespace,
-				Name:      string(policy.Spec.TargetRef.Name),
+				Name:      string(refName),
 			}
-			// It must exist since the gateways have already been processed
-			irKey = irStringKey(gatewayNN.Namespace, gatewayNN.Name)
+			irKey = t.IRKey(gatewayNN)
+			ancestorRef = getAncestorRefForPolicy(gatewayNN, nil)
 
-			ancestorRefs = []gwapiv1a2.ParentReference{
-				getAncestorRefForPolicy(gatewayNN, nil),
+			gwXdsIR, ok = xdsIR[irKey]
+			if !ok {
+				// The TargetRef Gateway is not an accepted Gateway, then skip processing.
+				continue
 			}
-		}
-
-		gwXdsIR, ok := xdsIR[irKey]
-		if !ok {
-			continue
 		}
 
 		// Create the IR with the context need to publish the status later
 		policyIR := ir.EnvoyPatchPolicy{}
 		policyIR.Name = policy.Name
 		policyIR.Namespace = policy.Namespace
+		policyIR.Generation = policy.Generation
 		policyIR.Status = &policy.Status
 
 		// Append the IR
@@ -79,8 +97,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 				Reason:  egv1a1.PolicyReasonDisabled,
 				Message: "EnvoyPatchPolicy is disabled in the EnvoyGateway configuration",
 			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
+			status.SetResolveErrorForPolicyAncestor(&policy.Status,
+				&ancestorRef,
 				t.GatewayControllerName,
 				policy.Generation,
 				resolveErr,
@@ -90,16 +108,16 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Ensure EnvoyPatchPolicy is targeting to a support type
-		if policy.Spec.TargetRef.Group != gwapiv1.GroupName || string(policy.Spec.TargetRef.Kind) != targetKind {
+		if refGroup != gwapiv1.GroupName || string(refKind) != targetKind {
 			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
-				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
+				refGroup, policy.Spec.TargetRef.Kind, gwapiv1.GroupName, targetKind)
 
 			resolveErr = &status.PolicyResolveError{
-				Reason:  gwapiv1a2.PolicyReasonInvalid,
+				Reason:  gwapiv1.PolicyReasonInvalid,
 				Message: message,
 			}
-			status.SetResolveErrorForPolicyAncestors(&policy.Status,
-				ancestorRefs,
+			status.SetResolveErrorForPolicyAncestor(&policy.Status,
+				&ancestorRef,
 				t.GatewayControllerName,
 				policy.Generation,
 				resolveErr,
@@ -123,6 +141,20 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName)
+		status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
 	}
+
+	return res
+}
+
+// envoyPatchPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func envoyPatchPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyPatchPolicy) []*egv1a1.EnvoyPatchPolicy {
+	copies := make([]*egv1a1.EnvoyPatchPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

@@ -96,12 +96,12 @@ func buildHCMRequestBufferFilter(spec *ir.RequestBuffer) (*hcmv3.HttpFilter, err
 	}, nil
 }
 
-func (r *requestBuffer) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+func (r *requestBuffer) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
 	return nil
 }
 
 // patchRoute will add a BufferPerRoute filter for a particular route
-func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (r *requestBuffer) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if !routeContainsRequestBuffer(irRoute) {
 		return nil
 	}

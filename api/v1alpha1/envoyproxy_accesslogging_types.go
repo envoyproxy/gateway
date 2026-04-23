@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 type ProxyAccessLog struct {
 	// Disable disables access logging for managed proxies if set to true.
 	//
@@ -37,7 +39,7 @@ type ProxyAccessLogSetting struct {
 	// (1) All Routes.
 	// (2) Listeners if and only if Envoy does not find a matching route for a request.
 	// If type is defined, the accesslog settings would apply to the relevant component (as-is).
-	// +kubebuilder:validation:Enum=Listener;Route
+	// +kubebuilder:validation:Enum=Listener;Route;Upstream
 	// +optional
 	Type *ProxyAccessLogType `json:"type,omitempty"`
 }
@@ -53,6 +55,9 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/tcp_proxy/v3/tcp_proxy.proto#envoy-v3-api-field-extensions-filters-network-tcp-proxy-v3-tcpproxy-access-log
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto#envoy-v3-api-field-extensions-filters-network-http-connection-manager-v3-httpconnectionmanager-access-log
 	ProxyAccessLogTypeRoute ProxyAccessLogType = "Route"
+
+	// ProxyAccessLogTypeUpstream defines the accesslog for upstream.
+	ProxyAccessLogTypeUpstream ProxyAccessLogType = "Upstream"
 )
 
 type ProxyAccessLogFormatType string
@@ -62,20 +67,22 @@ const (
 	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
 	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
 	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
-	// TODO: support format type "mix" in the future.
 )
 
 // ProxyAccessLogFormat defines the format of accesslog.
-// By default accesslogs are written to standard output.
-// +union
+// By default, accesslogs are written to standard output.
 //
-// +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : !has(self.text)",message="If AccessLogFormat type is Text, text field needs to be set."
-// +kubebuilder:validation:XValidation:rule="self.type == 'JSON' ? has(self.json) : !has(self.json)",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? has(self.text) : true",message="If AccessLogFormat type is Text, text field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'Text' ? !has(self.json) : true",message="If AccessLogFormat type is Text, json field must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'JSON' ? has(self.json) : true",message="If AccessLogFormat type is JSON, json field needs to be set."
+// +kubebuilder:validation:XValidation:rule="has(self.type) && self.type == 'JSON' ? !has(self.text) : true",message="If AccessLogFormat type is JSON, text field must not be set."
+// +kubebuilder:validation:XValidation:rule="!has(self.type) ? (has(self.text) || has(self.json)) : true",message="If AccessLogFormat type is unset, at least one of text or json must be set."
 type ProxyAccessLogFormat struct {
 	// Type defines the type of accesslog format.
+	// When unset, both text and json can be specified.
 	// +kubebuilder:validation:Enum=Text;JSON
-	// +unionDiscriminator
-	Type ProxyAccessLogFormatType `json:"type,omitempty"`
+	// +optional
+	Type *ProxyAccessLogFormatType `json:"type,omitempty"`
 	// Text defines the text accesslog format, following Envoy accesslog formatting,
 	// It's required when the format type is "Text".
 	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
@@ -188,14 +195,17 @@ type FileEnvoyProxyAccessLog struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs must be used, backendRef is not supported.",rule="!has(self.backendRef)"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Service and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only support Core and gateway.envoyproxy.io group.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:rule="!has(self.resources) || !has(self.resourceAttributes)",message="either resources or resourceAttributes can be set, not both"
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
@@ -204,8 +214,31 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	Port int32 `json:"port,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	//
+	// Deprecated: Use ResourceAttributes instead.
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
+	// ResourceAttributes is a set of labels that describe the source of a log entry, including envoy node info.
+	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	// +optional
+	ResourceAttributes map[string]string `json:"resourceAttributes,omitempty"`
+	// Headers is a list of additional headers to send with OTLP export requests.
+	// These headers are added as gRPC initial metadata for the OTLP gRPC service.
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=32
+	Headers []gwapiv1.HTTPHeader `json:"headers,omitempty"`
 
 	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
+}
+
+// GetResourceAttributes returns the preferred resource attributes for OpenTelemetry access logs.
+func (o *OpenTelemetryEnvoyProxyAccessLog) GetResourceAttributes() map[string]string {
+	if o == nil {
+		return nil
+	}
+	if o.ResourceAttributes != nil {
+		return o.ResourceAttributes
+	}
+	return o.Resources
 }

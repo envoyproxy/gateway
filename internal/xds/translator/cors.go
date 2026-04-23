@@ -105,7 +105,7 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 }
 
 // patchRoute patches the provided route with the CORS config if applicable.
-func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -125,7 +125,6 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	}
 
 	var (
-		allowOrigins     []*matcherv3.StringMatcher
 		allowMethods     string
 		allowHeaders     string
 		exposeHeaders    string
@@ -144,6 +143,7 @@ func (*cors) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 
 	//nolint:gocritic
 
+	allowOrigins := make([]*matcherv3.StringMatcher, 0, len(c.AllowOrigins))
 	for _, origin := range c.AllowOrigins {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}

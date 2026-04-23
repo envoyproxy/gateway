@@ -1,0 +1,118 @@
+{{template "base.html" .}}
+
+{{define "pprof-content"}}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">{{.Title}}</h1>
+    </div>
+    <div class="card-body">
+        {{if .EnablePprof}}
+        <p>Performance profiling endpoints are available for debugging and performance analysis.</p>
+        
+        <div class="info-box">
+            <div>
+                <strong>Status:</strong> <span class="status running">Enabled</span>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔍 CPU Profile</h2>
+                </div>
+                <div class="card-body">
+                    <p>CPU profiling shows where the program spends its time while actively consuming CPU cycles.</p>
+                    <a href="/debug/pprof/profile" class="btn" target="_blank">Download CPU Profile</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🧠 Memory Heap</h2>
+                </div>
+                <div class="card-body">
+                    <p>Heap profiling reports memory allocation samples for monitoring current and historical memory usage.</p>
+                    <a href="/debug/pprof/heap" class="btn" target="_blank">Download Heap Profile</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔄 Goroutines</h2>
+                </div>
+                <div class="card-body">
+                    <p>Stack traces of all current goroutines.</p>
+                    <a href="/debug/pprof/goroutine" class="btn" target="_blank">View Goroutines</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🔒 Mutex</h2>
+                </div>
+                <div class="card-body">
+                    <p>Stack traces of holders of contended mutexes.</p>
+                    <a href="/debug/pprof/mutex" class="btn" target="_blank">View Mutex Profile</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🚫 Block</h2>
+                </div>
+                <div class="card-body">
+                    <p>Stack traces that led to blocking on synchronization primitives.</p>
+                    <a href="/debug/pprof/block" class="btn" target="_blank">View Block Profile</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📊 All Profiles</h2>
+                </div>
+                <div class="card-body">
+                    <p>Index page with links to all available profiles.</p>
+                    <a href="/debug/pprof/" class="btn" target="_blank">View All Profiles</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">💡 Usage Tips</h2>
+            </div>
+            <div class="card-body">
+                <ul>
+                    <li><strong>CPU Profile:</strong> Use <code>go tool pprof &lt;profile-url&gt;</code> to analyze CPU usage</li>
+                    <li><strong>Memory Heap:</strong> Identify memory leaks and high memory usage patterns</li>
+                    <li><strong>Goroutines:</strong> Debug goroutine leaks and concurrency issues</li>
+                    <li><strong>Mutex/Block:</strong> Find contention points in your application</li>
+                </ul>
+                
+                <div class="code">
+# Example: Analyze CPU profile
+go tool pprof http://localhost:19000/debug/pprof/profile
+
+# Example: Analyze heap profile  
+go tool pprof http://localhost:19000/debug/pprof/heap
+
+# Example: View goroutines in browser
+go tool pprof -http=:8080 http://localhost:19000/debug/pprof/goroutine
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <div class="info-box warning">
+            <div>
+                <strong>Status:</strong> <span class="status warning">Disabled</span>
+            </div>
+            <div>
+                pprof endpoints are currently disabled. Enable them in the Envoy Gateway configuration.
+            </div>
+        </div>
+
+
+        {{end}}
+    </div>
+</div>
+{{end}}

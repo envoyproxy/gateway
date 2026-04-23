@@ -1,0 +1,22 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: url-rewrite-route
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - hostRewriteLiteral: backend-1.example.com
+            name: url-rewrite-route-dest/backend/0
+            weight: 50
+          - hostRewriteLiteral: backend-2.example.com
+            name: url-rewrite-route-dest/backend/1
+            weight: 50

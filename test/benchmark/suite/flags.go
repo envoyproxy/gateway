@@ -10,9 +10,9 @@ package suite
 import "flag"
 
 var (
-	RPS           = flag.String("rps", "1000", "The target requests-per-second rate.")
+	BaselineRPS   = flag.String("baseline-rps", "100", "The baseline target requests-per-second rate; actual RPS scales with test size.")
 	Connections   = flag.String("connections", "10", "The maximum allowed number of concurrent connections per event loop. HTTP/1 only.")
-	Duration      = flag.String("duration", "60", "The number of seconds that the test should run.")
+	Duration      = flag.String("duration", "90", "The number of seconds that the test should run.")
 	Concurrency   = flag.String("concurrency", "auto", "The number of concurrent event loops that should be used.")
 	ReportSaveDir = flag.String("report-save-dir", "benchmark_report", "The dir where to save the benchmark test report.")
 )

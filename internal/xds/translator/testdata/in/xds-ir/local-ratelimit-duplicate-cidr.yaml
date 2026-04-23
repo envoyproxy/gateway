@@ -1,0 +1,44 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "route-duplicate-cidr-ratelimit"
+    hostname: "*"
+    traffic:
+      rateLimit:
+        local:
+          default:
+            requests: 100
+            unit: Minute
+          rules:
+          - cidrMatch:
+              cidr: 0.0.0.0/0
+              maskLen: 0
+              distinct: true
+              isIPv6: false
+            limit:
+              requests: 50
+              unit: Second
+          - cidrMatch:
+              cidr: 0.0.0.0/0
+              maskLen: 0
+              distinct: true
+              isIPv6: false
+            limit:
+              requests: 1000
+              unit: Minute
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"

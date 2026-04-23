@@ -5,7 +5,7 @@
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 // DNSLookupFamily defines the behavior of Envoy when resolving DNS for hostnames
 // +enum
@@ -31,10 +31,14 @@ const (
 type DNS struct {
 	// DNSRefreshRate specifies the rate at which DNS records should be refreshed.
 	// Defaults to 30 seconds.
-	DNSRefreshRate *metav1.Duration `json:"dnsRefreshRate,omitempty"`
+	//
+	// +optional
+	DNSRefreshRate *gwapiv1.Duration `json:"dnsRefreshRate,omitempty"`
 	// RespectDNSTTL indicates whether the DNS Time-To-Live (TTL) should be respected.
 	// If the value is set to true, the DNS refresh rate will be set to the resource record’s TTL.
 	// Defaults to true.
+	//
+	// +optional
 	RespectDNSTTL *bool `json:"respectDnsTtl,omitempty"`
 	// LookupFamily determines how Envoy would resolve DNS for Routes where the backend is specified as a fully qualified domain name (FQDN).
 	// If set, this configuration overrides other defaults.

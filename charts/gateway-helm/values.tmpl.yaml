@@ -26,11 +26,15 @@ global:
       # List of secrets in the same namespace of the component that can be used to pull images from private repositories.
       pullSecrets: []
 
+# -- Labels to apply to all resources
+commonLabels: {}
+
 podDisruptionBudget:
   minAvailable: 0
   # maxUnavailable: 1
 
 deployment:
+  annotations: {}
   envoyGateway:
     image:
       # if both this and global.imageRegistry are specified, this has to include both registry and repository explicitly, eg docker.io/envoyproxy/gateway
@@ -38,6 +42,8 @@ deployment:
       tag: ""
     imagePullPolicy: ""
     imagePullSecrets: []
+    # -- Additional environment variables for the envoy-gateway container.
+    extraEnv: []
     resources:
       limits:
         memory: 1024Mi
@@ -84,6 +90,10 @@ service:
   # If set to PreferClose, the Envoy fleet will prioritize connecting to the Envoy Gateway pods that are topologically closest to them.
   trafficDistribution: ""
   annotations: {}
+  # -- Service type. Can be set to LoadBalancer with specific IP, e.g.:
+  # type: LoadBalancer
+  # loadBalancerIP: 10.236.90.20
+  type: "ClusterIP"
 
 hpa:
   enabled: false
@@ -106,6 +116,10 @@ config:
 
 createNamespace: false
 
+# -- Override the namespace for resources deployed by the chart.
+# Defaults to the release namespace.
+namespaceOverride: ""
+
 kubernetesClusterDomain: cluster.local
 
 # -- Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected.
@@ -113,6 +127,9 @@ certgen:
   job:
     annotations: {}
     args: []
+    pod:
+      annotations: {}
+      labels: {}
     resources: {}
     affinity: {}
     tolerations: []

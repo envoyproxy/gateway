@@ -7,7 +7,8 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: tls
+        # expected status: ResolvedRefs: False (PartiallyInvalidCertificateRef), Programmed: True, Accepted: True
+        - name: tls-contains-not-exist-ref
           protocol: HTTPS
           port: 443
           allowedRoutes:
@@ -17,9 +18,30 @@ gateways:
             mode: Terminate
             certificateRefs:
               - name: tls-secret-ecdsa-1
+              - name: not-exist-secret
+        # expected status: ResolvedRefs: False (PartiallyInvalidCertificateRef), Programmed: True, Accepted: True
+        - name: tls-contains-not-exist-key-cert
+          protocol: HTTPS
+          port: 8443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
               - name: tls-secret-ecdsa-2
               - name: tls-secret-1
-
+        # expected status: ResolvedRefs: False (InvalidCertificateRef), Programmed: False
+        - name: tls-all-invalid-cert
+          protocol: HTTPS
+          port: 8444
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: not-exist-secret
 secrets:
   - apiVersion: v1
     kind: Secret

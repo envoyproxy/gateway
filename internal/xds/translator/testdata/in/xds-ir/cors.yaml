@@ -23,10 +23,8 @@ http:
       cors:
         allowOrigins:
         - name: example.com
-          stringMatch:
           safeRegex: "*.example.com"
         - name: foo.bar.com
-          stringMatch:
           exact: foo.bar.com
         allowMethods:
         - GET

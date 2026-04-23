@@ -21,7 +21,6 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -36,22 +35,55 @@ const dummyClusterIP = "1.2.3.4"
 
 // LoadResourcesFromYAMLBytes will load Resources from given Kubernetes YAML string.
 // TODO: This function should be able to process arbitrary number of resources, tracked by https://github.com/envoyproxy/gateway/issues/3207.
-func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool) (*Resources, error) {
-	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources)
+func LoadResourcesFromYAMLBytes(yamlBytes []byte, addMissingResources bool, envoyGateway *egv1a1.EnvoyGateway) (*Resources, error) {
+	r, err := loadKubernetesYAMLToResources(yamlBytes, addMissingResources, envoyGateway)
 	if err != nil {
 		return nil, err
 	}
+
+	// Sort to:
+	// 1. ensure identical resources are not retranslated
+	//    and updates are avoided by the watchable layer
+	// 2. ensure gateway-api layer receives resources in order
+	//    which impacts translation output
+	r.Sort()
 
 	return r, nil
 }
 
 // loadKubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources.
-func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Resources, error) {
+func loadKubernetesYAMLToResources(input []byte, addMissingResources bool, envoyGateway *egv1a1.EnvoyGateway) (*Resources, error) {
 	resources := NewResources()
 	var useDefaultNamespace bool
 	providedNamespaceMap := sets.New[string]()
 	requiredNamespaceMap := sets.New[string]()
 	combinedScheme := envoygateway.GetScheme()
+	defaulter := GetGatewaySchemaDefaulter()
+	validator := GetDefaultValidator()
+
+	// Build a map of extension-managed resources (by Group/Version/Kind)
+	type extCategory int
+	const (
+		extNone extCategory = iota
+		extFilter
+		extPolicy
+		extBackend
+	)
+	extGVKMap := map[string]extCategory{}
+	if envoyGateway != nil && envoyGateway.ExtensionManager != nil {
+		for _, gvk := range envoyGateway.ExtensionManager.Resources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extFilter
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.PolicyResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extPolicy
+		}
+		for _, gvk := range envoyGateway.ExtensionManager.BackendResources {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			extGVKMap[key] = extBackend
+		}
+	}
 
 	if err := IterYAMLBytes(input, func(yamlByte []byte) error {
 		var obj map[string]interface{}
@@ -70,13 +102,21 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 
 		// Perform local validation and apply default values for gateway-api related resources only.
 		if gvk.Group == egv1a1.GroupName || gvk.Group == gwapiv1.GroupName {
-			if err = defaultValidator.Validate(yamlByte); err != nil {
-				return fmt.Errorf("local validation error: %w", err)
+			if validator != nil {
+				if err = validator.Validate(yamlByte); err != nil {
+					return fmt.Errorf("local validation error: %w", err)
+				}
+			} else {
+				return fmt.Errorf("failed to init validator")
 			}
 
-			un, err = gatewaySchemaDefaulter.ApplyDefault(un)
-			if err != nil {
-				return fmt.Errorf("failed to apply default values for %s/%s: %w", un.GetKind(), un.GetName(), err)
+			if defaulter != nil {
+				un, err = defaulter.ApplyDefault(un)
+				if err != nil {
+					return fmt.Errorf("failed to apply default values for %s/%s: %w", un.GetKind(), un.GetName(), err)
+				}
+			} else {
+				return fmt.Errorf("failed to init defaulter")
 			}
 		}
 
@@ -99,6 +139,21 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 		spec := kobjVal.FieldByName("Spec")
 		data := kobjVal.FieldByName("Data")
 		stringData := kobjVal.FieldByName("StringData")
+
+		// Check if this resource is managed by the ExtensionManager and if so, classify it
+		if len(extGVKMap) > 0 {
+			key := fmt.Sprintf("%s/%s/%s", gvk.Group, gvk.Version, gvk.Kind)
+			if category, ok := extGVKMap[key]; ok {
+				un.SetNamespace(namespace)
+				switch category {
+				case extFilter, extBackend:
+					resources.ExtensionRefFilters = append(resources.ExtensionRefFilters, *un)
+				case extPolicy:
+					resources.ExtensionServerPolicies = append(resources.ExtensionServerPolicies, *un)
+				}
+				return nil
+			}
+		}
 
 		switch gvk.Kind {
 		case KindEnvoyProxy:
@@ -178,7 +233,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
 		case KindTLSRoute:
 			typedSpec := spec.Interface()
-			tlsRoute := &gwapiv1a2.TLSRoute{
+			tlsRoute := &gwapiv1.TLSRoute{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindTLSRoute,
 					APIVersion: gv,
@@ -187,7 +242,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a2.TLSRouteSpec),
+				Spec: typedSpec.(gwapiv1.TLSRouteSpec),
 			}
 			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case KindHTTPRoute:
@@ -367,7 +422,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 			resources.ConfigMaps = append(resources.ConfigMaps, configMap)
 		case KindBackendTLSPolicy:
 			typedSpec := spec.Interface()
-			backendTLSPolicy := &gwapiv1a3.BackendTLSPolicy{
+			backendTLSPolicy := &gwapiv1.BackendTLSPolicy{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       KindBackendTLSPolicy,
 					APIVersion: gv,
@@ -376,7 +431,7 @@ func loadKubernetesYAMLToResources(input []byte, addMissingResources bool) (*Res
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(gwapiv1a3.BackendTLSPolicySpec),
+				Spec: typedSpec.(gwapiv1.BackendTLSPolicySpec),
 			}
 			resources.BackendTLSPolicies = append(resources.BackendTLSPolicies, backendTLSPolicy)
 		case KindEnvoyExtensionPolicy:
@@ -527,18 +582,18 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 	case *gwapiv1.HTTPRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
-			for _, httpBakcendRef := range rule.BackendRefs {
-				refs = append(refs, httpBakcendRef.BackendRef)
+			for i := range rule.BackendRefs {
+				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
 	case *gwapiv1.GRPCRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
-			for _, gRPCBakcendRef := range rule.BackendRefs {
-				refs = append(refs, gRPCBakcendRef.BackendRef)
+			for i := range rule.BackendRefs {
+				refs = append(refs, rule.BackendRefs[i].BackendRef)
 			}
 		}
-	case *gwapiv1a2.TLSRoute:
+	case *gwapiv1.TLSRoute:
 		objNamespace = route.Namespace
 		for _, rule := range route.Spec.Rules {
 			refs = append(refs, rule.BackendRefs...)
@@ -568,7 +623,7 @@ func addMissingServices(requiredServices map[string]*corev1.Service, obj interfa
 		name := string(ref.Name)
 		key := ns + "/" + name
 
-		port := int32(*ref.Port)
+		port := *ref.Port
 		servicePort := corev1.ServicePort{
 			Name:     fmt.Sprintf("%s-%d", protocol, port),
 			Protocol: corev1.Protocol(protocol),

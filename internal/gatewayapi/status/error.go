@@ -6,6 +6,7 @@
 package status
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -28,7 +29,77 @@ const (
 	RouteReasonPortNotSpecified       gwapiv1.RouteConditionReason = "PortNotSpecified"
 	RouteReasonUnsupportedAddressType gwapiv1.RouteConditionReason = "UnsupportedAddressType"
 	RouteReasonInvalidAddress         gwapiv1.RouteConditionReason = "InvalidAddress"
+	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
+
+	// Network configuration related condition types
+	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
 )
+
+// Listener condition reasons for various error scenarios
+const (
+	ListenerReasonPartiallyInvalidCertificateRef gwapiv1.ListenerConditionReason = "PartiallyInvalidCertificateRef"
+)
+
+// ListenerError is an error interface that represents errors that need to be reflected
+// in the status of a Kubernetes resource. It extends the standard error interface
+// with a Reason method that returns the specific condition reason.
+//
+// TODO kkk777-7: consider using generics to make Error interface resource-agnostic to support all resource types.
+type ListenerError interface {
+	error
+	Reason() gwapiv1.ListenerConditionReason
+	Type() gwapiv1.ListenerConditionType
+}
+
+// ListenerStatusError represents an error that needs to be reflected in the status of listener.
+// It wraps an underlying error and provides a specific listener condition reason.
+type ListenerStatusError struct {
+	Wrapped                 error
+	ListenerConditionReason gwapiv1.ListenerConditionReason
+	ListenerConditionType   gwapiv1.ListenerConditionType
+}
+
+// NewListenerStatusError creates a new ListenerStatusError with the given wrapped error and listener condition reason.
+func NewListenerStatusError(wrapped error, reason gwapiv1.ListenerConditionReason) *ListenerStatusError {
+	return &ListenerStatusError{
+		Wrapped:                 wrapped,
+		ListenerConditionReason: reason,
+	}
+}
+
+func (s *ListenerStatusError) WithType(t gwapiv1.ListenerConditionType) *ListenerStatusError {
+	s.ListenerConditionType = t
+	return s
+}
+
+// Error returns the string representation of the error.
+// If Wrapped is nil, it returns the string representation of the ListenerConditionReason.
+func (s *ListenerStatusError) Error() string {
+	if s == nil {
+		return ""
+	}
+	if s.Wrapped != nil {
+		return s.Wrapped.Error()
+	}
+	return string(s.ListenerConditionReason)
+}
+
+// Reason returns the listener condition reason associated with this error.
+func (s *ListenerStatusError) Reason() gwapiv1.ListenerConditionReason {
+	if s == nil {
+		return ""
+	}
+	return s.ListenerConditionReason
+}
+
+// Type returns the listener condition type associated with this error.
+func (s *ListenerStatusError) Type() gwapiv1.ListenerConditionType {
+	// Default to ResolvedRefs because it's the most common type.
+	if s == nil || s.ListenerConditionType == "" {
+		return gwapiv1.ListenerConditionResolvedRefs
+	}
+	return s.ListenerConditionType
+}
 
 // Error is an error interface that represents errors that need to be reflected
 // in the status of a Kubernetes resource. It extends the standard error interface
@@ -83,7 +154,7 @@ func (s *RouteStatusError) Reason() gwapiv1.RouteConditionReason {
 // Type returns the route condition type associated with this error.
 func (s *RouteStatusError) Type() gwapiv1.RouteConditionType {
 	// Default to ResolvedRefs because it's the most common type.
-	if s == nil {
+	if s == nil || s.RouteConditionType == "" {
 		return gwapiv1.RouteConditionResolvedRefs
 	}
 	return s.RouteConditionType
@@ -167,6 +238,67 @@ func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {
 		}
 	}
 	return gwapiv1.RouteConditionResolvedRefs
+}
+
+// TypedErrorCollector collects and organizes status errors by their condition type.
+// It automatically groups errors of the same type together, making it easy to
+// process and report errors for each distinct condition type separately.
+//
+// This is particularly useful when processing routes that may have multiple
+// validation errors across different types. (e.g., ResolvedRefs, Accepted, BackendsAvailable).
+type TypedErrorCollector struct {
+	// errs groups errors by their condition type for efficient retrieval
+	errs map[gwapiv1.RouteConditionType]*MultiStatusError
+}
+
+func (c *TypedErrorCollector) Empty() bool {
+	return len(c.errs) == 0
+}
+
+// Types returns all unique condition types for which errors have been collected.
+func (c *TypedErrorCollector) Types() []gwapiv1.RouteConditionType {
+	if len(c.errs) == 0 {
+		return nil
+	}
+	types := make([]gwapiv1.RouteConditionType, 0, len(c.errs))
+	for t := range c.errs {
+		types = append(types, t)
+	}
+	return types
+}
+
+// Add appends a new error to the collector, automatically grouping it with
+// other errors of the same condition type.
+func (c *TypedErrorCollector) Add(err Error) {
+	if err == nil {
+		return
+	}
+	if c.errs == nil {
+		c.errs = make(map[gwapiv1.RouteConditionType]*MultiStatusError)
+	}
+	if _, exist := c.errs[err.Type()]; !exist {
+		c.errs[err.Type()] = &MultiStatusError{}
+	}
+	c.errs[err.Type()].Add(err)
+}
+
+// GetError returns all errors of the specified condition type as a single RouteStatusError.
+// Multiple errors of the same type are consolidated into one error with combined messages and reasons.
+func (c *TypedErrorCollector) GetError(t gwapiv1.RouteConditionType) Error {
+	if len(c.errs) == 0 {
+		return nil
+	}
+	return NewRouteStatusError(errors.New(c.errs[t].Error()), c.errs[t].Reason()).WithType(t)
+}
+
+// GetAllErrors returns all collected errors as a slice of Error, one for each distinct condition type.
+func (c *TypedErrorCollector) GetAllErrors() []Error {
+	types := c.Types()
+	errs := make([]Error, 0, len(types))
+	for _, t := range types {
+		errs = append(errs, c.GetError(t))
+	}
+	return errs
 }
 
 func isAcceptedReason(reason gwapiv1.RouteConditionReason) bool {

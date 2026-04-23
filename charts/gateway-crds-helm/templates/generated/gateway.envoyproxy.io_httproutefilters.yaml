@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: httproutefilters.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -67,7 +67,6 @@ spec:
                           "credential", and the value should be the credential to be injected.
                           For example, for basic authentication, the value should be "Basic <base64 encoded username:password>".
                           for bearer token, the value should be "Bearer <token>".
-                          Note: The secret must be in the same namespace as the HTTPRouteFilter.
                         properties:
                           group:
                             default: ""
@@ -129,7 +128,9 @@ spec:
                   return a fixed response.
                 properties:
                   body:
-                    description: Body of the Response
+                    description: |-
+                      Body of the direct response.
+                      Supports Envoy command operators for dynamic content (see https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
                     properties:
                       inline:
                         description: Inline contains the value as an inline string.
@@ -194,19 +195,217 @@ spec:
                       rule: 'has(self.valueRef) ? self.valueRef.kind == ''ConfigMap''
                         : true'
                   contentType:
-                    description: Content Type of the response. This will be set in
-                      the Content-Type header.
+                    description: Content Type of the direct response. This will be
+                      set in the Content-Type header.
                     type: string
+                  header:
+                    description: Header defines the headers of the direct response.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-type: set
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 16
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
+                    x-kubernetes-validations:
+                    - message: header.remove is not supported for DirectResponse
+                      rule: '!has(self.remove) || size(self.remove) == 0'
                   statusCode:
                     description: |-
                       Status Code of the HTTP response
                       If unset, defaults to 200.
                     type: integer
                 type: object
+              matches:
+                description: |-
+                  Matches defines additional matching criteria for the HTTPRoute rule.
+                  As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
+                  When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
+                  effective matching is the logical AND of the two sets.
+                items:
+                  description: |-
+                    HTTPRouteMatchFilter defines additional matching criteria for the HTTPRoute rule.
+                    At least one matcher must be specified.
+                  minProperties: 1
+                  properties:
+                    cookies:
+                      description: |-
+                        Cookies is a list of cookie matchers evaluated against the HTTP request.
+                        All specified matchers must match.
+                      items:
+                        description: HTTPCookieMatch defines how to match a single
+                          cookie.
+                        properties:
+                          name:
+                            description: Name is the cookie name to evaluate.
+                            maxLength: 256
+                            minLength: 1
+                            type: string
+                          type:
+                            default: Exact
+                            description: Type specifies how to match against the value
+                              of the cookie.
+                            enum:
+                            - Exact
+                            - RegularExpression
+                            type: string
+                          value:
+                            description: Value is the cookie value to be matched.
+                            maxLength: 4096
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - value
+                        type: object
+                      maxItems: 16
+                      minItems: 1
+                      type: array
+                  type: object
+                maxItems: 8
+                type: array
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host
                 properties:
+                  appendXForwardedHost:
+                    description: |-
+                      AppendXForwardedHost controls whether the original Host header value is
+                      appended to the X-Forwarded-Host header when hostname rewriting is configured.
+                      Defaults to true for backward compatibility.
+                    type: boolean
                   hostname:
                     description: |-
                       Hostname is the value to be used to replace the Host header value during

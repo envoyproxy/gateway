@@ -732,7 +732,7 @@ func TestWasmCache(t *testing.T) {
 			if c.getOptions.PullSecret == nil {
 				c.getOptions.PullSecret = []byte{}
 			}
-			gotFilePath, _, gotErr := cache.Get(c.fetchURL, c.getOptions)
+			gotFilePath, _, gotErr := cache.Get(c.fetchURL, &c.getOptions)
 			serverVisited := atomic.LoadInt32(&tsNumRequest) > 0
 
 			if c.checkPurgeTimeout > 0 {
@@ -740,7 +740,7 @@ func TestWasmCache(t *testing.T) {
 				for start := time.Now(); time.Since(start) < c.checkPurgeTimeout; {
 					fileCount := 0
 					err = filepath.Walk(tmpDir,
-						func(path string, info os.FileInfo, err error) error {
+						func(_ string, info os.FileInfo, err error) error {
 							if err != nil {
 								return err
 							}
@@ -803,7 +803,7 @@ func TestWasmCache(t *testing.T) {
 	}
 }
 
-func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCIImageDigest string) {
+func setupOCIRegistry(t *testing.T, host string) (string, string) {
 	// Push *compat* variant docker image (others are well tested in imagefetcher's test and the behavior is consistent).
 	ref := fmt.Sprintf("%s/test/valid/docker:v0.1.0", host)
 	binary := wasmHeader
@@ -845,7 +845,7 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 
 	// Calculate sum
 	d, _ := img.Digest()
-	dockerImageDigest = d.Hex
+	dockerImageDigest := d.Hex
 
 	// Finally push the invalid image.
 	ref = fmt.Sprintf("%s/test/invalid", host)
@@ -862,14 +862,14 @@ func setupOCIRegistry(t *testing.T, host string) (dockerImageDigest, invalidOCII
 	img2 = mutate.MediaType(img2, types.OCIManifestSchema1)
 
 	d, _ = img2.Digest()
-	invalidOCIImageDigest = d.Hex
+	invalidOCIImageDigest := d.Hex
 
 	// Push image to the registry.
 	err = crane.Push(img2, ref, fetchOpt)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return
+	return dockerImageDigest, invalidOCIImageDigest
 }
 
 func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
@@ -888,7 +888,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 	binary2 = append(binary2, 2)
 
 	// Create a test server which returns 0 for the first two calls, and returns 1 for the following calls.
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if gotNumRequest <= 1 {
 			_, _ = w.Write(binary1)
 		} else {
@@ -905,7 +905,7 @@ func TestWasmCachePolicyChangesUsingHTTP(t *testing.T) {
 
 	testWasmGet := func(downloadURL string, policy PullPolicy, resourceVersion, wantFilePath string, wantNumRequest int) {
 		t.Helper()
-		gotFilePath, _, err := cache.Get(downloadURL, GetOptions{
+		gotFilePath, _, err := cache.Get(downloadURL, &GetOptions{
 			ResourceName:    "namespace.resource",
 			ResourceVersion: resourceVersion,
 			RequestTimeout:  time.Second * 10,
@@ -960,7 +960,7 @@ func TestAllInsecureServer(t *testing.T) {
 	ociURLWithTag := fmt.Sprintf("oci://%s/test/valid/docker:v0.1.0", ou.Host)
 	var defaultPullPolicy PullPolicy
 
-	gotFilePath, _, err := cache.Get(ociURLWithTag, GetOptions{
+	gotFilePath, _, err := cache.Get(ociURLWithTag, &GetOptions{
 		ResourceName:    "namespace.resource",
 		ResourceVersion: "123456",
 		RequestTimeout:  time.Second * 10,

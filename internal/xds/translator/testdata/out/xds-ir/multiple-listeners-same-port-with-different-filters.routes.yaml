@@ -8,11 +8,6 @@
     - match:
         pathSeparatedPrefix: /foo1
       name: httproute/default/httproute-1/rule/0/match/0/www_foo_com
-      responseHeadersToAdd:
-      - append: true
-        header:
-          key: alt-svc
-          value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-1/rule/0
         upgradeConfigs:
@@ -25,19 +20,14 @@
     - match:
         pathSeparatedPrefix: /foo2
       name: httproute/default/httproute-2/rule/0/match/0/www_foo_com
-      responseHeadersToAdd:
-      - append: true
-        header:
-          key: alt-svc
-          value: h3=":443"; ma=86400
       route:
         cluster: httproute/default/httproute-2/rule/0
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
         envoy.filters.http.ext_authz/securitypolicy/default/policy-for-http-route-2:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+          checkSettings: {}
   - domains:
     - www.bar.com
     name: default/gateway-2/http/www_bar_com
@@ -50,6 +40,45 @@
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
-        envoy.filters.http.oauth2/securitypolicy/default/policy-for-gateway-2:
-          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
-          config: {}
+        envoy.filters.http.oauth2:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2PerRoute
+          config:
+            authScopes:
+            - openid
+            - email
+            - profile
+            authType: BASIC_AUTH
+            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+            credentials:
+              clientId: client.oauth.foo.com
+              cookieNames:
+                bearerToken: AccessToken-5F93C2E4
+                idToken: IdToken-5F93C2E4
+                oauthExpires: OauthExpires-5F93C2E4
+                oauthHmac: OauthHMAC-5F93C2E4
+                oauthNonce: OauthNonce-5F93C2E4
+                refreshToken: RefreshToken-5F93C2E4
+              hmacSecret:
+                name: oauth2/hmac_secret/securitypolicy/default/policy-for-gateway-2
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+              tokenSecret:
+                name: oauth2/client_secret/securitypolicy/default/policy-for-gateway-2
+                sdsConfig:
+                  ads: {}
+                  resourceApiVersion: V3
+            preserveAuthorizationHeader: true
+            redirectPathMatcher:
+              path:
+                exact: /foo/oauth2/callback
+            redirectUri: https://www.example.com/foo/oauth2/callback
+            signoutPath:
+              path:
+                exact: /foo/logout
+            statPrefix: securitypolicy/default/policy-for-gateway-2
+            tokenEndpoint:
+              cluster: oauth_foo_com_443
+              timeout: 10s
+              uri: https://oauth.foo.com/token
+            useRefreshToken: true

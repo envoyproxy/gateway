@@ -1,4 +1,3 @@
-name: "metrics"
 metrics:
   enableVirtualHostStats: true
 http:

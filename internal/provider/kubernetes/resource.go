@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -20,6 +21,8 @@ type resourceMappings struct {
 	allAssociatedReferenceGrants sets.Set[string]
 	// Set for storing ServiceImports' NamespacedNames.
 	allAssociatedServiceImports sets.Set[string]
+	// Set for storing Services' NamespacedNames.
+	allAssociatedServices sets.Set[string]
 	// Set for storing EndpointSlices' NamespacedNames.
 	allAssociatedEndpointSlices sets.Set[string]
 	// Set for storing Backends' NamespacedNames.
@@ -44,8 +47,8 @@ type resourceMappings struct {
 	allAssociatedTCPRoutes sets.Set[string]
 	// Set for storing UDPRoutes' NamespacedNames attaching to various Gateway objects.
 	allAssociatedUDPRoutes sets.Set[string]
-	// Set for storing backendRefs' BackendObjectReference referred by various Route objects.
-	allAssociatedBackendRefs sets.Set[gwapiv1.BackendObjectReference]
+	// Map caching BackendObjectReferences keyed by their normalized identifier.
+	allAssociatedBackendRefs map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference
 	// Set for storing ClientTrafficPolicies' NamespacedNames referred by various Route objects.
 	allAssociatedClientTrafficPolicies sets.Set[string]
 	// Set for storing BackendTrafficPolicies' NamespacedNames referred by various Route objects.
@@ -63,32 +66,46 @@ type resourceMappings struct {
 	// Set for storing HTTPRouteExtensions (Envoy Gateway or Custom) NamespacedNames referenced by various
 	// route rules objects.
 	allAssociatedHTTPRouteExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
+	// Set for storing BackendRef Extensions' NamespacedNames attaching to various HTTPRoute objects.
+	allAssociatedBackendRefExtensionFilters sets.Set[utils.NamespacedNameWithGroupKind]
+	// allAssociatedClusterTrustBundles is a set of all ClusterTrustBundles' name
+	// key is the name of ClusterTrustBundle, because ClusterTrustBundle is cluster-scoped resource
+	allAssociatedClusterTrustBundles sets.Set[string]
+	// Set for storing ListenerSets' NamespacedNames attaching to Gateways.
+	allAssociatedListenerSets sets.Set[string]
+	// Map storing ListenerSets per Gateway (keyed by gateway namespace/name string).
+	gatewayToListenerSets map[string][]types.NamespacedName
 }
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedGateways:                  sets.New[string](),
-		allAssociatedReferenceGrants:           sets.New[string](),
-		allAssociatedServiceImports:            sets.New[string](),
-		allAssociatedEndpointSlices:            sets.New[string](),
-		allAssociatedBackends:                  sets.New[string](),
-		allAssociatedSecrets:                   sets.New[string](),
-		allAssociatedConfigMaps:                sets.New[string](),
-		allAssociatedNamespaces:                sets.New[string](),
-		allAssociatedEnvoyProxies:              sets.New[string](),
-		allAssociatedEnvoyPatchPolicies:        sets.New[string](),
-		allAssociatedTLSRoutes:                 sets.New[string](),
-		allAssociatedHTTPRoutes:                sets.New[string](),
-		allAssociatedGRPCRoutes:                sets.New[string](),
-		allAssociatedTCPRoutes:                 sets.New[string](),
-		allAssociatedUDPRoutes:                 sets.New[string](),
-		allAssociatedBackendRefs:               sets.New[gwapiv1.BackendObjectReference](),
-		allAssociatedClientTrafficPolicies:     sets.New[string](),
-		allAssociatedBackendTrafficPolicies:    sets.New[string](),
-		allAssociatedSecurityPolicies:          sets.New[string](),
-		allAssociatedBackendTLSPolicies:        sets.New[string](),
-		allAssociatedEnvoyExtensionPolicies:    sets.New[string](),
-		extensionRefFilters:                    map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
-		allAssociatedHTTPRouteExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedGateways:                   sets.New[string](),
+		allAssociatedReferenceGrants:            sets.New[string](),
+		allAssociatedServiceImports:             sets.New[string](),
+		allAssociatedServices:                   sets.New[string](),
+		allAssociatedEndpointSlices:             sets.New[string](),
+		allAssociatedBackends:                   sets.New[string](),
+		allAssociatedSecrets:                    sets.New[string](),
+		allAssociatedConfigMaps:                 sets.New[string](),
+		allAssociatedNamespaces:                 sets.New[string](),
+		allAssociatedEnvoyProxies:               sets.New[string](),
+		allAssociatedEnvoyPatchPolicies:         sets.New[string](),
+		allAssociatedTLSRoutes:                  sets.New[string](),
+		allAssociatedHTTPRoutes:                 sets.New[string](),
+		allAssociatedGRPCRoutes:                 sets.New[string](),
+		allAssociatedTCPRoutes:                  sets.New[string](),
+		allAssociatedUDPRoutes:                  sets.New[string](),
+		allAssociatedBackendRefs:                make(map[utils.NamespacedNameWithGroupKind]gwapiv1.BackendObjectReference),
+		allAssociatedClientTrafficPolicies:      sets.New[string](),
+		allAssociatedBackendTrafficPolicies:     sets.New[string](),
+		allAssociatedSecurityPolicies:           sets.New[string](),
+		allAssociatedBackendTLSPolicies:         sets.New[string](),
+		allAssociatedEnvoyExtensionPolicies:     sets.New[string](),
+		extensionRefFilters:                     map[utils.NamespacedNameWithGroupKind]unstructured.Unstructured{},
+		allAssociatedHTTPRouteExtensionFilters:  sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedBackendRefExtensionFilters: sets.New[utils.NamespacedNameWithGroupKind](),
+		allAssociatedClusterTrustBundles:        sets.New[string](),
+		allAssociatedListenerSets:               sets.New[string](),
+		gatewayToListenerSets:                   make(map[string][]types.NamespacedName),
 	}
 }

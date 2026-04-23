@@ -1,0 +1,4 @@
+- ignorePortInHostMatching: true
+  name: envoy-gateway/client-validation-insecure-fallback/https
+- ignorePortInHostMatching: true
+  name: envoy-gateway/client-validation-insecure-fallback/https-with-hostname

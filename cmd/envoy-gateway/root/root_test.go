@@ -12,6 +12,6 @@ import (
 )
 
 func TestGetRootCommand(t *testing.T) {
-	got := GetRootCommand()
+	got := GetRootCommand(nil)
 	assert.Equal(t, "envoy-gateway", got.Use)
 }

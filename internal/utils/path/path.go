@@ -26,8 +26,8 @@ func ValidateOutputPath(outputPath string) (string, error) {
 }
 
 // ListDirsAndFiles return a list of directories and files from a list of paths recursively.
-func ListDirsAndFiles(paths []string) (dirs, files sets.Set[string]) {
-	dirs, files = sets.New[string](), sets.New[string]()
+func ListDirsAndFiles(paths []string) (sets.Set[string], sets.Set[string]) {
+	dirs, files := sets.New[string](), sets.New[string]()
 	// Separate paths by whether is a directory or not.
 	paths = sets.NewString(paths...).UnsortedList()
 	for _, path := range paths {
@@ -54,7 +54,7 @@ func ListDirsAndFiles(paths []string) (dirs, files sets.Set[string]) {
 	}
 	files.Delete(ignoreFiles...)
 
-	return
+	return dirs, files
 }
 
 // GetParentDirs returns all the parent directories of given files.

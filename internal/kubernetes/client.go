@@ -188,5 +188,5 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container, command
 
 	stdout = stdoutBuf.String()
 	stderr = stderrBuf.String()
-	return
+	return stdout, stderr, err
 }

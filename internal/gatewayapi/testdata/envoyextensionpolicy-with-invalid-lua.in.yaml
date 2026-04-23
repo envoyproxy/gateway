@@ -72,14 +72,29 @@ envoyextensionpolicies:
   kind: EnvoyExtensionPolicy
   metadata:
     namespace: default
-    name: policy-for-http-route   # Invalid Lua
+    name: policy-for-http-route
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
     lua:
-    - type: Inline
-      inline: "function envoy_on_response(response_handle)
-    response_handle:UnknownApi()
-    end"
+    - type: Inline  # Lua with external library and UnknownApi() call should be rejected
+      inline: |
+        function envoy_on_response(response_handle)
+            local content_type = response_handle:headers():get("content-type")
+            if content_type and string.find(content_type, "application/json", 1, true) then
+                response_handle:body():setBytes(0, response_handle:body():length())
+                response_handle:UnknownApi()
+                local response_body = response_handle:body():getBytes(0, response_handle:body():length())
+                if response_body and #response_body > 0 then
+                    local parsed_json = json.decode(response_body)
+                    if type(parsed_json) == "table" then
+                        response_handle:logInfo("Successfully parsed JSON response.")
+                    else
+                        response_handle:logWarn("Parsed JSON is not a table, or unexpected format.")
+                    end
+                end
+            end
+            return envoy.lua.ResponseStatus.Continue
+        end

@@ -1,0 +1,122 @@
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: first-route-dest/backend/0
+- clusterName: second-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: second-route-dest/backend/0
+- clusterName: httproute/default/httproute-1/rule/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: httproute/default/httproute-1/rule/0/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: tlsroute/default/tlsroute-1/rule/-1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tlsroute/default/tlsroute-1/rule/-1/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: tlsroute/default/tlsroute-2/rule/-1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.7
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tlsroute/default/tlsroute-2/rule/-1/backend/0
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: ""
+            name: service-1
+            namespace: default
+            sectionName: "8080"
+- clusterName: tcproute/default/tcproute
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 3001
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tcproute/default/tcprou
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-ip
+            namespace: default
+- clusterName: udproute/default/udproute
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.1.1.1
+            portValue: 3001
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: udproute/default/udprou
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Backend
+            name: backend-ip
+            namespace: default

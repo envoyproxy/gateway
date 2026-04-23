@@ -1,0 +1,54 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: cookie-match
+  namespace: gateway-conformance-infra
+spec:
+  matches:
+    - cookies:
+        - name: choco
+          value: chip
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cookie-rule-filter
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+      namespace: gateway-conformance-infra
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /cookie-rule
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: cookie-match
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-cookie-filter-only
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+      namespace: gateway-conformance-infra
+  rules:
+    - filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: cookie-match
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080

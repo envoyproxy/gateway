@@ -9,10 +9,10 @@ running smoothly if something goes wrong. Here’s why it’s valuable:
 the fallback (or "passive") backend is ready to step in instantly.
 This helps keep your API accessible and your services running, so users don’t even notice any interruptions.
 
-* Automatic Switch Over: If a problem occurs, the system can automatically switch traffic over to the fallback backend. 
+* Automatic Switch Over: If a problem occurs, the system can automatically switch traffic over to the fallback backend.
 This avoids needing someone to jump in and fix things manually, which could take time and might even lead to mistakes.
 
-* Lower Costs: In an active-passive setup, the fallback backend doesn’t need to work all the time—it’s just on standby. 
+* Lower Costs: In an active-passive setup, the fallback backend doesn’t need to work all the time—it’s just on standby.
 This can save on costs (like cloud egress costs) compared to setups where both backend are running at full capacity.
 
 * Peace of Mind with Redundancy: Although the fallback backend isn’t handling traffic daily, it's there as a safety net.
@@ -24,7 +24,7 @@ If something happens with the primary backend, the backup can take over immediat
 
 ## Test
 
-* We'll first create two services & deployments, called `active` and `passive`, representing an `active` and `passive` backend application.
+* We'll first create two [services][Service] & [deployments][Deployment], called `active` and `passive`, representing an `active` and `passive` backend application.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -63,7 +63,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -110,7 +110,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: passive 
           ports:
@@ -164,7 +164,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -211,7 +211,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: passive 
           ports:
@@ -233,7 +233,7 @@ spec:
 
 * Follow the instructions [here](./../../tasks/traffic/backend/#enable-backend) to enable the Backend API
 
-* Create two Backend resources that are used to represent the `active` backend and `passive` backend.
+* Create two [Backend][] resources that are used to represent the `active` backend and `passive` backend.
 Note, we've set `fallback: true` for the `passive` backend to indicate its a passive backend
 
 
@@ -299,7 +299,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* Lets create an HTTPRoute that can route to both these backends
+* Lets create an [HTTPRoute][] that can route to both these backends
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -379,7 +379,7 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-* Lets configure a `BackendTrafficPolicy` with a passive health check setting to detect an transient errors.
+* Lets configure a [BackendTrafficPolicy][] with a passive health check setting to detect an transient errors.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -481,7 +481,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -523,7 +523,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -564,3 +564,9 @@ parse error: Invalid numeric literal at line 1, column 9
 ```
 
 The first error can be avoided by configuring [retries](./../../tasks/traffic/retry.md).
+
+[Backend]: ../../../api/extension_types#backend
+[BackendTrafficPolicy]: ../../../api/extension_types#backendtrafficpolicy
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
+[Service]: https://kubernetes.io/docs/concepts/services-networking/service/
+[Deployment]: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/

@@ -37,6 +37,7 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
         statPrefix: tcp-10080
+  maxConnectionsToAcceptPerSocketEvent: 1
   name: envoy-gateway/gateway-1/http1
   perConnectionBufferLimitBytes: 32768
   statPrefix: envoy-gateway/gateway-1/http1

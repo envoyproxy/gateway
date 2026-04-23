@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
@@ -107,7 +108,7 @@ func listenerContainsRBAC(irListener *ir.HTTPListener) bool {
 }
 
 // patchRoute patches the provided route with the RBAC config if applicable.
-func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*rbac) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -153,9 +154,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		rbac        *rbacv3.RBACPerRoute
 		allowAction *anypb.Any
 		denyAction  *anypb.Any
-		matcherList []*matcherv3.Matcher_MatcherList_FieldMatcher
 		err         error
 	)
+	matcherList := make([]*matcherv3.Matcher_MatcherList_FieldMatcher, 0, len(authorization.Rules))
 
 	allow := &rbacconfigv3.Action{
 		Name:   "ALLOW",
@@ -185,6 +186,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 
 			// Predicates for HTTP headers.
 			headerPredicate []*matcherv3.Matcher_MatcherList_Predicate
+
+			// Predicates for GeoIP metadata.
+			geoIPPredicate *matcherv3.Matcher_MatcherList_Predicate
 
 			// Predicates for IP ranges.
 			ipPredicate *matcherv3.Matcher_MatcherList_Predicate
@@ -244,6 +248,12 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		if len(rule.Principal.ClientIPGeoLocations) > 0 {
+			if geoIPPredicate, err = buildGeoIPPredicate(rule.Principal.ClientIPGeoLocations); err != nil {
+				return nil, err
+			}
+		}
+
 		// AND all the predicates together.
 		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
 		if methodPredicate != nil {
@@ -251,6 +261,9 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 		if ipPredicate != nil {
 			allPredicates = append(allPredicates, ipPredicate)
+		}
+		if geoIPPredicate != nil {
+			allPredicates = append(allPredicates, geoIPPredicate)
 		}
 		allPredicates = append(allPredicates, jwtPredicate...)
 		allPredicates = append(allPredicates, headerPredicate...)
@@ -334,7 +347,7 @@ func buildIPPredicate(clientCIDRs []*ir.CIDRMatch) (*matcherv3.Matcher_MatcherLi
 
 	for _, cidr := range clientCIDRs {
 		ipRangeMatcher.CidrRanges = append(ipRangeMatcher.CidrRanges, &configv3.CidrRange{
-			AddressPrefix: cidr.IP,
+			AddressPrefix: cidr.AddressPrefix(),
 			PrefixLen: &wrapperspb.UInt32Value{
 				Value: cidr.MaskLen,
 			},
@@ -373,39 +386,42 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 	// Build the scope matchers.
 	// Multiple scopes are ANDed together.
 	for _, scope := range jwt.Scopes {
-		var (
-			inputPb   *anypb.Any
-			matcherPb *anypb.Any
-			err       error
-		)
+		scopePredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, 2)
+		for _, scopeKey := range []string{"scope", "scp"} {
+			var (
+				inputPb   *anypb.Any
+				matcherPb *anypb.Any
+				err       error
+			)
 
-		input := &networkinput.DynamicMetadataInput{
-			Filter: "envoy.filters.http.jwt_authn",
-			Path: []*networkinput.DynamicMetadataInput_PathSegment{
-				{
-					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
+			input := &networkinput.DynamicMetadataInput{
+				Filter: "envoy.filters.http.jwt_authn",
+				Path: []*networkinput.DynamicMetadataInput_PathSegment{
+					{
+						Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+							Key: jwt.Provider, // The name of the jwt provider is used as the `payload_in_metadata` in the JWT Authn filter.
+						},
+					},
+					{
+						Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
+							Key: scopeKey,
+						},
 					},
 				},
-				{
-					Segment: &networkinput.DynamicMetadataInput_PathSegment_Key{
-						Key: "scope",
-					},
-				},
-			},
-		}
+			}
 
-		// The scope has already been normalized to a string array in the JWT Authn filter.
-		scopeMatcher := &metadatav3.Metadata{
-			Value: &envoymatcherv3.ValueMatcher{
-				MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
-					ListMatch: &envoymatcherv3.ListMatcher{
-						MatchPattern: &envoymatcherv3.ListMatcher_OneOf{
-							OneOf: &envoymatcherv3.ValueMatcher{
-								MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
-									StringMatch: &envoymatcherv3.StringMatcher{
-										MatchPattern: &envoymatcherv3.StringMatcher_Exact{
-											Exact: string(scope),
+			// The scope has already been normalized to a string array in the JWT Authn filter.
+			scopeMatcher := &metadatav3.Metadata{
+				Value: &envoymatcherv3.ValueMatcher{
+					MatchPattern: &envoymatcherv3.ValueMatcher_ListMatch{
+						ListMatch: &envoymatcherv3.ListMatcher{
+							MatchPattern: &envoymatcherv3.ListMatcher_OneOf{
+								OneOf: &envoymatcherv3.ValueMatcher{
+									MatchPattern: &envoymatcherv3.ValueMatcher_StringMatch{
+										StringMatch: &envoymatcherv3.StringMatcher{
+											MatchPattern: &envoymatcherv3.StringMatcher_Exact{
+												Exact: string(scope),
+											},
 										},
 									},
 								},
@@ -413,37 +429,48 @@ func buildJWTPredicate(jwt egv1a1.JWTPrincipal) ([]*matcherv3.Matcher_MatcherLis
 						},
 					},
 				},
-			},
-		}
+			}
 
-		if inputPb, err = proto.ToAnyWithValidation(input); err != nil {
-			return nil, err
-		}
+			if inputPb, err = proto.ToAnyWithValidation(input); err != nil {
+				return nil, err
+			}
 
-		if matcherPb, err = proto.ToAnyWithValidation(scopeMatcher); err != nil {
-			return nil, err
-		}
+			if matcherPb, err = proto.ToAnyWithValidation(scopeMatcher); err != nil {
+				return nil, err
+			}
 
-		scopePredicate := matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
-			Input: &cncfv3.TypedExtensionConfig{
-				Name:        "scope",
-				TypedConfig: inputPb,
-			},
-			Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
-				CustomMatch: &cncfv3.TypedExtensionConfig{
-					Name:        "scope_matcher",
-					TypedConfig: matcherPb,
+			scopePredicate := matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: &cncfv3.TypedExtensionConfig{
+					Name:        "scope",
+					TypedConfig: inputPb,
 				},
-			},
-		}
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_CustomMatch{
+					CustomMatch: &cncfv3.TypedExtensionConfig{
+						Name:        "scope_matcher",
+						TypedConfig: matcherPb,
+					},
+				},
+			}
 
-		jwtPredicate = append(jwtPredicate,
-			&matcherv3.Matcher_MatcherList_Predicate{
+			scopePredicates = append(scopePredicates, &matcherv3.Matcher_MatcherList_Predicate{
 				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
 					SinglePredicate: &scopePredicate,
 				},
+			})
+		}
+
+		if len(scopePredicates) == 1 {
+			jwtPredicate = append(jwtPredicate, scopePredicates[0])
+			continue
+		}
+
+		jwtPredicate = append(jwtPredicate, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: scopePredicates,
+				},
 			},
-		)
+		})
 	}
 
 	// Build the claim matchers.
@@ -613,6 +640,107 @@ func buildHeadersPredicate(headers []egv1a1.AuthorizationHeaderMatch) ([]*matche
 	return headersPredicates, nil
 }
 
+func buildGeoIPPredicate(geoLocations []egv1a1.ClientIPGeoLocation) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	locationPredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(geoLocations))
+
+	for _, geoLocation := range geoLocations {
+		fieldPredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, 10)
+		appendHeaderPredicate := func(name, value string, ignoreCase bool) error {
+			predicates, err := buildHeaderPredicate(name, []string{value}, ignoreCase)
+			if err != nil {
+				return err
+			}
+			if len(predicates) == 1 {
+				fieldPredicates = append(fieldPredicates, predicates[0])
+			}
+			return nil
+		}
+
+		if geoLocation.Country != nil {
+			if err := appendHeaderPredicate(geoIPInternalCountryHeader, *geoLocation.Country, true); err != nil {
+				return nil, err
+			}
+		}
+		if geoLocation.Region != nil {
+			if err := appendHeaderPredicate(geoIPInternalRegionHeader, *geoLocation.Region, true); err != nil {
+				return nil, err
+			}
+		}
+		if geoLocation.City != nil {
+			if err := appendHeaderPredicate(geoIPInternalCityHeader, *geoLocation.City, true); err != nil {
+				return nil, err
+			}
+		}
+		if geoLocation.ASN != nil {
+			if err := appendHeaderPredicate(geoIPInternalASNHeader, strconv.FormatUint(uint64(*geoLocation.ASN), 10), false); err != nil {
+				return nil, err
+			}
+		}
+		if geoLocation.ISP != nil {
+			if err := appendHeaderPredicate(geoIPInternalISPHeader, *geoLocation.ISP, true); err != nil {
+				return nil, err
+			}
+		}
+		if geoLocation.Anonymous != nil {
+			if geoLocation.Anonymous.IsAnonymous != nil {
+				if err := appendHeaderPredicate(geoIPInternalAnonHeader, strconv.FormatBool(*geoLocation.Anonymous.IsAnonymous), false); err != nil {
+					return nil, err
+				}
+			}
+			if geoLocation.Anonymous.IsVPN != nil {
+				if err := appendHeaderPredicate(geoIPInternalAnonVPNHeader, strconv.FormatBool(*geoLocation.Anonymous.IsVPN), false); err != nil {
+					return nil, err
+				}
+			}
+			if geoLocation.Anonymous.IsHosting != nil {
+				if err := appendHeaderPredicate(geoIPInternalAnonHostHeader, strconv.FormatBool(*geoLocation.Anonymous.IsHosting), false); err != nil {
+					return nil, err
+				}
+			}
+			if geoLocation.Anonymous.IsTor != nil {
+				if err := appendHeaderPredicate(geoIPInternalAnonTorHeader, strconv.FormatBool(*geoLocation.Anonymous.IsTor), false); err != nil {
+					return nil, err
+				}
+			}
+			if geoLocation.Anonymous.IsProxy != nil {
+				if err := appendHeaderPredicate(geoIPInternalAnonProxyHeader, strconv.FormatBool(*geoLocation.Anonymous.IsProxy), false); err != nil {
+					return nil, err
+				}
+			}
+		}
+
+		switch len(fieldPredicates) {
+		case 0:
+			continue
+		case 1:
+			locationPredicates = append(locationPredicates, fieldPredicates[0])
+		default:
+			locationPredicates = append(locationPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: fieldPredicates,
+					},
+				},
+			})
+		}
+	}
+
+	switch len(locationPredicates) {
+	case 0:
+		return nil, nil
+	case 1:
+		return locationPredicates[0], nil
+	default:
+		return &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: locationPredicates,
+				},
+			},
+		}, nil
+	}
+}
+
 func buildHeaderPredicate(name string, values []string, ignoreCase bool) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
 	var (
 		headerMatchInput *anypb.Any
@@ -625,7 +753,7 @@ func buildHeaderPredicate(name string, values []string, ignoreCase bool) ([]*mat
 		return nil, err
 	}
 
-	var predicates []*matcherv3.Matcher_MatcherList_Predicate
+	predicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(values))
 	for _, value := range values {
 		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
 			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{

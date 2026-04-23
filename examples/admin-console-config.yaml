@@ -1,0 +1,155 @@
+# Example EnvoyGateway configuration with Admin Console enabled
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+spec:
+  # Gateway API configuration
+  gateway:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+  # Provider configuration
+  provider:
+    type: Kubernetes
+    kubernetes:
+      watch:
+        type: Namespaces
+        namespaces:
+        - default
+        - app-namespace
+
+  # Admin server configuration
+  admin:
+    # Web console is always enabled and provides access to:
+    # - Server status and component information
+    # - Configuration dump and EnvoyGateway settings
+    # - Performance metrics and statistics
+
+    # Enable pprof endpoints for debugging (default: false)
+    # Only enable in development/debugging scenarios
+    enablePprof: true
+
+    # Enable config dump in logs (default: false)
+    enableDumpConfig: false
+
+    # Admin server address configuration
+    address:
+      # Host to bind the admin server (default: 127.0.0.1)
+      # Use 127.0.0.1 for localhost-only access (recommended for security)
+      # Use 0.0.0.0 to allow external access (use with caution)
+      host: "127.0.0.1"
+
+      # Port for the admin server (default: 19000)
+      port: 19000
+
+  # Logging configuration
+  logging:
+    level:
+      default: info
+
+  # Telemetry configuration
+  telemetry:
+    metrics:
+      prometheus:
+        disable: false
+      sinks:
+      - type: OpenTelemetry
+        openTelemetry:
+          host: otel-collector.monitoring.svc.cluster.local
+          port: 4317
+          protocol: grpc
+
+---
+# Example: Production configuration with console disabled
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+metadata:
+  name: envoy-gateway-production
+  namespace: envoy-gateway-system
+spec:
+  gateway:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+  provider:
+    type: Kubernetes
+    kubernetes:
+      watch:
+        type: Namespaces
+        namespaces:
+        - production
+        - staging
+
+  # Production admin configuration - more restrictive
+  admin:
+    # Disable pprof in production
+    enablePprof: false
+
+    # Disable config dump in logs
+    enableDumpConfig: false
+
+    address:
+      # Localhost only for security
+      host: "127.0.0.1"
+      port: 19000
+
+  logging:
+    level:
+      default: warn
+      # Enable debug logging for specific components if needed
+      # gateway-api: debug
+      # xds-translator: debug
+
+---
+# Example: Development configuration with all debugging features
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+metadata:
+  name: envoy-gateway-development
+  namespace: envoy-gateway-system
+spec:
+  gateway:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+  provider:
+    type: Kubernetes
+    kubernetes:
+      watch:
+        type: Namespaces
+        namespaces:
+        - default
+        - development
+        - testing
+
+  # Development admin configuration - all features enabled
+  admin:
+    # Enable pprof for debugging
+    enablePprof: true
+
+    # Enable config dump for troubleshooting
+    enableDumpConfig: true
+
+    address:
+      # Allow external access for development (use with caution)
+      host: "0.0.0.0"
+      port: 19000
+
+  logging:
+    level:
+      default: debug
+      # Detailed logging for all components
+      gateway-api: debug
+      xds-translator: debug
+      xds-server: debug
+      infrastructure: debug
+
+  telemetry:
+    metrics:
+      prometheus:
+        disable: false
+      sinks:
+      - type: OpenTelemetry
+        openTelemetry:
+          host: jaeger-collector.observability.svc.cluster.local
+          port: 4317
+          protocol: grpc

@@ -6,6 +6,14 @@
     name: first-listener/*
     routes:
     - match:
+        cookies:
+        - name: cookie-1
+          stringMatch:
+            exact: xxx
+        - name: cookie-2
+          stringMatch:
+            safeRegex:
+              regex: foo.*
         headers:
         - name: user
           stringMatch:

@@ -56,6 +56,8 @@ backends:
     namespace: default
   spec:
     type: DynamicResolver
+    AppProtocols:
+    - "gateway.envoyproxy.io/h2c"
     tls:
       caCertificateRefs:
       - name: ca-cmap
@@ -75,7 +77,7 @@ configMaps:
   kind: ConfigMap
   metadata:
     name: ca-cmap
-    namespace: backends
+    namespace: default
   data:
     ca.crt: |
       -----BEGIN CERTIFICATE-----

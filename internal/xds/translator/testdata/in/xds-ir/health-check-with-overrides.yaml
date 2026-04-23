@@ -1,0 +1,67 @@
+http:
+- name: "health-check-with-overrides-listener"
+  address: "::"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "overrides-first-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: "*"
+            path: "/healthz"
+            expectedStatuses:
+            - 200
+          overrides:
+            port: 9090
+    destination:
+      name: "overrides-first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        - host: "5.6.7.8"
+          port: 8080
+        name: "overrides-first-route-dest/backend/0"
+- name: "health-check-with-no-overrides-listener"
+  address: "::"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  port: 10081
+  hostnames:
+  - "*"
+  routes:
+  - name: "no-overrides-first-route"
+    hostname: "*"
+    traffic:
+      healthCheck:
+        active:
+          timeout: "1s"
+          interval: "3s"
+          unhealthyThreshold: 3
+          healthyThreshold: 1
+          http:
+            host: "*"
+            path: "/healthz"
+            expectedStatuses:
+            - 200
+    destination:
+      name: "no-overrides-first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 8080
+        - host: "5.6.7.8"
+          port: 8080
+        name: "no-overrides-first-route-dest/backend/0"

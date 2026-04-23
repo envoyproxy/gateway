@@ -10,18 +10,18 @@ http:
   routes:
   - name: "first-route"
     traffic:
-      name: "test-policy-1/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
-          - cidrMatch:
+          - name: "test-namespace/test-policy-1/rule/0"
+            cidrMatch:
               cidr: "192.168.0.10/32"
               ipv6: false
               maskLen: 32
             limit:
               requests: 15
               unit: Hour
+            shared: false
     pathMatch:
       exact: "foo/bar"
     destination:
@@ -32,18 +32,18 @@ http:
           port: 50000
   - name: "second-route"
     traffic:
-      name: "test-policy-2/test-namespace"
       rateLimit:
         global:
-          shared: false
           rules:
-          - cidrMatch:
+          - name: "test-namespace/test-policy-2/rule/0"
+            cidrMatch:
               cidr: "192.168.0.10/32"
               ipv6: false
               maskLen: 32
             limit:
               requests: 300
               unit: Hour
+            shared: false
     pathMatch:
       exact: "foo/bar"
     destination:

@@ -1,11 +1,17 @@
 accessLog:
   openTelemetry:
     - destination:
-        name: accesslog_otel_0_1
+        name: "accesslog_otel_0_1"
         settings:
-          - protocol: TCP
-      resources:
-        k8s.cluster.name: cluster-1
+          - endpoints:
+              - host: "otel-collector.default.svc.cluster.local"
+                port: 4317
+            protocol: "GRPC"
+            addressType: FQDN
+            name: "accesslog-0/backend/0"
+      resourceAttributes:
+        - key: k8s.cluster.name
+          value: cluster-1
       text: |
         [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
       traffic:
@@ -19,8 +25,10 @@ accessLog:
 http:
   - address: 0.0.0.0
     hostnames:
-      - '*'
-    isHTTP2: true
+      - "*"
+    grpc:
+      enableGRPCStats: true
+      enableGRPCWeb: true
     metadata:
       kind: Gateway
       name: gateway-1
@@ -101,7 +109,7 @@ http:
                   port: 8080
               protocol: GRPC
               weight: 1
-        hostname: '*'
+        hostname: "*"
         isHTTP2: true
         metadata:
           kind: GRPCRoute

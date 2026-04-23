@@ -2,7 +2,6 @@ http:
 - address: 0.0.0.0
   hostnames:
   - '*'
-  isHTTP2: false
   metadata:
     kind: Gateway
     name: gateway-1
@@ -89,8 +88,6 @@ http:
             roundRobin:
               slowStart:
                 window: 5s
-          proxyProtocol:
-            version: V2
           tcpKeepalive:
             probes: 7
           timeout:

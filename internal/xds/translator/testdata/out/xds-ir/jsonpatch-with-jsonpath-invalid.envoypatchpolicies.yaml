@@ -1,0 +1,21 @@
+- generation: 1
+  name: first-policy
+  namespace: default
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: foobar
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: 'No jsonPointers were found while evaluating the jsonPath: ''..doesNotExists''.
+          Ensure the elements you are trying to select with the jsonPath exist in
+          the document. If you need to add a non-existing property, use the ''path''
+          attribute.'
+        observedGeneration: 1
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      controllerName: ""

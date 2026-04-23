@@ -74,6 +74,12 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Telemetry *EnvoyGatewayTelemetry `json:"telemetry,omitempty"`
 
+	// XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.
+	// If unspecified, default connection keepalive settings will be used.
+	//
+	// +optional
+	XDSServer *XDSServer `json:"xdsServer,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -85,6 +91,10 @@ type EnvoyGatewaySpec struct {
 
 	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
+	// Warning: Enabling an Extension Server may lead to complete security compromise of your system.
+	// Users that control the Extension Server can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
 
@@ -93,6 +103,65 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+
+	// GatewayAPI defines feature flags for experimental Gateway API resources.
+	// These APIs live under the gateway.networking.x-k8s.io group and are opt-in.
+	//
+	// +optional
+	GatewayAPI *GatewayAPISettings `json:"gatewayAPI,omitempty"`
+
+	// RuntimeFlags defines the runtime flags for Envoy Gateway.
+	// Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable.
+	RuntimeFlags *RuntimeFlags `json:"runtimeFlags,omitempty"`
+
+	// EnvoyProxy defines the default EnvoyProxy configuration that applies
+	// to all managed Envoy Proxy fleet. This is an optional field and when
+	// provided, the settings from this EnvoyProxySpec serve as the base
+	// defaults for all Envoy Proxy instances.
+	//
+	// The hierarchy for EnvoyProxy configuration is (highest to lowest priority):
+	// 1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)
+	// 2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)
+	// 3. This EnvoyProxy default spec
+	//
+	// Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).
+	// A future release will introduce merge semantics to allow combining configurations
+	// across multiple levels.
+	//
+	// +optional
+	EnvoyProxy *EnvoyProxySpec `json:"envoyProxy,omitempty"`
+}
+
+// GatewayAPI defines an experimental Gateway API resource that can be enabled.
+// +enum
+// +kubebuilder:validation:Enum=XBackendTrafficPolicy
+type GatewayAPI string
+
+// GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
+// These APIs are experimental today and are subject to change or removal as they mature.
+type GatewayAPISettings struct {
+	Enabled []GatewayAPI `json:"enabled,omitempty"`
+}
+
+// RuntimeFlag defines a runtime flag used to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// A runtime flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// +enum
+// +kubebuilder:validation:Enum=XDSNameSchemeV2
+type RuntimeFlag string
+
+const (
+	// XDSNameSchemeV2 indicates that the xds name scheme v2 is used.
+	// * The listener name will be generated using the protocol and port of the listener.
+	XDSNameSchemeV2 RuntimeFlag = "XDSNameSchemeV2"
+)
+
+// RuntimeFlags provide a mechanism to guard breaking changes or risky experimental features in new Envoy Gateway releases.
+// Each flag may be enabled or disabled by default and can be toggled through the EnvoyGateway resource.
+// The names of these flags will be included in the release notes alongside an explanation of the change.
+// Please note that these flags are temporary and will be removed in future releases once the related features are stable.
+type RuntimeFlags struct {
+	Enabled  []RuntimeFlag `json:"enabled,omitempty"`
+	Disabled []RuntimeFlag `json:"disabled,omitempty"`
 }
 
 type KubernetesClient struct {
@@ -115,16 +184,39 @@ type KubernetesClientRateLimit struct {
 	Burst *int32 `json:"burst,omitempty"`
 }
 
+// XDSServer defines configuration values for the xDS gRPC server.
+type XDSServer struct {
+	// MaxConnectionAge is the maximum age of an active connection before Envoy Gateway will initiate a graceful close.
+	// If unspecified, Envoy Gateway randomly selects a value between 10h and 12h to stagger reconnects across replicas.
+	//
+	// +optional
+	MaxConnectionAge *gwapiv1.Duration `json:"maxConnectionAge,omitempty"`
+
+	// MaxConnectionAgeGrace is the grace period granted after reaching MaxConnectionAge before the connection is forcibly closed.
+	// The default grace period is 2m.
+	//
+	// +optional
+	MaxConnectionAgeGrace *gwapiv1.Duration `json:"maxConnectionAgeGrace,omitempty"`
+}
+
 // LeaderElection defines the desired leader election settings.
 type LeaderElection struct {
 	// LeaseDuration defines the time non-leader contenders will wait before attempting to claim leadership.
-	// It's based on the timestamp of the last acknowledged signal. The default setting is 15 seconds.
+	// It's based on the timestamp of the last acknowledged signal.
+	// The default setting is 15 seconds.
+	//
+	// +optional
 	LeaseDuration *gwapiv1.Duration `json:"leaseDuration,omitempty"`
 	// RenewDeadline represents the time frame within which the current leader will attempt to renew its leadership
-	// status before relinquishing its position. The default setting is 10 seconds.
+	// status before relinquishing its position.
+	// The default setting is 10 seconds.
+	//
+	// +optional
 	RenewDeadline *gwapiv1.Duration `json:"renewDeadline,omitempty"`
 	// RetryPeriod denotes the interval at which LeaderElector clients should perform action retries.
 	// The default setting is 2 seconds.
+	//
+	// +optional
 	RetryPeriod *gwapiv1.Duration `json:"retryPeriod,omitempty"`
 	// Disable provides the option to turn off leader election, which is enabled by default.
 	Disable *bool `json:"disable,omitempty"`
@@ -135,6 +227,8 @@ type LeaderElection struct {
 type EnvoyGatewayTelemetry struct {
 	// Metrics defines metrics configuration for envoy gateway.
 	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
+	// Traces defines traces configuration for envoy gateway.
+	Traces *EnvoyGatewayTraces `json:"traces,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -145,10 +239,24 @@ type EnvoyGatewayLogging struct {
 	//
 	// +kubebuilder:default={default: info}
 	Level map[EnvoyGatewayLogComponent]LogLevel `json:"level,omitempty"`
+	// Encoder defines the log encoder format.
+	// If unspecified, defaults to "Text".
+	//
+	// +optional
+	Encoder *EnvoyGatewayLogEncoder `json:"encoder,omitempty"`
 }
 
+type EnvoyGatewayLogEncoder string
+
+const (
+	// EnvoyGatewayLogEncoderText defines the "Text" log encoder.
+	EnvoyGatewayLogEncoderText EnvoyGatewayLogEncoder = "Text"
+	// EnvoyGatewayLogEncoderJSON defines the "JSON" log encoder.
+	EnvoyGatewayLogEncoderJSON EnvoyGatewayLogEncoder = "JSON"
+)
+
 // EnvoyGatewayLogComponent defines a component that supports a configured logging level.
-// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;infrastructure;global-ratelimit
+// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;xds;infrastructure;global-ratelimit
 type EnvoyGatewayLogComponent string
 
 const (
@@ -168,6 +276,9 @@ const (
 	// LogComponentXdsServerRunner defines the "xds-server" runner component.
 	LogComponentXdsServerRunner EnvoyGatewayLogComponent = "xds-server"
 
+	// LogComponentXdsRunner defines the "xds" runner component.
+	LogComponentXdsRunner EnvoyGatewayLogComponent = "xds"
+
 	// LogComponentInfrastructureRunner defines the "infrastructure" runner component.
 	LogComponentInfrastructureRunner EnvoyGatewayLogComponent = "infrastructure"
 
@@ -180,7 +291,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/reference/1.4/spec/#gatewayclass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -190,10 +301,19 @@ type Gateway struct {
 type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
+	//
+	// Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.
+	// Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
 	// EnableBackend enables Envoy Gateway to
 	// reconcile and implement the Backend resources.
 	EnableBackend bool `json:"enableBackend"`
+	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
+	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
+	DisableLua bool `json:"disableLua"`
+	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
+	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -233,13 +353,17 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	RateLimitHpa *KubernetesHorizontalPodAutoscalerSpec `json:"rateLimitHpa,omitempty"`
 
+	// RateLimitPDB allows to control the pod disruption budget of rate limit service.
+	//
+	// +optional
+	RateLimitPDB *KubernetesPodDisruptionBudgetSpec `json:"rateLimitPDB,omitempty"`
+
 	// Watch holds configuration of which input resources should be watched and reconciled.
 	// +optional
 	Watch *KubernetesWatchMode `json:"watch,omitempty"`
 	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
 	// should be deployed
 	// +optional
-	// +notImplementedHide
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
 	// LeaderElection specifies the configuration for leader election.
 	// If it's not set up, leader election will be active by default, using Kubernetes' standard settings.
@@ -254,6 +378,16 @@ type EnvoyGatewayKubernetesProvider struct {
 	// TopologyInjector defines the configuration for topology injector MutatatingWebhookConfiguration
 	// +optional
 	TopologyInjector *EnvoyGatewayTopologyInjector `json:"proxyTopologyInjector,omitempty"`
+
+	// CacheSyncPeriod determines the minimum frequency at which watched resources are synced.
+	// Note that a sync in the provider layer will not lead to a full reconciliation (including translation),
+	// unless there are actual changes in the provider resources.
+	// This option can be used to protect against missed events or issues in Envoy Gateway where resources
+	// are not requeued when they should be, at the cost of increased resource consumption.
+	// Learn more about the implications of this option: https://pkg.go.dev/sigs.k8s.io/controller-runtime/pkg/cache#Options
+	// Default: 10 hours
+	// +optional
+	CacheSyncPeriod *gwapiv1.Duration `json:"cacheSyncPeriod,omitempty"`
 }
 
 const (
@@ -290,10 +424,10 @@ type KubernetesWatchMode struct {
 
 const (
 	// KubernetesDeployModeTypeControllerNamespace indicates that the controller namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeControllerNamespace = "ControllerNamespace"
+	KubernetesDeployModeTypeControllerNamespace KubernetesDeployModeType = "ControllerNamespace"
 
 	// KubernetesDeployModeTypeGatewayNamespace indicates that the gateway namespace is used for the infra proxy deployments.
-	KubernetesDeployModeTypeGatewayNamespace = "GatewayNamespace"
+	KubernetesDeployModeTypeGatewayNamespace KubernetesDeployModeType = "GatewayNamespace"
 )
 
 // KubernetesDeployModeType defines the type of KubernetesDeployMode
@@ -384,7 +518,25 @@ type EnvoyGatewayInfrastructureProvider struct {
 
 // EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
 type EnvoyGatewayHostInfrastructureProvider struct {
-	// TODO: Add config as use cases are better understood.
+	// ConfigHome is the directory for configuration files.
+	// Defaults to ~/.config/envoy-gateway
+	// +optional
+	ConfigHome *string `json:"configHome,omitempty"`
+
+	// DataHome is the directory for persistent data (Envoy binaries).
+	// Defaults to ~/.local/share/envoy-gateway
+	// +optional
+	DataHome *string `json:"dataHome,omitempty"`
+
+	// StateHome is the directory for persistent state (logs).
+	// Defaults to ~/.local/state/envoy-gateway
+	// +optional
+	StateHome *string `json:"stateHome,omitempty"`
+
+	// RuntimeDir is the directory for ephemeral runtime files.
+	// Defaults to /tmp/envoy-gateway-${UID}
+	// +optional
+	RuntimeDir *string `json:"runtimeDir,omitempty"`
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service
@@ -397,9 +549,9 @@ type RateLimit struct {
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20ms.
+	//
 	// +optional
-	// +kubebuilder:validation:Format=duration
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	Timeout *gwapiv1.Duration `json:"timeout,omitempty"`
 
 	// FailClosed is a switch used to control the flow of traffic
 	// when the response from the ratelimit server cannot be obtained.
@@ -495,6 +647,7 @@ type RedisTLSSettings struct {
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
+	// This can reference a single Redis host or a comma delimited list for Sentinel and Cluster deployments of Redis.
 	URL string `json:"url"`
 
 	// TLS defines TLS configuration for connecting to redis database.
@@ -517,6 +670,14 @@ type ExtensionManager struct {
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`
+
+	// BackendResources defines the set of K8s resources the extension will handle as
+	// custom backendRef resources. These resources can be referenced in HTTPRoute
+	// backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)
+	// that are not natively supported by Envoy Gateway.
+	//
+	// +optional
+	BackendResources []GroupVersionKind `json:"backendResources,omitempty"`
 
 	// Hooks defines the set of hooks the extension supports
 	//
@@ -563,6 +724,61 @@ type ExtensionHooks struct {
 type XDSTranslatorHooks struct {
 	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
 	Post []XDSTranslatorHook `json:"post,omitempty"`
+
+	// Translation defines the configuration for the translation hook.
+	Translation *TranslationConfig `json:"translation,omitempty"`
+}
+
+// TranslationConfig defines the configuration for the translation hook.
+type TranslationConfig struct {
+	// Listener defines the configuration for the listener translation hook.
+	//
+	// +optional
+	Listener *ListenerTranslationConfig `json:"listener,omitempty"`
+	// Route defines the configuration for the route translation hook.
+	//
+	// +optional
+	Route *RouteTranslationConfig `json:"route,omitempty"`
+	// Cluster defines the configuration for the cluster translation hook.
+	//
+	// +optional
+	Cluster *ClusterTranslationConfig `json:"cluster,omitempty"`
+	// Secret defines the configuration for the secret translation hook.
+	//
+	// +optional
+	Secret *SecretTranslationConfig `json:"secret,omitempty"`
+}
+
+type ListenerTranslationConfig struct {
+	// IncludeAll defines whether all listeners should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type RouteTranslationConfig struct {
+	// IncludeAll defines whether all routes should be included in the translation hook.
+	// Default is false.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type ClusterTranslationConfig struct {
+	// IncludeAll defines whether all clusters should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
+}
+
+type SecretTranslationConfig struct {
+	// IncludeAll defines whether all secrets should be included in the translation hook.
+	// Default is true for backward compatibility.
+	//
+	// +optional
+	IncludeAll *bool `json:"includeAll,omitempty"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
@@ -571,12 +787,14 @@ type ExtensionService struct {
 	BackendEndpoint `json:",inline"`
 
 	// Host define the extension service hostname.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
@@ -601,11 +819,19 @@ type ExtensionService struct {
 type ExtensionTLS struct {
 	// CertificateRef is a reference to a Kubernetes Secret with a CA certificate in a key named "tls.crt".
 	//
-	// The CA certificate is used by Envoy Gateway the verify the server certificate presented by the extension server.
-	// At this time, Envoy Gateway does not support Client Certificate authentication of Envoy Gateway towards the extension server (mTLS).
+	// The CA certificate is used by Envoy Gateway to verify the server certificate presented by the extension server.
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
+
+	// ClientCertificateRef is a reference to a Kubernetes Secret with a client certificate and key
+	// for client certificate authentication (mTLS). The secret must contain both "tls.crt" and "tls.key" keys.
+	//
+	// When specified, Envoy Gateway will present this client certificate to the extension server
+	// for mTLS authentication. If not specified, only server certificate validation is performed.
+	//
+	// +optional
+	ClientCertificateRef *gwapiv1.SecretObjectReference `json:"clientCertificateRef,omitempty"`
 }
 
 // GRPCStatus defines grpc status codes as defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md.
@@ -689,5 +915,5 @@ type EnvoyGatewayTopologyInjector struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&EnvoyGateway{})
+	localSchemeBuilder.Register(&EnvoyGateway{})
 }

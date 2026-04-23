@@ -4,17 +4,55 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 #       find a way to remove github.com from ignore list
 # TODO: example.com is not a valid domain, we should remove it from ignore list
 # TODO: https://www.gnu.org/software/make became unstable, we should remove it from ignore list later
-LINKINATOR_IGNORE := "github.com jwt.io githubusercontent.com example.com github.io gnu.org _print canva.com sched.co sap.com httpbin.org nemlig.com"
+LINKINATOR_IGNORE := "opentelemetry.io \
+	blog.envoyproxy.io \
+	gateway-api.sigs.k8s.io/reference/1.3 \
+	ntia.gov \
+	github.com \
+	jwt.io \
+	githubusercontent.com \
+	example.com \
+	foo.bar.com \
+	github.io \
+	gnu.org \
+	_print \
+	canva.com \
+	sched.co \
+	sap.com \
+	httpbin.org \
+	nemlig.com \
+	verve.com \
+	goteleport.com \
+	developer.hashicorp.com \
+	v0.1 \
+	v0.2 \
+	v0.3 \
+	v0.4 \
+	v0.5 \
+	v0.6 \
+	v1.0 \
+	v1.1 \
+	v1.2 \
+	v1.3 \
+	v1.4"
 CLEAN_NODE_MODULES ?= true
 
 ##@ Docs
 
-.PHONY: docs
-docs: docs.clean helm-readme-gen docs-api copy-current-release-docs ## Generate Envoy Gateway Docs Sources
+.PHONY: docs-gen
+docs-gen: docs.clean helm-readme-gen docs-api copy-current-release-docs docs-sync-owners ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	cd $(ROOT_DIR)/site && npm install
+	cd $(ROOT_DIR)/site && npm ci
 	cd $(ROOT_DIR)/site && npm run build:production
 	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
+
+.PHONY: docs
+docs: docs-gen docs-check ## Generate docs and verify no changes are needed
+
+.PHONY: sync-benchmark-dashboard
+sync-benchmark-dashboard: ## Sync release benchmark dashboard data and rebuild tracked static assets. Requires VERSION=vX.Y.Z.
+	@test -n "$(VERSION)" || (echo "VERSION is required, e.g. make sync-benchmark-dashboard VERSION=v1.7.1" && exit 1)
+	@./tools/src/benchmark-dashboard-sync/sync.sh --version "$(VERSION)" --force
 
 .PHONY: copy-current-release-docs
 copy-current-release-docs:  ## Copy the current release docs to the docs folder
@@ -45,7 +83,6 @@ ifeq ($(CLEAN_NODE_MODULES),true)
 	rm -rf site/node_modules
 endif
 	rm -rf site/resources
-	rm -f site/package-lock.json
 	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
@@ -64,7 +101,9 @@ DOC_DEST_DIR=$(ROOT_DIR)/site/content/en/latest/api/gateway_api
 SYNC_FILES := gateway.md gatewayclass.md httproute.md grpcroute.md backendtlspolicy.md referencegrant.md
 
 # Main target to synchronize all gateway-api documentation components.
-sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform gwapi-doc-download-includes gwapi-doc-replace-includes gwapi-doc-clean-includes gwapi-doc-remove-special-lines gwapi-doc-update-relative-links
+sync-gwapi-docs: gwapi-doc-download gwapi-doc-transform \
+	gwapi-doc-download-includes gwapi-doc-replace-includes gwapi-doc-clean-includes \
+	gwapi-doc-remove-special-lines gwapi-doc-update-relative-links
 
 # Download the documentation files from the gateway-api repository to the local destination directory.
 gwapi-doc-download:
@@ -75,17 +114,12 @@ gwapi-doc-download:
 # Transform the first line of each markdown file to a header format suitable for Hugo.
 gwapi-doc-transform:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), sed -i '' '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), $(SED) '1s/^# \(.*\)/+++\ntitle = "\1"\n+++/' $(DOC_DEST_DIR)/$(file);)
 
 # Download included YAML files referenced within the documentation.
 gwapi-doc-download-includes:
 	@$(LOG_TARGET)
-	@$(foreach file, $(SYNC_FILES), \
-		grep -o "{% include '.*' %}" $(DOC_DEST_DIR)/$(file) | sed "s/{% include '\(.*\)' %}/\1/" | \
-		while read yaml_path; do \
-			yaml_file=$$(basename $$yaml_path); \
-			curl -s -o $(DOC_DEST_DIR)/$$yaml_file $(YAML_SRC_BASE_URL)/$$yaml_path; \
-		done;)
+	@DOC_DEST_DIR=$(DOC_DEST_DIR) YAML_SRC_BASE_URL=$(YAML_SRC_BASE_URL) SYNC_FILES="$(SYNC_FILES)" ./tools/hack/gwapi-doc-download-includes.sh
 
 # Replace include statements with the actual content of the YAML files.
 gwapi-doc-replace-includes:
@@ -109,12 +143,21 @@ gwapi-doc-clean-includes:
 gwapi-doc-remove-special-lines:
 	@$(LOG_TARGET)
 	@$(foreach file, $(SYNC_FILES), \
-		sed -i '' '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
+		$(SED) '/^[\?!]\{3\}/d' $(DOC_DEST_DIR)/$(file);)
 
 # Update relative links
 gwapi-doc-update-relative-links:
+	@$(LOG_TARGET)
+	# Replace ../reference/spec.md to https://gateway-api.sigs.k8s.io/reference/$(GATEWAY_API_MINOR_VERSION)/spec/
 	@$(foreach file, $(SYNC_FILES), \
-		sed -i '' -e 's/\(\.*\]\)(\(\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+ 		$(SED) -e 's/\(\[.*\]\)(\(\.\.\/reference\/spec.md\))/\1(https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\/)/g' -e 's/\(\[.*\]: \)\(\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' -e 's/\(\[.*\]: \)\(\.\.\/reference\/spec.md\)/\1https:\/\/gateway-api.sigs.k8s.io\/reference\/$(GATEWAY_API_MINOR_VERSION)\/spec\//g' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/\(\.*\]\)(\(\.\.\/[^:]*\))/\1(https:\/\/gateway-api.sigs.k8s.io\2)/g' -e 's/\(\[.*\]: \)\(\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' -e 's/\(\[.*\]: \)\(\.\.\/[^:]*\)/\1https:\/\/gateway-api.sigs.k8s.io\2/g' $(DOC_DEST_DIR)/$(file);)
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/https:\/\/gateway-api.sigs.k8s.io\.\./https:\/\/gateway-api.sigs.k8s.io/g' $(DOC_DEST_DIR)/$(file);)
+ 	# Remove .md from links
+	@$(foreach file, $(SYNC_FILES), \
+ 		$(SED) -e 's/\((https:\/\/gateway-api.sigs.k8s.io[^)]*\)\.md/\1/g' $(DOC_DEST_DIR)/$(file);)
 
 .PHONY: helm-readme-gen
 helm-readme-gen:
@@ -134,19 +177,19 @@ helm-readme-gen.%:
 	fi
 
 	# generate helm readme doc
-	@go tool helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/readme.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o README.md
 
 	# change the placeholder to title before api helm docs generated: split by '-' and capitalize the first letters
 	$(eval CHART_TITLE := $(shell echo "$(CHART_NAME)" | sed -E 's/\<./\U&/g; s/-/ /g' | awk '{for(i=1;i<=NF;i++){ $$i=toupper(substr($$i,1,1)) substr($$i,2) }}1'))
 	sed 's/{CHART-NAME}/$(CHART_TITLE)/g' tools/helm-docs/api.gotmpl > tools/helm-docs/api.${CHART_NAME}.gotmpl
-	@go tool helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
+	$(GO_TOOL) helm-docs --template-files=tools/helm-docs/api.${CHART_NAME}.gotmpl -g charts/${CHART_NAME} -f values.yaml -o api.md
 	mv charts/${CHART_NAME}/api.md site/content/en/latest/install/${CHART_NAME}-api.md
 	rm tools/helm-docs/api.${CHART_NAME}.gotmpl
 
 .PHONY: docs-api-gen
 docs-api-gen:
 	@$(LOG_TARGET)
-	go tool crd-ref-docs \
+	$(GO_TOOL) crd-ref-docs \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
 	--templates-dir=tools/crd-ref-docs/templates \
@@ -168,21 +211,32 @@ docs-release-gen:
 	$(eval DOC_VERSION := $(shell cat VERSION | cut -d "." -f 1,2))
 	@$(call log, "Added Release Doc: site/content/en/$(DOC_VERSION)")
 	cp -r site/content/en/latest/ site/content/en/$(DOC_VERSION)/
-	@echo "" >> site/hugo.toml
-	@echo '[[params.versions]]' >> site/hugo.toml
-	@echo '  version = "$(DOC_VERSION)"' >> site/hugo.toml
-	@echo '  url = "/$(DOC_VERSION)"' >> site/hugo.toml
+
+.PHONY: docs-sync-owners
+docs-sync-owners: $(tools/sync-docs-codeowners) # Sync maintainers and emeritus-maintainers from OWNERS to CODEOWNERS.md
+	@$(LOG_TARGET)
+	$(tools/sync-docs-codeowners)
 
 .PHONY: docs-check-links
-docs-check-links: # Check for broken links in the docs
+docs-check-links: $(tools/linkinator) # Check for broken links in the docs
 	@$(LOG_TARGET)
-	linkinator site/public/ -r --concurrency 25 --skip $(LINKINATOR_IGNORE) --verbosity error
+	$(tools/linkinator) site/public/ -r --concurrency 25 --retry-errors --retry --retry-errors-jitter --retry-errors-count 5 --skip $(LINKINATOR_IGNORE) --verbosity error
 
-docs-markdown-lint:
-	markdownlint -c .github/markdown_lint_config.json site/content/*
+docs-markdown-lint: $(tools/markdownlint)
+	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/*
 
-release-notes-docs: $(tools/release-notes-docs)
+.PHONY: docs-check
+docs-check: ## Verify no doc changes are needed
 	@$(LOG_TARGET)
-	@for file in $(wildcard release-notes/v*.yaml); do \
+	@if [ ! -z "`git status --porcelain`" ]; then \
+		$(call errorlog, ERROR: Some files need to be updated, please run 'make docs' to include any changed files to your PR); \
+		git diff --exit-code; \
+	fi
+
+release-notes-docs: $(tools/release-notes-docs) # Read version from Environment variable, if not set, read from VERSION file
+	@$(LOG_TARGET)
+	$(eval RELEASE_NOTE_VERSION := $(if $(RELEASE_NOTE_VERSION),$(RELEASE_NOTE_VERSION),$(shell cat VERSION)))
+	@echo "Generating release notes for version $(RELEASE_NOTE_VERSION)"
+	@for file in $(wildcard release-notes/$(RELEASE_NOTE_VERSION).yaml); do \
 		$(tools/release-notes-docs) $$file site/content/en/news/releases/notes; \
 	done

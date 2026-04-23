@@ -1,0 +1,47 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-envoy-patch-policy
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: custom-response-patch-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: same-namespace
+  type: JSONPatch
+  jsonPatches:
+  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+    name: "tcp-80"
+    operation:
+      op: add
+      path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
+      value:
+        mappers:
+        - filter:
+            status_code_filter:
+              comparison:
+                op: EQ
+                value:
+                  default_value: 404
+                  runtime_key: key_b
+          status_code: 406
+          body:
+            inline_string: "not acceptable"

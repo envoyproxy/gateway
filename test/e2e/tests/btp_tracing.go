@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -34,13 +35,13 @@ var BTPTracingTest = suite.ConformanceTest{
 		// For non-override, the tracing provider this's simply same as OpenTelemetryTracingTest
 		t.Run("NonOverride", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "no-override", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/otel",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -52,18 +53,18 @@ var BTPTracingTest = suite.ConformanceTest{
 				"provider":     "otel",
 				"service.name": naming.ServiceName(gwNN),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 
 		t.Run("Override", func(t *testing.T) {
 			routeNN := types.NamespacedName{Name: "override", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/otel-override",
 				},
 				Response: httputils.Response{
-					StatusCode: 200,
+					StatusCodes: []int{200},
 				},
 				Namespace: ns,
 			}
@@ -75,7 +76,7 @@ var BTPTracingTest = suite.ConformanceTest{
 				"provider":     "otel-override",
 				"service.name": naming.ServiceName(gwNN),
 			}
-			tracing.ExpectedTraceCount(t, suite, gwAddr, expectedResponse, tags)
+			tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 		})
 	},
 }

@@ -52,5 +52,3 @@ udp:
               - host: "5.6.7.8"
                 port: 50001
             name: "udp-route-dest/backend/0"
-      backendConnection:
-        bufferLimit: 100000000

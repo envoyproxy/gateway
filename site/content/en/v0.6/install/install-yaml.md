@@ -25,7 +25,7 @@ Refer to the [Version Compatibility Matrix](/news/releases/matrix/) to learn mor
 Envoy Gateway is typically deployed to Kubernetes from the command line. If you don't have Kubernetes, you should use `kind` to create one.
 
 {{% alert title="Developer Guide" color="primary" %}}
-Refer to the [Developer Guide](/contributions/develop) to learn more.
+Refer to the [Developer Guide](/community/develop) to learn more.
 {{% /alert %}}
 
 1. In your terminal, run the following command:

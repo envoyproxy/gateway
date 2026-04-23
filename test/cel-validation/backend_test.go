@@ -15,7 +15,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -125,7 +124,10 @@ func TestBackend(t *testing.T) {
 					Endpoints:    []egv1a1.BackendEndpoint{{}},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": one of fqdn, ip or unix must be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"one of fqdn, ip or unix must be specified",
+			},
 		},
 		{
 			desc: "Multiple addresses",
@@ -145,7 +147,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints[0]: Invalid value: \"object\": only one of fqdn, ip or unix can be specified"},
+			wantErrors: []string{
+				"spec.endpoints[0]: Invalid value:",
+				"only one of fqdn, ip or unix can be specified",
+			},
 		},
 		{
 			desc: "Mixed types",
@@ -168,7 +173,10 @@ func TestBackend(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"spec.endpoints: Invalid value: \"array\": FQDN addresses cannot be mixed with other address types"},
+			wantErrors: []string{
+				"spec.endpoints: Invalid value:",
+				"FQDN addresses cannot be mixed with other address types",
+			},
 		},
 		{
 			desc: "Invalid hostname",
@@ -253,14 +261,17 @@ func TestBackend(t *testing.T) {
 		{
 			desc: "invalid type",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
+				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendType("FOO"))}
 			},
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
 		},
 		{
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: ptr.To(egv1a1.BackendTypeDynamicResolver)}
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         new(egv1a1.BackendTypeDynamicResolver),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+				}
 			},
 			wantErrors: []string{},
 		},
@@ -268,18 +279,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
-					Endpoints:    []egv1a1.BackendEndpoint{},
-					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
-				}
-			},
-			wantErrors: []string{"DynamicResolver type cannot have endpoints and appProtocols specified"},
-		},
-		{
-			desc: "tls settings on non-dynamic resolver",
-			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{
-					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -288,16 +288,42 @@ func TestBackend(t *testing.T) {
 							},
 						},
 					},
-					TLS: &egv1a1.BackendTLSSettings{
-						CACertificateRefs: []gwapiv1.LocalObjectReference{
-							{
-								Name: "ca-certificate",
+				}
+			},
+			wantErrors: []string{"DynamicResolver type cannot have endpoints specified"},
+		},
+		{
+			desc: "Invalid Unix socket path length",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type:         new(egv1a1.BackendTypeEndpoints),
+					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
+					Endpoints: []egv1a1.BackendEndpoint{
+						{
+							Unix: &egv1a1.UnixSocket{
+								Path: "/path/to/a/very/long/unix/socket/path/that/exceeds/the/maximum/allowed/length/of/108/characters/and/should/fail/validation.sock",
 							},
 						},
 					},
 				}
 			},
-			wantErrors: []string{"TLS settings can only be specified for DynamicResolver backends"},
+			wantErrors: []string{
+				"spec.endpoints[0].unix.path: Invalid value:",
+				"unix domain socket path must not exceed 108 characters",
+			},
+		},
+		{
+			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",
+			mutate: func(backend *egv1a1.Backend) {
+				backend.Spec = egv1a1.BackendSpec{
+					Type: new(egv1a1.BackendTypeDynamicResolver),
+					TLS: &egv1a1.BackendTLSSettings{
+						InsecureSkipVerify:      new(true),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
+					},
+				}
+			},
+			wantErrors: []string{`must not contain either CACertificateRefs or WellKnownCACertificates when InsecureSkipVerify is enabled`},
 		},
 	}
 

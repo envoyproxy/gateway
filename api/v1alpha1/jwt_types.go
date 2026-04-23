@@ -5,7 +5,9 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // JWT defines the configuration for JSON Web Token (JWT) authentication.
 type JWT struct {
@@ -19,7 +21,7 @@ type JWT struct {
 	// see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
 	//
 	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=4
+	// +kubebuilder:validation:MaxItems=16
 	Providers []JWTProvider `json:"providers"`
 }
 
@@ -87,18 +89,18 @@ type JWTProvider struct {
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+//
+// BackendRefs is used to specify the address of the Remote JWKS.
+// If the BackendRefs is not specified, the URI field is used to determine the address of the Remote JWKS.
+//
+// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
+//
+// Other settings for the connection to the remote JWKS can be specified in the BackendSettings resource.
+//
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef)",message="BackendRefs must be used, backendRef is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.perRetry)? !has(self.backendSettings.retry.perRetry.timeout):true):true):true",message="Retry timeout is not supported."
 // +kubebuilder:validation:XValidation:rule="has(self.backendSettings)? (has(self.backendSettings.retry)?(has(self.backendSettings.retry.retryOn)? !has(self.backendSettings.retry.retryOn.httpStatusCodes):true):true):true",message="HTTPStatusCodes is not supported."
 type RemoteJWKS struct {
-	// BackendRefs is used to specify the address of the Remote JWKS. The BackendRefs are optional, if not specified,
-	// the backend service is extracted from the host and port of the URI field.
-	//
-	// TLS configuration can be specified in a BackendTLSConfig resource and target the BackendRefs.
-	//
-	// Other settings for the connection to remote JWKS can be specified in the BackendSettings resource.
-	// Currently, only the retry policy is supported.
-	//
 	// +optional
 	BackendCluster `json:",inline"`
 
@@ -108,6 +110,11 @@ type RemoteJWKS struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URI string `json:"uri"`
+	// Duration after which the cached JWKS should be expired. If not specified, default cache duration is 5 minutes.
+
+	// +kubebuilder:default="300s"
+	// +optional
+	CacheDuration *gwapiv1.Duration `json:"cacheDuration,omitempty"`
 }
 
 // LocalJWKSType defines the types of values for Local JWKS.

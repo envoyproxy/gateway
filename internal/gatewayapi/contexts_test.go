@@ -10,20 +10,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 func TestContexts(t *testing.T) {
-	r := &resource.Resources{
-		GatewayClass: &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		},
-	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -37,11 +32,10 @@ func TestContexts(t *testing.T) {
 			},
 		},
 	}
-
 	gctx := &GatewayContext{
 		Gateway: gateway,
 	}
-	gctx.ResetListeners(r)
+	gctx.ResetListeners()
 	require.Len(t, gctx.listeners, 1)
 
 	lctx := gctx.listeners[0]
@@ -64,18 +58,11 @@ func TestContexts(t *testing.T) {
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
 	require.EqualValues(t, "HTTPRoute", gateway.Status.Listeners[0].SupportedKinds[0].Kind)
 
-	gctx.ResetListeners(r)
+	gctx.ResetListeners()
 	require.Empty(t, gateway.Status.Listeners[0].Conditions)
 }
 
 func TestContextsStaleListener(t *testing.T) {
-	r := &resource.Resources{
-		GatewayClass: &gwapiv1.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-		},
-	}
 	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
@@ -112,7 +99,6 @@ func TestContextsStaleListener(t *testing.T) {
 			},
 		},
 	}
-
 	gCtx := &GatewayContext{Gateway: gateway}
 
 	httpsListenerCtx := &ListenerContext{
@@ -131,7 +117,7 @@ func TestContextsStaleListener(t *testing.T) {
 		listenerStatusIdx: 1,
 	}
 
-	gCtx.ResetListeners(r)
+	gCtx.ResetListeners()
 
 	require.Len(t, gCtx.listeners, 2)
 
@@ -156,7 +142,7 @@ func TestContextsStaleListener(t *testing.T) {
 	// Remove one of the listeners
 	gateway.Spec.Listeners = gateway.Spec.Listeners[:1]
 
-	gCtx.ResetListeners(r)
+	gCtx.ResetListeners()
 
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.
@@ -166,4 +152,245 @@ func TestContextsStaleListener(t *testing.T) {
 	// Ensure that the listeners within GatewayContext have been properly updated.
 	expectedGCtxListeners := []*ListenerContext{httpsListenerCtx}
 	require.Equal(t, expectedGCtxListeners, gCtx.listeners)
+}
+
+func TestAttachEnvoyProxy(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		gatewayParametersRef  *gwapiv1.LocalParametersReference
+		envoyProxyForGateway  *egv1a1.EnvoyProxy
+		envoyProxyForGWClass  *egv1a1.EnvoyProxy
+		envoyProxyDefaultSpec *egv1a1.EnvoyProxySpec
+		expectedMergeGateways *bool
+		expectedConcurrency   *int32
+		expectEnvoyProxyNil   bool
+	}{
+		{
+			name:                "no envoy proxy at any level",
+			expectEnvoyProxyNil: true,
+		},
+		{
+			name: "only default spec - no gateway or gatewayclass proxy, use defaults",
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(4)),
+			},
+			expectedConcurrency: new(int32(4)),
+		},
+		{
+			name: "gatewayclass envoy proxy overrides default spec",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "envoy-gateway-system",
+					Name:      "gc-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: new(int32(8)),
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(4)),
+			},
+			expectedConcurrency: new(int32(8)),
+		},
+		{
+			name: "gateway envoy proxy overrides gatewayclass",
+			gatewayParametersRef: &gwapiv1.LocalParametersReference{
+				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+				Name:  "gw-proxy",
+			},
+			envoyProxyForGateway: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "gw-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: new(int32(16)),
+				},
+			},
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "envoy-gateway-system",
+					Name:      "gc-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: new(int32(8)),
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				Concurrency: new(int32(4)),
+			},
+			expectedConcurrency: new(int32(16)),
+		},
+		{
+			name: "default spec with merge gateways enabled - no gatewayclass proxy, use defaults",
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(true),
+				Concurrency:   new(int32(4)),
+			},
+			expectedConcurrency:   new(int32(4)),
+			expectedMergeGateways: new(true),
+		},
+		{
+			name: "gatewayclass overrides default merge gateways setting",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "envoy-gateway-system",
+					Name:      "gc-proxy",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(false),
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(true),
+			},
+			expectedMergeGateways: new(false),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create gateway
+			gateway := &gwapiv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test-gateway",
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "test-gc",
+				},
+			}
+			if tc.gatewayParametersRef != nil {
+				gateway.Spec.Infrastructure = &gwapiv1.GatewayInfrastructure{
+					ParametersRef: tc.gatewayParametersRef,
+				}
+			}
+
+			gCtx := &GatewayContext{Gateway: gateway}
+
+			// Build resources
+			resources := &resource.Resources{
+				EnvoyProxyForGatewayClass: tc.envoyProxyForGWClass,
+				EnvoyProxyDefaultSpec:     tc.envoyProxyDefaultSpec,
+			}
+
+			// Build envoy proxy map for gateway-level proxies
+			epMap := make(map[types.NamespacedName]*egv1a1.EnvoyProxy)
+			if tc.envoyProxyForGateway != nil {
+				key := types.NamespacedName{
+					Namespace: tc.envoyProxyForGateway.Namespace,
+					Name:      tc.envoyProxyForGateway.Name,
+				}
+				epMap[key] = tc.envoyProxyForGateway
+			}
+
+			// Call attachEnvoyProxy
+			err := gCtx.attachEnvoyProxy(resources, epMap)
+			require.NoError(t, err)
+
+			// Verify results
+			if tc.expectEnvoyProxyNil {
+				require.Nil(t, gCtx.envoyProxy)
+				return
+			}
+
+			require.NotNil(t, gCtx.envoyProxy)
+
+			if tc.expectedConcurrency != nil {
+				require.NotNil(t, gCtx.envoyProxy.Spec.Concurrency)
+				require.Equal(t, *tc.expectedConcurrency, *gCtx.envoyProxy.Spec.Concurrency)
+			}
+
+			if tc.expectedMergeGateways != nil {
+				require.NotNil(t, gCtx.envoyProxy.Spec.MergeGateways)
+				require.Equal(t, *tc.expectedMergeGateways, *gCtx.envoyProxy.Spec.MergeGateways)
+			}
+		})
+	}
+}
+
+func TestIsMergeGatewaysEnabled(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		envoyProxyForGWClass  *egv1a1.EnvoyProxy
+		envoyProxyDefaultSpec *egv1a1.EnvoyProxySpec
+		expected              bool
+	}{
+		{
+			name:     "no envoy proxy configured",
+			expected: false,
+		},
+		{
+			name: "default spec with merge gateways true",
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(true),
+			},
+			expected: true,
+		},
+		{
+			name: "default spec with merge gateways false",
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(false),
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass proxy with merge gateways true",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "gatewayclass proxy overrides default - gc true, default false",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(true),
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(false),
+			},
+			expected: true,
+		},
+		{
+			name: "gatewayclass proxy overrides default - gc false, default true",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					MergeGateways: new(false),
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(true),
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass proxy nil merge gateways falls back to default",
+			envoyProxyForGWClass: &egv1a1.EnvoyProxy{
+				Spec: egv1a1.EnvoyProxySpec{
+					Concurrency: new(int32(4)), // some other setting
+				},
+			},
+			envoyProxyDefaultSpec: &egv1a1.EnvoyProxySpec{
+				MergeGateways: new(true),
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resources := &resource.Resources{
+				EnvoyProxyForGatewayClass: tc.envoyProxyForGWClass,
+				EnvoyProxyDefaultSpec:     tc.envoyProxyDefaultSpec,
+			}
+
+			result := IsMergeGatewaysEnabled(resources)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }

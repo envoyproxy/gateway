@@ -36,12 +36,12 @@ func (f *Counter) Decrement() {
 }
 
 func (f *Counter) With(labelValues ...LabelValue) *Counter {
-	attrs, set := mergeLabelValues(f.attrs, labelValues)
+	mergedAttrs := mergeLabelValues(f.attrs, labelValues)
 	m := &Counter{
 		c:                f.c,
-		preRecordOptions: []api.AddOption{api.WithAttributeSet(set)},
+		preRecordOptions: []api.AddOption{api.WithAttributes(mergedAttrs...)},
 		name:             f.name,
-		attrs:            attrs,
+		attrs:            mergedAttrs,
 	}
 
 	return m

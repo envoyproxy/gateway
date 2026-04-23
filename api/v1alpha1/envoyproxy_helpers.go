@@ -13,13 +13,12 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 )
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
 	return &EnvoyProxyProvider{
-		Type: ProviderTypeKubernetes,
+		Type: EnvoyProxyProviderTypeKubernetes,
 	}
 }
 
@@ -42,6 +41,7 @@ func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	}
 }
 
+// DefaultEnvoyProxyHpaMetrics returns a default HPA metrics spec for EnvoyProxy.
 func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 	return []autoscalingv2.MetricSpec{
 		{
@@ -49,7 +49,7 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 				Name: corev1.ResourceCPU,
 				Target: autoscalingv2.MetricTarget{
 					Type:               autoscalingv2.UtilizationMetricType,
-					AverageUtilization: ptr.To[int32](80),
+					AverageUtilization: new(int32(80)),
 				},
 			},
 			Type: autoscalingv2.ResourceMetricSourceType,
@@ -74,11 +74,21 @@ func (e *EnvoyProxy) NeedToSwitchPorts() bool {
 	return !*e.Spec.Provider.Kubernetes.UseListenerPortAsContainerPort
 }
 
+// GetEnvoyProxyHostProvider returns the EnvoyProxyHostProvider of EnvoyProxyProvider or
+// a nil EnvoyProxyHostProvider if unspecified. If EnvoyProxyProvider is not of
+// type "Host", a nil EnvoyProxyHostProvider is returned.
+func (r *EnvoyProxyProvider) GetEnvoyProxyHostProvider() *EnvoyProxyHostProvider {
+	if r.Type != EnvoyProxyProviderTypeHost {
+		return nil
+	}
+	return r.Host
+}
+
 // GetEnvoyProxyKubeProvider returns the EnvoyProxyKubernetesProvider of EnvoyProxyProvider or
 // a default EnvoyProxyKubernetesProvider if unspecified. If EnvoyProxyProvider is not of
 // type "Kubernetes", a nil EnvoyProxyKubernetesProvider is returned.
 func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
-	if r.Type != ProviderTypeKubernetes {
+	if r.Type != EnvoyProxyProviderTypeKubernetes {
 		return nil
 	}
 
@@ -117,6 +127,15 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	return r.Kubernetes
 }
 
+// GetEnvoyVersion returns the version of Envoy to use.
+// This method gracefully handles nil pointers.
+func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
+	if e == nil || e.EnvoyVersion == nil {
+		return ""
+	}
+	return *e.EnvoyVersion
+}
+
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
 // If unspecified, defaults to "warn". When specified, all other logging components are ignored.
 func (logging *ProxyLogging) DefaultEnvoyProxyLoggingLevel() LogLevel {
@@ -141,6 +160,11 @@ func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
 		if level != "" {
 			args = append(args, fmt.Sprintf("%s:%s", component, level))
 		}
+	}
+
+	if len(args) == 0 {
+		// use "misc:error" as default
+		args = []string{"misc:error"}
 	}
 
 	sort.Strings(args)

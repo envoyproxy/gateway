@@ -6,14 +6,17 @@
 package kubernetes
 
 import (
+	"net"
 	"sync"
 
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 )
 
 type nodeDetails struct {
-	name    string
-	address string
+	name      string
+	addresses status.NodeAddresses
 }
 
 // kubernetesProviderStore holds cached information for the kubernetes provider.
@@ -34,23 +37,31 @@ func newProviderStore() *kubernetesProviderStore {
 func (p *kubernetesProviderStore) addNode(n *corev1.Node) {
 	details := nodeDetails{name: n.Name}
 
-	var internalIP, externalIP string
+	var internalIPs, externalIPs status.NodeAddresses
 	for _, addr := range n.Status.Addresses {
-		if addr.Type == corev1.NodeExternalIP {
-			externalIP = addr.Address
+		var addrs *status.NodeAddresses
+		switch addr.Type {
+		case corev1.NodeExternalIP:
+			addrs = &externalIPs
+		case corev1.NodeInternalIP:
+			addrs = &internalIPs
+		default:
+			continue
 		}
-		if addr.Type == corev1.NodeInternalIP {
-			internalIP = addr.Address
+		if net.ParseIP(addr.Address).To4() != nil {
+			addrs.IPv4 = append(addrs.IPv4, addr.Address)
+		} else {
+			addrs.IPv6 = append(addrs.IPv6, addr.Address)
 		}
 	}
 
 	// In certain scenarios (like in local KinD clusters), the Node
 	// externalIP is not provided, in that case we default back
 	// to the internalIP of the Node.
-	if externalIP != "" {
-		details.address = externalIP
-	} else if internalIP != "" {
-		details.address = internalIP
+	if len(externalIPs.IPv4) > 0 || len(externalIPs.IPv6) > 0 {
+		details.addresses = externalIPs
+	} else if len(internalIPs.IPv4) > 0 || len(internalIPs.IPv6) > 0 {
+		details.addresses = internalIPs
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -63,14 +74,13 @@ func (p *kubernetesProviderStore) removeNode(n *corev1.Node) {
 	delete(p.nodes, n.Name)
 }
 
-func (p *kubernetesProviderStore) listNodeAddresses() []string {
-	addrs := []string{}
+func (p *kubernetesProviderStore) listNodeAddresses() status.NodeAddresses {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	addrs := status.NodeAddresses{}
 	for _, n := range p.nodes {
-		if n.address != "" {
-			addrs = append(addrs, n.address)
-		}
+		addrs.IPv4 = append(addrs.IPv4, n.addresses.IPv4...)
+		addrs.IPv6 = append(addrs.IPv6, n.addresses.IPv6...)
 	}
 	return addrs
 }

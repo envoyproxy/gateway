@@ -21,6 +21,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/common"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -38,12 +39,13 @@ const (
 var statsConf string
 
 type ResourceRender struct {
-	// Namespace is the Namespace used for managed infra.
-	Namespace string
+	// namespace is the Namespace used for managed infra.
+	namespace string
 
 	rateLimit           *egv1a1.RateLimit
 	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
 	rateLimitHpa        *egv1a1.KubernetesHorizontalPodAutoscalerSpec
+	rateLimitPdb        *egv1a1.KubernetesPodDisruptionBudgetSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
@@ -51,17 +53,26 @@ type ResourceRender struct {
 
 // NewResourceRender returns a new ResourceRender.
 func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
-	return &ResourceRender{
-		Namespace:           ns,
+	prov := gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider()
+
+	render := &ResourceRender{
+		namespace:           ns,
 		rateLimit:           gateway.RateLimit,
-		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
-		rateLimitHpa:        gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitHpa,
+		rateLimitDeployment: prov.RateLimitDeployment,
+		rateLimitHpa:        prov.RateLimitHpa,
+		rateLimitPdb:        prov.RateLimitPDB,
 		ownerReferenceUID:   ownerReferenceUID,
 	}
+
+	return render
 }
 
 func (r *ResourceRender) Name() string {
 	return InfraName
+}
+
+func (r *ResourceRender) Namespace() string {
+	return r.namespace
 }
 
 func (r *ResourceRender) LabelSelector() labels.Selector {
@@ -80,7 +91,7 @@ func enablePrometheus(rl *egv1a1.RateLimit) bool {
 }
 
 // ConfigMap returns the expected rate limit ConfigMap based on the provided infra.
-func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
+func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 	if !enablePrometheus(r.rateLimit) {
 		return nil, nil
 	}
@@ -91,9 +102,10 @@ func (r *ResourceRender) ConfigMap(cert string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      "statsd-exporter-config",
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            "statsd-exporter-config",
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Data: map[string]string{
 			"conf.yaml": statsConf,
@@ -138,7 +150,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      InfraName,
 			Labels:    labels,
 		},
@@ -170,9 +182,11 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       ResourceKindServiceAccount,
 			APIVersion: apiVersion,
 		},
+		AutomountServiceAccountToken: new(false),
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Name:      InfraName,
+			Labels:    rateLimitLabels(),
 		},
 	}
 
@@ -194,7 +208,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment, r.Namespace())
 	selector := resource.GetSelector(rateLimitLabels())
 
 	podLabels := rateLimitLabels()
@@ -227,7 +241,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: appsAPIVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
+			Namespace: r.Namespace(),
 			Labels:    rateLimitLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -242,8 +256,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					ServiceAccountName:            InfraName,
-					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					AutomountServiceAccountToken:  new(false),
+					TerminationGracePeriodSeconds: new(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
@@ -256,8 +270,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					TopologySpreadConstraints:     r.rateLimitDeployment.Pod.TopologySpreadConstraints,
 				},
 			},
-			RevisionHistoryLimit:    ptr.To[int32](10),
-			ProgressDeadlineSeconds: ptr.To[int32](600),
+			RevisionHistoryLimit:    new(int32(10)),
+			ProgressDeadlineSeconds: new(int32(600)),
 		},
 	}
 
@@ -313,9 +327,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      r.Name(),
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
@@ -337,6 +352,13 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 		hpa.Spec.ScaleTargetRef.Name = r.Name()
 	}
 
+	// set name
+	if hpaConfig.Name != nil {
+		hpa.Name = *hpaConfig.Name
+	} else {
+		hpa.Name = r.Name()
+	}
+
 	if hpa, err = utils.MergeWithPatch(hpa, hpaConfig.Patch); err != nil {
 		return nil, err
 	}
@@ -345,5 +367,36 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 }
 
 func (r *ResourceRender) PodDisruptionBudget() (*policyv1.PodDisruptionBudget, error) {
-	return nil, nil
+	pdb := r.rateLimitPdb
+	if pdb == nil {
+		return nil, nil
+	}
+
+	// set name
+	resourceName := r.Name()
+	if pdb.Name != nil {
+		resourceName = *pdb.Name
+	}
+
+	return common.GetPodDisruptionBudget(r.rateLimitPdb, resource.GetSelector(rateLimitLabels()), &types.NamespacedName{
+		Name:      resourceName,
+		Namespace: r.Namespace(),
+	}, r.ownerReferences())
+}
+
+func (r *ResourceRender) ownerReferences() []metav1.OwnerReference {
+	var ownerReferences []metav1.OwnerReference
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindDeployment]; ok {
+			ownerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindDeployment,
+					APIVersion: appsAPIVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
+	}
+	return ownerReferences
 }

@@ -1,4 +1,5 @@
-- name: first-policy
+- generation: 1
+  name: first-policy
   namespace: default
   status:
     ancestors:
@@ -10,6 +11,7 @@
       conditions:
       - lastTransitionTime: null
         message: 'Unable to find xds resources: type.googleapis.com/envoy.config.listener.v3.Listener/non-existing-listener'
+        observedGeneration: 1
         reason: ResourceNotFound
         status: "False"
         type: Programmed

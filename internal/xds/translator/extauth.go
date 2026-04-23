@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -14,6 +15,7 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -21,6 +23,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
+
+var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
 
 func init() {
 	registerHTTPFilter(&extAuth{})
@@ -71,7 +75,10 @@ func (*extAuth) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPLi
 
 // buildHCMExtAuthFilter returns an ext_authz HTTP filter from the provided IR HTTPRoute.
 func buildHCMExtAuthFilter(extAuth *ir.ExtAuth) (*hcmv3.HttpFilter, error) {
-	extAuthProto := extAuthConfig(extAuth)
+	extAuthProto, err := extAuthConfig(extAuth)
+	if err != nil {
+		return nil, err
+	}
 	extAuthAny, err := anypb.New(extAuthProto)
 	if err != nil {
 		return nil, err
@@ -90,7 +97,7 @@ func extAuthFilterName(extAuth *ir.ExtAuth) string {
 	return perRouteFilterName(egv1a1.EnvoyFilterExtAuthz, extAuth.Name)
 }
 
-func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
+func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 	config := &extauthv3.ExtAuthz{
 		TransportApiVersion: corev3.ApiVersion_V3,
 	}
@@ -103,7 +110,11 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
-	var headersToExtAuth []*matcherv3.StringMatcher
+	if extAuth.IncludeRouteMetadata != nil && *extAuth.IncludeRouteMetadata {
+		config.RouteMetadataContextNamespaces = extAuthRouteMetadataContextNamespaces
+	}
+
+	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -125,31 +136,54 @@ func extAuthConfig(extAuth *ir.ExtAuth) *extauthv3.ExtAuthz {
 		}
 	}
 
-	if extAuth.HTTP != nil {
-		config.Services = &extauthv3.ExtAuthz_HttpService{
-			HttpService: httpService(extAuth.HTTP),
-		}
-	} else if extAuth.GRPC != nil {
-		config.Services = &extauthv3.ExtAuthz_GrpcService{
-			GrpcService: &corev3.GrpcService{
-				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: grpcService(extAuth.GRPC),
-				},
-				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
-				},
-			},
+	timeout := durationpb.New(defaultExtServiceRequestTimeout)
+	if extAuth.Timeout != nil {
+		timeout = durationpb.New(extAuth.Timeout.Duration)
+	}
+
+	var rp *corev3.RetryPolicy
+	// Set the retry policy if it exists.
+	if extAuth.Traffic != nil && extAuth.Traffic.Retry != nil {
+		var err error
+		rp, err = buildNonRouteRetryPolicy(extAuth.Traffic.Retry)
+		if err != nil {
+			return nil, fmt.Errorf("build retry policy for http service: %w", err)
 		}
 	}
 
-	return config
+	if extAuth.HTTP != nil {
+		hs := httpService(extAuth.HTTP, timeout)
+		hs.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_HttpService{
+			HttpService: hs,
+		}
+	} else if extAuth.GRPC != nil {
+		service := &corev3.GrpcService{
+			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+				EnvoyGrpc: grpcService(extAuth.GRPC),
+			},
+			Timeout: timeout,
+		}
+		service.RetryPolicy = rp
+
+		config.Services = &extauthv3.ExtAuthz_GrpcService{
+			GrpcService: service,
+		}
+	}
+
+	if extAuth.StatusOnError != nil {
+		config.StatusOnError = &typev3.HttpStatus{
+			Code: typev3.StatusCode(*extAuth.StatusOnError),
+		}
+	}
+	return config, nil
 }
 
-func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
+func httpService(http *ir.HTTPExtAuthService, timeout *durationpb.Duration) *extauthv3.HttpService {
 	var (
-		uri              string
-		headersToBackend []*matcherv3.StringMatcher
-		service          *extauthv3.HttpService
+		uri     string
+		service *extauthv3.HttpService
 	)
 
 	service = &extauthv3.HttpService{
@@ -171,11 +205,10 @@ func httpService(http *ir.HTTPExtAuthService) *extauthv3.HttpService {
 		HttpUpstreamType: &corev3.HttpUri_Cluster{
 			Cluster: http.Destination.Name,
 		},
-		Timeout: &durationpb.Duration{
-			Seconds: defaultExtServiceRequestTimeout,
-		},
+		Timeout: timeout,
 	}
 
+	headersToBackend := make([]*matcherv3.StringMatcher, 0, len(http.HeadersToBackend))
 	for _, header := range http.HeadersToBackend {
 		headersToBackend = append(headersToBackend, &matcherv3.StringMatcher{
 			MatchPattern: &matcherv3.StringMatcher_Exact{
@@ -226,14 +259,21 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		if !routeContainsExtAuth(route) {
 			continue
 		}
-		if route.Security.ExtAuth.HTTP != nil {
+		if http := route.Security.ExtAuth.HTTP; http != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, http.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
+			grpc := route.Security.ExtAuth.GRPC
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, grpc.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -244,7 +284,7 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 
 // patchRoute patches the provided route with the extAuth config if applicable.
 // Note: this method enables the corresponding extAuth filter for the provided route.
-func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -255,8 +295,32 @@ func (*extAuth) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 		return nil
 	}
 	filterName := extAuthFilterName(irRoute.Security.ExtAuth)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	contextExtensions := convertContextExtensions(irRoute.Security.ExtAuth.ContextExtensions)
+	if err := enableFilterOnRoute(route, filterName, &extauthv3.ExtAuthzPerRoute{
+		Override: &extauthv3.ExtAuthzPerRoute_CheckSettings{
+			CheckSettings: &extauthv3.CheckSettings{
+				ContextExtensions: contextExtensions,
+			},
+		},
+	}); err != nil {
 		return err
 	}
 	return nil
+}
+
+// convertContextExtensions converts the provided context extensions
+// [ir.PrivateBytes] values to regular string values.
+func convertContextExtensions(irCtxExts []*ir.ContextExtention) map[string]string {
+	if irCtxExts == nil {
+		return nil
+	}
+
+	ctxExts := make(map[string]string, len(irCtxExts))
+	for _, ext := range irCtxExts {
+		if ext != nil {
+			ctxExts[ext.Name] = string(ext.Value)
+		}
+	}
+
+	return ctxExts
 }

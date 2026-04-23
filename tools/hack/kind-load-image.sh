@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-readonly KIND=${KIND:-go tool kind}
+readonly KIND=${KIND:-go tool -modfile=tools/go.mod kind}
 readonly CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 
 # Docker variables

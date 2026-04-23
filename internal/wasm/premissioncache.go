@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/avast/retry-go"
+	"github.com/avast/retry-go/v5"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -71,9 +71,6 @@ type permissionCache struct {
 
 	cache  map[string]*permissionCacheEntry
 	logger logging.Logger
-
-	// For tests
-	triggerChan chan struct{}
 }
 
 // permissionCacheEntry is an entry in the permission cache.
@@ -128,14 +125,17 @@ func newPermissionCache(options permissionCacheOptions, logger logging.Logger) *
 		cache:                  make(map[string]*permissionCacheEntry),
 		permissionCacheOptions: options,
 		logger:                 logger,
-		triggerChan:            make(chan struct{}),
 	}
 }
 
 // checkAndUpdatePermission checks the permission of the image against the pull secret and updates the cache entry.
 func (p *permissionCache) checkAndUpdatePermission(ctx context.Context, e *permissionCacheEntry) error {
-	fetcher := NewImageFetcher(ctx, *e.fetcherOption, p.logger)
-	_, _, err := fetcher.PrepareFetch(e.image.Host + e.image.Path)
+	fetcher, err := NewImageFetcher(ctx, *e.fetcherOption, p.logger)
+	if err != nil {
+		// Return a more descriptive error as messages downstream do not indicate the source very well.
+		return fmt.Errorf("failed to create image fetcher: %w", err)
+	}
+	_, _, err = fetcher.PrepareFetch(e.image.Host + e.image.Path)
 	e.checkError = err
 	e.lastCheck = time.Now()
 	return err
@@ -148,58 +148,52 @@ func (p *permissionCache) Start(ctx context.Context) {
 		defer ticker.Stop()
 		for {
 			select {
-			// explicitly trigger a check for tests
-			case <-p.triggerChan:
-				p.checkPermissions(ctx)
 			case <-ticker.C:
-				p.checkPermissions(ctx)
+				func() {
+					p.Lock()
+					defer p.Unlock()
+					for _, e := range p.cache {
+						if e.isCacheExpired(p.cacheExpiry) {
+							p.logger.Info("removing permission cache entry", "image", e.image.String())
+							delete(p.cache, e.key())
+							continue
+						}
+						if e.isPermissionExpired(p.permissionExpiry) {
+							const retryAttempts = 3
+							const retryDelay = 1 * time.Second
+							p.logger.Info("rechecking permission for image", "image", e.image.String())
+							err := retry.New(
+								retry.Attempts(retryAttempts),
+								retry.DelayType(retry.BackOffDelay),
+								retry.Delay(retryDelay),
+								retry.Context(ctx),
+							).Do(func() error {
+								err := p.checkAndUpdatePermission(ctx, e)
+								if err != nil && isRetriableError(err) {
+									p.logger.Error(
+										err,
+										"failed to check permission for image, will retry again",
+										"image",
+										e.image.String())
+									return err
+								}
+								return nil
+							})
+							if err != nil {
+								p.logger.Error(
+									err,
+									fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
+									"image",
+									e.image.String())
+							}
+						}
+					}
+				}()
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
-}
-
-func (p *permissionCache) checkPermissions(ctx context.Context) {
-	p.Lock()
-	defer p.Unlock()
-	for _, e := range p.cache {
-		if e.isCacheExpired(p.cacheExpiry) {
-			p.logger.Info("removing permission cache entry", "image", e.image.String())
-			delete(p.cache, e.key())
-			continue
-		}
-		if e.isPermissionExpired(p.permissionExpiry) {
-			const retryAttempts = 3
-			const retryDelay = 1 * time.Second
-			p.logger.Info("rechecking permission for image", "image", e.image.String())
-			err := retry.Do(
-				func() error {
-					err := p.checkAndUpdatePermission(ctx, e)
-					if err != nil && isRetriableError(err) {
-						p.logger.Error(
-							err,
-							"failed to check permission for image, will retry again",
-							"image",
-							e.image.String())
-						return err
-					}
-					return nil
-				},
-				retry.Attempts(retryAttempts),
-				retry.DelayType(retry.BackOffDelay),
-				retry.Delay(retryDelay),
-				retry.Context(ctx),
-			)
-			if err != nil {
-				p.logger.Error(
-					err,
-					fmt.Sprintf("failed to recheck permission for image after %d attempts", retryAttempts),
-					"image",
-					e.image.String())
-			}
-		}
-	}
 }
 
 // isRetriableError checks if the error is retriable.

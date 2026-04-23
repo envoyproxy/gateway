@@ -1,5 +1,5 @@
 {{ $cover := .HasShortcode "blocks/cover" }}
-<nav class="js-navbar-scroll navbar navbar-expand navbar-dark flex-column flex-md-row td-navbar">
+<nav class="js-navbar-scroll navbar navbar-expand-lg navbar-light td-navbar">
   <a class="navbar-brand" href="{{ .Site.Home.RelPermalink }}">
     {{ $logoRegular := resources.Get "icons/logo.svg" }}
     {{ $logoWhite := resources.Get "icons/logo-white.svg" }}
@@ -11,6 +11,30 @@
     <ul class="navbar-nav mt-2 mt-lg-0">
       {{ $p := . }}
       {{ range .Site.Menus.main }}
+      {{ if .HasChildren }}
+      <li class="nav-item dropdown">
+        {{ $active := or ($p.IsMenuCurrent "main" .) ($p.HasMenuCurrent "main" .) }}
+        {{ with .Page }}
+        {{ $active = or $active ( $.IsDescendant .)  }}
+        {{ end }}
+        {{ $pre := .Pre }}
+        {{ $post := .Post }}
+        <a class="nav-link dropdown-toggle{{if $active }} active{{end}}" href="{{ with .Page }}{{ .RelPermalink }}{{ else }}{{ .URL | relLangURL }}{{ end }}" id="navbarDropdown{{ .Name }}" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          {{ with .Pre}}{{ $pre }}{{ end }}<span{{if $active }} class="active"{{end}}>{{ .Name }}</span>{{ with .Post}}{{ $post }}{{ end }}
+        </a>
+        <ul class="dropdown-menu" aria-labelledby="navbarDropdown{{ .Name }}">
+          <li><a class="dropdown-item" href="{{ with .Page }}{{ .RelPermalink }}{{ else }}{{ .URL | relLangURL }}{{ end }}">All {{ .Name }}</a></li>
+          <li><hr class="dropdown-divider"></li>
+          {{ if eq .Name "Tools" }}
+          {{ range where $p.Site.Pages "Section" "tools" }}
+          {{ if not .IsSection }}
+          <li><a class="dropdown-item" href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+          {{ end }}
+          {{ end }}
+          {{ end }}
+        </ul>
+      </li>
+      {{ else }}
       <li class="nav-item">
         {{ $active := or ($p.IsMenuCurrent "main" .) ($p.HasMenuCurrent "main" .) }}
         {{ with .Page }}
@@ -23,6 +47,7 @@
         <a class="nav-link{{if $active }} active{{end}}" href="{{ with .Page }}{{ .RelPermalink }}{{ else }}{{ .URL | relLangURL }}{{ end }}"{{ if ne $url.Host $baseurl.Host }} target="_blank" rel="noopener"{{ end }}>{{ with .Pre}}{{ $pre }}{{ end }}<span{{if $active }} class="active"{{end}}>{{ .Name }}</span>{{ with .Post}}{{ $post }}{{ end }}</a>
       </li>
       {{ end }}
+      {{ end }}
       {{ if .Site.Params.versions }}
       <li class="nav-item dropdown d-none d-lg-block">
         {{ partial "navbar-version-selector.html" . }}
@@ -33,6 +58,9 @@
         {{ partial "navbar-lang-selector.html" . }}
       </li>
       {{ end }}
+      <li class="nav-item">
+        <button id="custom-ask-ai-button" class="btn btn-ask-ai">✨ Ask AI</button>
+      </li>
     </ul>
   </div>
 </nav>

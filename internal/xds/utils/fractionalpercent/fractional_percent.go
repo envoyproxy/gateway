@@ -8,6 +8,7 @@ package fractionalpercent
 import (
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/shopspring/decimal"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -39,6 +40,10 @@ const (
 
 // FromFraction translates a gwapiv1.Fraction instance to envoy.type.FractionalPercent.
 func FromFraction(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
+	if fraction == nil {
+		return nil
+	}
+
 	if fraction.Denominator == nil {
 		return &xdstype.FractionalPercent{
 			Numerator:   uint32(fraction.Numerator),
@@ -82,4 +87,13 @@ func FromFraction(fraction *gwapiv1.Fraction) *xdstype.FractionalPercent {
 		Numerator:   uint32(percent.IntPart()),
 		Denominator: xdstype.FractionalPercent_MILLION,
 	}
+}
+
+func ToPercent(fp *gwapiv1.Fraction) float64 {
+	if fp == nil {
+		return 0
+	}
+
+	denominator := ptr.Deref(fp.Denominator, 100)
+	return float64(fp.Numerator) / float64(denominator) * 100
 }

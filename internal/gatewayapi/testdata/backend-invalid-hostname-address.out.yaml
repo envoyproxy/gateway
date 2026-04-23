@@ -2,7 +2,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -20,7 +19,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -39,7 +37,6 @@ backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-fqdn
     namespace: default
   spec:
@@ -51,14 +48,13 @@ backends:
     conditions:
     - lastTransitionTime: null
       message: 'The Backend was not accepted: IP address 127.0.0.3 in the loopback
-        range is not supported'
+        range is only supported when using the Host infrastructure'
       reason: Accepted
       status: "False"
       type: Invalid
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
   metadata:
-    creationTimestamp: null
     name: backend-ip
     namespace: default
   spec:

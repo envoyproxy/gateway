@@ -1,4 +1,3 @@
-name: "http-route"
 http:
 - name: "first-listener"
   address: "::"
@@ -18,9 +17,10 @@ http:
         - host: "1.2.3.4"
           port: 50000
         name: "route-dest/backend/0"
-    mirror:
-      name: "mirror-route-dest"
-      settings:
-      - endpoints:
-        - host: "2.3.4.5"
-        name: "mirror-route-dest/backend/0"
+    mirrors:
+    - destination:
+        name: "mirror-route-dest"
+        settings:
+        - endpoints:
+          - host: "2.3.4.5"
+          name: "mirror-route-dest/backend/0"

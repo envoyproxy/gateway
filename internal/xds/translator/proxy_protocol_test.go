@@ -9,46 +9,57 @@ import (
 	"testing"
 
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestPatchProxyProtocolFilter(t *testing.T) {
 	type testCase struct {
-		name     string
-		listener *listenerv3.Listener
+		name                  string
+		listener              *listenerv3.Listener
+		proxyProtocolSettings *ir.ProxyProtocolSettings
+		expectedFilterName    string
+		expectedFilterCount   int
 	}
-
-	enableProxyProtocol := true
 
 	testCases := []testCase{
 		{
-			name: "listener with proxy proto available already",
-			listener: &listenerv3.Listener{
-				ListenerFilters: []*listenerv3.ListenerFilter{
-					{
-						Name: wellknown.ProxyProtocol,
-					},
-				},
-			},
+			name:                  "proxyProtocolSettings=nil (disabled)",
+			listener:              &listenerv3.Listener{},
+			proxyProtocolSettings: nil,
+			expectedFilterName:    "",
+			expectedFilterCount:   0,
 		},
 		{
-			name: "listener with tls, append proxy proto",
-			listener: &listenerv3.Listener{
-				ListenerFilters: []*listenerv3.ListenerFilter{
-					{
-						Name: wellknown.TLSInspector,
-					},
-				},
+			name:     "proxyProtocolSettings configured with Optional=false",
+			listener: &listenerv3.Listener{},
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{
+				Optional: false,
 			},
+			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
+			expectedFilterCount: 1,
+		},
+		{
+			name:     "proxyProtocolSettings configured with Optional=true",
+			listener: &listenerv3.Listener{},
+			proxyProtocolSettings: &ir.ProxyProtocolSettings{
+				Optional: true,
+			},
+			expectedFilterName:  "envoy.filters.listener.proxy_protocol",
+			expectedFilterCount: 1,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			patchProxyProtocolFilter(tc.listener, enableProxyProtocol)
-			// proxy proto filter should be added always as first
-			require.Equal(t, wellknown.ProxyProtocol, tc.listener.ListenerFilters[0].Name)
+			patchProxyProtocolFilter(tc.listener, tc.proxyProtocolSettings)
+
+			assert.Len(t, tc.listener.ListenerFilters, tc.expectedFilterCount)
+
+			if tc.expectedFilterCount > 0 {
+				assert.Equal(t, tc.expectedFilterName, tc.listener.ListenerFilters[0].Name)
+			}
 		})
 	}
 }

@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: apikey-secret
+stringData:
+  client1: supersecret
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: apikey-auth-example
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend
+  apiKeyAuth:
+    credentialRefs:
+    - group: ""
+      kind: Secret
+      name: apikey-secret
+    extractFrom:
+    - headers:
+      - x-api-key

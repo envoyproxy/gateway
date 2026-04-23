@@ -91,8 +91,8 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 // them if they do.
 func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret, update bool) ([]corev1.Secret, error) {
 	var (
-		tidySecrets     []corev1.Secret
-		existingSecrets []string
+		tidySecrets     = make([]corev1.Secret, 0, len(secrets))
+		existingSecrets = make([]string, 0, len(secrets))
 	)
 
 	for i := range secrets {

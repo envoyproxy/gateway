@@ -6,9 +6,6 @@ http:
     address: 0.0.0.0
     hostnames:
       - 'www.foo.com'
-    isHTTP2: false
-    http3:
-      quicPort: 443
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
@@ -21,9 +18,6 @@ http:
           distinct: false
           name: ""
           prefix: /foo1
-        backendWeights:
-          invalid: 0
-          valid: 0
         destination:
           name: httproute/default/httproute-1/rule/0
           settings:
@@ -45,9 +39,7 @@ http:
           distinct: false
           name: ""
           prefix: /foo2
-        backendWeights:
-          invalid: 0
-          valid: 0
+
         destination:
           name: httproute/default/httproute-2/rule/0
           settings:
@@ -82,7 +74,6 @@ http:
     address: 0.0.0.0
     hostnames:
       - 'www.bar.com'
-    isHTTP2: false
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
@@ -95,9 +86,7 @@ http:
           distinct: false
           name: ""
           prefix: /bar
-        backendWeights:
-          invalid: 0
-          valid: 0
+
         destination:
           name: httproute/default/httproute-3/rule/0
           settings:
@@ -124,3 +113,4 @@ http:
             redirectPath: "/foo/oauth2/callback"
             logoutPath: "/foo/logout"
             cookieSuffix: 5F93C2E4
+            refreshToken: true

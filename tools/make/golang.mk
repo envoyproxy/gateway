@@ -4,7 +4,9 @@
 
 VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
 
-GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell cat VERSION) \
+# Use git describe to get the version from the latest tag (e.g. v1.7.1 or v1.8.0-rc.0).
+# Falls back to the abbreviated commit SHA when tags are unavailable (e.g. shallow clone).
+GO_LDFLAGS += -X $(VERSION_PACKAGE).envoyGatewayVersion=$(shell git describe --tags --always) \
 	-X $(VERSION_PACKAGE).gitCommitID=$(GIT_COMMIT)
 
 GIT_COMMIT:=$(shell git rev-parse HEAD)
@@ -16,12 +18,18 @@ endif
 
 GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
 
+# Set SKIP_GO_BUILD=true to skip go compilation (e.g. when using pre-built binaries from CI artifacts).
+SKIP_GO_BUILD ?= false
+
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform,
 # just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
+ifeq ($(SKIP_GO_BUILD),true)
+	@echo "Skipping go build"
+else
 	@$(LOG_TARGET)
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
@@ -29,6 +37,7 @@ go.build.%:
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@$(call log, "Building binary $(COMMAND) with commit $(REV) for $(OS) $(ARCH)")
 	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
+endif
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
@@ -65,21 +74,34 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
 	go test -timeout 60s github.com/envoyproxy/gateway/internal/gatewayapi/resource --override-testdata=true
 
+GO_TEST_COVERAGE_ARGS ?= --tags=integration,conformance_unit_test -race
+
 .PHONY: go.test.coverage
 go.test.coverage: go.test.cel ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell go tool setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
-		go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
+	KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $(ENVTEST_K8S_VERSION) -p path)" \
+		go test ./... $(GO_TEST_COVERAGE_ARGS) -coverprofile=coverage.xml -covermode=atomic -coverpkg=./...
 
 .PHONY: go.test.cel
 go.test.cel: manifests # Run the CEL validation tests
 	@$(LOG_TARGET)
 	@for ver in $(ENVTEST_K8S_VERSIONS); do \
   		echo "Run CEL Validation on k8s $$ver"; \
-        go clean -testcache; \
-        KUBEBUILDER_ASSETS="$$(go tool setup-envtest use $$ver -p path)" \
-         go test ./test/cel-validation --tags celvalidation -race; \
+        pushd test; go clean -testcache;  \
+        KUBEBUILDER_ASSETS="$$($(GO_TOOL) setup-envtest use $$ver -p path)" \
+          go test ./cel-validation --tags celvalidation -race || exit 1; \
+		popd; \
     done
+
+.PHONY: go.test.benchmark
+go.test.benchmark: ## Run benchmark tests for translation performance
+	@$(LOG_TARGET)
+	cd test && go test -timeout=15m -run='^$$' -bench=. -benchmem -benchtime=1x -count=6 ./gobench
+
+.PHONY: go.test.clean
+go.test.clean: # Clean go test cache
+	@$(LOG_TARGET)
+	go clean -testcache
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
@@ -107,7 +129,7 @@ go.mod.lint: go.mod.tidy go.mod.tidy.examples ## Check if go.mod is clean
 .PHONY: go.lint.fmt
 go.lint.fmt:
 	@$(LOG_TARGET)
-	@go tool golangci-lint fmt --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint fmt --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: go.generate
 go.generate: ## Generate code from templates
@@ -134,8 +156,12 @@ format: go.mod.lint
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
-clean: go.clean
+clean: go.clean go.test.clean
 
 .PHONY: testdata
 testdata: ## Override the testdata with new configurations.
 testdata: go.testdata.complete
+
+.PHONY: go-benchmark
+go-benchmark: ## Run benchmark tests for translation performance.
+go-benchmark: go.test.benchmark

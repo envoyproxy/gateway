@@ -1,0 +1,97 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-precedence-test
+  spec:
+    # Legacy API - should be overridden by new API
+    enableProxyProtocol: false
+    # New API - should take precedence
+    proxyProtocol:
+      optional: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-precedence-test
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-legacy-only
+  spec:
+    # Legacy API only - should work as before
+    enableProxyProtocol: true
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-legacy-only
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: target-gateway-new-api-only
+  spec:
+    # New API only - no legacy field
+    proxyProtocol:
+      optional: false
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-new-api-only
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-precedence-test
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-legacy-only
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tcp-1
+      protocol: TCP
+      port: 9090
+      allowedRoutes:
+        namespaces:
+          from: Same
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-new-api-only
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-2
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: Same
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    namespace: envoy-gateway
+    name: tcproute-1
+  spec:
+    parentRefs:
+    - name: gateway-legacy-only
+    rules:
+    - backendRefs:
+      - name: tcp-backend
+        port: 3000

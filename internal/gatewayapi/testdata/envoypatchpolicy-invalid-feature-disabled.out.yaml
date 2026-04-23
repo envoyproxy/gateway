@@ -1,8 +1,39 @@
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: edit-conn-buffer-bytes
+    namespace: envoy-gateway
+  spec:
+    jsonPatches:
+    - name: envoy-gateway-gateway-1-http
+      operation:
+        op: replace
+        path: /per_connection_buffer_limit_bytes
+        value: "1024"
+      type: type.googleapis.com/envoy.config.listener.v3.Listener
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: envoy-gateway-class
+    type: JSONPatch
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyPatchPolicy is disabled in the EnvoyGateway configuration
+        reason: Disabled
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
-    creationTimestamp: null
     name: gateway-1
     namespace: envoy-gateway
   spec:
@@ -46,7 +77,6 @@ infraIR:
         apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
-          creationTimestamp: null
           name: test
           namespace: envoy-gateway-system
         spec:
@@ -54,8 +84,7 @@ infraIR:
           mergeGateways: true
         status: {}
       listeners:
-      - address: null
-        name: envoy-gateway/gateway-1/http
+      - name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -64,6 +93,9 @@ infraIR:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
       name: envoy-gateway-class
       namespace: envoy-gateway-system
 xdsIR:
@@ -87,11 +119,32 @@ xdsIR:
             status: "False"
             type: Accepted
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-envoy-gateway-class-3b1df594
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: envoy-gateway-class
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-envoy-gateway-class-3b1df594
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: envoy-gateway-class
+          protocol: TCP
     http:
     - address: 0.0.0.0
+      externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

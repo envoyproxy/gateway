@@ -14,7 +14,6 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -28,19 +27,20 @@ func (t *Translator) translateExtServiceBackendRefs(
 	backendRefs []egv1a1.BackendRef,
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 	configType string,
 	index int, // index is used to differentiate between multiple external services in the same policy
 ) (*ir.RouteDestination, error) {
 	var (
 		rs  *ir.RouteDestination
-		ds  []*ir.DestinationSetting
 		err error
 	)
 
 	if len(backendRefs) == 0 {
 		return nil, errors.New("no backendRefs found for external service")
 	}
+
+	ds := make([]*ir.DestinationSetting, 0, len(backendRefs))
 
 	pnn := utils.NamespacedName(policy)
 	destName := irIndexedExtServiceDestinationName(pnn, policy.GetObjectKind().GroupVersionKind().Kind, configType, index)
@@ -53,6 +53,11 @@ func (t *Translator) translateExtServiceBackendRefs(
 			return nil, err
 		}
 
+		// don't process backends with weight 0
+		if backendRef.Weight != nil && *backendRef.Weight == 0 {
+			continue
+		}
+
 		settingName := irDestinationSettingName(destName, i)
 		var extServiceDest *ir.DestinationSetting
 		if extServiceDest, err = t.processExtServiceDestination(
@@ -62,7 +67,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 			policy.GetObjectKind().GroupVersionKind().Kind,
 			protocol,
 			resources,
-			envoyProxy,
+			gtwCtx,
 		); err != nil {
 			return nil, err
 		}
@@ -72,6 +77,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	rs = &ir.RouteDestination{
 		Name:     destName,
 		Settings: ds,
+		Metadata: buildResourceMetadata(policy, nil),
 	}
 
 	if validationErr := rs.Validate(); validationErr != nil {
@@ -81,6 +87,7 @@ func (t *Translator) translateExtServiceBackendRefs(
 	if rs.HasMixedEndpoints() {
 		return nil, errors.New("external service destinations having multiple endpoint types are not supported")
 	}
+
 	return rs, nil
 }
 
@@ -91,23 +98,32 @@ func (t *Translator) processExtServiceDestination(
 	policyKind string,
 	protocol ir.AppProtocol,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 ) (*ir.DestinationSetting, error) {
 	var (
 		backendTLS *ir.TLSUpstreamConfig
 		ds         *ir.DestinationSetting
+		err        error
 	)
 
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policyNamespacedName.Namespace)
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindService:
-		ds = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
+		if err != nil {
+			return nil, err
+		}
+	case resource.KindServiceImport:
+		ds, err = t.processServiceImportDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, gtwCtx.envoyProxy, nil)
+		if err != nil {
+			return nil, err
+		}
 	case egv1a1.KindBackend:
 		if !t.BackendEnabled {
 			return nil, fmt.Errorf("resource %s of type Backend cannot be used since Backend is disabled in Envoy Gateway configuration", string(backendRef.Name))
 		}
-		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(settingName, backendRef.BackendObjectReference, backendNamespace, protocol)
 		// Dynamic resolver destinations are not supported for none-route destinations
 		if ds.IsDynamicResolver {
 			return nil, errors.New("dynamic resolver destinations are not supported")
@@ -120,12 +136,11 @@ func (t *Translator) processExtServiceDestination(
 	}
 
 	// TODO: support mixed endpointslice address type for the same backendRef
-	if !t.IsEnvoyServiceRouting(envoyProxy) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
+	if !t.IsServiceRouting(gtwCtx.envoyProxy, nil) && ds.AddressType != nil && *ds.AddressType == ir.MIXED {
 		return nil, errors.New(
 			"mixed endpointslice address type for the same backendRef is not supported")
 	}
 
-	var err error
 	backendTLS, err = t.applyBackendTLSSetting(
 		backendRef.BackendObjectReference,
 		backendNamespace,
@@ -133,15 +148,14 @@ func (t *Translator) processExtServiceDestination(
 		// of the BackendRef is the policy, and there is no hierarchy
 		// relationship between the policy and a gateway.
 		// The owner policy of the BackendRef is used as the parent reference here.
-		gwapiv1a2.ParentReference{
-			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-			Kind:      ptr.To(gwapiv1.Kind(policyKind)),
-			Namespace: ptr.To(gwapiv1.Namespace(policyNamespacedName.Namespace)),
+		gwapiv1.ParentReference{
+			Group:     new(gwapiv1.Group(egv1a1.GroupName)),
+			Kind:      new(gwapiv1.Kind(policyKind)),
+			Namespace: new(gwapiv1.Namespace(policyNamespacedName.Namespace)),
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
 		resources,
-		envoyProxy,
-		false,
+		gtwCtx,
 	)
 	if err != nil {
 		return nil, err
@@ -150,11 +164,17 @@ func (t *Translator) processExtServiceDestination(
 	ds.TLS = backendTLS
 
 	// TODO: support weighted non-xRoute backends
-	ds.Weight = ptr.To(uint32(1))
+	if backendRef.Weight != nil {
+		ds.Weight = backendRef.Weight
+	} else {
+		// set default weight to 1
+		ds.Weight = new(uint32(1))
+	}
+
 	if backendRef.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backendRef.Fallback, false) {
-			ds.Priority = ptr.To(uint32(1))
+			ds.Priority = new(uint32(1))
 		}
 	}
 	return ds, nil

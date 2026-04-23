@@ -8,7 +8,9 @@ package proxy
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
+	"github.com/containers/image/v5/docker/reference"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
@@ -26,8 +28,8 @@ import (
 const (
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
-	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
-	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
+	// envoyNsEnvVar is the name of the Envoy pod namespace environment variable.
+	envoyNsEnvVar = "ENVOY_POD_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// envoyZoneEnvVar is the Envoy pod locality zone name
@@ -35,6 +37,7 @@ const (
 )
 
 // ExpectedResourceHashedName returns expected resource hashed name including up to the 48 characters of the original name.
+// WARNING: DO NOT USE THIS FUNCTION IN MOST OF THE CASES. Use ResourceRender.Name() instead.
 func ExpectedResourceHashedName(name string) string {
 	hashedName := utils.GetHashedName(name, 48)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
@@ -58,16 +61,6 @@ func EnvoyAppLabelSelector() []string {
 	}
 }
 
-// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
-func envoyLabels(extraLabels map[string]string) map[string]string {
-	labels := EnvoyAppLabel()
-	for k, v := range extraLabels {
-		labels[k] = v
-	}
-
-	return labels
-}
-
 func enablePrometheus(infra *ir.ProxyInfra) bool {
 	if infra.Config != nil &&
 		infra.Config.Spec.Telemetry != nil &&
@@ -84,7 +77,8 @@ func enablePrometheus(infra *ir.ProxyInfra) bool {
 func expectedProxyContainers(infra *ir.ProxyInfra,
 	containerSpec *egv1a1.KubernetesContainerSpec,
 	shutdownConfig *egv1a1.ShutdownConfig, shutdownManager *egv1a1.ShutdownManager,
-	egNamespace, dnsDomain string, gatewayNamespaceMode bool,
+	topologyInjectorDisabled bool,
+	controllerNamespace, dnsDomain string, gatewayNamespaceMode bool,
 ) ([]corev1.Container, error) {
 	ports := make([]corev1.ContainerPort, 0, 2)
 	if enablePrometheus(infra) {
@@ -107,20 +101,25 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
+	resolvedMetricSinks := common.ConvertResolvedMetricSinks(infra.ResolvedMetricSinks)
+
 	maxHeapSizeBytes := calculateMaxHeapSizeBytes(containerSpec.Resources)
 
-	if gatewayNamespaceMode {
-		egNamespace = config.DefaultNamespace
-	}
 	// Get the default Bootstrap
 	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics: proxyMetrics,
+		ProxyMetrics:        proxyMetrics,
+		ResolvedMetricSinks: resolvedMetricSinks,
 		SdsConfig: bootstrap.SdsConfigPath{
 			Certificate: filepath.Join("/sds", common.SdsCertFilename),
 			TrustedCA:   filepath.Join("/sds", common.SdsCAFilename),
 		},
-		MaxHeapSizeBytes: maxHeapSizeBytes,
-		XdsServerHost:    ptr.To(fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, egNamespace, dnsDomain)),
+		MaxHeapSizeBytes:         maxHeapSizeBytes,
+		XdsServerHost:            new(fmt.Sprintf("%s.%s.svc.%s.", config.EnvoyGatewayServiceName, controllerNamespace, dnsDomain)),
+		TopologyInjectorDisabled: topologyInjectorDisabled,
+	}
+
+	if gatewayNamespaceMode {
+		bootstrapConfigOptions.SdsConfig.ServiceAccountToken = filepath.Join("/sds", common.SdsServiceAccountTokenFilename)
 	}
 
 	args, err := common.BuildProxyArgs(infra, shutdownConfig, bootstrapConfigOptions, fmt.Sprintf("$(%s)", envoyPodEnvVar), gatewayNamespaceMode)
@@ -128,18 +127,23 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		return nil, err
 	}
 
+	proxyImage, err := resolveProxyImage(containerSpec)
+	if err != nil {
+		return nil, err
+	}
+
 	containers := []corev1.Container{
 		{
 			Name:                     envoyContainerName,
-			Image:                    *containerSpec.Image,
+			Image:                    proxyImage,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy"},
 			Args:                     args,
-			Env:                      expectedContainerEnv(containerSpec, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(containerSpec),
 			Resources:                *containerSpec.Resources,
 			SecurityContext:          expectedEnvoySecurityContext(containerSpec),
 			Ports:                    ports,
-			VolumeMounts:             expectedContainerVolumeMounts(containerSpec),
+			VolumeMounts:             expectedContainerVolumeMounts(containerSpec, gatewayNamespaceMode),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 			StartupProbe: &corev1.Probe{
@@ -197,7 +201,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 			ImagePullPolicy:          corev1.PullIfNotPresent,
 			Command:                  []string{"envoy-gateway"},
 			Args:                     expectedShutdownManagerArgs(shutdownConfig),
-			Env:                      expectedContainerEnv(nil, gatewayNamespaceMode),
+			Env:                      expectedContainerEnv(nil),
 			Resources:                *egv1a1.DefaultShutdownManagerContainerResourceRequirements(),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
@@ -264,7 +268,11 @@ func expectedShutdownManagerImage(shutdownManager *egv1a1.ShutdownManager) strin
 func expectedShutdownManagerArgs(cfg *egv1a1.ShutdownConfig) []string {
 	args := []string{"envoy", "shutdown-manager"}
 	if cfg != nil && cfg.DrainTimeout != nil {
-		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", cfg.DrainTimeout.Seconds()+10))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		args = append(args, fmt.Sprintf("--ready-timeout=%.0fs", d.Seconds()+10))
 	}
 	return args
 }
@@ -277,18 +285,26 @@ func expectedShutdownPreStopCommand(cfg *egv1a1.ShutdownConfig) []string {
 	}
 
 	if cfg.DrainTimeout != nil {
-		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", cfg.DrainTimeout.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.DrainTimeout))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--drain-timeout=%.0fs", d.Seconds()))
 	}
 
 	if cfg.MinDrainDuration != nil {
-		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", cfg.MinDrainDuration.Seconds()))
+		d, err := time.ParseDuration(string(*cfg.MinDrainDuration))
+		if err != nil {
+			return nil
+		}
+		command = append(command, fmt.Sprintf("--min-drain-duration=%.0fs", d.Seconds()))
 	}
 
 	return command
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "certs",
@@ -300,29 +316,37 @@ func expectedContainerVolumeMounts(containerSpec *egv1a1.KubernetesContainerSpec
 			MountPath: "/sds",
 		},
 	}
+	if gatewayNamespaceMode {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "sa-token",
+			MountPath: "/var/run/secrets/token",
+			ReadOnly:  true,
+		})
+	}
+
 	return resource.ExpectedContainerVolumeMounts(containerSpec, volumeMounts)
 }
 
 // expectedVolumes returns expected proxy deployment volumes.
-func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
+func (r *ResourceRender) expectedVolumes(pod *egv1a1.KubernetesPodSpec) []corev1.Volume {
 	var volumes []corev1.Volume
 	certsVolume := corev1.Volume{
 		Name: "certs",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy",
-				DefaultMode: ptr.To[int32](420),
+				DefaultMode: new(int32(420)),
 			},
 		},
 	}
 
-	if gatewayNamespacedMode {
+	if r.GatewayNamespaceMode {
 		certsVolume = corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
+						Name: r.Name(),
 					},
 					Items: []corev1.KeyToPath{
 						{
@@ -330,11 +354,30 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 							Path: XdsTLSCaFileName,
 						},
 					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
+					DefaultMode: new(int32(420)),
+					Optional:    new(false),
 				},
 			},
 		}
+		saAudience := fmt.Sprintf("%s.%s.svc.%s", config.EnvoyGatewayServiceName, r.ControllerNamespace(), r.DNSDomain)
+		saTokenProjectedVolume := corev1.Volume{
+			Name: "sa-token",
+			VolumeSource: corev1.VolumeSource{
+				Projected: &corev1.ProjectedVolumeSource{
+					Sources: []corev1.VolumeProjection{
+						{
+							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+								Path:              "sa-token",
+								Audience:          saAudience,
+								ExpirationSeconds: new(int64(3600)),
+							},
+						},
+					},
+					DefaultMode: new(int32(420)),
+				},
+			},
+		}
+		volumes = append(volumes, saTokenProjectedVolume)
 	}
 
 	volumes = append(volumes, certsVolume)
@@ -344,49 +387,47 @@ func expectedVolumes(name string, gatewayNamespacedMode bool, pod *egv1a1.Kubern
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: ExpectedResourceHashedName(name),
+					Name: r.Name(),
 				},
-				Items: []corev1.KeyToPath{
-					{
-						Key:  common.SdsCAFilename,
-						Path: common.SdsCAFilename,
-					},
-					{
-						Key:  common.SdsCertFilename,
-						Path: common.SdsCertFilename,
-					},
-				},
-				DefaultMode: ptr.To[int32](420),
-				Optional:    ptr.To(false),
+				Items:       sdsConfigMapItems(r.GatewayNamespaceMode),
+				DefaultMode: new(int32(420)),
+				Optional:    new(false),
 			},
 		},
 	}
-	if gatewayNamespacedMode {
-		sdsVolume = corev1.Volume{
-			Name: "sds",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: ExpectedResourceHashedName(name),
-					},
-					Items: []corev1.KeyToPath{
-						{
-							Key:  common.SdsCAFilename,
-							Path: common.SdsCAFilename,
-						},
-					},
-					DefaultMode: ptr.To[int32](420),
-					Optional:    ptr.To(false),
-				},
-			},
-		}
-	}
+
 	volumes = append(volumes, sdsVolume)
 	return resource.ExpectedVolumes(pod, volumes)
 }
 
+func sdsConfigMapItems(gatewayNamespaceMode bool) []corev1.KeyToPath {
+	if gatewayNamespaceMode {
+		return []corev1.KeyToPath{
+			{
+				Key:  common.SdsCAFilename,
+				Path: common.SdsCAFilename,
+			},
+			{
+				Key:  common.SdsServiceAccountTokenFilename,
+				Path: common.SdsServiceAccountTokenFilename,
+			},
+		}
+	}
+
+	return []corev1.KeyToPath{
+		{
+			Key:  common.SdsCAFilename,
+			Path: common.SdsCAFilename,
+		},
+		{
+			Key:  common.SdsCertFilename,
+			Path: common.SdsCertFilename,
+		},
+	}
+}
+
 // expectedContainerEnv returns expected proxy container envs.
-func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gatewayNamespaceMode bool) []corev1.EnvVar {
+func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,
@@ -394,6 +435,15 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 				FieldRef: &corev1.ObjectFieldSelector{
 					APIVersion: "v1",
 					FieldPath:  "metadata.namespace",
+				},
+			},
+		},
+		{
+			Name: envoyPodEnvVar,
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  "metadata.name",
 				},
 			},
 		},
@@ -407,33 +457,6 @@ func expectedContainerEnv(containerSpec *egv1a1.KubernetesContainerSpec, gateway
 			},
 		},
 	}
-	if gatewayNamespaceMode {
-		env = []corev1.EnvVar{
-			{
-				Name:  envoyNsEnvVar,
-				Value: config.DefaultNamespace,
-			},
-			{
-				Name: envoyZoneEnvVar,
-				ValueFrom: &corev1.EnvVarSource{
-					FieldRef: &corev1.ObjectFieldSelector{
-						APIVersion: "v1",
-						FieldPath:  fmt.Sprintf("metadata.labels['%s']", corev1.LabelTopologyZone),
-					},
-				},
-			},
-		}
-	}
-
-	env = append(env, corev1.EnvVar{
-		Name: envoyPodEnvVar,
-		ValueFrom: &corev1.EnvVarSource{
-			FieldRef: &corev1.ObjectFieldSelector{
-				APIVersion: "v1",
-				FieldPath:  "metadata.name",
-			},
-		},
-	})
 
 	if containerSpec != nil {
 		return resource.ExpectedContainerEnv(containerSpec, env)
@@ -465,8 +488,8 @@ func expectedEnvoySecurityContext(containerSpec *egv1a1.KubernetesContainerSpec)
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
-	sc.RunAsGroup = ptr.To(int64(65532))
-	sc.RunAsUser = ptr.To(int64(65532))
+	sc.RunAsGroup = new(int64(65532))
+	sc.RunAsUser = new(int64(65532))
 
 	// Envoy container needs to write to the log file/UDS socket.
 	sc.ReadOnlyRootFilesystem = nil
@@ -481,11 +504,49 @@ func expectedShutdownManagerSecurityContext(containerSpec *egv1a1.KubernetesCont
 	sc := resource.DefaultSecurityContext()
 
 	// run as non-root user
-	sc.RunAsGroup = ptr.To(int64(65532))
-	sc.RunAsUser = ptr.To(int64(65532))
+	sc.RunAsGroup = new(int64(65532))
+	sc.RunAsUser = new(int64(65532))
 
 	// ShutdownManger creates a file to indicate the connection drain process is completed,
 	// so it needs file write permission.
 	sc.ReadOnlyRootFilesystem = nil
 	return sc
+}
+
+func resolveProxyImage(containerSpec *egv1a1.KubernetesContainerSpec) (string, error) {
+	if containerSpec == nil {
+		return "", fmt.Errorf("containerSpec is nil")
+	}
+
+	repo := ptr.Deref(containerSpec.ImageRepository, "")
+	if repo != "" {
+		tag, err := getImageTag(egv1a1.DefaultEnvoyProxyImage)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("%s:%s", repo, tag), nil
+	}
+
+	image := ptr.Deref(containerSpec.Image, "")
+	if image != "" {
+		return image, nil
+	}
+
+	return egv1a1.DefaultEnvoyProxyImage, nil
+}
+
+// getImageTag parses a Docker/OCI image reference and returns the tag if present.
+// Returns an error if parsing fails or if no tag is found.
+func getImageTag(image string) (string, error) {
+	ref, err := reference.ParseNormalizedNamed(image)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse image reference %q: %w", image, err)
+	}
+
+	tagged, ok := ref.(reference.Tagged)
+	if !ok {
+		return "", fmt.Errorf("no tag found in image reference %q", image)
+	}
+
+	return tagged.Tag(), nil
 }

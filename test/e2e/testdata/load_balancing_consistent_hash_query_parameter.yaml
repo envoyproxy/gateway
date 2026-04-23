@@ -1,0 +1,35 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: query-parameter-lb-policy
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: query-parameter-lb-route
+  loadBalancer:
+    type: ConsistentHash
+    consistentHash:
+      type: QueryParams
+      queryParams:
+        - name: lb-query-parameter-first
+        - name: lb-query-parameter-second
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: query-parameter-lb-route
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /query-parameter
+      backendRefs:
+        - name: web-backend
+          port: 8080

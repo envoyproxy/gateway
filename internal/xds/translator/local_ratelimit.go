@@ -17,6 +17,7 @@ import (
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -26,8 +27,6 @@ import (
 
 const (
 	localRateLimitFilterStatPrefix = "http_local_rate_limiter"
-	descriptorMaskedRemoteAddress  = "masked_remote_address"
-	descriptorRemoteAddress        = "remote_address"
 )
 
 func init() {
@@ -117,7 +116,7 @@ func (*localRateLimit) patchResources(*types.ResourceVersionTable,
 	return nil
 }
 
-func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, httpListener *ir.HTTPListener) error {
 	routeAction := route.GetRoute()
 
 	// Return early if no rate limit config exists.
@@ -136,7 +135,6 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 	local := irRoute.Traffic.RateLimit.Local
 
 	rateLimits, descriptors := buildRouteLocalRateLimits(local)
-	routeAction.RateLimits = rateLimits
 
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[egv1a1.EnvoyFilterLocalRateLimit.String()]; ok {
@@ -147,12 +145,17 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 			route.Name)
 	}
 
+	enableXRatelimitHeaders := rlv3.XRateLimitHeadersRFCVersion_DRAFT_VERSION_03
+	if ptr.Deref(local.DefaultXRateLimitOption, egv1a1.XRateLimitHeadersOptionDraftVersion03) == egv1a1.XRateLimitHeadersOptionDisabled {
+		enableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
+	}
+
 	localRl := &localrlv3.LocalRateLimit{
 		StatPrefix: localRateLimitFilterStatPrefix,
 		TokenBucket: &typev3.TokenBucket{
-			MaxTokens: uint32(local.Default.Requests),
+			MaxTokens: local.Default.Requests,
 			TokensPerFill: &wrapperspb.UInt32Value{
-				Value: uint32(local.Default.Requests),
+				Value: local.Default.Requests,
 			},
 			FillInterval: ratelimit.UnitToDuration(local.Default.Unit),
 		},
@@ -168,7 +171,8 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 				Denominator: typev3.FractionalPercent_HUNDRED,
 			},
 		},
-		Descriptors: descriptors,
+		EnableXRatelimitHeaders: enableXRatelimitHeaders,
+		Descriptors:             descriptors,
 		// By setting AlwaysConsumeDefaultTokenBucket to false, the descriptors
 		// won't consume the default token bucket. This means that a request only
 		// counts towards the default token bucket if it does not match any of the
@@ -176,6 +180,10 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 		AlwaysConsumeDefaultTokenBucket: &wrapperspb.BoolValue{
 			Value: false,
 		},
+		RateLimits: rateLimits,
+	}
+	if httpListener.Headers != nil && httpListener.Headers.DisableRateLimitHeaders {
+		localRl.EnableXRatelimitHeaders = rlv3.XRateLimitHeadersRFCVersion_OFF
 	}
 
 	localRlAny, err := anypb.New(localRl)
@@ -194,128 +202,284 @@ func (*localRateLimit) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) e
 func buildRouteLocalRateLimits(local *ir.LocalRateLimit) (
 	[]*routev3.RateLimit, []*rlv3.LocalRateLimitDescriptor,
 ) {
-	var rateLimits []*routev3.RateLimit
-	var descriptors []*rlv3.LocalRateLimitDescriptor
+	rateLimits := make([]*routev3.RateLimit, 0, len(local.Rules))
+	descriptors := make([]*rlv3.LocalRateLimitDescriptor, 0, len(local.Rules))
 
 	// Rules are ORed
 	for rIdx, rule := range local.Rules {
-		var rlActions []*routev3.RateLimit_Action
-		var descriptorEntries []*rlv3.RateLimitDescriptor_Entry
-
-		// HeaderMatches
-		for mIdx, match := range rule.HeaderMatches {
-			var action *routev3.RateLimit_Action
-			var entry *rlv3.RateLimitDescriptor_Entry
-
-			if match.Distinct {
-				// For distinct matches, we only check if the header exists using the RequestHeaders action.
-				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
-				action = &routev3.RateLimit_Action{
-					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
-						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
-							HeaderName:    match.Name,
-							DescriptorKey: descriptorKey,
-						},
-					},
-				}
-				// The descriptor entry value is not set for distinct matches, which means that each distinct
-				// value of the matched header will be counted separately.
-				entry = &rlv3.RateLimitDescriptor_Entry{
-					Key: descriptorKey,
-				}
-			} else {
-				// For exact matches, we check if there is an existing header with the matching value using the
-				// HeaderValueMatch action.
-				descriptorKey := getRouteRuleDescriptor(rIdx, mIdx)
-				descriptorVal := getRouteRuleDescriptor(rIdx, mIdx)
-				headerMatcher := &routev3.HeaderMatcher{
-					Name: match.Name,
-					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
-						StringMatch: buildXdsStringMatcher(match),
-					},
-				}
-				expectMatch := true
-				if match.Invert != nil && *match.Invert {
-					expectMatch = false
-				}
-				action = &routev3.RateLimit_Action{
-					ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
-						HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
-							DescriptorKey:   descriptorKey,
-							DescriptorValue: descriptorVal,
-							ExpectMatch: &wrapperspb.BoolValue{
-								Value: expectMatch,
-							},
-							Headers: []*routev3.HeaderMatcher{headerMatcher},
-						},
-					},
-				}
-				// For exact matches, the descriptor entry value is set to the generated descriptor value.
-				entry = &rlv3.RateLimitDescriptor_Entry{
-					Key:   descriptorKey,
-					Value: descriptorVal,
-				}
-			}
-			rlActions = append(rlActions, action)
-			descriptorEntries = append(descriptorEntries, entry)
+		// If method matches specified, create one rate limit rule per method (OR behavior),
+		// these rules share the same limit counter, so they share the same descriptor.
+		methodMatches := rule.MethodMatches
+		if len(methodMatches) == 0 {
+			// Use nil to indicate no method match
+			methodMatches = []*ir.StringMatch{nil}
 		}
 
-		// Source IP CIDRMatch
-		if rule.CIDRMatch != nil {
-			// For CIDR matches, we first need to check if the source IP matches the CIDR range using
-			// the MaskedRemoteAddress action.
-			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: rule.CIDRMatch.MaskLen}
-			if rule.CIDRMatch.IsIPv6 {
-				mra.V6PrefixMaskLen = maskLen
-			} else {
-				mra.V4PrefixMaskLen = maskLen
-			}
-			action := &routev3.RateLimit_Action{
-				ActionSpecifier: &routev3.RateLimit_Action_MaskedRemoteAddress_{
-					MaskedRemoteAddress: mra,
+		for _, methodMatch := range methodMatches {
+			var rlActions []*routev3.RateLimit_Action
+			var descriptorEntries []*rlv3.RateLimitDescriptor_Entry
+
+			// Build all match conditions
+			// - HeaderMatch
+			// - MethodMatch
+			// - PathMatch
+			// - CIDRMatch
+			// - QueryParamMatch
+			buildHeaderMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.HeaderMatches)
+			buildMethodMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, methodMatch)
+			buildPathMatchLocalRateLimitAction(&rlActions, &descriptorEntries, rIdx, rule.PathMatch)
+			buildCIDRMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, rule.CIDRMatch)
+			// Pass header match count as offset to continue match index sequence
+			buildQueryParamMatchLocalRateLimitActions(&rlActions, &descriptorEntries, rIdx, len(rule.HeaderMatches), rule.QueryParamMatches)
+
+			// Create rate limit and descriptor
+			rateLimit := &routev3.RateLimit{Actions: rlActions}
+			// Set the per-rule XRateLimitOption if specified, overriding the filter-level setting.
+			rateLimit.XRatelimitOption = toEnvoyXRateLimitOption(rule.XRateLimitOption)
+			rateLimits = append(rateLimits, rateLimit)
+			descriptors = append(descriptors, &rlv3.LocalRateLimitDescriptor{
+				Entries: descriptorEntries,
+				TokenBucket: &typev3.TokenBucket{
+					MaxTokens: rule.Limit.Requests,
+					TokensPerFill: &wrapperspb.UInt32Value{
+						Value: rule.Limit.Requests,
+					},
+					FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
 				},
-			}
-			entry := &rlv3.RateLimitDescriptor_Entry{
-				Key:   descriptorMaskedRemoteAddress,
-				Value: rule.CIDRMatch.CIDR,
-			}
-			descriptorEntries = append(descriptorEntries, entry)
-			rlActions = append(rlActions, action)
-
-			if rule.CIDRMatch.Distinct {
-				// If the CIDRMatch is distinct, we also need to use the RemoteAddress action to get the client IP.
-				action = &routev3.RateLimit_Action{
-					ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
-						RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
-					},
-				}
-
-				// If the CIDRMatch is distinct, we use the built-in remote address descriptor key without a value.
-				// This means that each distinct client IP will be counted separately.
-				entry = &rlv3.RateLimitDescriptor_Entry{
-					Key: descriptorRemoteAddress,
-				}
-				descriptorEntries = append(descriptorEntries, entry)
-				rlActions = append(rlActions, action)
-			}
+				ShadowMode: ptr.Deref(rule.ShadowMode, false),
+			})
 		}
-
-		rateLimit := &routev3.RateLimit{Actions: rlActions}
-		rateLimits = append(rateLimits, rateLimit)
-
-		descriptor := &rlv3.LocalRateLimitDescriptor{
-			Entries: descriptorEntries,
-			TokenBucket: &typev3.TokenBucket{
-				MaxTokens: uint32(rule.Limit.Requests),
-				TokensPerFill: &wrapperspb.UInt32Value{
-					Value: uint32(rule.Limit.Requests),
-				},
-				FillInterval: ratelimit.UnitToDuration(rule.Limit.Unit),
-			},
-		}
-		descriptors = append(descriptors, descriptor)
 	}
 
 	return rateLimits, descriptors
+}
+
+func buildHeaderMatchLocalRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	headerMatches []*ir.StringMatch,
+) {
+	for mIdx, match := range headerMatches {
+		var action *routev3.RateLimit_Action
+		var entry *rlv3.RateLimitDescriptor_Entry
+
+		if match.Distinct {
+			// For distinct matches, we only check if the header exists using the RequestHeaders action.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, mIdx)
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
+					RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
+						HeaderName:    match.Name,
+						DescriptorKey: descriptorKey,
+					},
+				},
+			}
+			// The descriptor entry value is not set for distinct matches, which means that each distinct
+			// value of the matched header will be counted separately.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key: descriptorKey,
+			}
+		} else {
+			// For exact matches, we check if there is an existing header with the matching value using the
+			// HeaderValueMatch action.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, mIdx)
+			headerMatcher := &routev3.HeaderMatcher{
+				Name: match.Name,
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(match),
+				},
+			}
+			expectMatch := match.Invert == nil || !*match.Invert
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+					HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						Headers: []*routev3.HeaderMatcher{headerMatcher},
+					},
+				},
+			}
+			// For exact matches, the descriptor entry value is set to the generated descriptor value.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key:   descriptorKey,
+				Value: descriptorVal,
+			}
+		}
+		*rlActions = append(*rlActions, action)
+		*descriptorEntries = append(*descriptorEntries, entry)
+	}
+}
+
+func buildPathMatchLocalRateLimitAction(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	pathMatch *ir.StringMatch,
+) {
+	if pathMatch == nil {
+		return
+	}
+
+	descriptorKey := getRouteRulePathDescriptor(ruleIdx)
+	descriptorVal := getRouteRulePathDescriptor(ruleIdx)
+	headerMatcher := &routev3.HeaderMatcher{
+		Name: ":path",
+		HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+			StringMatch: buildXdsStringMatcher(pathMatch),
+		},
+	}
+	expectMatch := pathMatch.Invert == nil || !*pathMatch.Invert
+	action := &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+			HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+				DescriptorKey:   descriptorKey,
+				DescriptorValue: descriptorVal,
+				ExpectMatch: &wrapperspb.BoolValue{
+					Value: expectMatch,
+				},
+				Headers: []*routev3.HeaderMatcher{headerMatcher},
+			},
+		},
+	}
+	entry := &rlv3.RateLimitDescriptor_Entry{
+		Key:   descriptorKey,
+		Value: descriptorVal,
+	}
+
+	*rlActions = append(*rlActions, action)
+	*descriptorEntries = append(*descriptorEntries, entry)
+}
+
+func buildCIDRMatchLocalRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	cidrMatch *ir.CIDRMatch,
+) {
+	if cidrMatch == nil {
+		return
+	}
+
+	maskedKey := getRouteRuleMaskedRemoteAddressDescriptor(ruleIdx)
+	*rlActions = append(*rlActions, buildExactCIDRMatchRateLimitAction(cidrMatch, maskedKey))
+	*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+		Key:   maskedKey,
+		Value: exactCIDRDescriptorValue(cidrMatch.CIDR, cidrMatch.Invert),
+	})
+
+	if cidrMatch.Distinct {
+		remoteKey := getRouteRuleRemoteAddressDescriptor(ruleIdx)
+		*rlActions = append(*rlActions, buildDistinctCIDRMatchRateLimitAction(cidrMatch, remoteKey))
+		*descriptorEntries = append(*descriptorEntries, &rlv3.RateLimitDescriptor_Entry{
+			Key: remoteKey,
+		})
+	}
+}
+
+func buildMethodMatchLocalRateLimitAction(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	methodMatch *ir.StringMatch,
+) {
+	if methodMatch == nil {
+		return
+	}
+
+	descriptorKey := getRouteRuleMethodDescriptor(ruleIdx)
+	descriptorVal := getRouteRuleMethodDescriptor(ruleIdx)
+	headerMatcher := &routev3.HeaderMatcher{
+		Name: ":method",
+		HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+			StringMatch: buildXdsStringMatcher(methodMatch),
+		},
+	}
+	expectMatch := methodMatch.Invert == nil || !*methodMatch.Invert
+	action := &routev3.RateLimit_Action{
+		ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+			HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
+				DescriptorKey:   descriptorKey,
+				DescriptorValue: descriptorVal,
+				ExpectMatch: &wrapperspb.BoolValue{
+					Value: expectMatch,
+				},
+				Headers: []*routev3.HeaderMatcher{headerMatcher},
+			},
+		},
+	}
+	entry := &rlv3.RateLimitDescriptor_Entry{
+		Key:   descriptorKey,
+		Value: descriptorVal,
+	}
+
+	*rlActions = append(*rlActions, action)
+	*descriptorEntries = append(*descriptorEntries, entry)
+}
+
+func buildQueryParamMatchLocalRateLimitActions(
+	rlActions *[]*routev3.RateLimit_Action,
+	descriptorEntries *[]*rlv3.RateLimitDescriptor_Entry,
+	ruleIdx int,
+	matchIdxOffset int,
+	queryParamMatches []*ir.QueryParamMatch,
+) {
+	for mIdx, queryParam := range queryParamMatches {
+		var action *routev3.RateLimit_Action
+		var entry *rlv3.RateLimitDescriptor_Entry
+
+		if queryParam.Distinct {
+			// For distinct matches, use QueryParameters action to match any value.
+			// Each unique value will get its own rate limit bucket.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamAction := &routev3.RateLimit_Action_QueryParameters{}
+			queryParamAction.DescriptorKey = descriptorKey
+			queryParamAction.QueryParameterName = queryParam.Name
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameters_{
+					QueryParameters: queryParamAction,
+				},
+			}
+			// For distinct matches, the descriptor entry value is not set, which means
+			// each distinct value of the matched query parameter will be counted separately.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key: descriptorKey,
+			}
+		} else {
+			// For non-distinct matches (exact, regex, invert), use QueryParameterValueMatch
+			// action to support advanced matching features like regex and invert.
+			descriptorKey := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			descriptorVal := getRouteRuleDescriptor(ruleIdx, matchIdxOffset+mIdx)
+			queryParamMatcher := &routev3.QueryParameterMatcher{
+				Name: queryParam.Name,
+				QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
+					StringMatch: buildXdsStringMatcher(&queryParam.StringMatch),
+				},
+			}
+			expectMatch := queryParam.Invert == nil || !*queryParam.Invert
+			action = &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_QueryParameterValueMatch_{
+					QueryParameterValueMatch: &routev3.RateLimit_Action_QueryParameterValueMatch{
+						DescriptorKey:   descriptorKey,
+						DescriptorValue: descriptorVal,
+						ExpectMatch: &wrapperspb.BoolValue{
+							Value: expectMatch,
+						},
+						QueryParameters: []*routev3.QueryParameterMatcher{queryParamMatcher},
+					},
+				},
+			}
+			// For non-distinct matches, the descriptor entry value is set to the generated descriptor value.
+			entry = &rlv3.RateLimitDescriptor_Entry{
+				Key:   descriptorKey,
+				Value: descriptorVal,
+			}
+		}
+		*rlActions = append(*rlActions, action)
+		*descriptorEntries = append(*descriptorEntries, entry)
+	}
 }

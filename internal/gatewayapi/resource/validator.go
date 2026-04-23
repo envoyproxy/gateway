@@ -6,16 +6,29 @@
 package resource
 
 import (
+	"sync"
+
 	kvalidate "sigs.k8s.io/kubectl-validate/pkg/cmd"
 	"sigs.k8s.io/kubectl-validate/pkg/openapiclient"
 	"sigs.k8s.io/kubectl-validate/pkg/validator"
 )
 
-var defaultValidator = newDefaultValidator()
+var (
+	defaultValidator     *Validator
+	defaultValidatorOnce sync.Once
+)
+
+func GetDefaultValidator() *Validator {
+	defaultValidatorOnce.Do(func() {
+		defaultValidator = newDefaultValidator()
+	})
+	return defaultValidator
+}
 
 // Validator is a local/offline Kubernetes resources validator.
 type Validator struct {
 	resolver *validator.Validator
+	mu       sync.Mutex
 }
 
 // newDefaultValidator init a default validator for internal usage.
@@ -25,6 +38,8 @@ func newDefaultValidator() *Validator {
 }
 
 // Validate validates one Kubernetes resource.
-func (v Validator) Validate(content []byte) error {
+func (v *Validator) Validate(content []byte) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	return kvalidate.ValidateDocument(content, v.resolver)
 }

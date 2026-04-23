@@ -16,8 +16,8 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -35,11 +35,7 @@ var _ httpFilter = &oidc{}
 
 // patchHCM builds and appends the oauth2 Filters to the HTTP Connection Manager
 // if applicable, and it does not already exist.
-// Note: this method creates an oauth2 filter for each route that contains an OIDC config.
-// the filter is disabled by default. It is enabled on the route level.
 func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
-	var errs error
-
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -48,60 +44,49 @@ func (*oidc) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListe
 		return errors.New("ir listener is nil")
 	}
 
+	if hcmContainsFilter(mgr, string(egv1a1.EnvoyFilterOAuth2)) {
+		return nil
+	}
+
 	for _, route := range irListener.Routes {
 		if !routeContainsOIDC(route) {
 			continue
 		}
 
-		// Only generates one OAuth2 Envoy filter for each unique name.
-		// For example, if there are two routes under the same gateway with the
-		// same OAuth2 config, only one OAuth2 filter will be generated.
-		if hcmContainsFilter(mgr, oauth2FilterName(route.Security.OIDC)) {
-			continue
-		}
-
-		filter, err := buildHCMOAuth2Filter(route.Security.OIDC)
+		filter, err := buildHCMOAuth2Filter()
 		if err != nil {
-			errs = errors.Join(errs, err)
-			continue
+			return err
 		}
-
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
+		return nil
 	}
 
-	return errs
+	return nil
 }
 
-// buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
-func buildHCMOAuth2Filter(oidc *ir.OIDC) (*hcmv3.HttpFilter, error) {
-	oauth2Proto, err := oauth2Config(oidc)
-	if err != nil {
-		return nil, err
-	}
-
+// buildHCMOAuth2Filter returns the listener-level OAuth2 HTTP filter.
+func buildHCMOAuth2Filter() (*hcmv3.HttpFilter, error) {
+	oauth2Proto := &oauth2v3.OAuth2{}
 	OAuth2Any, err := proto.ToAnyWithValidation(oauth2Proto)
 	if err != nil {
 		return nil, err
 	}
 
 	return &hcmv3.HttpFilter{
-		Name:     oauth2FilterName(oidc),
-		Disabled: true,
+		Name: string(egv1a1.EnvoyFilterOAuth2),
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: OAuth2Any,
 		},
 	}, nil
 }
 
-func oauth2FilterName(oidc *ir.OIDC) string {
-	return perRouteFilterName(egv1a1.EnvoyFilterOAuth2, oidc.Name)
-}
-
-func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
+func oauth2Config(securityFeatures *ir.SecurityFeatures) (*oauth2v3.OAuth2PerRoute, error) {
 	var (
 		tokenEndpointCluster string
 		err                  error
 	)
+
+	oidc := securityFeatures.OIDC
 
 	if oidc.Provider.Destination != nil && len(oidc.Provider.Destination.Settings) > 0 {
 		tokenEndpointCluster = oidc.Provider.Destination.Name
@@ -118,25 +103,33 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 		tokenEndpointCluster = cluster.name
 	}
 
+	tokenEndpointTimeout := durationpb.New(defaultExtServiceRequestTimeout)
+	requestTimeoutConfigured := oidc.Provider.Traffic != nil &&
+		oidc.Provider.Traffic.Timeout != nil &&
+		oidc.Provider.Traffic.Timeout.HTTP != nil &&
+		oidc.Provider.Traffic.Timeout.HTTP.RequestTimeout != nil
+	if requestTimeoutConfigured {
+		tokenEndpointTimeout = durationpb.New(oidc.Provider.Traffic.Timeout.HTTP.RequestTimeout.Duration)
+	}
+
 	// Envoy OAuth2 filter deletes the HTTP authorization header by default, which surprises users.
 
 	// If the user wants to forward the oauth2 access token to the upstream service,
 	// we should not preserve the original authorization header.
 	preserveAuthorizationHeader := !oidc.ForwardAccessToken
-
-	oauth2 := &oauth2v3.OAuth2{
+	oauth2 := &oauth2v3.OAuth2PerRoute{
 		Config: &oauth2v3.OAuth2Config{
+			StatPrefix: oidc.Name,
 			TokenEndpoint: &corev3.HttpUri{
 				Uri: oidc.Provider.TokenEndpoint,
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
 					Cluster: tokenEndpointCluster,
 				},
-				Timeout: &durationpb.Duration{
-					Seconds: defaultExtServiceRequestTimeout,
-				},
+				Timeout: tokenEndpointTimeout,
 			},
 			AuthorizationEndpoint: oidc.Provider.AuthorizationEndpoint,
 			RedirectUri:           oidc.RedirectURL,
+			CookieConfigs:         buildCookieConfigs(oidc),
 			RedirectPathMatcher: &matcherv3.PathMatcher{
 				Rule: &matcherv3.PathMatcher_Path{
 					Path: &matcherv3.StringMatcher{
@@ -184,19 +177,16 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 			Resources:  oidc.Resources,
 
 			PreserveAuthorizationHeader: preserveAuthorizationHeader,
+			DisableTokenEncryption:      oidc.DisableTokenEncryption,
 		},
 	}
 
 	if oidc.DefaultTokenTTL != nil {
-		oauth2.Config.DefaultExpiresIn = &durationpb.Duration{
-			Seconds: int64(oidc.DefaultTokenTTL.Seconds()),
-		}
+		oauth2.Config.DefaultExpiresIn = durationpb.New(oidc.DefaultTokenTTL.Duration)
 	}
 
 	if oidc.DefaultRefreshTokenTTL != nil {
-		oauth2.Config.DefaultRefreshTokenExpiresIn = &durationpb.Duration{
-			Seconds: int64(oidc.DefaultRefreshTokenTTL.Seconds()),
-		}
+		oauth2.Config.DefaultRefreshTokenExpiresIn = durationpb.New(oidc.DefaultRefreshTokenTTL.Duration)
 	}
 
 	if oidc.CookieNameOverrides != nil &&
@@ -221,7 +211,138 @@ func oauth2Config(oidc *ir.OIDC) (*oauth2v3.OAuth2, error) {
 		}
 		oauth2.Config.RetryPolicy = rp
 	}
+
+	if oidc.PassThroughAuthHeader {
+		oauth2.Config.PassThroughMatcher = buildHeaderMatchers(securityFeatures.JWT)
+	}
+
+	if oidc.DenyRedirect != nil {
+		oauth2.Config.DenyRedirectMatcher = buildDenyRedirectMatcher(oidc)
+	}
+
+	if oidc.Provider.EndSessionEndpoint != nil {
+		oauth2.Config.EndSessionEndpoint = *oidc.Provider.EndSessionEndpoint
+	}
+
+	if oidc.CSRFTokenTTL != nil {
+		oauth2.Config.CsrfTokenExpiresIn = durationpb.New(oidc.CSRFTokenTTL.Duration)
+	}
+
 	return oauth2, nil
+}
+
+func buildSameSite(config *egv1a1.OIDCCookieConfig) oauth2v3.CookieConfig_SameSite {
+	samesite := egv1a1.SameSite(*config.SameSite)
+
+	switch samesite {
+	case egv1a1.SameSiteStrict:
+		return oauth2v3.CookieConfig_STRICT
+	case egv1a1.SameSiteLax:
+		return oauth2v3.CookieConfig_LAX
+	case egv1a1.SameSiteNone:
+		return oauth2v3.CookieConfig_NONE
+	default:
+		// should not reach here
+		return oauth2v3.CookieConfig_DISABLED
+	}
+}
+
+// buildCookieConfigs translates the OIDC configuration from the US
+func buildCookieConfigs(oidc *ir.OIDC) *oauth2v3.CookieConfigs {
+	// If the user did not specify any custom cookie configurations at all, return the defaults.
+	if oidc.CookieConfig == nil || oidc.CookieConfig.SameSite == nil {
+		return nil
+	}
+
+	// Apply the user-defined SameSite policy for each cookie if it has been configured.
+	sameSite := buildSameSite(oidc.CookieConfig)
+	return &oauth2v3.CookieConfigs{
+		BearerTokenCookieConfig:  &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthHmacCookieConfig:    &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthExpiresCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		IdTokenCookieConfig:      &oauth2v3.CookieConfig{SameSite: sameSite},
+		RefreshTokenCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+		OauthNonceCookieConfig:   &oauth2v3.CookieConfig{SameSite: sameSite},
+		CodeVerifierCookieConfig: &oauth2v3.CookieConfig{SameSite: sameSite},
+	}
+}
+
+func buildDenyRedirectMatcher(oidc *ir.OIDC) []*routev3.HeaderMatcher {
+	denyRedirectPathMatchers := make([]*routev3.HeaderMatcher, 0, len(oidc.DenyRedirect.Headers))
+
+	for _, m := range oidc.DenyRedirect.Headers {
+		var stringMatcher *matcherv3.StringMatcher
+
+		if m.Type == nil { // if no type is specified, default to exact match on value
+			stringMatcher = &matcherv3.StringMatcher{
+				MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+			}
+		} else { // if type is specified, use it
+			switch *m.Type {
+			case egv1a1.StringMatchExact:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{Exact: m.Value},
+				}
+			case egv1a1.StringMatchPrefix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: m.Value},
+				}
+			case egv1a1.StringMatchSuffix:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: m.Value},
+				}
+			case egv1a1.StringMatchRegularExpression:
+				stringMatcher = &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+						SafeRegex: &matcherv3.RegexMatcher{Regex: m.Value},
+					},
+				}
+			}
+		}
+
+		denyRedirectPathMatchers = append(denyRedirectPathMatchers, &routev3.HeaderMatcher{
+			Name: m.Name,
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+				StringMatch: stringMatcher,
+			},
+		})
+	}
+
+	return denyRedirectPathMatchers
+}
+
+func buildHeaderMatchers(jwt *ir.JWT) []*routev3.HeaderMatcher {
+	// Bypass OIDC if a header that will be handled by JWT is passed.
+	passThroughMatchers := make([]*routev3.HeaderMatcher, 0, len(jwt.Providers))
+
+	for _, provider := range jwt.Providers {
+		if provider.ExtractFrom == nil {
+			// If extractFrom is not specified, it adds "Authorization: Bearer ..." as a default
+			stringMatcher := matcherv3.StringMatcher{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: "Bearer "}}
+			headerMatcher := routev3.HeaderMatcher{
+				Name:                 "Authorization",
+				HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{StringMatch: &stringMatcher},
+			}
+			passThroughMatchers = append(passThroughMatchers, &headerMatcher)
+		} else {
+			// Any matching header will be bypassed (JWT effectively OR's them).
+			for _, extractHeader := range provider.ExtractFrom.Headers {
+				if extractHeader.ValuePrefix == nil {
+					headerMatcher := routev3.HeaderMatcher{Name: extractHeader.Name}
+					passThroughMatchers = append(passThroughMatchers, &headerMatcher)
+				} else {
+					stringMatcher := matcherv3.StringMatcher{MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: *extractHeader.ValuePrefix}}
+					headerMatcher := routev3.HeaderMatcher{
+						Name:                 extractHeader.Name,
+						HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{StringMatch: &stringMatcher},
+					}
+					passThroughMatchers = append(passThroughMatchers, &headerMatcher)
+				}
+			}
+		}
+	}
+
+	return passThroughMatchers
 }
 
 func buildNonRouteRetryPolicy(rr *ir.Retry) (*corev3.RetryPolicy, error) {
@@ -235,12 +356,8 @@ func buildNonRouteRetryPolicy(rr *ir.Retry) (*corev3.RetryPolicy, error) {
 
 	if rr.PerRetry != nil && rr.PerRetry.BackOff != nil {
 		rp.RetryBackOff = &corev3.BackoffStrategy{
-			BaseInterval: &durationpb.Duration{
-				Seconds: int64(rr.PerRetry.BackOff.BaseInterval.Seconds()),
-			},
-			MaxInterval: &durationpb.Duration{
-				Seconds: int64(rr.PerRetry.BackOff.MaxInterval.Seconds()),
-			},
+			BaseInterval: durationpb.New(rr.PerRetry.BackOff.BaseInterval.Duration),
+			MaxInterval:  durationpb.New(rr.PerRetry.BackOff.MaxInterval.Duration),
 		}
 	}
 
@@ -306,9 +423,12 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 				oidc.Provider.Destination, oidc.Provider.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
+			if err := processClientCertificates(tCtx, oidc.Provider.Destination.Settings); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		} else {
 			// Create a cluster with the token endpoint url.
-			if err := createOAuth2TokenEndpointCluster(tCtx, oidc.Provider.TokenEndpoint); err != nil {
+			if err := createOAuth2TokenEndpointCluster(tCtx, oidc); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}
@@ -320,7 +440,7 @@ func createOAuthServerClusters(tCtx *types.ResourceVersionTable,
 // createOAuth2TokenEndpointClusters creates token endpoint clusters from the
 // provided routes, if needed.
 func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
-	tokenEndpoint string,
+	oidc *ir.OIDC,
 ) error {
 	var (
 		cluster *urlCluster
@@ -329,7 +449,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		err     error
 	)
 
-	if cluster, err = url2Cluster(tokenEndpoint); err != nil {
+	if cluster, err = url2Cluster(oidc.Provider.TokenEndpoint); err != nil {
 		return err
 	}
 
@@ -339,15 +459,17 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 	if cluster.endpointType == EndpointTypeStatic {
 		return fmt.Errorf(
 			"static IP cluster is not allowed: %s",
-			tokenEndpoint)
+			oidc.Provider.TokenEndpoint)
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight: ptr.To[uint32](1),
+		Weight: new(uint32(1)),
 		Endpoints: []*ir.DestinationEndpoint{
-			ir.NewDestEndpoint(cluster.hostname, cluster.port, false, nil),
+			ir.NewDestEndpoint(nil, cluster.hostname, cluster.port, false, nil),
 		},
 		Name: destinationSettingName(cluster.name),
+		// TODO: tracked with issue #6861
+		Metadata: nil,
 	}
 
 	clusterArgs := &xdsClusterArgs{
@@ -355,6 +477,7 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		endpointType: cluster.endpointType,
+		metadata:     ds.Metadata,
 	}
 	if cluster.tls {
 		if tSocket, err = buildXdsUpstreamTLSSocket(cluster.hostname); err != nil {
@@ -362,6 +485,9 @@ func createOAuth2TokenEndpointCluster(tCtx *types.ResourceVersionTable,
 		}
 		clusterArgs.tSocket = tSocket
 	}
+
+	// Apply traffic features if they exist.
+	applyTraffic(clusterArgs, oidc.Provider.Traffic)
 
 	return addXdsCluster(tCtx, clusterArgs)
 }
@@ -435,7 +561,7 @@ func oauth2HMACSecretName(oidc *ir.OIDC) string {
 
 // patchRoute patches the provided route with the oauth2 config if applicable.
 // Note: this method enables the corresponding oauth2 filter for the provided route.
-func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -445,9 +571,19 @@ func (*oidc) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if irRoute.Security == nil || irRoute.Security.OIDC == nil {
 		return nil
 	}
-	filterName := oauth2FilterName(irRoute.Security.OIDC)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	oauth2Proto, err := oauth2Config(irRoute.Security)
+	if err != nil {
 		return err
 	}
+	if route.TypedPerFilterConfig == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+
+	oauth2Any, err := proto.ToAnyWithValidation(oauth2Proto)
+	if err != nil {
+		return err
+	}
+
+	route.TypedPerFilterConfig[string(egv1a1.EnvoyFilterOAuth2)] = oauth2Any
 	return nil
 }

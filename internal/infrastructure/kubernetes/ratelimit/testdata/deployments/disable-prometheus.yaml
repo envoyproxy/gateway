@@ -1,7 +1,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/component: ratelimit
     app.kubernetes.io/managed-by: envoy-gateway
@@ -25,7 +24,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway

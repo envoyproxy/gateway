@@ -20,11 +20,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -206,7 +205,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		name    string
 		policy  egv1a1.PolicyTargetReferences
 		targets []*unstructured.Unstructured
-		results []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName
+		results []gwapiv1.LocalPolicyTargetReferenceWithSectionName
 	}{
 		{
 			name: "simple",
@@ -214,7 +213,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
 						Kind:  "Gateway",
-						Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
+						Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
 						MatchLabels: map[string]string{
 							"pick": "me",
 						},
@@ -262,9 +261,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "second",
@@ -331,16 +330,16 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "TLSRoute",
 						Name:  "third",
 					},
 				},
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "second",
@@ -351,9 +350,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 		{
 			name: "deduplicated",
 			policy: egv1a1.PolicyTargetReferences{
-				TargetRefs: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 					{
-						LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "TLSRoute",
 							Name:  "third",
@@ -410,9 +409,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "TLSRoute",
 						Name:  "third",
@@ -426,7 +425,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				TargetSelectors: []egv1a1.TargetSelector{
 					{
 						Kind:  "Gateway",
-						Group: ptr.To(gwapiv1.Group("bad-group")),
+						Group: new(gwapiv1.Group("bad-group")),
 						MatchLabels: map[string]string{
 							"pick": "me",
 						},
@@ -474,7 +473,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
 		},
 		{
 			name: "match expression",
@@ -520,9 +519,9 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1a2.LocalPolicyTargetReference{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 						Group: "gateway.networking.k8s.io",
 						Kind:  "Gateway",
 						Name:  "first",
@@ -574,13 +573,13 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1a2.LocalPolicyTargetReferenceWithSectionName{},
+			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			results := getPolicyTargetRefs(tc.policy, tc.targets)
+			results := getPolicyTargetRefs(tc.policy, tc.targets, "default")
 			require.ElementsMatch(t, results, tc.results)
 		})
 	}
@@ -669,10 +668,10 @@ func TestGetServiceIPFamily(t *testing.T) {
 			name: "require dual stack",
 			service: &corev1.Service{
 				Spec: corev1.ServiceSpec{
-					IPFamilyPolicy: ptr.To(corev1.IPFamilyPolicyRequireDualStack),
+					IPFamilyPolicy: new(corev1.IPFamilyPolicyRequireDualStack),
 				},
 			},
-			expected: ptr.To(egv1a1.DualStack),
+			expected: new(egv1a1.DualStack),
 		},
 		{
 			name: "multiple ip families",
@@ -681,7 +680,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.DualStack),
+			expected: new(egv1a1.DualStack),
 		},
 		{
 			name: "ipv4 only",
@@ -690,7 +689,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.IPv4),
+			expected: new(egv1a1.IPv4),
 		},
 		{
 			name: "ipv6 only",
@@ -699,7 +698,7 @@ func TestGetServiceIPFamily(t *testing.T) {
 					IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
 				},
 			},
-			expected: ptr.To(egv1a1.IPv6),
+			expected: new(egv1a1.IPv6),
 		},
 		{
 			name: "no ip family specified",
@@ -713,6 +712,237 @@ func TestGetServiceIPFamily(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := getServiceIPFamily(tc.service)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestGetCaCertFromConfigMap(t *testing.T) {
+	cases := []struct {
+		name          string
+		cm            *corev1.ConfigMap
+		expectedFound bool
+		expected      string
+	}{
+		{
+			name: "get from ca.crt",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"ca.crt":        "fake-cert",
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
+			name: "get from first key",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{
+					"root-cert.pem": "fake-root",
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-root",
+		},
+		{
+			name: "not found",
+			cm: &corev1.ConfigMap{
+				Data: map[string]string{},
+			},
+			expectedFound: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, found := getOrFirstFromData(tc.cm.Data, CACertKey)
+			require.Equal(t, tc.expectedFound, found)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetCaCertFromSecret(t *testing.T) {
+	cases := []struct {
+		name          string
+		s             *corev1.Secret
+		expectedFound bool
+		expected      string
+	}{
+		{
+			name: "get from ca.crt",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"ca.crt":        []byte("fake-cert"),
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-cert",
+		},
+		{
+			name: "get from first key",
+			s: &corev1.Secret{
+				Data: map[string][]byte{
+					"root-cert.pem": []byte("fake-root"),
+				},
+			},
+			expectedFound: true,
+			expected:      "fake-root",
+		},
+		{
+			name: "not found",
+			s: &corev1.Secret{
+				Data: map[string][]byte{},
+			},
+			expectedFound: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, found := getOrFirstFromData(tc.s.Data, CACertKey)
+			require.Equal(t, tc.expectedFound, found)
+			require.Equal(t, tc.expected, string(got))
+		})
+	}
+}
+
+func TestIrStringMatch(t *testing.T) {
+	const stringMatchUnknown egv1a1.StringMatchType = "Unknown"
+	matchName := "Name"
+	matchValue := "Value"
+
+	testCases := []struct {
+		name     string
+		match    egv1a1.StringMatch
+		expected *ir.StringMatch
+	}{
+		{
+			name: "Exact by default",
+			match: egv1a1.StringMatch{
+				Type:  nil,
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
+		},
+		{
+			name: "Exact",
+			match: egv1a1.StringMatch{
+				Type:  new(egv1a1.StringMatchExact),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
+		},
+		{
+			name: "Prefix",
+			match: egv1a1.StringMatch{
+				Type:  new(egv1a1.StringMatchPrefix),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:   matchName,
+				Prefix: &matchValue,
+			},
+		},
+		{
+			name: "Suffix",
+			match: egv1a1.StringMatch{
+				Type:  new(egv1a1.StringMatchSuffix),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:   matchName,
+				Suffix: &matchValue,
+			},
+		},
+		{
+			name: "RegularExpression",
+			match: egv1a1.StringMatch{
+				Type:  new(egv1a1.StringMatchRegularExpression),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:      matchName,
+				SafeRegex: &matchValue,
+			},
+		},
+		{
+			name: "Unknown",
+			match: egv1a1.StringMatch{
+				Type:  new(stringMatchUnknown),
+				Value: matchValue,
+			},
+			expected: &ir.StringMatch{
+				Name:  matchName,
+				Exact: &matchValue,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := irStringMatch(matchName, tc.match)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestWildcardHostnameMatchesHostname(t *testing.T) {
+	testCases := []struct {
+		name     string
+		wildcard string
+		hostname string
+		expected bool
+	}{
+		{
+			name:     "*.com matches *.example.com",
+			wildcard: "*.com",
+			hostname: "*.example.com",
+			expected: true,
+		},
+		{
+			name:     "*.example.com matches *.foo.example.com",
+			wildcard: "*.example.com",
+			hostname: "*.foo.example.com",
+			expected: true,
+		},
+		{
+			name:     "*.com does not match *.net",
+			wildcard: "*.com",
+			hostname: "*.net",
+			expected: false,
+		},
+		{
+			name:     "*.example.com does not match *.other.com",
+			wildcard: "*.example.com",
+			hostname: "*.other.com",
+			expected: false,
+		},
+		{
+			name:     "*.foo.example.com does not match *.example.com",
+			wildcard: "*.foo.example.com",
+			hostname: "*.example.com",
+			expected: false,
+		},
+		{
+			name:     "*.example.com match foo.example.com",
+			wildcard: "*.example.com",
+			hostname: "foo.example.com",
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := wildcardHostnameMatchesHostname(tc.wildcard, tc.hostname)
 			require.Equal(t, tc.expected, result)
 		})
 	}

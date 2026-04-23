@@ -1,0 +1,36 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: route-with-settings-preferlocal
+      route:
+        cluster: route-with-settings-preferlocal-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: route-with-lb-preferlocal
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: route-with-lb-preferlocal-dest/backend/0
+            weight: 30
+    - match:
+        prefix: /
+      name: route-with-lb-and-settings-preferlocal
+      route:
+        clusterNotFoundResponseCode: INTERNAL_SERVER_ERROR
+        upgradeConfigs:
+        - upgradeType: websocket
+        weightedClusters:
+          clusters:
+          - name: route-with-lb-and-settings-preferlocal-dest/backend/0
+            weight: 30

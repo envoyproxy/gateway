@@ -7,7 +7,6 @@ package translator
 
 import (
 	"errors"
-	"sort"
 	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -16,12 +15,9 @@ import (
 	cel "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/filters/cel/v3"
 	grpcaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/grpc/v3"
 	otelaccesslog "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/open_telemetry/v3"
-	celformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/cel/v3"
-	metadataformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/metadata/v3"
 	reqwithoutqueryformatter "github.com/envoyproxy/go-control-plane/envoy/extensions/formatter/req_without_query/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	otlpcommonv1 "go.opentelemetry.io/proto/otlp/common/v1"
-	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -35,8 +31,6 @@ const (
 	otelAccessLog = "envoy.access_loggers.open_telemetry"
 
 	reqWithoutQueryCommandOperator = "%REQ_WITHOUT_QUERY"
-	metadataCommandOperator        = "%METADATA"
-	celCommandOperator             = "%CEL"
 
 	tcpGRPCAccessLog = "envoy.access_loggers.tcp_grpc"
 	celFilter        = "envoy.access_loggers.extension_filters.cel"
@@ -76,45 +70,17 @@ var listenerAccessLogFilter = &accesslog.AccessLogFilter{
 	},
 }
 
-var (
-	// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
-	reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
-
-	// metadataFormatter configures additional formatters needed for some of the format strings like "METADATA"
-	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/metadata/v3/metadata.proto
-	metadataFormatter *cfgcore.TypedExtensionConfig
-
-	// celFormatter configures additional formatters needed for some of the format strings like "CEL"
-	// for more information, see https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/formatter/cel/v3/cel.proto
-	celFormatter *cfgcore.TypedExtensionConfig
-)
+// reqWithoutQueryFormatter configures additional formatters needed for some of the format strings like "REQ_WITHOUT_QUERY"
+var reqWithoutQueryFormatter *cfgcore.TypedExtensionConfig
 
 func init() {
-	any, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
+	anyCfg, err := proto.ToAnyWithValidation(&reqwithoutqueryformatter.ReqWithoutQuery{})
 	if err != nil {
 		panic(err)
 	}
 	reqWithoutQueryFormatter = &cfgcore.TypedExtensionConfig{
 		Name:        "envoy.formatter.req_without_query",
-		TypedConfig: any,
-	}
-
-	any, err = proto.ToAnyWithValidation(&metadataformatter.Metadata{})
-	if err != nil {
-		panic(err)
-	}
-	metadataFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.metadata",
-		TypedConfig: any,
-	}
-
-	any, err = proto.ToAnyWithValidation(&celformatter.Cel{})
-	if err != nil {
-		panic(err)
-	}
-	celFormatter = &cfgcore.TypedExtensionConfig{
-		Name:        "envoy.formatter.cel",
-		TypedConfig: any,
+		TypedConfig: anyCfg,
 	}
 }
 
@@ -129,7 +95,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle text file access logs
 	for _, text := range al.Text {
 		// Filter out logs that are not Global or match the desired access log type
-		if text.LogType != nil && *text.LogType != accessLogType {
+		if !accessLogTypeMatch(text.LogType, accessLogType) {
 			continue
 		}
 
@@ -182,27 +148,28 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle json file access logs
 	for _, json := range al.JSON {
 		// Filter out logs that are not Global or match the desired access log type
-		if json.LogType != nil && *json.LogType != accessLogType {
+		if !accessLogTypeMatch(json.LogType, accessLogType) {
 			continue
 		}
 
 		// NR is only added to listener logs originating from a global log configuration
 		defaultLogTypeForListener := accessLogType == ir.ProxyAccessLogTypeListener && json.LogType == nil
 
-		jsonLogFields := EnvoyJSONLogFields
+		var jsonLogFields []ir.MapEntry
 		if json.JSON != nil {
 			jsonLogFields = json.JSON
+		} else {
+			jsonLogFields = ir.MapToSlice(EnvoyJSONLogFields)
 		}
 
-		keys := maps.Keys(jsonLogFields)
 		jsonFormat := &structpb.Struct{
-			Fields: make(map[string]*structpb.Value, len(keys)),
+			Fields: make(map[string]*structpb.Value, len(jsonLogFields)),
 		}
 
-		for _, key := range keys {
-			jsonFormat.Fields[key] = &structpb.Value{
+		for _, entry := range jsonLogFields {
+			jsonFormat.Fields[entry.Key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: jsonLogFields[key],
+					StringValue: entry.Value,
 				},
 			}
 		}
@@ -242,7 +209,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle ALS access logs
 	for _, als := range al.ALS {
 		// Filter out logs that are not Global or match the desired access log type
-		if als.LogType != nil && *als.LogType != accessLogType {
+		if !accessLogTypeMatch(als.LogType, accessLogType) {
 			continue
 		}
 
@@ -313,7 +280,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	// handle open telemetry access logs
 	for _, otel := range al.OpenTelemetry {
 		// Filter out logs that are not Global or match the desired access log type
-		if otel.LogType != nil && *otel.LogType != accessLogType {
+		if !accessLogTypeMatch(otel.LogType, accessLogType) {
 			continue
 		}
 
@@ -330,10 +297,11 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 							Authority:   otel.Authority,
 						},
 					},
+					InitialMetadata: buildGrpcInitialMetadata(otel.Headers),
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
-			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
+			ResourceAttributes: convertToKeyValueList(otel.ResourceAttributes, false),
 		}
 
 		var format string
@@ -349,12 +317,12 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 			}
 		}
 
-		var attrs map[string]string
+		var attrs []ir.MapEntry
 		if len(otel.Attributes) != 0 {
 			attrs = otel.Attributes
 		} else if len(otel.Attributes) == 0 && format == "" {
 			// if there are no attributes and text format is unset, use the default EnvoyJSONLogFields
-			attrs = EnvoyJSONLogFields
+			attrs = ir.MapToSlice(EnvoyJSONLogFields)
 		}
 
 		al.Attributes = convertToKeyValueList(attrs, true)
@@ -384,11 +352,27 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 	return accessLogs, nil
 }
 
+// accessLogTypeMatch checks if the access log type from the IR matches the desired access log type for the proxy (listener, route or Upstream).
+// nil ProxyAccessLogType doesn't match Upstream for compatibility.
+func accessLogTypeMatch(left *ir.ProxyAccessLogType, right ir.ProxyAccessLogType) bool {
+	// Filter out logs that are not Global or match the desired access log type
+	if left != nil && *left != right {
+		return false
+	}
+
+	// nil LogType didn't match upstream
+	if left == nil && right == ir.ProxyAccessLogTypeUpstream {
+		return false
+	}
+
+	return true
+}
+
 func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 	fl := &cel.ExpressionFilter{
 		Expression: expr,
 	}
-	any, err := proto.ToAnyWithValidation(fl)
+	anyCfg, err := proto.ToAnyWithValidation(fl)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +381,7 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 		FilterSpecifier: &accesslog.AccessLogFilter_ExtensionFilter{
 			ExtensionFilter: &accesslog.ExtensionFilter{
 				Name:       celFilter,
-				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: any},
+				ConfigType: &accesslog.ExtensionFilter_TypedConfig{TypedConfig: anyCfg},
 			},
 		},
 	}, nil
@@ -405,7 +389,11 @@ func celAccessLogFilter(expr string) (*accesslog.AccessLogFilter, error) {
 
 func buildAccessLogFilter(exprs []string, withNoRouteMatchFilter bool) (*accesslog.AccessLogFilter, error) {
 	// add filter for access logs
-	var filters []*accesslog.AccessLogFilter
+	capacity := len(exprs)
+	if withNoRouteMatchFilter {
+		capacity++
+	}
+	filters := make([]*accesslog.AccessLogFilter, 0, capacity)
 	for _, expr := range exprs {
 		fl, err := celAccessLogFilter(expr)
 		if err != nil {
@@ -441,35 +429,19 @@ func accessLogTextFormatters(text string) []*cfgcore.TypedExtensionConfig {
 		formatters = append(formatters, reqWithoutQueryFormatter)
 	}
 
-	if strings.Contains(text, metadataCommandOperator) {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if strings.Contains(text, celCommandOperator) {
-		formatters = append(formatters, celFormatter)
-	}
-
 	return formatters
 }
 
-func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionConfig {
-	reqWithoutQuery, metadata, cel := false, false, false
+func accessLogJSONFormatters(json []ir.MapEntry) []*cfgcore.TypedExtensionConfig {
+	reqWithoutQuery := false
 
-	for _, value := range json {
-		if reqWithoutQuery && metadata && cel {
+	for _, entry := range json {
+		if reqWithoutQuery {
 			break
 		}
 
-		if strings.Contains(value, reqWithoutQueryCommandOperator) {
+		if strings.Contains(entry.Value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
-		}
-
-		if strings.Contains(value, metadataCommandOperator) {
-			metadata = true
-		}
-
-		if strings.Contains(value, celCommandOperator) {
-			cel = true
 		}
 	}
 
@@ -479,62 +451,26 @@ func accessLogJSONFormatters(json map[string]string) []*cfgcore.TypedExtensionCo
 		formatters = append(formatters, reqWithoutQueryFormatter)
 	}
 
-	if metadata {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if cel {
-		formatters = append(formatters, celFormatter)
-	}
-
 	return formatters
 }
 
-func accessLogOpenTelemetryFormatters(body string, attributes map[string]string) []*cfgcore.TypedExtensionConfig {
-	reqWithoutQuery, metadata, cel := false, false, false
+func accessLogOpenTelemetryFormatters(body string, attributes []ir.MapEntry) []*cfgcore.TypedExtensionConfig {
+	var reqWithoutQuery bool
 
 	if strings.Contains(body, reqWithoutQueryCommandOperator) {
 		reqWithoutQuery = true
 	}
 
-	if strings.Contains(body, metadataCommandOperator) {
-		metadata = true
-	}
-
-	if strings.Contains(body, celCommandOperator) {
-		cel = true
-	}
-
-	for _, value := range attributes {
-		if reqWithoutQuery && metadata && cel {
-			break
-		}
-
-		if !reqWithoutQuery && strings.Contains(value, reqWithoutQueryCommandOperator) {
+	for _, entry := range attributes {
+		if strings.Contains(entry.Value, reqWithoutQueryCommandOperator) {
 			reqWithoutQuery = true
-		}
-
-		if !metadata && strings.Contains(value, metadataCommandOperator) {
-			metadata = true
-		}
-
-		if !cel && strings.Contains(value, celCommandOperator) {
-			cel = true
+			break
 		}
 	}
 
 	formatters := make([]*cfgcore.TypedExtensionConfig, 0, 3)
-
 	if reqWithoutQuery {
 		formatters = append(formatters, reqWithoutQueryFormatter)
-	}
-
-	if metadata {
-		formatters = append(formatters, metadataFormatter)
-	}
-
-	if cel {
-		formatters = append(formatters, celFormatter)
 	}
 
 	return formatters
@@ -546,7 +482,7 @@ const (
 	k8sPodNameKey       = "k8s.pod.name"
 )
 
-func convertToKeyValueList(attributes map[string]string, additionalLabels bool) *otlpcommonv1.KeyValueList {
+func convertToKeyValueList(attributes []ir.MapEntry, additionalLabels bool) *otlpcommonv1.KeyValueList {
 	maxLen := len(attributes)
 	if additionalLabels {
 		maxLen += 2
@@ -560,29 +496,27 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	// so we set these on attributes that read from the environment.
 	if additionalLabels {
 		// TODO: check the provider type and set the appropriate attributes
-		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   k8sNamespaceNameKey,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%"}},
-		})
-
-		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   k8sPodNameKey,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
-		})
+		keyValueList.Values = append(keyValueList.Values,
+			&otlpcommonv1.KeyValue{
+				Key:   k8sNamespaceNameKey,
+				Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAMESPACE)%"}},
+			},
+			&otlpcommonv1.KeyValue{
+				Key:   k8sPodNameKey,
+				Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
+			},
+		)
 	}
 
 	if len(attributes) == 0 {
 		return keyValueList
 	}
 
-	// sort keys to ensure consistent ordering
-	keys := maps.Keys(attributes)
-	sort.Strings(keys)
-
-	for _, key := range keys {
+	// Attributes are already sorted by key in the IR
+	for _, entry := range attributes {
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   key,
-			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: attributes[key]}},
+			Key:   entry.Key,
+			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: entry.Value}},
 		})
 	}
 
@@ -595,54 +529,32 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	}
 	// add clusters for ALS access logs
 	for _, als := range al.ALS {
-		traffic := als.Traffic
-		// Make sure that there are safe defaults for the traffic
-		if traffic == nil {
-			traffic = &ir.TrafficFeatures{}
+		args := &xdsClusterArgs{
+			name:         als.Destination.Name,
+			settings:     als.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(als.Destination.Settings),
+			metadata:     als.Destination.Metadata,
 		}
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:              als.Destination.Name,
-			settings:          als.Destination.Settings,
-			tSocket:           nil,
-			endpointType:      EndpointTypeStatic,
-			loadBalancer:      traffic.LoadBalancer,
-			proxyProtocol:     traffic.ProxyProtocol,
-			circuitBreaker:    traffic.CircuitBreaker,
-			healthCheck:       traffic.HealthCheck,
-			timeout:           traffic.Timeout,
-			tcpkeepalive:      traffic.TCPKeepalive,
-			backendConnection: traffic.BackendConnection,
-			dns:               traffic.DNS,
-			http2Settings:     traffic.HTTP2,
-		}); err != nil {
+		applyTraffic(args, als.Traffic)
+
+		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}
 	}
 
 	// add clusters for Open Telemetry access logs
 	for _, otel := range al.OpenTelemetry {
-		traffic := otel.Traffic
-		// Make sure that there are safe defaults for the traffic
-		if traffic == nil {
-			traffic = &ir.TrafficFeatures{}
+		args := &xdsClusterArgs{
+			name:         otel.Destination.Name,
+			settings:     otel.Destination.Settings,
+			tSocket:      nil,
+			endpointType: buildEndpointType(otel.Destination.Settings),
+			metrics:      metrics,
+			metadata:     otel.Destination.Metadata,
 		}
-
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:              otel.Destination.Name,
-			settings:          otel.Destination.Settings,
-			tSocket:           nil,
-			endpointType:      EndpointTypeDNS,
-			metrics:           metrics,
-			loadBalancer:      traffic.LoadBalancer,
-			proxyProtocol:     traffic.ProxyProtocol,
-			circuitBreaker:    traffic.CircuitBreaker,
-			healthCheck:       traffic.HealthCheck,
-			timeout:           traffic.Timeout,
-			tcpkeepalive:      traffic.TCPKeepalive,
-			backendConnection: traffic.BackendConnection,
-			dns:               traffic.DNS,
-			http2Settings:     traffic.HTTP2,
-		}); err != nil {
+		applyTraffic(args, otel.Traffic)
+		if err := addXdsCluster(tCtx, args); err != nil {
 			return err
 		}
 	}

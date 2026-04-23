@@ -1,0 +1,4 @@
+tcp:
+- name: "tcp-listener-with-no-routes"
+  address: "::"
+  port: 10080

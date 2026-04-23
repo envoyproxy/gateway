@@ -8,12 +8,13 @@ package host
 import (
 	"context"
 	"errors"
-	"io"
-	"os"
+	"fmt"
 	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
 
-	funcE "github.com/tetratelabs/func-e/api"
-	"k8s.io/utils/ptr"
+	func_e_api "github.com/tetratelabs/func-e/api"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/common"
@@ -32,9 +33,19 @@ type proxyContext struct {
 
 // Close implements the Manager interface.
 func (i *Infra) Close() error {
-	for name := range i.proxyContextMap {
-		i.stopEnvoy(name)
-	}
+	var wg sync.WaitGroup
+
+	// Stop any Envoy subprocesses in parallel
+	i.proxyContextMap.Range(func(key, _ any) bool {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			i.stopEnvoy(name)
+		}(key.(string))
+		return true
+	})
+
+	wg.Wait()
 	return nil
 }
 
@@ -51,51 +62,75 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	proxyInfra := infra.GetProxyInfra()
 	proxyName := utils.GetHashedName(proxyInfra.Name, 64)
 	// Return directly if the proxy is running.
-	if _, ok := i.proxyContextMap[proxyName]; ok {
+	if _, loaded := i.proxyContextMap.Load(proxyName); loaded {
 		return nil
 	}
 
 	proxyConfig := proxyInfra.GetProxyConfig()
-	// Disable Prometheus to make envoy running as a host process successfully.
-	// TODO: Add Prometheus support to host infra.
-	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
-		ProxyMetrics: &egv1a1.ProxyMetrics{
-			Prometheus: &egv1a1.ProxyPrometheusProvider{
-				Disable: true,
-			},
+	// Build proxy metrics with Prometheus disabled for host mode,
+	// but preserve any user-configured sinks (e.g., OpenTelemetry).
+	proxyMetrics := &egv1a1.ProxyMetrics{
+		Prometheus: &egv1a1.ProxyPrometheusProvider{
+			Disable: true,
 		},
+	}
+	if proxyConfig.Spec.Telemetry != nil && proxyConfig.Spec.Telemetry.Metrics != nil {
+		proxyMetrics.Sinks = proxyConfig.Spec.Telemetry.Metrics.Sinks
+		proxyMetrics.Matches = proxyConfig.Spec.Telemetry.Metrics.Matches
+	}
+
+	resolvedMetricSinks := common.ConvertResolvedMetricSinks(proxyInfra.ResolvedMetricSinks)
+
+	bootstrapConfigOptions := &bootstrap.RenderBootstrapConfigOptions{
+		ProxyMetrics:        proxyMetrics,
+		ResolvedMetricSinks: resolvedMetricSinks,
 		SdsConfig: bootstrap.SdsConfigPath{
 			Certificate: filepath.Join(i.sdsConfigPath, common.SdsCertFilename),
 			TrustedCA:   filepath.Join(i.sdsConfigPath, common.SdsCAFilename),
 		},
-		XdsServerHost:   ptr.To("0.0.0.0"),
-		WasmServerPort:  ptr.To(int32(0)),
-		AdminServerPort: ptr.To(int32(0)),
-		StatsServerPort: ptr.To(int32(0)),
+		XdsServerHost:   new("0.0.0.0"),
+		AdminServerPort: new(int32(0)),
+		StatsServerPort: new(int32(0)),
+		// Always disable the topology injector in standalone mode. The topology
+		// injector adds an EDS local_cluster to the bootstrap config for
+		// zone-aware routing, which is both irrelevant outside K8s, but also
+		// causes a 15-30s startup delay on the admin /ready endpoint.
+		TopologyInjectorDisabled: true,
 	}
-
 	args, err := common.BuildProxyArgs(proxyInfra, proxyConfig.Spec.Shutdown, bootstrapConfigOptions, proxyName, false)
 	if err != nil {
 		return err
 	}
-	i.runEnvoy(ctx, os.Stdout, proxyName, args)
+	i.runEnvoy(ctx, i.getEnvoyVersion(proxyConfig), proxyName, args)
 	return nil
 }
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
-func (i *Infra) runEnvoy(ctx context.Context, out io.Writer, name string, args []string) {
+func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
+	// #nosec G118 - cancel is stored in proxyContextMap and called later to stop the Envoy process
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
-	i.proxyContextMap[name] = &proxyContext{cancel: cancel, exit: exit}
+	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})
 	go func() {
 		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
 		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
 		defer func() {
 			exit <- struct{}{}
 		}()
-		err := funcE.Run(pCtx, args, funcE.HomeDir(i.HomeDir), funcE.Out(out))
+		err := i.envoyRunner(pCtx, args,
+			func_e_api.ConfigHome(i.Paths.ConfigHome),
+			func_e_api.DataHome(i.Paths.DataHome),
+			func_e_api.StateHome(i.Paths.StateHome),
+			func_e_api.RuntimeDir(i.Paths.RuntimeDir),
+			func_e_api.Out(i.Stdout),
+			func_e_api.EnvoyOut(i.Stdout),
+			func_e_api.EnvoyErr(i.Stderr),
+			func_e_api.EnvoyVersion(envoyVersion))
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
+			// If the Envoy process fails to start, notify an unrecoverable error so that the main control
+			// loop can properly handle it.
+			i.errors.Store(err)
 		}
 	}()
 }
@@ -114,10 +149,51 @@ func (i *Infra) DeleteProxyInfra(_ context.Context, infra *ir.Infra) error {
 
 // stopEnvoy stops the Envoy process by its name. It will block until the process completely stopped.
 func (i *Infra) stopEnvoy(proxyName string) {
-	if pCtx, ok := i.proxyContextMap[proxyName]; ok {
+	value, ok := i.proxyContextMap.LoadAndDelete(proxyName)
+	if ok {
+		pCtx := value.(*proxyContext)
 		pCtx.cancel()    // Cancel causes the Envoy process to exit.
 		<-pCtx.exit      // Wait for the Envoy process to completely exit.
 		close(pCtx.exit) // Close the channel to avoid leaking.
-		delete(i.proxyContextMap, proxyName)
 	}
+}
+
+// getEnvoyVersion returns the version of Envoy to use.
+func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
+	// Note these helper functions gracefully handle nil pointer dereferencing, so it's safe to
+	// chain method calls.
+	version := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyHostProvider().GetEnvoyVersion()
+	if version == "" {
+		// If the version is not explicitly set, use the default version EG is built with.
+		// This is only populated to a concrete version in release branches.
+		// For `main` it may fail. In that case, we return an empty version and let the func-e library
+		// decide what version to use.
+		// This keeps the old behaviour for backwards compatibility.
+		version, _ = extractSemver(i.defaultEnvoyImage)
+	}
+
+	if version == "" {
+		i.Logger.Info("no explicit Envoy version is set and " +
+			"could not extract a default version from the default Envoy image")
+	}
+
+	return version
+}
+
+// extractSemver takes an image reference like "docker.io/envoyproxy/envoy:distroless-v1.35.0"
+// and returns the semver string, e.g. "1.35.0".
+func extractSemver(image string) (string, error) {
+	// Split to isolate the tag part after the colon
+	parts := strings.Split(image, ":")
+	if len(parts) < 2 {
+		return "", fmt.Errorf("no tag found in default Envoy image reference: %s", image)
+	}
+	tag := parts[len(parts)-1]
+
+	re := regexp.MustCompile(`\d+\.\d+\.\d+`)
+	semver := re.FindString(tag)
+	if semver == "" {
+		return "", fmt.Errorf("no semver found in tag: %s", tag)
+	}
+	return semver, nil
 }

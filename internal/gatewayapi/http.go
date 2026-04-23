@@ -8,8 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
-
-	"k8s.io/utils/ptr"
+	"time"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -42,7 +41,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 				MinHTTP2InitialStreamWindowSize,
 				MaxHTTP2InitialStreamWindowSize))
 		default:
-			http2.InitialStreamWindowSize = ptr.To(uint32(initialStreamWindowSize))
+			http2.InitialStreamWindowSize = new(uint32(initialStreamWindowSize))
 		}
 	}
 
@@ -57,7 +56,7 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 				MinHTTP2InitialConnectionWindowSize,
 				MaxHTTP2InitialConnectionWindowSize))
 		default:
-			http2.InitialConnectionWindowSize = ptr.To(uint32(initialConnectionWindowSize))
+			http2.InitialConnectionWindowSize = new(uint32(initialConnectionWindowSize))
 		}
 	}
 
@@ -66,10 +65,42 @@ func buildIRHTTP2Settings(http2Settings *egv1a1.HTTP2Settings) (*ir.HTTP2Setting
 	if http2Settings.OnInvalidMessage != nil {
 		switch *http2Settings.OnInvalidMessage {
 		case egv1a1.InvalidMessageActionTerminateStream:
-			http2.ResetStreamOnError = ptr.To(true)
+			http2.ResetStreamOnError = new(true)
 		case egv1a1.InvalidMessageActionTerminateConnection:
-			http2.ResetStreamOnError = ptr.To(false)
+			http2.ResetStreamOnError = new(false)
 		}
+	}
+
+	if http2Settings.ConnectionKeepalive != nil {
+		keepalive := &ir.HTTP2KeepaliveSettings{}
+		if http2Settings.ConnectionKeepalive.Interval != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.Interval))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Interval: %w", err))
+			} else {
+				keepalive.Interval = ir.MetaV1DurationPtr(d)
+			}
+		}
+		if http2Settings.ConnectionKeepalive.Timeout != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.Timeout))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.Timeout: %w", err))
+			} else {
+				keepalive.Timeout = ir.MetaV1DurationPtr(d)
+			}
+		}
+		if http2Settings.ConnectionKeepalive.IntervalJitter != nil {
+			keepalive.IntervalJitter = http2Settings.ConnectionKeepalive.IntervalJitter
+		}
+		if http2Settings.ConnectionKeepalive.IdleInterval != nil {
+			d, err := time.ParseDuration(string(*http2Settings.ConnectionKeepalive.IdleInterval))
+			if err != nil {
+				errs = errors.Join(errs, fmt.Errorf("invalid ConnectionKeepalive.IdleInterval: %w", err))
+			} else {
+				keepalive.IdleInterval = ir.MetaV1DurationPtr(d)
+			}
+		}
+		http2.ConnectionKeepalive = keepalive
 	}
 
 	return http2, errs

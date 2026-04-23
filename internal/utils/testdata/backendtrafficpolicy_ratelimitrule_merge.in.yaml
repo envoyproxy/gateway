@@ -1,12 +1,12 @@
 kind: BackendTrafficPolicy
 metadata:
-  name: original
+  name: original-1
 spec:
   rateLimit:
     type: Global
     global:
       rules:
-        - name: one
+        - shared: true
           clientSelectors:
             - headers:
                 - name: x-user-id

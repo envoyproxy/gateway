@@ -15,6 +15,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	genericv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/http/injected_credentials/generic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -141,7 +142,7 @@ func buildCredentialSecret(credentialInjection *ir.CredentialInjection) *tlsv3.S
 
 // patchRoute patches the provided route with the credential injector filter if applicable.
 // Note: this method enables the corresponding credential injector filter for the provided route.
-func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPListener) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -152,7 +153,9 @@ func (*credentialInjector) patchRoute(route *routev3.Route, irRoute *ir.HTTPRout
 		return nil
 	}
 	filterName := credentialInjectorFilterName(irRoute.CredentialInjection)
-	if err := enableFilterOnRoute(route, filterName); err != nil {
+	if err := enableFilterOnRoute(route, filterName, &routev3.FilterConfig{
+		Config: &anypb.Any{},
+	}); err != nil {
 		return err
 	}
 	return nil

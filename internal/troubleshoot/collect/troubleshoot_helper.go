@@ -72,10 +72,11 @@ func getAllNamespaces(ctx context.Context, client *kubernetes.Clientset) ([]byte
 		namespaces.GetObjectKind().SetGroupVersionKind(gvk)
 	}
 
-	for i, o := range namespaces.Items {
-		gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+	for i := range namespaces.Items {
+		ns := &namespaces.Items[i]
+		gvk, err := apiutil.GVKForObject(ns, scheme.Scheme)
 		if err == nil {
-			namespaces.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
+			ns.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 	}
 
@@ -126,7 +127,8 @@ func crsV1(ctx context.Context, client dynamic.Interface, crdClient apiextv1clie
 	metaAccessor := meta.NewAccessor()
 
 	// Loop through CRDs to fetch the CRs
-	for _, crd := range crds.Items {
+	for i := range crds.Items {
+		crd := &crds.Items[i]
 		// A resource that contains '/' is a subresource type, and it has no
 		// object instances
 		if strings.ContainsAny(crd.Name, "/") {
@@ -245,7 +247,8 @@ func crsV1beta(ctx context.Context, client dynamic.Interface, crdClient apiextv1
 	metaAccessor := meta.NewAccessor()
 
 	// Loop through CRDs to fetch the CRs
-	for _, crd := range crds.Items {
+	for i := range crds.Items {
+		crd := &crds.Items[i]
 		// A resource that contains '/' is a subresource type, and it has no
 		// object instances
 		if strings.ContainsAny(crd.Name, "/") {
@@ -384,11 +387,12 @@ func pods(ctx context.Context, client *kubernetes.Clientset, namespaces []string
 			pods.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range pods.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			gvk, err := apiutil.GVKForObject(pod, scheme.Scheme)
 			if err == nil {
-				pods.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				pods.Items[i].SetManagedFields(nil)
+				pod.GetObjectKind().SetGroupVersionKind(gvk)
+				pod.SetManagedFields(nil)
 			}
 		}
 
@@ -398,9 +402,10 @@ func pods(ctx context.Context, client *kubernetes.Clientset, namespaces []string
 			continue
 		}
 
-		for _, pod := range pods.Items {
-			if k8sutil.IsPodUnhealthy(&pod) {
-				unhealthyPods = append(unhealthyPods, pod)
+		for i := range pods.Items {
+			pod := &pods.Items[i]
+			if k8sutil.IsPodUnhealthy(pod) {
+				unhealthyPods = append(unhealthyPods, *pod)
 			}
 		}
 
@@ -430,11 +435,12 @@ func services(ctx context.Context, client *kubernetes.Clientset, namespaces []st
 			services.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range services.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range services.Items {
+			svc := &services.Items[i]
+			gvk, err := apiutil.GVKForObject(svc, scheme.Scheme)
 			if err == nil {
-				services.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				services.Items[i].SetManagedFields(nil)
+				svc.GetObjectKind().SetGroupVersionKind(gvk)
+				svc.SetManagedFields(nil)
 			}
 		}
 
@@ -470,11 +476,12 @@ func deployments(ctx context.Context, client *kubernetes.Clientset, namespaces [
 			deployments.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range deployments.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range deployments.Items {
+			dp := &deployments.Items[i]
+			gvk, err := apiutil.GVKForObject(dp, scheme.Scheme)
 			if err == nil {
-				deployments.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				deployments.Items[i].SetManagedFields(nil)
+				dp.GetObjectKind().SetGroupVersionKind(gvk)
+				dp.SetManagedFields(nil)
 			}
 		}
 
@@ -510,11 +517,12 @@ func daemonsets(ctx context.Context, client *kubernetes.Clientset, namespaces []
 			daemonsets.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range daemonsets.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range daemonsets.Items {
+			ds := &daemonsets.Items[i]
+			gvk, err := apiutil.GVKForObject(ds, scheme.Scheme)
 			if err == nil {
-				daemonsets.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				daemonsets.Items[i].SetManagedFields(nil)
+				ds.GetObjectKind().SetGroupVersionKind(gvk)
+				ds.SetManagedFields(nil)
 			}
 		}
 
@@ -550,11 +558,12 @@ func jobs(ctx context.Context, client *kubernetes.Clientset, namespaces []string
 			nsJobs.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range nsJobs.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range nsJobs.Items {
+			job := &nsJobs.Items[i]
+			gvk, err := apiutil.GVKForObject(job, scheme.Scheme)
 			if err == nil {
-				nsJobs.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				nsJobs.Items[i].SetManagedFields(nil)
+				job.GetObjectKind().SetGroupVersionKind(gvk)
+				job.SetManagedFields(nil)
 			}
 		}
 
@@ -590,11 +599,12 @@ func configMaps(ctx context.Context, client kubernetes.Interface, namespaces []s
 			configmaps.GetObjectKind().SetGroupVersionKind(gvk)
 		}
 
-		for i, o := range configmaps.Items {
-			gvk, err := apiutil.GVKForObject(&o, scheme.Scheme)
+		for i := range configmaps.Items {
+			configmap := &configmaps.Items[i]
+			gvk, err := apiutil.GVKForObject(configmap, scheme.Scheme)
 			if err == nil {
-				configmaps.Items[i].GetObjectKind().SetGroupVersionKind(gvk)
-				configmaps.Items[i].SetManagedFields(nil)
+				configmap.GetObjectKind().SetGroupVersionKind(gvk)
+				configmap.SetManagedFields(nil)
 			}
 		}
 

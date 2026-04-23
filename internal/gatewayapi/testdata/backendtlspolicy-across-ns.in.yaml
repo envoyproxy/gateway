@@ -118,6 +118,7 @@ backendTLSPolicies:
     metadata:
       name: policy-btls
       namespace: policies
+      generation: 10
     spec:
       targetRefs:
         - group: ""

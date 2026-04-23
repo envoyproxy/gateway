@@ -26,35 +26,69 @@ import (
 	"github.com/google/go-cmp/cmp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
+	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
+	k8sutils "sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 	tb "github.com/envoyproxy/gateway/internal/troubleshoot"
 )
 
-var IPFamily = os.Getenv("IP_FAMILY")
+var (
+	IPFamily                  = os.Getenv("IP_FAMILY")
+	DeployProfile             = os.Getenv("KUBE_DEPLOY_PROFILE")
+	enabledClusterTrustBundle = os.Getenv("ENABLE_CLUSTER_TRUST_BUNDLE")
 
-const defaultServiceStartupTimeout = 5 * time.Minute
+	SameNamespaceGateway    = types.NamespacedName{Name: "same-namespace", Namespace: ConformanceInfraNamespace}
+	SameNamespaceGatewayRef = k8sutils.NewGatewayRef(SameNamespaceGateway)
 
-var PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+	PodReady = corev1.PodCondition{Type: corev1.PodReady, Status: corev1.ConditionTrue}
+)
+
+const (
+	ClusterTrustBundleFeature features.FeatureName = "ClusterTrustBundle"
+
+	ConformanceInfraNamespace = "gateway-conformance-infra"
+
+	AllNamespacesGateway = "all-namespaces"
+
+	defaultServiceStartupTimeout = 5 * time.Minute
+)
+
+// TimeoutConfig returns the default TimeoutConfig for E2E tests.
+// We need this to reduce the logs in CI because of https://github.com/kubernetes-sigs/gateway-api/pull/4630
+func TimeoutConfig() config.TimeoutConfig {
+	timeout := config.DefaultTimeoutConfig()
+	// The default value of RequiredConsecutiveSuccesses is 3,
+	// which means a test needs to pass 3 times in a row to be considered successful.
+	// This's not necessary for E2E test.
+	timeout.RequiredConsecutiveSuccesses = 0
+	return timeout
+}
 
 // WaitForPods waits for the pods in the given namespace and with the given selector
 // to be in the given phase and condition.
-func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition corev1.PodCondition) {
+func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map[string]string, phase corev1.PodPhase, condition *corev1.PodCondition) {
+	if condition == nil {
+		t.Fatalf("condition cannot be nil")
+	}
 	tlog.Logf(t, "waiting for %s/[%s] to be %v...", namespace, selectors, phase)
 
 	require.Eventually(t, func() bool {
@@ -70,7 +104,8 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 		}
 
 	checkPods:
-		for _, p := range pods.Items {
+		for i := range pods.Items {
+			p := &pods.Items[i]
 			if p.Status.Phase != phase {
 				return false
 			}
@@ -81,6 +116,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 
 			for _, c := range p.Status.Conditions {
 				if c.Type == condition.Type && c.Status == condition.Status {
+					tlog.Logf(t, "pod %s/%s matches the status: %v ip: %v", p.Namespace, p.Name, condition.Status, p.Status.PodIPs)
 					continue checkPods // pod is ready, check next pod
 				}
 			}
@@ -94,7 +130,7 @@ func WaitForPods(t *testing.T, cl client.Client, namespace string, selectors map
 }
 
 // SecurityPolicyMustBeAccepted waits for the specified SecurityPolicy to be accepted.
-func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -116,10 +152,32 @@ func SecurityPolicyMustBeAccepted(t *testing.T, client client.Client, policyName
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be accepted")
 }
 
+// SecurityPolicyMustNotExist waits for the specified SecurityPolicy to be deleted.
+func SecurityPolicyMustNotExist(t *testing.T, client client.Client, policyName types.NamespacedName) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		switch {
+		case apierrors.IsNotFound(err):
+			tlog.Logf(t, "SecurityPolicy has been deleted: %s/%s", policyName.Namespace, policyName.Name)
+			return true, nil
+		case err != nil:
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		default:
+			tlog.Logf(t, "SecurityPolicy still exists: %v", policy)
+			return false, nil
+		}
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to be deleted")
+}
+
 // SecurityPolicyMustFail waits for an SecurityPolicy to fail with the specified reason.
 func SecurityPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -143,8 +201,31 @@ func SecurityPolicyMustFail(
 	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to fail with message: %s policy %v", message, policy)
 }
 
+// SecurityPolicyMustBeMerged waits for the specified SecurityPolicy to have Merged condition.
+func SecurityPolicyMustBeMerged(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
+	t.Helper()
+
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
+		policy := &egv1a1.SecurityPolicy{}
+		err := client.Get(ctx, policyName, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching SecurityPolicy: %w", err)
+		}
+
+		if policyMergedByAncestor(policy.Status.Ancestors, controllerName, ancestorRef) {
+			tlog.Logf(t, "SecurityPolicy has Merged condition: %v", policy)
+			return true, nil
+		}
+
+		tlog.Logf(t, "SecurityPolicy does not have Merged condition yet: %v", policy)
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for SecurityPolicy to have Merged condition")
+}
+
 // BackendTrafficPolicyMustBeAccepted waits for the specified BackendTrafficPolicy to be accepted.
-func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -168,7 +249,7 @@ func BackendTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, poli
 // BackendTrafficPolicyMustFail waits for an BackendTrafficPolicy to fail with the specified reason.
 func BackendTrafficPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -193,7 +274,7 @@ func BackendTrafficPolicyMustFail(
 }
 
 // ClientTrafficPolicyMustBeAccepted waits for the specified ClientTrafficPolicy to be accepted.
-func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func ClientTrafficPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -228,11 +309,21 @@ func AlmostEquals(actual, expect, offset int) bool {
 // runs a load test with options described in opts
 // the done channel is used to notify caller of execution result
 // the execution may end due to an external abort or timeout
-func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string) {
+func runLoadAndWait(t *testing.T, timeoutConfig *config.TimeoutConfig, done chan bool, aborter *periodic.Aborter, reqURL string, reqTimeout time.Duration) {
+	qpsVal := os.Getenv("E2E_BACKEND_UPGRADE_QPS")
+	qps := 5000
+	if qpsVal != "" {
+		if v, err := strconv.Atoi(qpsVal); err == nil {
+			qps = v
+		} else {
+			tlog.Logf(t, "Invalid QPS value %s, using default %d", qpsVal, qps)
+		}
+	}
+
 	flog.SetLogLevel(flog.Error)
 	opts := fhttp.HTTPRunnerOptions{
 		RunnerOptions: periodic.RunnerOptions{
-			QPS: 5000,
+			QPS: float64(qps),
 			// allow some overhead time for setting up workers and tearing down after restart
 			Duration:   timeoutConfig.CreateTimeout + timeoutConfig.CreateTimeout/2,
 			NumThreads: 50,
@@ -242,6 +333,10 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 		HTTPOptions: fhttp.HTTPOptions{
 			URL: reqURL,
 		},
+	}
+
+	if reqTimeout > 0 {
+		opts.HTTPReqTimeOut = reqTimeout
 	}
 
 	res, err := fhttp.RunHTTPTest(&opts)
@@ -264,11 +359,24 @@ func runLoadAndWait(t *testing.T, timeoutConfig config.TimeoutConfig, done chan 
 	done <- false
 }
 
-func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference) bool {
+func policyAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
 	for _, ancestor := range ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
-				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(gwapiv1.PolicyConditionAccepted) && condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func policyMergedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference) bool {
+	for _, ancestor := range ancestors {
+		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
+			for _, condition := range ancestor.Conditions {
+				if condition.Type == string(egv1a1.PolicyConditionMerged) && condition.Status == metav1.ConditionTrue {
 					return true
 				}
 			}
@@ -280,7 +388,7 @@ func policyAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, contro
 // EnvoyExtensionPolicyMustFail waits for an EnvoyExtensionPolicy to fail with the specified reason.
 func EnvoyExtensionPolicyMustFail(
 	t *testing.T, client client.Client, policyName types.NamespacedName,
-	controllerName string, ancestorRef gwapiv1a2.ParentReference, message string,
+	controllerName string, ancestorRef gwapiv1.ParentReference, message string,
 ) {
 	t.Helper()
 
@@ -304,11 +412,11 @@ func EnvoyExtensionPolicyMustFail(
 	require.NoErrorf(t, waitErr, "error waiting for EnvoyExtensionPolicy to fail with message: %s policy %v", message, policy)
 }
 
-func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1a2.ParentReference, message string) bool {
+func policyFailAcceptedByAncestor(ancestors []gwapiv1.PolicyAncestorStatus, controllerName string, ancestorRef gwapiv1.ParentReference, message string) bool {
 	for _, ancestor := range ancestors {
 		if string(ancestor.ControllerName) == controllerName && cmp.Equal(ancestor.AncestorRef, ancestorRef) {
 			for _, condition := range ancestor.Conditions {
-				if condition.Type == string(gwapiv1a2.PolicyConditionAccepted) &&
+				if condition.Type == string(gwapiv1.PolicyConditionAccepted) &&
 					condition.Status == metav1.ConditionFalse &&
 					strings.Contains(condition.Message, message) {
 					return true
@@ -320,7 +428,7 @@ func policyFailAcceptedByAncestor(ancestors []gwapiv1a2.PolicyAncestorStatus, co
 }
 
 // EnvoyExtensionPolicyMustBeAccepted waits for the specified EnvoyExtensionPolicy to be accepted.
-func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1a2.ParentReference) {
+func EnvoyExtensionPolicyMustBeAccepted(t *testing.T, client client.Client, policyName types.NamespacedName, controllerName string, ancestorRef gwapiv1.ParentReference) {
 	t.Helper()
 
 	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, 60*time.Second, true, func(ctx context.Context) (bool, error) {
@@ -369,14 +477,14 @@ func BackendMustBeAccepted(t *testing.T, client client.Client, backendName types
 // ScrapeMetrics
 // TODO: use QueryPrometheus from test/e2e/tests/promql.go instead
 func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, port int32, path string) error {
-	url, err := RetrieveURL(c, nn, port, path)
+	promURL, err := RetrieveURL(c, nn, port, path)
 	if err != nil {
 		return err
 	}
 
-	tlog.Logf(t, "scraping metrics from %s", url)
+	tlog.Logf(t, "scraping metrics from %s", promURL)
 
-	metrics, err := RetrieveMetrics(url, time.Second)
+	metrics, err := RetrieveMetrics(promURL, time.Second)
 	if err != nil {
 		return err
 	}
@@ -419,7 +527,7 @@ func ServiceHost(c client.Client, nn types.NamespacedName, port int32) (string, 
 	return net.JoinHostPort(host, strconv.Itoa(int(port))), nil
 }
 
-var metricParser = &expfmt.TextParser{}
+var metricParser = expfmt.NewTextParser(model.UTF8Validation)
 
 func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricFamily, error) {
 	httpClient := http.Client{
@@ -429,6 +537,9 @@ func RetrieveMetrics(url string, timeout time.Duration) (map[string]*dto.MetricF
 	if err != nil {
 		return nil, fmt.Errorf("failed to scrape metrics: %w", err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to scrape metrics: %s", res.Status)
 	}
@@ -518,23 +629,7 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
-// QueryLogCountFromLoki queries log count from loki
-func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
-	svc := corev1.Service{}
-	if err := c.Get(context.Background(), types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "loki",
-	}, &svc); err != nil {
-		return -1, err
-	}
-	lokiHost := ""
-	for _, ing := range svc.Status.LoadBalancer.Ingress {
-		if ing.IP != "" {
-			lokiHost = ing.IP
-			break
-		}
-	}
-
+func buildLokiQuery(keyValues map[string]string, match string) string {
 	qParams := make([]string, 0, len(keyValues))
 	for k, v := range keyValues {
 		qParams = append(qParams, fmt.Sprintf("%s=\"%s\"", k, v))
@@ -544,23 +639,57 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if match != "" {
 		q = q + "|~\"" + match + "\""
 	}
+
+	return q
+}
+
+func queryLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (*LokiQueryResponse, string, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "loki",
+	}, &svc); err != nil {
+		return nil, "", err
+	}
+	lokiHost := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			lokiHost = ing.IP
+			break
+		}
+	}
+
+	q := buildLokiQuery(keyValues, match)
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
 	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 	tlog.Logf(t, "get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
 
 	lokiResponse := &LokiQueryResponse{}
 	if err := json.Unmarshal(b, lokiResponse); err != nil {
+		return nil, q, err
+	}
+
+	return lokiResponse, q, nil
+}
+
+// QueryLogCountFromLoki queries log count from loki
+func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
+	lokiResponse, q, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
 		return -1, err
 	}
 
@@ -574,6 +703,32 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	}
 	tlog.Logf(t, "get response from loki, query=%s, total=%d", q, total)
 	return total, nil
+}
+
+// QueryLogLinesFromLoki queries matching log lines from loki.
+func QueryLogLinesFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) ([]string, error) {
+	lokiResponse, _, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := make([]string, 0)
+	for _, res := range lokiResponse.Data.Result {
+		for _, value := range res.Values {
+			pair, ok := value.([]interface{})
+			if !ok || len(pair) < 2 {
+				continue
+			}
+
+			line, ok := pair[1].(string)
+			if !ok {
+				continue
+			}
+			lines = append(lines, line)
+		}
+	}
+
+	return lines, nil
 }
 
 type LokiQueryResponse struct {
@@ -590,11 +745,38 @@ type LokiQueryResponse struct {
 // CollectAndDump collects and dumps the cluster data for troubleshooting and log.
 // This function should be call within t.Cleanup.
 func CollectAndDump(t *testing.T, rest *rest.Config) {
-	result := tb.CollectResult(context.TODO(), rest, "", "envoy-gateway-system")
+	if os.Getenv("ACTIONS_STEP_DEBUG") != "true" {
+		tlog.Logf(t, "Skipping collecting and dumping cluster data, set ACTIONS_STEP_DEBUG=true to enable it")
+		return
+	}
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest, tb.WithCollectedNamespaces(dumpedNamespaces))
+}
+
+func runCollectAndDump(t *testing.T, rest *rest.Config, opts ...tb.CollectOption) {
+	result, _ := tb.CollectResult(t.Context(), rest, opts...)
 	for r, data := range result {
 		tlog.Logf(t, "\nfilename: %s", r)
-		tlog.Logf(t, "\ndata: \n%s", data)
+		tlog.Logf(t, "\ndata: \n%s\n", data)
 	}
+}
+
+func consistentHashDump(t *testing.T, rest *rest.Config) {
+	dumpedNamespaces := []string{"envoy-gateway-system"}
+	if IsGatewayNamespaceMode() {
+		dumpedNamespaces = append(dumpedNamespaces, ConformanceInfraNamespace)
+	}
+
+	runCollectAndDump(t, rest,
+		tb.WithCollectedNamespaces(dumpedNamespaces),
+		tb.DisableCollector(tb.CollectorTypeEnvoyGatewayResource),
+		tb.DisableCollector(tb.CollectorTypePrometheusMetrics),
+		tb.WithSelector("gateway.envoyproxy.io/owning-gateway-name=lb-backend-gateway"),
+	)
 }
 
 func GetService(c client.Client, nn types.NamespacedName) (*corev1.Service, error) {
@@ -640,16 +822,18 @@ func ContentEncoding(compressorType egv1a1.CompressorType) string {
 		encoding = "br"
 	case egv1a1.GzipCompressorType:
 		encoding = "gzip"
+	case egv1a1.ZstdCompressorType:
+		encoding = "zstd"
 	}
 
 	return encoding
 }
 
-func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedNs string, expectedCount int) {
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 		deploys := &appsv1.DeploymentList{}
 		err := suite.Client.List(ctx, deploys, &client.ListOptions{
-			Namespace: "envoy-gateway-system",
+			Namespace: expectedNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"app.kubernetes.io/managed-by":                   "envoy-gateway",
 				"app.kubernetes.io/name":                         "envoy",
@@ -668,11 +852,11 @@ func ExpectEnvoyProxyDeploymentCount(t *testing.T, suite *suite.ConformanceTestS
 	}
 }
 
-func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedCount int) {
+func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, gwNN types.NamespacedName, expectedNs string, expectedCount int) {
 	err := wait.PollUntilContextTimeout(context.TODO(), time.Second, suite.TimeoutConfig.DeleteTimeout, true, func(ctx context.Context) (bool, error) {
 		hpa := &autoscalingv2.HorizontalPodAutoscalerList{}
 		err := suite.Client.List(ctx, hpa, &client.ListOptions{
-			Namespace: "envoy-gateway-system",
+			Namespace: expectedNs,
 			LabelSelector: labels.SelectorFromSet(map[string]string{
 				"gateway.envoyproxy.io/owning-gateway-name":      gwNN.Name,
 				"gateway.envoyproxy.io/owning-gateway-namespace": gwNN.Namespace,
@@ -687,4 +871,60 @@ func ExpectEnvoyProxyHPACount(t *testing.T, suite *suite.ConformanceTestSuite, g
 	if err != nil {
 		t.Fatalf("Failed to check HPA count(%d) for the Gateway: %v", expectedCount, err)
 	}
+}
+
+func IsGatewayNamespaceMode() bool {
+	return DeployProfile == "gateway-namespace-mode"
+}
+
+func UseStandardChannel() bool {
+	return os.Getenv("E2E_GATEWAY_API_CHANNEL") == "standard"
+}
+
+// TODO(zhaohuabing) remove this after the feature flag is removed.
+func XDSNameSchemeV2() bool {
+	return DeployProfile == "xds-name-scheme-v2"
+}
+
+func GetGatewayResourceNamespace() string {
+	if IsGatewayNamespaceMode() {
+		return "gateway-conformance-infra"
+	}
+	return "envoy-gateway-system"
+}
+
+func ExpectRequestTimeout(t *testing.T, suite *suite.ConformanceTestSuite, gwAddr, path, query string, exceptedStatusCode int) {
+	// Use raw http request to avoid chunked
+	req := &http.Request{
+		Method: "GET",
+		URL:    &url.URL{Scheme: "http", Host: gwAddr, Path: path, RawQuery: query},
+	}
+
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	httputils.AwaitConvergence(t, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
+		func(elapsed time.Duration) bool {
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			defer func() {
+				_ = resp.Body.Close()
+			}()
+
+			// return 504 instead of 400 when request timeout.
+			// https://github.com/envoyproxy/envoy/blob/56021dbfb10b53c6d08ed6fc811e1ff4c9ac41fd/source/common/http/utility.cc#L1409
+			if exceptedStatusCode == resp.StatusCode {
+				return true
+			}
+
+			tlog.Logf(t, "%s%s response status code: %d after %v", gwAddr, path, resp.StatusCode, elapsed)
+			return false
+		})
+}
+
+// TODO: remove this when the min version EG supported is v1.33
+func EnabledClusterTrustBundle() bool {
+	return enabledClusterTrustBundle == "true"
 }

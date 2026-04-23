@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: deploy-custom-name
+  name: eg-deployment
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -24,9 +24,17 @@ spec:
     type: Kubernetes
     kubernetes:
       envoyDeployment:
-        name: deploy-custom-name
+        name: custom-deploy
       envoyService:
-        name: deploy-custom-name
+        name: custom-service
+      envoyPDB:
+        name: custom-pdb
+        minAvailable: 1
+      envoyHpa:
+        name: custom-hpa
+        maxReplicas: 3
+      envoyServiceAccount:
+        name: custom-sa
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -35,7 +43,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: deploy-custom-name
+    - name: eg-deployment
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -48,7 +56,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: ds-custom-name
+  name: eg-daemonset
   namespace: gateway-conformance-infra
 spec:
   gatewayClassName: "{GATEWAY_CLASS_NAME}"
@@ -109,7 +117,7 @@ metadata:
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
-    - name: ds-custom-name
+    - name: eg-daemonset
   rules:
     - backendRefs:
         - name: infra-backend-v1
@@ -118,3 +126,18 @@ spec:
         - path:
             type: PathPrefix
             value: /daemonset
+---
+# custom sa for gateway namespace mode
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  name: custom-sa
+  namespace: gateway-conformance-infra
+---
+# custom sa for controller namespace mode
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: custom-sa
+  namespace: envoy-gateway-system

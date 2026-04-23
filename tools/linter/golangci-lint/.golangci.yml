@@ -37,16 +37,19 @@ linters:
     - copyloopvar
     - depguard
     - errorlint
+    - forbidigo
     - gocritic
     - goheader
     - gosec
     - importas
     - misspell
+    - prealloc
     - revive
     - staticcheck
     - testifylint
     - unconvert
     - unparam
+    - unused
   exclusions:
     generated: lax
     presets:
@@ -83,6 +86,15 @@ linters:
               desc: "use errors instead"
             - pkg: github.com/hashicorp/go-multierror
               desc: "use errors instead"
+    forbidigo:
+      forbid:
+        - pattern: ^ptr\.To$
+          pkg: ^k8s\.io/utils/ptr$
+          msg: "use new() builtin instead of ptr.To"
+      analyze-types: true
+    gocritic:
+      enabled-tags:
+        - performance
     goheader:
       # Note that because the format is different (this needs no comment markers),
       # updating this text means also updating /tools/boilerplate.txt so that
@@ -120,6 +132,8 @@ linters:
           alias: apiextensionsv1
         - pkg: sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
           alias: mcsapiv1a1
+        - pkg: k8s.io/api/certificates/v1beta1
+          alias: certificatesv1b1
         - pkg: k8s.io/api/(\w+)/(v[\w\d]+)
           alias: $1$2
       # Do not allow unaliased imports of aliased packages.
@@ -129,6 +143,7 @@ linters:
     revive:
       # TODO: enable if-return check
       rules:
+        - name: unused-parameter
         - name: if-return
           disabled: true
     staticcheck:

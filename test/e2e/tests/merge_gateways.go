@@ -14,7 +14,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -76,21 +75,21 @@ var MergeGatewaysTest = suite.ConformanceTest{
 		t.Run("merged three gateways under the same namespace with http routes", func(t *testing.T) {
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw1HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge1", Host: "www.example1.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v1",
 			})
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw2HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge2", Host: "www.example2.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v2",
 			})
 
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw3HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge3", Host: "www.example3.com"},
-				Response:  http.Response{StatusCode: 200},
+				Response:  http.Response{StatusCodes: []int{200}},
 				Namespace: ns,
 				Backend:   "infra-backend-v3",
 			})
@@ -184,15 +183,15 @@ var MergeGatewaysTest = suite.ConformanceTest{
 											Name:  "infra-backend-v3",
 											Port:  gatewayapi.PortNumPtr(8080),
 										},
-										Weight: ptr.To[int32](1),
+										Weight: new(int32(1)),
 									},
 								},
 							},
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/merge4"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/merge4"),
 									},
 								},
 							},
@@ -239,15 +238,17 @@ var MergeGatewaysTest = suite.ConformanceTest{
 			// Not merged gateway should not receive any traffic.
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gw4HostPort, http.ExpectedResponse{
 				Request:   http.Request{Path: "/merge4", Host: "www.example4.com"},
-				Response:  http.Response{StatusCode: 404},
+				Response:  http.Response{StatusCodes: []int{404}},
 				Namespace: ns,
 			})
 		})
 
 		// Clean-up the conflicted gateway and route resources.
 		t.Cleanup(func() {
-			// Collect and dump every config before removing the created resource.
-			CollectAndDump(t, suite.RestConfig)
+			if t.Failed() {
+				// Collect and dump every config before removing the created resource.
+				CollectAndDump(t, suite.RestConfig)
+			}
 
 			conflictedGateway := new(gwapiv1.Gateway)
 			conflictedHTTPRoute := new(gwapiv1.HTTPRoute)

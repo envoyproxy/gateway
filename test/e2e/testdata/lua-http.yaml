@@ -58,8 +58,8 @@ kind: ConfigMap
 metadata:
   name: cm-example-lua
   namespace: gateway-conformance-infra
-data:
-  lua: |
+data:  # not-lua key is used to test that the it fallbacks to first key
+  not-lua: |
     function envoy_on_response(response_handle)
       response_handle:headers():add("X-Custom-Lua-Header", "lua_value_1")
     end

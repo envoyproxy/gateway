@@ -8,7 +8,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"slices"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,10 +18,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -28,7 +30,7 @@ import (
 // OfflineGatewayAPIReconciler can be used for non-kuberetes provider.
 // It can let other providers to have the same reconcile logic without rely on apiserver.
 type OfflineGatewayAPIReconciler struct {
-	gatewayAPIReconciler
+	*gatewayAPIReconciler
 
 	Client client.Client
 }
@@ -47,8 +49,9 @@ func NewOfflineGatewayAPIController(
 
 	// Gather additional resources to watch from registered extensions.
 	var (
-		extGVKs               []schema.GroupVersionKind
-		extServerPoliciesGVKs []schema.GroupVersionKind
+		extGVKs                []schema.GroupVersionKind
+		extServerPoliciesGVKs  []schema.GroupVersionKind
+		extBackendPoliciesGVKs []schema.GroupVersionKind
 	)
 
 	if cfg.EnvoyGateway.ExtensionManager != nil {
@@ -59,27 +62,67 @@ func NewOfflineGatewayAPIController(
 		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.PolicyResources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extServerPoliciesGVKs = append(extServerPoliciesGVKs, gvk)
+
+		}
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.BackendResources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extBackendPoliciesGVKs = append(extBackendPoliciesGVKs, gvk)
+		}
+	}
+	allExtensions := slices.Concat(extGVKs, extServerPoliciesGVKs, extBackendPoliciesGVKs)
+
+	cli := newOfflineGatewayAPIClient(allExtensions)
+
+	// Seed the fake client with the secrets that the CertGen job would create
+	// in Kubernetes mode. This prevents spurious errors during reconciliation
+	// when the controller tries to look up OIDC HMAC and Envoy TLS secrets.
+	certs, err := crypto.GenerateCerts(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate certificates: %w", err)
+	}
+	secrets := CertsToSecret(cfg.ControllerNamespace, certs)
+	for i := range secrets {
+		if err := cli.Create(ctx, &secrets[i]); err != nil {
+			return nil, fmt.Errorf("failed to seed secret %s: %w", secrets[i].Name, err)
 		}
 	}
 
-	cli := newOfflineGatewayAPIClient()
-	r := gatewayAPIReconciler{
+	r := &gatewayAPIReconciler{
 		client:            cli,
 		log:               cfg.Logger,
 		classController:   gwapiv1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		namespace:         cfg.ControllerNamespace,
 		statusUpdater:     su,
 		resources:         resources,
+		subscriptions:     &subscriptions{},
 		extGVKs:           extGVKs,
 		store:             newProviderStore(),
 		envoyGateway:      cfg.EnvoyGateway,
 		mergeGateways:     sets.New[string](),
 		extServerPolicies: extServerPoliciesGVKs,
+		extBackendGVKs:    extBackendPoliciesGVKs,
+		// We assume all CRDs are available in offline mode.
+		btpCRDExists:           true,
+		ctpCRDExists:           true,
+		eepCRDExists:           true,
+		epCRDExists:            true,
+		eppCRDExists:           true,
+		hrfCRDExists:           true,
+		serviceImportCRDExists: true,
+		spCRDExists:            true,
+		tcpRouteCRDExists:      true,
+		udpRouteCRDExists:      true,
+		backendCRDExists:       true,
 	}
 
 	r.log.Info("created offline gatewayapi controller")
+
+	// Do not call .Subscribe() inside Goroutine since it is supposed to be called from the same
+	// Goroutine where Close() is called.
+	r.subscribeToResources(ctx)
+
 	if su != nil {
-		r.subscribeAndUpdateStatus(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
+		r.updateStatusFromSubscriptions(ctx, cfg.EnvoyGateway.ExtensionManager != nil)
 	}
 
 	return &OfflineGatewayAPIReconciler{
@@ -95,10 +138,25 @@ func (r *OfflineGatewayAPIReconciler) Reconcile(ctx context.Context) error {
 	return err
 }
 
-// newOfflineGatewayAPIClient returns a offline client with gateway-api schemas and indexes.
-func newOfflineGatewayAPIClient() client.Client {
+// newOfflineGatewayAPIClient returns an in-memory Kubernetes client that
+// understands Envoy-Gateway, Gateway-API resources and any extension-server
+// policy kinds supplied by an extension.
+func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) client.Client {
+	// Base scheme already holds Envoy-Gateway and Gateway-API types.
+	scheme := envoygateway.GetScheme()
+	// Register extension-server GVKs as Unstructured so the client can handle them.
+	// nolint:copyloopvar
+	for _, gvk := range extensionPolicies {
+		// single object
+		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+		// list object
+		listGVK := gvk
+		listGVK.Kind += "List"
+		scheme.AddKnownTypeWithName(listGVK, &unstructured.UnstructuredList{})
+	}
+
 	return fake.NewClientBuilder().
-		WithScheme(envoygateway.GetScheme()).
+		WithScheme(scheme).
 		WithIndex(&gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc).
 		WithIndex(&gwapiv1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
 		WithIndex(&gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
@@ -110,20 +168,26 @@ func newOfflineGatewayAPIClient() client.Client {
 		WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
 		WithIndex(&gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, gatewayUDPRouteIndexFunc).
 		WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
-		WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+		WithIndex(&gwapiv1.TLSRoute{}, gatewayTLSRouteIndex, gatewayTLSRouteIndexFunc).
+		WithIndex(&gwapiv1.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, backendEnvoyProxyTelemetryIndex, backendEnvoyProxyTelemetryIndexFunc).
 		WithIndex(&egv1a1.EnvoyProxy{}, secretEnvoyProxyIndex, secretEnvoyProxyIndexFunc).
 		WithIndex(&egv1a1.BackendTrafficPolicy{}, configMapBtpIndex, configMapBtpIndexFunc).
 		WithIndex(&egv1a1.ClientTrafficPolicy{}, configMapCtpIndex, configMapCtpIndexFunc).
 		WithIndex(&egv1a1.ClientTrafficPolicy{}, secretCtpIndex, secretCtpIndexFunc).
+		WithIndex(&egv1a1.ClientTrafficPolicy{}, clusterTrustBundleCtpIndex, clusterTrustBundleCtpIndexFunc).
 		WithIndex(&egv1a1.SecurityPolicy{}, secretSecurityPolicyIndex, secretSecurityPolicyIndexFunc).
 		WithIndex(&egv1a1.SecurityPolicy{}, backendSecurityPolicyIndex, backendSecurityPolicyIndexFunc).
 		WithIndex(&egv1a1.SecurityPolicy{}, configMapSecurityPolicyIndex, configMapSecurityPolicyIndexFunc).
 		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, backendEnvoyExtensionPolicyIndex, backendEnvoyExtensionPolicyIndexFunc).
 		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, secretEnvoyExtensionPolicyIndex, secretEnvoyExtensionPolicyIndexFunc).
-		WithIndex(&gwapiv1a3.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc).
-		WithIndex(&gwapiv1a3.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc).
+		WithIndex(&egv1a1.EnvoyExtensionPolicy{}, configMapEepIndex, configMapEepIndexFunc).
+		WithIndex(&gwapiv1.BackendTLSPolicy{}, configMapBtlsIndex, configMapBtlsIndexFunc).
+		WithIndex(&gwapiv1.BackendTLSPolicy{}, secretBtlsIndex, secretBtlsIndexFunc).
+		WithIndex(&gwapiv1.BackendTLSPolicy{}, clusterTrustBundleBtlsIndex, clusterTrustBundleBtlsIndexFunc).
+		WithIndex(&egv1a1.Backend{}, configMapBackendIndex, configMapBackendIndexFunc).
+		WithIndex(&egv1a1.Backend{}, secretBackendIndex, secretBackendIndexFunc).
+		WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).

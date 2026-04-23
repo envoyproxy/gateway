@@ -1,0 +1,53 @@
+http:
+- name: "test-listener-modify"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "test-route-modify"
+    hostname: "*"
+    pathMatch:
+      prefix: "/"
+    destination:
+      name: "test-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "test-route-dest/backend/0"
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10081
+  hostnames:
+  - "example.com"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: "second-route"
+    hostname: "example.com"
+    pathMatch:
+      prefix: "/api"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "2.3.4.5"
+          port: 8080
+        name: "second-route-dest/backend/0"
+extensionServerPolicies:
+- Object:
+    apiVersion: foo.example.io/v1alpha1
+    kind: ExampleExtPolicy
+    metadata:
+      name: test-policy
+      namespace: default
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: test-gateway

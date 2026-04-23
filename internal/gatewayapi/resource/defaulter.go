@@ -12,6 +12,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 
 	gospec "github.com/go-openapi/spec"
 	"github.com/go-openapi/strfmt"
@@ -44,12 +45,23 @@ import (
 // meets our needs.
 // TODO: remove this file once can directly get schema from the Validator in kubectl-validate.
 
-var gatewaySchemaDefaulter, _ = newDefaulter(openapiclient.NewLocalCRDFiles(gatewayCRDsFS))
+var (
+	gatewaySchemaDefaulter     *Defaulter
+	gatewaySchemaDefaulterOnce sync.Once
+)
+
+func GetGatewaySchemaDefaulter() *Defaulter {
+	gatewaySchemaDefaulterOnce.Do(func() {
+		gatewaySchemaDefaulter, _ = newDefaulter(openapiclient.NewLocalCRDFiles(gatewayCRDsFS))
+	})
+	return gatewaySchemaDefaulter
+}
 
 // Defaulter can set default values for crd object according to their schema.
 type Defaulter struct {
 	gvs         map[string]openapi.GroupVersion
 	schemaCache map[schema.GroupVersionKind]*kubespec.Schema
+	cacheMu     sync.Mutex
 }
 
 func newDefaulter(client openapi.Client) (*Defaulter, error) {
@@ -104,6 +116,8 @@ func (d *Defaulter) ApplyDefault(obj *unstructured.Unstructured) (*unstructured.
 }
 
 func (d *Defaulter) parseSchema(gvk schema.GroupVersionKind) (*kubespec.Schema, error) {
+	d.cacheMu.Lock()
+	defer d.cacheMu.Unlock()
 	if existing, ok := d.schemaCache[gvk]; ok {
 		return existing, nil
 	}

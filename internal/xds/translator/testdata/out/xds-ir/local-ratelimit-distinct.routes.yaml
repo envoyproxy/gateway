@@ -10,11 +10,6 @@
       name: first-route-ratelimit-distinct-ip
       route:
         cluster: first-route-dest
-        rateLimits:
-        - actions:
-          - requestHeaders:
-              descriptorKey: rule-0-match-0
-              headerName: x-user-id
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -28,12 +23,18 @@
               fillInterval: 0s
               maxTokens: 5
               tokensPerFill: 5
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100
           filterEnforced:
             defaultValue:
               numerator: 100
+          rateLimits:
+          - actions:
+            - requestHeaders:
+                descriptorKey: rule-0-match-0
+                headerName: x-user-id
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s
@@ -44,44 +45,6 @@
       name: second-route-ratelimit-multiple-rules
       route:
         cluster: second-route-dest
-        rateLimits:
-        - actions:
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
-          - headerValueMatch:
-              descriptorKey: rule-0-match-1
-              descriptorValue: rule-0-match-1
-              expectMatch: true
-              headers:
-              - name: x-org-id
-                stringMatch:
-                  exact: foo
-        - actions:
-          - headerValueMatch:
-              descriptorKey: rule-1-match-0
-              descriptorValue: rule-1-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: two
-          - headerValueMatch:
-              descriptorKey: rule-1-match-1
-              descriptorValue: rule-1-match-1
-              expectMatch: true
-              headers:
-              - name: x-org-id
-                stringMatch:
-                  exact: bar
-          - maskedRemoteAddress:
-              v4PrefixMaskLen: 16
-          - remoteAddress: {}
         upgradeConfigs:
         - upgradeType: websocket
       typedPerFilterConfig:
@@ -103,19 +66,69 @@
               value: rule-1-match-0
             - key: rule-1-match-1
               value: rule-1-match-1
-            - key: masked_remote_address
+            - key: rule-1-masked-remote-address
               value: 192.168.0.0/16
-            - key: remote_address
+            - key: rule-1-remote-address
             tokenBucket:
               fillInterval: 60s
               maxTokens: 10
               tokensPerFill: 10
+          enableXRatelimitHeaders: DRAFT_VERSION_03
           filterEnabled:
             defaultValue:
               numerator: 100
           filterEnforced:
             defaultValue:
               numerator: 100
+          rateLimits:
+          - actions:
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
+            - headerValueMatch:
+                descriptorKey: rule-0-match-1
+                descriptorValue: rule-0-match-1
+                expectMatch: true
+                headers:
+                - name: x-org-id
+                  stringMatch:
+                    exact: foo
+          - actions:
+            - headerValueMatch:
+                descriptorKey: rule-1-match-0
+                descriptorValue: rule-1-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: two
+            - headerValueMatch:
+                descriptorKey: rule-1-match-1
+                descriptorValue: rule-1-match-1
+                expectMatch: true
+                headers:
+                - name: x-org-id
+                  stringMatch:
+                    exact: bar
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: rule-1-masked-remote-address
+                descriptorValue: 192.168.0.0/16
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 192.168.0.0
+                    prefixLen: 16
+                descriptorKey: rule-1-remote-address
+                descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
           statPrefix: http_local_rate_limiter
           tokenBucket:
             fillInterval: 60s

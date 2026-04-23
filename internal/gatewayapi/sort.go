@@ -19,36 +19,39 @@ func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 func (x XdsIRRoutes) Less(i, j int) bool {
 	// 1. Sort based on path match type
 	// Exact > RegularExpression > PathPrefix
-	if x[i].PathMatch != nil && x[i].PathMatch.Exact != nil {
-		if x[j].PathMatch != nil {
-			if x[j].PathMatch.SafeRegex != nil {
-				return false
+	if x[i].PathMatch != nil {
+		if x[i].PathMatch.Exact != nil {
+			if x[j].PathMatch != nil {
+				if x[j].PathMatch.SafeRegex != nil {
+					return false
+				}
+				if x[j].PathMatch.Prefix != nil {
+					return false
+				}
 			}
-			if x[j].PathMatch.Prefix != nil {
-				return false
+		}
+		if x[i].PathMatch.SafeRegex != nil {
+			if x[j].PathMatch != nil {
+				if x[j].PathMatch.Exact != nil {
+					return true
+				}
+				if x[j].PathMatch.Prefix != nil {
+					return false
+				}
+			}
+		}
+		if x[i].PathMatch.Prefix != nil {
+			if x[j].PathMatch != nil {
+				if x[j].PathMatch.Exact != nil {
+					return true
+				}
+				if x[j].PathMatch.SafeRegex != nil {
+					return true
+				}
 			}
 		}
 	}
-	if x[i].PathMatch != nil && x[i].PathMatch.SafeRegex != nil {
-		if x[j].PathMatch != nil {
-			if x[j].PathMatch.Exact != nil {
-				return true
-			}
-			if x[j].PathMatch.Prefix != nil {
-				return false
-			}
-		}
-	}
-	if x[i].PathMatch != nil && x[i].PathMatch.Prefix != nil {
-		if x[j].PathMatch != nil {
-			if x[j].PathMatch.Exact != nil {
-				return true
-			}
-			if x[j].PathMatch.SafeRegex != nil {
-				return true
-			}
-		}
-	}
+
 	// Equal case
 
 	// 2. Sort based on characters in a matching path.
@@ -83,6 +86,27 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	}
 	// Equal case
 
+	// 4. Sort based on the number of Cookie matches.
+	// When the number is same, sort based on number of Exact Cookie matches.
+	cCountI := len(x[i].CookieMatches)
+	cCountJ := len(x[j].CookieMatches)
+	if cCountI < cCountJ {
+		return true
+	}
+	if cCountI > cCountJ {
+		return false
+	}
+
+	cExtNumberI := numberOfExactMatches(x[i].CookieMatches)
+	cExtNumberJ := numberOfExactMatches(x[j].CookieMatches)
+	if cExtNumberI < cExtNumberJ {
+		return true
+	}
+	if cExtNumberI > cExtNumberJ {
+		return false
+	}
+	// Equal case
+
 	// 4. Sort based on the number of Query param matches.
 	// When the number is same, sort based on number of Exact Query param matches.
 	qCountI := len(x[i].QueryParamMatches)
@@ -107,7 +131,7 @@ func sortXdsIRMap(xdsIR resource.XdsIRMap) {
 		for _, http := range irItem.HTTP {
 			if !http.PreserveRouteOrder {
 				// descending order
-				sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
+				sort.Stable(sort.Reverse(XdsIRRoutes(http.Routes)))
 			}
 		}
 	}
@@ -122,6 +146,11 @@ func pathMatchCount(pathMatch *ir.StringMatch) int {
 			return len(*pathMatch.SafeRegex)
 		}
 		if pathMatch.Prefix != nil {
+			// special case: "/" prefix should have 0 count
+			// as it matches all paths which equals to no path match
+			if *pathMatch.Prefix == "/" {
+				return 0
+			}
 			return len(*pathMatch.Prefix)
 		}
 	}
