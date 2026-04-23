@@ -62,6 +62,16 @@ http:
         path: /usr/lib/envoy/modules/my_auth.so
         name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
         terminalFilter: false
+      - config:
+          authEndpoint: https://remote-auth.example.com
+        doNotClose: false
+        filterName: remote-auth-check
+        loadGlobally: false
+        name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
+        remote:
+          url: https://modules.example.com/libremote_auth.so
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+        terminalFilter: false
   - destination:
       name: httproute/default/httproute-3/rule/0
       settings:

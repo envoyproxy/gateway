@@ -135,7 +135,7 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 
 func initZapLogger(w io.Writer, logging *egv1a1.EnvoyGatewayLogging, level egv1a1.LogLevel) *zap.Logger {
 	parseLevel, _ := zapcore.ParseLevel(string(logging.DefaultEnvoyGatewayLoggingLevel(level)))
-	cfg := zap.NewDevelopmentEncoderConfig()
+	cfg := zap.NewProductionEncoderConfig()
 	var encoder zapcore.Encoder
 	logEncoder := egv1a1.EnvoyGatewayLogEncoderText
 	if logging != nil && logging.Encoder != nil {

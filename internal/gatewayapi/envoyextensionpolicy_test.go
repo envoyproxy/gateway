@@ -64,3 +64,44 @@ func Test_hasTag(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDynamicModuleRemoteURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		rawURL  string
+		wantErr string
+	}{
+		{
+			name:   "valid https URL",
+			rawURL: "https://modules.example.com/libremote_auth.so",
+		},
+		{
+			name:   "valid http URL with port",
+			rawURL: "http://modules.example.com:8443/libremote_auth.so",
+		},
+		{
+			name:    "missing hostname",
+			rawURL:  "https:///libremote_auth.so",
+			wantErr: "hostname",
+		},
+		{
+			name:    "unsupported scheme",
+			rawURL:  "ftp://modules.example.com/libremote_auth.so",
+			wantErr: "unsupported URL scheme",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateDynamicModuleRemoteURL(tt.rawURL)
+			if tt.wantErr == "" {
+				assert.NoError(t, err)
+				return
+			}
+
+			if assert.Error(t, err) {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
+}

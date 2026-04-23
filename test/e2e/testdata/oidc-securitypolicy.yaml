@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: http-with-oidc
+  name: http-with-oidc-foo
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -12,7 +12,25 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /myapp              # This is the path that will be protected by OIDC
+        value: /foo                # This is the path that will be protected by OIDC
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-oidc-bar
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  hostnames: ["www.example.com"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /bar                # This is the path that will be protected by OIDC
     backendRefs:
     - name: infra-backend-v1
       port: 8080
@@ -53,31 +71,73 @@ apiVersion: v1
 kind: Secret
 metadata:
   namespace: gateway-conformance-infra
-  name: oidctest-secret
+  name: oidctest-foo-secret
 data:
-  client-secret: b2lkY3Rlc3QtY2xpZW50LXNlY3JldA==   # base64 encoding of "oidctest-client-secret"
+  client-secret: b2lkY3Rlc3QtZm9vLWNsaWVudC1zZWNyZXQ=   # base64 encoding of "oidctest-foo-client-secret"
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: oidc-test
+  name: oidc-test-foo
   namespace: gateway-conformance-infra
 spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: http-with-oidc
+    name: http-with-oidc-foo
   oidc:
     provider:
       issuer: "http://keycloak.gateway-conformance-infra/realms/master"
       authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
       tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
       endSessionEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout"
-    clientID: "oidctest"
+    clientID: "oidctest-foo"
     clientSecret:
-      name: "oidctest-secret"
-    redirectURL: "http://www.example.com/myapp/oauth2/callback"
-    logoutPath: "/myapp/logout"
+      name: "oidctest-foo-secret"
+    redirectURL: "http://www.example.com/foo/oauth2/callback"
+    logoutPath: "/foo/logout"
+    forwardAccessToken: true
+    passThroughAuthHeader: true
+  jwt:
+    providers:
+    - name: "keycloak"  # This is needed so JWTs generated through the OIDC flow can be validated
+      remoteJWKS:
+        uri: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/certs"
+        cacheDuration: 300s
+    - name: "example"  # This allows us to use the static JWTs in the test
+      remoteJWKS:
+        uri: "http://static-file-server.gateway-conformance-infra/jwt/jwks.json"
+        cacheDuration: 300s
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  namespace: gateway-conformance-infra
+  name: oidctest-bar-secret
+data:
+  client-secret: b2lkY3Rlc3QtYmFyLWNsaWVudC1zZWNyZXQ=   # base64 encoding of "oidctest-bar-client-secret"
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: oidc-test-bar
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-oidc-bar
+  oidc:
+    provider:
+      issuer: "http://keycloak.gateway-conformance-infra/realms/master"
+      authorizationEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/auth"
+      tokenEndpoint: "http://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/token"
+      endSessionEndpoint: "https://keycloak.gateway-conformance-infra/realms/master/protocol/openid-connect/logout"
+    clientID: "oidctest-bar"
+    clientSecret:
+      name: "oidctest-bar-secret"
+    redirectURL: "http://www.example.com/bar/oauth2/callback"
+    logoutPath: "/bar/logout"
     forwardAccessToken: true
     passThroughAuthHeader: true
   jwt:

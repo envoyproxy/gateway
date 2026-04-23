@@ -143,7 +143,7 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 			namespaceRequired = false
 		}
 
-		var parents []gwapiv1.RouteParentStatus
+		parents := make([]gwapiv1.RouteParentStatus, 0, len(gw.listenerNames))
 		for _, listener := range gw.listenerNames {
 			parents = append(parents, gwapiv1.RouteParentStatus{
 				ParentRef: gwapiv1.ParentReference{

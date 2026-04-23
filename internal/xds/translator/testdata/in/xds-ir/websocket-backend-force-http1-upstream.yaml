@@ -1,0 +1,43 @@
+http:
+  - name: "websocket-listener"
+    address: "0.0.0.0"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "websocket-wss-route"
+        hostname: "*"
+        destination:
+          name: "websocket-wss-route-dest"
+          settings:
+            - endpoints:
+                - host: "websocket.example.com"
+                  port: 443
+              name: "websocket-wss-route-dest/backend/0"
+              protocol: HTTP
+              forceHTTP1Upstream: true
+              tls:
+                alpnProtocols: null
+                caCertificate:
+                  name: websocket-wss-route/ca
+                sni: "websocket.example.com"
+                useSystemTrustStore: true
+      - name: "ordinary-tls-http-route"
+        hostname: "*"
+        destination:
+          name: "ordinary-tls-http-route-dest"
+          settings:
+            - endpoints:
+                - host: "ordinary.example.com"
+                  port: 443
+              name: "ordinary-tls-http-route-dest/backend/0"
+              protocol: HTTP
+              tls:
+                alpnProtocols: null
+                caCertificate:
+                  name: ordinary-tls-http-route/ca
+                sni: "ordinary.example.com"
+                useSystemTrustStore: true

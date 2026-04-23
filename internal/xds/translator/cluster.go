@@ -247,11 +247,15 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	// influence transport socket specific settings
 	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
+	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
+		}
+		if ds.ForceHTTP1Upstream {
+			forceHTTP1UpstreamProtocol = true
 		}
 
 		if ds.Protocol == ir.TCP {
@@ -316,7 +320,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +342,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 		if err != nil {
 			return nil, err
 		}
-		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		cluster.LoadBalancingPolicy = endpointOverridePolicy
 		// Clear CommonLbConfig fields that conflict with LoadBalancingPolicy
 		// This is required because Envoy doesn't allow both LoadBalancingPolicy and
@@ -347,7 +350,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			cluster.CommonLbConfig.LocalityConfigSpecifier = nil
 		}
 	case args.loadBalancer == nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 		leastRequest := &least_requestv3.LeastRequest{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -364,8 +366,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.LeastRequest != nil:
-		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
-
 		leastRequest := &least_requestv3.LeastRequest{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -387,7 +387,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.RoundRobin != nil:
-		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
 		roundRobin := &round_robinv3.RoundRobin{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -409,7 +408,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.Random != nil:
-		cluster.LbPolicy = clusterv3.Cluster_RANDOM
 		random := &randomv3.Random{
 			LocalityLbConfig: localityLbConfig,
 		}
@@ -426,7 +424,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.ConsistentHash != nil:
-		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 		consistentHash := &maglevv3.Maglev{}
 		if args.loadBalancer.ConsistentHash.TableSize != nil {
 			consistentHash.TableSize = wrapperspb.UInt64(*args.loadBalancer.ConsistentHash.TableSize)
@@ -516,7 +513,6 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			Name:        dfpClusterTypeName,
 			TypedConfig: dfpAny,
 		}}
-		cluster.LbPolicy = clusterv3.Cluster_CLUSTER_PROVIDED
 		clusterProvided := &cluster_providedv3.ClusterProvided{}
 		typedClusterProvided, err := proto.ToAnyWithValidation(clusterProvided)
 		if err != nil {
@@ -669,7 +665,7 @@ func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.
 	}
 
 	if outlierDetection.MaxEjectionPercent != nil && *outlierDetection.MaxEjectionPercent > 0 {
-		od.MaxEjectionPercent = wrapperspb.UInt32(uint32(*outlierDetection.MaxEjectionPercent))
+		od.MaxEjectionPercent = wrapperspb.UInt32(*outlierDetection.MaxEjectionPercent)
 	}
 
 	if outlierDetection.ConsecutiveLocalOriginFailures != nil {
@@ -1032,7 +1028,7 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 		return nil
 	}
 
-	return ptr.To(hc.Active.Overrides.Port)
+	return new(hc.Active.Overrides.Port)
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
@@ -1049,7 +1045,7 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpo
 	return *ep.Hostname
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
@@ -1060,7 +1056,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI || forceHTTP1UpstreamProtocol
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
@@ -1090,11 +1086,21 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
 	switch {
+	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream, regardless of other settings.
 	case args.useClientProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1Opts,
 				Http2ProtocolOptions: http2Opts,
+			},
+		}
+	// If forceHTTP1UpstreamProtocol is set, force Envoy to use HTTP1 upstream regardless of other settings.
+	case forceHTTP1UpstreamProtocol:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1Opts,
+				},
 			},
 		}
 	case requiresHTTP2Options:

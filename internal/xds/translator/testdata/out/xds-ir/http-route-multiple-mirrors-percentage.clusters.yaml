@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -34,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: mirror-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -58,7 +56,6 @@
       resourceApiVersion: V3
     serviceName: mirror-route-dest1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

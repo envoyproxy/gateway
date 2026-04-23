@@ -52,11 +52,11 @@ const LatencyTab = ({ latencyPercentileComparison, benchmarkResults }: LatencyTa
       if (maxScaleData && maxScaleData.latency && maxScaleData.latency.percentiles) {
         const percentiles = maxScaleData.latency.percentiles;
         return [
-          { percentile: 'P50', value: Number((percentiles.p50 / 1000).toFixed(1)), category: 'Median', status: 'excellent' },
-          { percentile: 'P75', value: Number((percentiles.p75 / 1000).toFixed(1)), category: '75th', status: 'excellent' },
-          { percentile: 'P90', value: Number((percentiles.p90 / 1000).toFixed(1)), category: '90th', status: 'good' },
-          { percentile: 'P95', value: Number((percentiles.p95 / 1000).toFixed(1)), category: '95th', status: 'watch' },
-          { percentile: 'P99', value: Number((percentiles.p99 / 1000).toFixed(1)), category: '99th', status: 'alert' }
+          { percentile: 'P50', value: Number(percentiles.p50.toFixed(1)), category: 'Median', status: 'excellent' },
+          { percentile: 'P75', value: Number(percentiles.p75.toFixed(1)), category: '75th', status: 'excellent' },
+          { percentile: 'P90', value: Number(percentiles.p90.toFixed(1)), category: '90th', status: 'good' },
+          { percentile: 'P95', value: Number(percentiles.p95.toFixed(1)), category: '95th', status: 'watch' },
+          { percentile: 'P99', value: Number(percentiles.p99.toFixed(1)), category: '99th', status: 'alert' }
         ];
       }
     }
@@ -72,8 +72,8 @@ const LatencyTab = ({ latencyPercentileComparison, benchmarkResults }: LatencyTa
     .filter(item => item.phase === 'scaling-up')
     .map(item => ({
       routes: item.routes,
-      mean: Number((item.latency.mean / 1000).toFixed(1)),
-      p95: Number((item.latency.percentiles.p95 / 1000).toFixed(1)),
+      mean: Number(item.latency.mean.toFixed(1)),
+      p95: Number(item.latency.percentiles.p95.toFixed(1)),
       ratio: Number((item.latency.percentiles.p95 / item.latency.mean).toFixed(1))
     }));
 

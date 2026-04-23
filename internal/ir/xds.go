@@ -16,6 +16,7 @@ import (
 	"net/netip"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -471,12 +472,43 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// SDSConfig holds the configuration for a Secret Discovery Service (SDS) server.
+// +k8s:deepcopy-gen=true
+type SDSConfig struct {
+	// SecretName is an identifier for the SDS configuration.
+	SecretName string `json:"secretName" yaml:"secretName"`
+	// URL is the URL of the SDS server
+	URL string `json:"url" yaml:"url"`
+
+	// TODO: support additional SDS configuration options
+	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
+	sdsSecretName, hasSecretName := s.Data["secretName"]
+	sdsURLBytes, hasURL := s.Data["url"]
+	// TODO: support more sds options if needed.
+	if !hasSecretName || len(sdsSecretName) == 0 {
+		return nil, fmt.Errorf("no secretName found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+	if !hasURL || len(sdsURLBytes) == 0 {
+		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+
+	return &SDSConfig{
+		SecretName: string(sdsSecretName),
+		URL:        string(sdsURLBytes),
+	}, nil
 }
 
 // TLSCrl holds a single CRL's details
@@ -497,6 +529,8 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
@@ -615,6 +649,7 @@ type HTTP1Settings struct {
 	PreserveHeaderCase               bool            `json:"preserveHeaderCase,omitempty" yaml:"preserveHeaderCase,omitempty"`
 	HTTP10                           *HTTP10Settings `json:"http10,omitempty" yaml:"http10,omitempty"`
 	DisableSafeMaxConnectionDuration bool            `json:"disableSafeMaxConnectionDuration,omitempty" yaml:"disableSafeMaxConnectionDuration,omitempty"`
+	IgnoredUpgradeTypes              []*StringMatch  `json:"ignoredUpgradeTypes,omitempty" yaml:"ignoredUpgradeTypes,omitempty"`
 }
 
 // HTTP10Settings provides HTTP/1.0 configuration on the listener.
@@ -1468,6 +1503,11 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway route metadata to the external
+	// authorization service as route metadata context.
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
@@ -1816,7 +1856,8 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1849,6 +1890,27 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 		}
 	}
 	return false
+}
+
+// HasMixedUpstreamProtocolRequirements returns true if destination settings require
+// mutually exclusive cluster-level upstream protocol configuration.
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+	hasForceHTTP1Upstream := false
+	hasHTTP2Upstream := false
+
+	for _, setting := range r.Settings {
+		if setting == nil {
+			continue
+		}
+		if setting.ForceHTTP1Upstream {
+			hasForceHTTP1Upstream = true
+		}
+		if setting.Protocol == HTTP2 || setting.Protocol == GRPC {
+			hasHTTP2Upstream = true
+		}
+	}
+
+	return hasForceHTTP1Upstream && hasHTTP2Upstream
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1900,8 +1962,11 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// ForceHTTP1Upstream requires Envoy to use explicit HTTP/1.1 upstream protocol selection.
+	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
+	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
+	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
@@ -2027,6 +2092,10 @@ type URLRewrite struct {
 	Path *ExtendedHTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Host configures the replacement of the request's host header.
 	Host *HTTPHostModifier `json:"host,omitempty" yaml:"host,omitempty"`
+	// AppendXForwardedHost controls whether the original Host value is appended
+	// to the X-Forwarded-Host header when hostname rewriting is configured.
+	// Defaults to true when nil.
+	AppendXForwardedHost *bool `json:"appendXForwardedHost,omitempty" yaml:"appendXForwardedHost,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -2488,6 +2557,12 @@ type LocalRateLimit struct {
 
 	// Rules for rate limiting.
 	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+
+	// DefaultXRateLimitOption controls whether X-RateLimit response headers are emitted for
+	// the default bucket (requests not matching any rule).
+	// When nil, the default bucket inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	DefaultXRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"defaultXRateLimitOption,omitempty" yaml:"defaultXRateLimitOption,omitempty"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
@@ -2521,6 +2596,10 @@ type RateLimitRule struct {
 	// but the result is always success regardless of whether the limit was exceeded.
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
+	// XRateLimitOption controls whether X-RateLimit response headers are emitted for this rule.
+	// When nil, the rule inherits the listener-level setting from DisableRateLimitHeaders.
+	// +optional
+	XRateLimitOption *egv1a1.XRateLimitHeadersOption `json:"xRateLimitOption,omitempty" yaml:"xRateLimitOption,omitempty"`
 	// Name is a unique identifier for this rule, set as <policy-ns>/<policy-name>/rule/<rule-index>.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 }
@@ -2532,14 +2611,34 @@ type RateLimitCost struct {
 	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
 }
 
+// CIDRMatch defines the match conditions on the source IP's CIDR for rate limiting.
+// +k8s:deepcopy-gen=true
 type CIDRMatch struct {
-	CIDR    string `json:"cidr" yaml:"cidr"`
-	IP      string `json:"ip" yaml:"ip"`
+	// CIDR is the full CIDR string (e.g. "192.168.0.0/24") from the API source match.
+	CIDR string `json:"cidr" yaml:"cidr"`
+	// MaskLen is the prefix length in bits (e.g. 24 for /24).
 	MaskLen uint32 `json:"maskLen" yaml:"maskLen"`
-	IsIPv6  bool   `json:"isIPv6" yaml:"isIPv6"`
+	// IsIPv6 is true when the CIDR is an IPv6 range.
+	IsIPv6 bool `json:"isIPv6" yaml:"isIPv6"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// Invert when true matches when the client IP is not in the specified range(s).
+	Invert bool `json:"invert" yaml:"invert"`
+}
+
+// AddressPrefix returns the network/base IP address derived from CIDR.
+func (c *CIDRMatch) AddressPrefix() string {
+	if c == nil {
+		return ""
+	}
+
+	prefix, err := netip.ParsePrefix(c.CIDR)
+	if err != nil {
+		return ""
+	}
+
+	return prefix.Masked().Addr().String()
 }
 
 // QueryParamMatch defines the match attributes within the query parameters of the request.
@@ -2561,7 +2660,7 @@ type RateLimitUnit egv1a1.RateLimitUnit
 // +k8s:deepcopy-gen=true
 type RateLimitValue struct {
 	// Requests are the number of requests that need to be rate limited.
-	Requests uint `json:"requests" yaml:"requests"`
+	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
@@ -2983,7 +3082,7 @@ type OutlierDetection struct {
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
-	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	MaxEjectionPercent *uint32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
@@ -3564,7 +3663,10 @@ type DynamicModule struct {
 	Name string `json:"name"`
 
 	// Path is the absolute filesystem path to the dynamic module shared library.
-	Path string `json:"path"`
+	Path string `json:"path,omitempty"`
+
+	// Remote is the remote source of the dynamic module shared library.
+	Remote *RemoteDynamicModuleSource `json:"remote,omitempty"`
 
 	// FilterName identifies the filter implementation within the module.
 	FilterName string `json:"filterName,omitempty"`
@@ -3580,6 +3682,16 @@ type DynamicModule struct {
 
 	// TerminalFilter indicates the module handles requests without upstream.
 	TerminalFilter bool `json:"terminalFilter"`
+}
+
+// RemoteDynamicModuleSource holds the remote source information for a dynamic module.
+// +k8s:deepcopy-gen=true
+type RemoteDynamicModuleSource struct {
+	// URL is the HTTP(S) URL of the dynamic module shared library.
+	URL string `json:"url"`
+
+	// SHA256 is the checksum used by Envoy to verify the downloaded module.
+	SHA256 string `json:"sha256"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

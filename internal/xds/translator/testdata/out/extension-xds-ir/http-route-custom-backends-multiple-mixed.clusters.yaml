@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: custom-backend-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

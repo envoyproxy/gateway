@@ -44,19 +44,13 @@ func conformanceOpts(t *testing.T) suite.ConformanceOptions {
 
 // SkipTests is a list of tests that are skipped in the conformance suite.
 func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
-	skipTests := []suite.ConformanceTest{
-		tests.GatewayStaticAddresses,
+	skipTests := make([]suite.ConformanceTest, 0, 4)
+	skipTests = append(skipTests,
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.GatewayInvalidTLSBackendConfiguration,
-		tests.GatewayTLSBackendClientCertificate,
-		tests.GatewayFrontendClientCertificateValidation,
-		tests.GatewayInvalidFrontendClientCertificateValidation,
-		tests.GatewayFrontendInvalidDefaultClientCertificateValidation,
-		tests.GatewayFrontendClientCertificateValidationInsecureFallback,
 		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
-	}
+	)
 
 	if gatewayNamespaceMode {
 		return skipTests
@@ -70,13 +64,10 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 // SkipFeatures is a list of features that are skipped in the conformance report.
 func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
-		return sets.New(
-			features.GatewayStaticAddressesFeature.Name,
-		)
+		return sets.New[features.FeatureName]()
 	}
 
 	return sets.New(
-		features.GatewayStaticAddressesFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
 	)
 }

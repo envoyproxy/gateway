@@ -361,7 +361,6 @@
                   "serviceName": "httproute/envoy-gateway-system/backend/rule/0"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {
@@ -410,7 +409,6 @@
                 "dnsLookupFamily": "V4_PREFERRED",
                 "dnsRefreshRate": "30s",
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadAssignment": {
                   "clusterName": "raw_githubusercontent_com_443",
                   "endpoints": [

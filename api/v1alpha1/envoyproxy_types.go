@@ -188,8 +188,9 @@ type EnvoyProxySpec struct {
 	LuaValidation *LuaValidation `json:"luaValidation,omitempty"`
 
 	// DynamicModules defines the set of dynamic modules that are allowed to be
-	// used by EnvoyExtensionPolicy resources. Each entry registers a module by
-	// a logical name and specifies the shared library that Envoy will load.
+	// used by EnvoyExtensionPolicy resources and dynamic module load balancer
+	// policies. Each entry registers a module by a logical name and specifies
+	// the shared library that Envoy will load.
 	//
 	// The EnvoyProxy owner is responsible for ensuring the module .so files are available
 	// on the proxy container's filesystem (e.g., via init containers, custom images,
@@ -205,6 +206,14 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	GeoIP *EnvoyProxyGeoIP `json:"geoIP,omitempty"`
+
+	// MergeType controls how this EnvoyProxy merges with less specific configurations
+	// in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).
+	// If unset, this EnvoyProxy completely replaces less specific settings.
+	// Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec.
+	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
+	// +optional
+	MergeType *MergeType `json:"mergeType,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.

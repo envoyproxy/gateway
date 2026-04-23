@@ -347,6 +347,47 @@ spec:
 EOF
 ```
 
+### Sampler
+
+For OpenTelemetry tracing, you can configure the sampler using the `openTelemetry.sampler` field.
+When a sampler is configured, it becomes the sole sampling decision maker (`samplingRate` is
+effectively 100% so the sampler runs for every request).
+The sampler `type` maps to the standard [OTEL_TRACES_SAMPLER](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#general-sdk-configuration) environment variable:
+
+| `sampler.type`                 | Discriminated fields                    |
+|--------------------------------|-----------------------------------------|
+| `AlwaysOn`                     | —                                       |
+| `AlwaysOff`                    | —                                       |
+| `TraceIdRatio`            | `samplingPercentage` (default 100%)     |
+| `ParentBasedAlwaysOn`          | —                                       |
+| `ParentBasedAlwaysOff`         | —                                       |
+| `ParentBasedTraceIdRatio` | `samplingPercentage` (default 100%)     |
+
+The following configuration uses `ParentBasedTraceIdRatio` to respect the parent span's sampling
+decision and drop all root spans:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: otel
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    tracing:
+      provider:
+        backendRefs:
+        - name: otel-collector
+          namespace: monitoring
+          port: 4317
+        type: OpenTelemetry
+        openTelemetry:
+          sampler:
+            type: ParentBasedTraceIdRatio
+            samplingPercentage:
+              numerator: 0
+```
+
 ### Custom Tags
 
 You can add custom tags to the traces by setting the `telemetry.tracing.tags` in the [EnvoyProxy][envoy-proxy-crd] CRD.

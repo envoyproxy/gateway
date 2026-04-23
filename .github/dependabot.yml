@@ -61,6 +61,7 @@ updates:
   - package-ecosystem: npm
     directories:
       - /site
+      - /tools
     schedule:
       interval: weekly
   - package-ecosystem: pip

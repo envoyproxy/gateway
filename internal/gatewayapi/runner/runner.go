@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/docker/docker/pkg/fileutils"
 	"github.com/telepresenceio/watchable"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -172,13 +171,13 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		cacheOption.CacheDir = path.Join(h, ".eg", "wasm")
 	}
 	// Create the file directory if it does not exist.
-	if err = fileutils.CreateIfNotExists(cacheOption.CacheDir, true); err != nil {
+	if err = os.MkdirAll(cacheOption.CacheDir, 0o755); err != nil {
 		r.Logger.Error(err, "Failed to create Wasm cache directory")
 		return
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
-		wasm.SeverOptions{
+		wasm.ServerOptions{
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},
@@ -266,6 +265,7 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					GlobalRateLimitEnabled:          r.EnvoyGateway.RateLimit != nil,
 					EnvoyPatchPolicyEnabled:         r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy,
 					BackendEnabled:                  r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableBackend,
+					SDSSecretRefEnabled:             r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.EnableSDSSecretRef,
 					ControllerNamespace:             r.ControllerNamespace,
 					GatewayNamespaceMode:            r.EnvoyGateway.GatewayNamespaceMode(),
 					MergeGateways:                   gatewayapi.IsMergeGatewaysEnabled(resources),

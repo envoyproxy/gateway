@@ -55,12 +55,10 @@ http:
             clientCIDRs:
             - cidr: 192.168.1.0/24
               distinct: false
-              ip: 192.168.1.0
               isIPv6: false
               maskLen: 24
             - cidr: 192.168.2.0/24
               distinct: false
-              ip: 192.168.2.0
               isIPv6: false
               maskLen: 24
         - action: Deny
@@ -69,12 +67,10 @@ http:
             clientCIDRs:
             - cidr: 10.75.1.0/24
               distinct: false
-              ip: 10.75.1.0
               isIPv6: false
               maskLen: 24
             - cidr: 10.75.2.0/24
               distinct: false
-              ip: 10.75.2.0
               isIPv6: false
               maskLen: 24
   - destination:
@@ -104,11 +100,9 @@ http:
             clientCIDRs:
             - cidr: 10.0.1.0/24
               distinct: false
-              ip: 10.0.1.0
               isIPv6: false
               maskLen: 24
             - cidr: 10.0.2.0/24
               distinct: false
-              ip: 10.0.2.0
               isIPv6: false
               maskLen: 24

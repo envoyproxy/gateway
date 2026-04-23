@@ -69,5 +69,5 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
-[release guide]: ../../contributions/releasing
+[release guide]: /community/releasing
 [release schedule]: https://github.com/envoyproxy/envoy/blob/main/RELEASES.md#major-release-schedule

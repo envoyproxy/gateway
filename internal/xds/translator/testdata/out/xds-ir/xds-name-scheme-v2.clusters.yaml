@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -34,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -58,7 +56,6 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -89,7 +86,6 @@
       resourceApiVersion: V3
     serviceName: tlsroute/default/tlsroute-1/rule/-1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -120,7 +116,6 @@
       resourceApiVersion: V3
     serviceName: tlsroute/default/tlsroute-2/rule/-1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -144,7 +139,6 @@
       resourceApiVersion: V3
     serviceName: tcproute/default/tcproute
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -175,7 +169,6 @@
       resourceApiVersion: V3
     serviceName: udproute/default/udproute
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

@@ -8,14 +8,18 @@
 package tests
 
 import (
+	"context"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
 
 func init() {
@@ -51,17 +55,23 @@ var EnvoyProxyHPATest = suite.ConformanceTest{
 			// Send a request to a valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
-			// Update the Gateway to without HPA
-			gw := &gwapiv1.Gateway{}
-			err := suite.Client.Get(t.Context(), gwNN, gw)
-			if err != nil {
-				t.Fatalf("Failed to get Gateway: %v", err)
-			}
-			gw.Spec.Infrastructure = nil
-			err = suite.Client.Patch(t.Context(), gw, client.Merge)
-			if err != nil {
-				t.Fatalf("Failed to update Gateway: %v", err)
-			}
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+				// Update the Gateway to without HPA
+				gw := &gwapiv1.Gateway{}
+				err := suite.Client.Get(ctx, gwNN, gw)
+				if err != nil {
+					tlog.Logf(t, "failed to get Gateway %s", gwNN)
+					return false, nil
+				}
+				gw.Spec.Infrastructure = nil
+				err = suite.Client.Update(ctx, gw)
+				if err != nil {
+					tlog.Logf(t, "failed to update Gateway %s: %v", gwNN, err)
+					return false, nil
+				}
+
+				return true, nil
+			}))
 
 			ExpectEnvoyProxyDeploymentCount(t, suite, gwNN, expectedNs, 1)
 			ExpectEnvoyProxyHPACount(t, suite, gwNN, expectedNs, 0)

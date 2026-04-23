@@ -186,7 +186,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
       return {
         gatewayMemoryRange: '0-0MB',
         proxyMemoryRange: '0-0MB',
-        peakProxyMeanCPU: 0,
+        peakGatewayMeanCPU: 0,
         memoryPerRouteAtScale: 0
       };
     }
@@ -200,9 +200,9 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
     const proxyMin = Math.min(...proxyMemories);
     const proxyMax = Math.max(...proxyMemories);
 
-    // Calculate peak proxy mean CPU (highest average across all tests)
-    const proxyMeanCPUValues = cpuData.map(d => d.proxyMean);
-    const peakProxyMeanCPU = proxyMeanCPUValues.length > 0 ? Math.max(...proxyMeanCPUValues) : 0;
+    // Calculate peak gateway and proxy mean CPU (highest average across all tests)
+    const gatewayMeanCPUValues = cpuData.map(d => d.gatewayMean);
+    const peakGatewayMeanCPU = gatewayMeanCPUValues.length > 0 ? Math.max(...gatewayMeanCPUValues) : 0;
 
     // Get memory per route at highest scale (most efficient point)
     const highestScaleEfficiency = efficiencyData[efficiencyData.length - 1];
@@ -211,7 +211,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
     return {
       gatewayMemoryRange: `${gatewayMin}-${gatewayMax}MB`,
       proxyMemoryRange: `${proxyMin}-${proxyMax}MB`,
-      peakProxyMeanCPU: Math.round(peakProxyMeanCPU),
+      peakGatewayMeanCPU: Math.round(peakGatewayMeanCPU),
       memoryPerRouteAtScale: memoryPerRouteAtScale
     };
   };
@@ -221,7 +221,7 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
   return (
     <div className="space-y-6">
       {/* Key Resource Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Gateway Memory</CardTitle>
@@ -250,13 +250,13 @@ const ResourcesTab = ({ resourceTrends, benchmarkResults }: ResourcesTabProps) =
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Peak Proxy Mean CPU</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Peak Gateway Mean CPU</CardTitle>
+            <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{resourceMetrics.peakProxyMeanCPU}%</div>
+            <div className="text-2xl font-bold">{resourceMetrics.peakGatewayMeanCPU}%</div>
             <p className="text-xs text-muted-foreground">
-              Highest average CPU usage
+              Highest average Gateway CPU usage
             </p>
           </CardContent>
         </Card>

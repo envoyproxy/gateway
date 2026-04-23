@@ -14,7 +14,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -184,15 +183,15 @@ var MergeGatewaysTest = suite.ConformanceTest{
 											Name:  "infra-backend-v3",
 											Port:  gatewayapi.PortNumPtr(8080),
 										},
-										Weight: ptr.To[int32](1),
+										Weight: new(int32(1)),
 									},
 								},
 							},
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/merge4"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/merge4"),
 									},
 								},
 							},

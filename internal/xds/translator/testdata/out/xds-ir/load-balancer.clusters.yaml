@@ -33,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: RANDOM
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -57,7 +56,6 @@
       resourceApiVersion: V3
     serviceName: third-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -81,7 +79,6 @@
       resourceApiVersion: V3
     serviceName: fourth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -103,7 +100,6 @@
       resourceApiVersion: V3
     serviceName: fifth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -154,7 +150,6 @@
       resourceApiVersion: V3
     serviceName: seventh-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -176,7 +171,6 @@
       resourceApiVersion: V3
     serviceName: eighth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -199,7 +193,6 @@
       resourceApiVersion: V3
     serviceName: ninth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -221,7 +214,6 @@
       resourceApiVersion: V3
     serviceName: tenth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -243,7 +235,6 @@
       resourceApiVersion: V3
     serviceName: eleventh-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -273,7 +264,6 @@
       resourceApiVersion: V3
     serviceName: twelfth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -303,7 +293,6 @@
       resourceApiVersion: V3
     serviceName: thirteen-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: CLUSTER_PROVIDED
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -333,7 +322,6 @@
       resourceApiVersion: V3
     serviceName: fourteenth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -355,7 +343,6 @@
       resourceApiVersion: V3
     serviceName: fifteenth-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

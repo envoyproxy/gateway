@@ -80,11 +80,11 @@ const OverviewTab = ({
       if (maxScaleData && maxScaleData.latency && maxScaleData.latency.percentiles) {
         const percentiles = maxScaleData.latency.percentiles;
         return [
-          { percentile: 'P50', value: Number((percentiles.p50 / 1000).toFixed(1)), status: 'excellent' },
-          { percentile: 'P75', value: Number((percentiles.p75 / 1000).toFixed(1)), status: 'excellent' },
-          { percentile: 'P90', value: Number((percentiles.p90 / 1000).toFixed(1)), status: 'good' },
-          { percentile: 'P95', value: Number((percentiles.p95 / 1000).toFixed(1)), status: 'acceptable' },
-          { percentile: 'P99', value: Number((percentiles.p99 / 1000).toFixed(1)), status: 'watch' }
+          { percentile: 'P50', value: Number(percentiles.p50.toFixed(1)), status: 'excellent' },
+          { percentile: 'P75', value: Number(percentiles.p75.toFixed(1)), status: 'excellent' },
+          { percentile: 'P90', value: Number(percentiles.p90.toFixed(1)), status: 'good' },
+          { percentile: 'P95', value: Number(percentiles.p95.toFixed(1)), status: 'acceptable' },
+          { percentile: 'P99', value: Number(percentiles.p99.toFixed(1)), status: 'watch' }
         ];
       }
     }
@@ -157,7 +157,7 @@ const OverviewTab = ({
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{(performanceSummary.avgLatency / 1000).toFixed(1)}ms</div>
+            <div className="text-2xl font-bold">{performanceSummary.avgLatency.toFixed(1)}ms</div>
             <p className="text-xs text-muted-foreground">
               End-to-end as measured by Nighthawk
             </p>

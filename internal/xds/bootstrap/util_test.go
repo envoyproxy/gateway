@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -29,28 +28,28 @@ func TestApplyBootstrapConfig(t *testing.T) {
 		{
 			name: "default",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
-				Type: ptr.To(egv1a1.BootstrapTypeMerge),
+				Type: new(egv1a1.BootstrapTypeMerge),
 			},
 			defaultBootstrap: str,
 		},
 		{
 			name: "merge-user-bootstrap",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
-				Type: ptr.To(egv1a1.BootstrapTypeMerge),
+				Type: new(egv1a1.BootstrapTypeMerge),
 			},
 			defaultBootstrap: str,
 		},
 		{
 			name: "stats_sinks",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
-				Type: ptr.To(egv1a1.BootstrapTypeMerge),
+				Type: new(egv1a1.BootstrapTypeMerge),
 			},
 			defaultBootstrap: str,
 		},
 		{
 			name: "patch-global-config",
 			boostrapConfig: &egv1a1.ProxyBootstrap{
-				Type: ptr.To(egv1a1.BootstrapTypeJSONPatch),
+				Type: new(egv1a1.BootstrapTypeJSONPatch),
 			},
 			defaultBootstrap: str,
 		},

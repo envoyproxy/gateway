@@ -54,6 +54,8 @@ type BackendTrafficPolicySpec struct {
 	// into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).
 	// This field cannot be set when targeting a parent resource (Gateway).
 	// If unset, no merging occurs, and only the most specific configuration takes effect.
+	//
+	// +kubebuilder:validation:XValidation:rule="self != 'Replace'",message="Replace is not a valid MergeType for BackendTrafficPolicySpec"
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
 
@@ -75,6 +77,7 @@ type BackendTrafficPolicySpec struct {
 	UseClientProtocol *bool `json:"useClientProtocol,omitempty"`
 
 	// The compression config for the http streams.
+	//
 	// Deprecated: Use Compressor instead.
 	//
 	// +patchMergeKey=type
