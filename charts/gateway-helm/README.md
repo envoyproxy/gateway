@@ -88,6 +88,8 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.extraVolumeMounts | list | `[]` |  |
+| deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
 | deployment.pod.tolerations | list | `[]` |  |
