@@ -95,7 +95,7 @@ func TestTranslate(t *testing.T) {
 		},
 	}
 
-	inputFiles, err := filepath.Glob(filepath.Join("testdata", "policy-cross-namespace-targetselector-invalid-referencegrant-route.in.yaml"))
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
 	base, err := os.ReadFile("testdata/base/base.yaml")
 	require.NoError(t, err)
