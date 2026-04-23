@@ -100,6 +100,7 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 					return len(trafficMap) >= 2
 				}), nil
 			}); err != nil {
+				consistentHashDump(t, suite.RestConfig)
 				tlog.Errorf(t, "failed to hit both backends during warmup: %v", err)
 			}
 		})
@@ -126,6 +127,7 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 					return lowPct >= lowUtilMinPct
 				}), nil
 			}); err != nil {
+				consistentHashDump(t, suite.RestConfig)
 				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
 			}
 		})
@@ -185,6 +187,7 @@ var RoundRobinLoadBalancing = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 30*time.Second, true, func(_ context.Context) (bool, error) {
 				return runTrafficTest(t, suite, &req, &expectedResponse, sendRequests, compareFunc), nil
 			}); err != nil {
+				consistentHashDump(t, suite.RestConfig)
 				tlog.Errorf(t, "failed to run round robin load balancing test: %v", err)
 			}
 		})
@@ -233,12 +236,7 @@ func runTrafficTest(t *testing.T, suite *suite.ConformanceTestSuite,
 	ret := compareFunc(trafficMap)
 	if !ret {
 		tlog.Logf(t, "traffic map: %v", trafficMap)
-		// wait for a while to let envoy flush all the logs.
-		time.Sleep(6 * time.Second)
-		consistentHashDump(t, suite.RestConfig)
-		t.FailNow()
 	}
-
 	return ret
 }
 
@@ -383,6 +381,7 @@ func runConsistentHashLoadBalancingTest(t *testing.T, suite *suite.ConformanceTe
 		})
 		return got, nil
 	}); err != nil {
+		consistentHashDump(t, suite.RestConfig)
 		tlog.Errorf(t, "failed to run consistent hash load balancing test: %v", err)
 	}
 }
