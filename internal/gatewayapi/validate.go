@@ -139,7 +139,7 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 	resources *resource.Resources, routeKind gwapiv1.Kind,
 ) status.Error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
-		if !isCrossNamespacePolicyTargetRefAllowed(
+		if !isCrossNamespaceReferencePermitted(
 			crossNamespaceFrom{
 				group:     gwapiv1.GroupName,
 				kind:      string(routeKind),
@@ -410,7 +410,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				fromKind = resource.KindListenerSet
 			}
 
-			if !isCrossNamespacePolicyTargetRefAllowed(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     fromGroup,
 					kind:      fromKind,
@@ -946,7 +946,7 @@ func (t *Translator) validateSecretObjectRef(
 				from.namespace)
 		}
 
-		if !isCrossNamespacePolicyTargetRefAllowed(
+		if !isCrossNamespaceReferencePermitted(
 			from,
 			crossNamespaceTo{
 				group:     "",
@@ -1061,7 +1061,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	// check if the cross-namespace reference is permitted
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" &&
 		string(*backendRef.Namespace) != ownerNamespace {
-		if !isCrossNamespacePolicyTargetRefAllowed(
+		if !isCrossNamespaceReferencePermitted(
 			crossNamespaceFrom{
 				group:     egv1a1.GroupName,
 				kind:      policyKind,

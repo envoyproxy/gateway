@@ -858,9 +858,9 @@ func targetNamespaceMatches(
 	return targetSelectorNamespacesMatch(selector.Namespaces, policyNamespace, targetNamespace, targetNamespaceLabels)
 }
 
-// isCrossNamespacePolicyTargetRefAllowed checks if a cross-namespace reference from a policy in one namespace to a target
+// isCrossNamespaceReferencePermitted checks if a cross-namespace reference from a policy in one namespace to a target
 // in another namespace is allowed by a ReferenceGrant in the target namespace.
-func isCrossNamespacePolicyTargetRefAllowed(
+func isCrossNamespaceReferencePermitted(
 	from crossNamespaceFrom,
 	to crossNamespaceTo,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
@@ -937,7 +937,7 @@ func resolvePolicySelectorTargets[T client.Object](
 			}
 
 			// Check if cross-namespace reference is allowed if the policy and target are in different namespaces.
-			if !isCrossNamespacePolicyTargetRefAllowed(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     egv1a1.GroupVersion.Group,
 					kind:      policyKind,

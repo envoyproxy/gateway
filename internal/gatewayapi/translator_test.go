@@ -1042,7 +1042,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}
 
-			assert.Equal(t, tc.want, isCrossNamespacePolicyTargetRefAllowed(tc.from, tc.to, referenceGrants))
+			assert.Equal(t, tc.want, isCrossNamespaceReferencePermitted(tc.from, tc.to, referenceGrants))
 		})
 	}
 }
