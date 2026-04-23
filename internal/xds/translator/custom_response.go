@@ -13,7 +13,6 @@ import (
 	cncfv3 "github.com/cncf/xds/go/xds/core/v3"
 	matcherv3 "github.com/cncf/xds/go/xds/type/matcher/v3"
 	typev3 "github.com/cncf/xds/go/xds/type/v3"
-	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	respv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/custom_response/v3"
@@ -55,7 +54,7 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 	}
 
 	for _, route := range irListener.Routes {
-		if !c.routeContainsBackendOrAllOverride(route) {
+		if !c.routeContainsResponseOverride(route) {
 			continue
 		}
 
@@ -75,117 +74,7 @@ func (c *customResponse) patchHCM(mgr *hcmv3.HttpConnectionManager, irListener *
 		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
-	c.patchLocalReplyConfig(mgr, irListener)
 	return errs
-}
-
-// patchLocalReplyConfig collects all Local rules from all routes and builds mgr.LocalReplyConfig.
-func (c *customResponse) patchLocalReplyConfig(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) {
-	var mappers []*hcmv3.ResponseMapper
-
-	for _, route := range irListener.Routes {
-		if route.Traffic == nil || route.Traffic.ResponseOverride == nil {
-			continue
-		}
-		for _, rule := range route.Traffic.ResponseOverride.Rules {
-			if rule.Source != egv1a1.ResponseOverrideSourceLocal {
-				continue
-			}
-			if rule.Response == nil {
-				// local_reply_config only supports response, not redirect
-				continue
-			}
-			mappers = append(mappers, c.buildResponseMapper(rule))
-		}
-	}
-
-	if len(mappers) > 0 {
-		mgr.LocalReplyConfig = &hcmv3.LocalReplyConfig{Mappers: mappers}
-	}
-}
-
-// buildResponseMapper converts an IR ResponseOverrideRule to an HCM ResponseMapper.
-func (c *customResponse) buildResponseMapper(rule ir.ResponseOverrideRule) *hcmv3.ResponseMapper {
-	mapper := &hcmv3.ResponseMapper{Filter: c.buildAccessLogFilter(rule.Match.StatusCodes)}
-
-	if rule.Response.StatusCode != nil {
-		mapper.StatusCode = &wrapperspb.UInt32Value{Value: *rule.Response.StatusCode}
-	}
-
-	if len(rule.Response.Body) > 0 {
-		mapper.BodyFormatOverride = &corev3.SubstitutionFormatString{
-			Format: &corev3.SubstitutionFormatString_TextFormat{
-				TextFormat: string(rule.Response.Body),
-			},
-		}
-	}
-
-	if rule.Response.ContentType != nil && *rule.Response.ContentType != "" {
-		mapper.HeadersToAdd = append(mapper.HeadersToAdd, &corev3.HeaderValueOption{
-			Header: &corev3.HeaderValue{
-				Key:   "Content-Type",
-				Value: *rule.Response.ContentType,
-			},
-			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
-		})
-	}
-
-	if rule.Response.AddResponseHeaders != nil {
-		mapper.HeadersToAdd = append(mapper.HeadersToAdd, buildXdsAddedHeaders(rule.Response.AddResponseHeaders)...)
-	}
-
-	return mapper
-}
-
-// statusCodeComparisonFilter builds a leaf AccessLogFilter that compares the response status code.
-func statusCodeComparisonFilter(op accesslogv3.ComparisonFilter_Op, code int, key string) *accesslogv3.AccessLogFilter {
-	return &accesslogv3.AccessLogFilter{
-		FilterSpecifier: &accesslogv3.AccessLogFilter_StatusCodeFilter{
-			StatusCodeFilter: &accesslogv3.StatusCodeFilter{
-				Comparison: &accesslogv3.ComparisonFilter{
-					Op: op,
-					Value: &corev3.RuntimeUInt32{
-						DefaultValue: uint32(code),
-						RuntimeKey:   key,
-					},
-				},
-			},
-		},
-	}
-}
-
-// buildAccessLogFilter builds an AccessLogFilter for matching the given status codes.
-func (c *customResponse) buildAccessLogFilter(statusCodes []ir.StatusCodeMatch) *accesslogv3.AccessLogFilter {
-	if len(statusCodes) == 1 {
-		return c.buildSingleAccessLogFilter(statusCodes[0])
-	}
-
-	filters := make([]*accesslogv3.AccessLogFilter, 0, len(statusCodes))
-	for _, code := range statusCodes {
-		filters = append(filters, c.buildSingleAccessLogFilter(code))
-	}
-
-	return &accesslogv3.AccessLogFilter{
-		FilterSpecifier: &accesslogv3.AccessLogFilter_OrFilter{
-			OrFilter: &accesslogv3.OrFilter{Filters: filters},
-		},
-	}
-}
-
-func (c *customResponse) buildSingleAccessLogFilter(codeMatch ir.StatusCodeMatch) *accesslogv3.AccessLogFilter {
-	if codeMatch.Range != nil {
-		// Range: GE start AND LE end
-		ge := statusCodeComparisonFilter(accesslogv3.ComparisonFilter_GE, codeMatch.Range.Start, fmt.Sprintf("response_override_%d_start", codeMatch.Range.Start))
-		le := statusCodeComparisonFilter(accesslogv3.ComparisonFilter_LE, codeMatch.Range.End, fmt.Sprintf("response_override_%d_end", codeMatch.Range.End))
-		return &accesslogv3.AccessLogFilter{
-			FilterSpecifier: &accesslogv3.AccessLogFilter_AndFilter{
-				AndFilter: &accesslogv3.AndFilter{Filters: []*accesslogv3.AccessLogFilter{ge, le}},
-			},
-		}
-	}
-
-	// Single value: EQ
-	return statusCodeComparisonFilter(accesslogv3.ComparisonFilter_EQ, *codeMatch.Value, fmt.Sprintf("response_override_%d", *codeMatch.Value))
 }
 
 // buildHCMCustomResponseFilter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
@@ -216,12 +105,6 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 	var matchers []*matcherv3.Matcher_MatcherList_FieldMatcher
 
 	for _, r := range ro.Rules {
-		// Only include Backend, All, and default (empty) rules in the custom_response HTTP filter.
-		// Local-only rules are handled via local_reply_config on the HCM.
-		if r.Source == egv1a1.ResponseOverrideSourceLocal {
-			continue
-		}
-
 		var (
 			action    *matcherv3.Matcher_OnMatch_Action
 			predicate *matcherv3.Matcher_MatcherList_Predicate
@@ -240,15 +123,6 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
 				return nil, err
 			}
-
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: predicate,
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
-			}
-
-			matchers = append(matchers, matcher)
 		case len(r.Match.StatusCodes) > 1:
 			var predicates []*matcherv3.Matcher_MatcherList_Predicate
 
@@ -260,24 +134,38 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 				predicates = append(predicates, predicate)
 			}
 
-			// Create a single matcher that ORs all the predicates together.
-			// The rule will match if any of the codes match.
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: &matcherv3.Matcher_MatcherList_Predicate{
-					MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
-						OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-							Predicate: predicates,
-						},
+			// Create a single predicate that ORs all the status code predicates together.
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicates,
 					},
 				},
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
 			}
-
-			matchers = append(matchers, matcher)
 		}
 
+		// For Local or Backend sources, AND the status code predicate with a
+		// local_reply predicate so the rule only fires for the correct response origin.
+		if r.Source == egv1a1.ResponseOverrideSourceLocal || r.Source == egv1a1.ResponseOverrideSourceBackend {
+			localReplyPredicate, err := c.buildLocalReplyPredicate(r.Source == egv1a1.ResponseOverrideSourceLocal)
+			if err != nil {
+				return nil, err
+			}
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: []*matcherv3.Matcher_MatcherList_Predicate{predicate, localReplyPredicate},
+					},
+				},
+			}
+		}
+
+		matchers = append(matchers, &matcherv3.Matcher_MatcherList_FieldMatcher{
+			Predicate: predicate,
+			OnMatch: &matcherv3.Matcher_OnMatch{
+				OnMatch: action,
+			},
+		})
 	}
 
 	// Create a MatcherList.
@@ -375,6 +263,42 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 	return &cncfv3.TypedExtensionConfig{
 		Name:        "http-response-status-code-match-input",
 		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildLocalReplyInput() (*cncfv3.TypedExtensionConfig, error) {
+	pb, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseLocalReplyMatchInput{})
+	if err != nil {
+		return nil, err
+	}
+	return &cncfv3.TypedExtensionConfig{
+		Name:        "http-response-local-reply-match-input",
+		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildLocalReplyPredicate(isLocal bool) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	input, err := c.buildLocalReplyInput()
+	if err != nil {
+		return nil, err
+	}
+	value := "false"
+	if isLocal {
+		value = "true"
+	}
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: input,
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+					ValueMatch: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: value,
+						},
+					},
+				},
+			},
+		},
 	}, nil
 }
 
@@ -568,16 +492,12 @@ func (c *customResponse) buildResponseAction(r ir.ResponseOverrideRule) (*anypb.
 	return proto.ToAnyWithValidation(response)
 }
 
-// routeContainsBackendOrAllOverride returns true if the route has any Backend or All (default) source override rules.
-func (c *customResponse) routeContainsBackendOrAllOverride(irRoute *ir.HTTPRoute) bool {
-	if irRoute == nil || irRoute.Traffic == nil || irRoute.Traffic.ResponseOverride == nil {
-		return false
-	}
-	for _, rule := range irRoute.Traffic.ResponseOverride.Rules {
-		// empty string means the default (All)
-		if rule.Source == egv1a1.ResponseOverrideSourceAll || rule.Source == egv1a1.ResponseOverrideSourceBackend || rule.Source == "" {
-			return true
-		}
+// routeContainsResponseOverride returns true if ResponseOverride exists for the provided route.
+func (c *customResponse) routeContainsResponseOverride(irRoute *ir.HTTPRoute) bool {
+	if irRoute != nil &&
+		irRoute.Traffic != nil &&
+		irRoute.Traffic.ResponseOverride != nil {
+		return true
 	}
 	return false
 }
@@ -595,7 +515,7 @@ func (c *customResponse) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute,
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if !c.routeContainsBackendOrAllOverride(irRoute) {
+	if irRoute.Traffic == nil || irRoute.Traffic.ResponseOverride == nil {
 		return nil
 	}
 	filterName := c.customResponseFilterName(irRoute.Traffic.ResponseOverride)

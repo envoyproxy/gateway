@@ -27,6 +27,10 @@
         cluster: httproute/default/httproute-local/rule/0
         upgradeConfigs:
         - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-local:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
     - match:
         prefix: /
       metadata:

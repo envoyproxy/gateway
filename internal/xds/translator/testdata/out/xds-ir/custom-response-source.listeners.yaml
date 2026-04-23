@@ -61,32 +61,62 @@
                             key: Content-Type
                             value: application/json
                   predicate:
-                    singlePredicate:
-                      input:
-                        name: http-response-status-code-match-input
-                        typedConfig:
-                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
-                      valueMatch:
-                        exact: "500"
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "500"
+                      - singlePredicate:
+                          input:
+                            name: http-response-local-reply-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseLocalReplyMatchInput
+                          valueMatch:
+                            exact: "false"
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-local
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-local/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error": "Unauthorized"}'
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "401"
+                      - singlePredicate:
+                          input:
+                            name: http-response-local-reply-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseLocalReplyMatchInput
+                          valueMatch:
+                            exact: "true"
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
-        localReplyConfig:
-          mappers:
-          - bodyFormatOverride:
-              textFormat: '{"error": "Unauthorized"}'
-            filter:
-              statusCodeFilter:
-                comparison:
-                  value:
-                    defaultValue: 401
-                    runtimeKey: response_override_401
-            headersToAdd:
-            - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
-              header:
-                key: Content-Type
-                value: application/json
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT

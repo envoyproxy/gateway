@@ -796,9 +796,6 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(
 	policyTargetGatewayNN *types.NamespacedName,
 	policyTargetListener *gwapiv1.SectionName,
 ) error {
-	if hasLocalSourceResponseOverride(policy) {
-		return fmt.Errorf("responseOverride: source %q is only supported when targeting a Gateway", egv1a1.ResponseOverrideSourceLocal)
-	}
 	tf, errs := t.buildTrafficFeatures(policy)
 	if tf == nil {
 		// should not happen
@@ -824,9 +821,6 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	policyTargetGatewayNN types.NamespacedName, policyTargetListener *gwapiv1.SectionName, route RouteContext,
 	xdsIR resource.XdsIRMap,
 ) error {
-	if hasLocalSourceResponseOverride(policy) {
-		return fmt.Errorf("responseOverride: source %q is only supported when targeting a Gateway", egv1a1.ResponseOverrideSourceLocal)
-	}
 	mergedPolicy, err := t.mergeBackendTrafficPolicy(policy, parentPolicy)
 	if err != nil {
 		return fmt.Errorf("error merging policies: %w", err)
@@ -1943,17 +1937,6 @@ func sourceFromAPI(s *egv1a1.ResponseOverrideSource) egv1a1.ResponseOverrideSour
 	return *s
 }
 
-// hasLocalSourceResponseOverride returns true if the policy contains any responseOverride
-// rule with source: Local. Local rules use local_reply_config which is listener-scoped
-// and therefore only valid on Gateway-targeted BackendTrafficPolicies.
-func hasLocalSourceResponseOverride(policy *egv1a1.BackendTrafficPolicy) bool {
-	for _, ro := range policy.Spec.ResponseOverride {
-		if ro.Source != nil && *ro.Source == egv1a1.ResponseOverrideSourceLocal {
-			return true
-		}
-	}
-	return false
-}
 
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
 	return fmt.Sprintf(

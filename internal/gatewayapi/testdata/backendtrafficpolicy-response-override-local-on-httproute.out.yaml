@@ -30,10 +30,9 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: 'ResponseOverride: source "Local" is only supported when targeting
-          a Gateway.'
-        reason: Invalid
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
       - lastTransitionTime: null
         message: spec.targetRef is deprecated, use spec.targetRefs instead
@@ -169,7 +168,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -206,11 +204,27 @@ xdsIR:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-local-on-httproute
+            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/www_example_com
         pathMatch:
           distinct: false
           name: ""
           prefix: /
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-local-on-httproute
+            rules:
+            - match:
+                statusCodes:
+                - value: 401
+              name: backendtrafficpolicy/default/policy-local-on-httproute/responseoverride/rule/0
+              response:
+                body: eyJlcnJvciI6ICJVbmF1dGhvcml6ZWQifQ==
+                contentType: application/json
+              source: Local
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
