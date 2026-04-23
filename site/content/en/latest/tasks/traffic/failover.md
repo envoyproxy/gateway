@@ -63,7 +63,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -110,7 +110,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: passive 
           ports:
@@ -164,7 +164,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -211,7 +211,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: passive 
           ports:
@@ -481,7 +481,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
@@ -523,7 +523,7 @@ spec:
         version: v1
     spec:
       containers:
-        - image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231214-v1.0.0-140-gf544a46e
+        - image: registry.k8s.io/gateway-api/echo-basic:v1.5.1
           imagePullPolicy: IfNotPresent
           name: active 
           ports:
