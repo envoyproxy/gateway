@@ -1695,7 +1695,7 @@ func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *i
 			}
 
 			if policy.Spec.FaultInjection.Abort.GrpcStatus != nil {
-				fi.Abort.GrpcStatus = policy.Spec.FaultInjection.Abort.GrpcStatus
+				fi.Abort.GrpcStatus = new(uint32(*policy.Spec.FaultInjection.Abort.GrpcStatus))
 			}
 			if policy.Spec.FaultInjection.Abort.HTTPStatus != nil {
 				fi.Abort.HTTPStatus = policy.Spec.FaultInjection.Abort.HTTPStatus
