@@ -57,26 +57,27 @@ var ResponseOverrideSourceTest = suite.ConformanceTest{
 		t.Run("source Local fires on Envoy-generated 401", func(t *testing.T) {
 			// No JWT token → Envoy rejects the request with a locally-generated 401.
 			// The source: Local rule should override it.
-			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/local/status/200", "", `{"error": "Unauthorized"}`)
+			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/local/status/200", "", `{"error": "Unauthorized"}`, "")
 		})
 
 		t.Run("source Local does not fire on upstream 401", func(t *testing.T) {
 			// Valid JWT + backend returns 401 → upstream response, not Envoy-generated.
 			// The source: Local rule should not match, so the raw upstream 401 passes through.
-			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/local/status/401", jwtToken, "")
+			// No exact passthrough body: echo-basic returns a request-echo JSON we don't control.
+			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/local/status/401", jwtToken, "", "")
 		})
 
 		// source: Backend — should fire for upstream 401s but not Envoy-generated 401s.
 		t.Run("source Backend fires on upstream 401", func(t *testing.T) {
 			// Valid JWT + backend returns 401 → upstream response.
 			// The source: Backend rule should override it.
-			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/backend/status/401", jwtToken, `{"error": "Upstream Error"}`)
+			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/backend/status/401", jwtToken, `{"error": "Upstream Error"}`, "")
 		})
 
 		t.Run("source Backend does not fire on Envoy-generated 401", func(t *testing.T) {
 			// No JWT token → Envoy rejects the request with a locally-generated 401.
-			// The source: Backend rule should not match, so the raw Envoy 401 passes through.
-			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/backend/status/200", "", "")
+			// The source: Backend rule should not match, so Envoy's default JWT error passes through.
+			checkResponseOverrideSource(t, &suite.TimeoutConfig, gwAddr, "/backend/status/200", "", "", "Jwt is missing")
 		})
 	},
 }
@@ -85,7 +86,7 @@ var ResponseOverrideSourceTest = suite.ConformanceTest{
 // status code, and — when expectedBody is non-empty — verifies the response body matches exactly.
 // An empty expectedBody means the response must NOT have been overridden by a custom-response rule
 // (i.e. the body should not equal either of the two custom bodies used in this test).
-func checkResponseOverrideSource(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr, path, token string, expectedBody string) {
+func checkResponseOverrideSource(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr, path, token, expectedBody, passthroughBody string) {
 	t.Helper()
 
 	reqURL := url.URL{
@@ -131,6 +132,11 @@ func checkResponseOverrideSource(t *testing.T, timeoutConfig *config.TimeoutConf
 			// No override expected: verify neither custom body was applied.
 			if string(body) == `{"error": "Unauthorized"}` || string(body) == `{"error": "Upstream Error"}` {
 				tlog.Logf(t, "response was unexpectedly overridden, body: %q", string(body))
+				return false
+			}
+			// When we know the exact passthrough body, assert it too.
+			if passthroughBody != "" && string(body) != passthroughBody {
+				tlog.Logf(t, "expected passthrough body %q but got %q", passthroughBody, string(body))
 				return false
 			}
 		}
