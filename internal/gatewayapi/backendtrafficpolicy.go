@@ -97,7 +97,7 @@ func BuildBTPRoutingTypeIndex(
 			allTargets,
 			crossNamespaceFrom{
 				group:     egv1a1.GroupVersion.Group,
-				kind:      "BackendTrafficPolicy",
+				kind:      egv1a1.KindBackendTrafficPolicy,
 				namespace: btp.Namespace,
 			},
 			referenceGrants,

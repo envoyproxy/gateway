@@ -94,12 +94,15 @@ var BackendTrafficPolicyCrossNamespaceTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, grantedAddr, grantedResponse)
 
 			deniedResponse := http.ExpectedResponse{
-				Namespace: deniedNS,
+				// Set the expected namespace to empty string since the test uses a direct response HTTP filter.
+				// The CapturedRequest is empty since the response is directly returned by the HTTP filter without forwarding to the backend.
+				Namespace: "",
 				Request: http.Request{
 					Host: "denied.cross-namespace-btp.example.com",
 					Path: "/",
 				},
 				// Set the expected request properties to empty strings since the test uses a direct response HTTP filter.
+				// The CapturedRequest is empty since the response is directly returned by the HTTP filter without forwarding to the backend.
 				ExpectedRequest: &http.ExpectedRequest{
 					Request: http.Request{
 						Host:    "",
