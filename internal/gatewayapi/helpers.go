@@ -772,11 +772,6 @@ type policySelectorTargetMatch[T client.Object] struct {
 	Ref    policyTargetReferenceWithSectionName
 }
 
-type policySelectorTargetMatches[T client.Object] struct {
-	Allowed []policySelectorTargetMatch[T]
-	Denied  []policySelectorTargetMatch[T]
-}
-
 func isRouteRule(target policyTargetReferenceWithSectionName) bool {
 	// If the target is not a gateway and the section name is not nil, then it's a route rule.
 	return target.Kind != resource.KindGateway && target.SectionName != nil
@@ -912,10 +907,9 @@ func getPolicySelectorTargetMatches[T client.Object](
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
-) policySelectorTargetMatches[T] {
+) (allowed []policySelectorTargetMatch[T], denied []policySelectorTargetMatch[T]) {
 	allowedDedup := sets.New[targetRefWithTimestamp]()
 	deniedDedup := sets.New[policyTargetReferenceWithSectionName]()
-	matches := policySelectorTargetMatches[T]{}
 	for _, currSelector := range targetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
@@ -961,7 +955,7 @@ func getPolicySelectorTargetMatches[T client.Object](
 					continue
 				}
 				deniedDedup.Insert(ref)
-				matches.Denied = append(matches.Denied, policySelectorTargetMatch[T]{
+				denied = append(denied, policySelectorTargetMatch[T]{
 					Object: obj,
 					Ref:    ref,
 				})
@@ -976,14 +970,14 @@ func getPolicySelectorTargetMatches[T client.Object](
 				continue
 			}
 			allowedDedup.Insert(targetRef)
-			matches.Allowed = append(matches.Allowed, policySelectorTargetMatch[T]{
+			allowed = append(allowed, policySelectorTargetMatch[T]{
 				Object: obj,
 				Ref:    ref,
 			})
 		}
 	}
 
-	return matches
+	return allowed, denied
 }
 
 // getPolicyTargetRefs returns a list of policy target refs that are allowed by the policy's TargetSelectors.
@@ -995,27 +989,27 @@ func getPolicyTargetRefs[T client.Object](
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
 ) []policyTargetReferenceWithSectionName {
-	matches := getPolicySelectorTargetMatches(
+	allowed,_ := getPolicySelectorTargetMatches(
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
 		policyKind,
 		policyNamespace,
 		namespaceLookup)
-	return getPolicyTargetRefsFromMatches(matches, targetRefs.GetTargetRefs(), policyNamespace)
+	return getPolicyTargetRefsFromMatches(allowed, targetRefs.GetTargetRefs(), policyNamespace)
 }
 
 // getPolicyTargetRefsFromMatches returns a list of policy target refs that are allowed by the policy's TargetSelectors, including:
 // 1. Target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
 // 2. Plain target refs specified in the policy.
 func getPolicyTargetRefsFromMatches[T client.Object](
-	matches policySelectorTargetMatches[T],
+	matches []policySelectorTargetMatch[T],
 	targetRefs []gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	policyNamespace string,
 ) []policyTargetReferenceWithSectionName {
 	// First add the target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
-	selectorsList := make([]targetRefWithTimestamp, 0, len(matches.Allowed))
-	for _, match := range matches.Allowed {
+	selectorsList := make([]targetRefWithTimestamp, 0, len(matches))
+	for _, match := range matches {
 		selectorsList = append(selectorsList, targetRefWithTimestamp{
 			CreationTimestamp:                    match.Object.GetCreationTimestamp(),
 			policyTargetReferenceWithSectionName: match.Ref,

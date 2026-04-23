@@ -275,22 +275,22 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		routeMatches := getPolicySelectorTargetMatches(
+		allowed, denied := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(routeMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(routeMatches.Denied) > 0 {
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
 				policy = currPolicy
 				handledPolicies[policyName] = policy
 				res = append(res, policy)
 			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, routeMatches.Denied, t.GatewayControllerName, policy.Generation)
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
 			if isRouteRule(currTarget) {
@@ -330,22 +330,22 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		gatewayMatches := getPolicySelectorTargetMatches(
+		allowed, denied := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(gatewayMatches.Denied) > 0 {
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
 				policy = currPolicy
 				handledPolicies[policyName] = policy
 				res = append(res, policy)
 			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, gatewayMatches.Denied, t.GatewayControllerName, policy.Generation)
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
 			if isListener(currTarget) {
@@ -355,7 +355,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, gatewayMatches.Allowed)
+				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed) //TODO
 				t.processBackendTrafficPolicyForGateway(xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
 			}
@@ -365,14 +365,14 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Process the policies targeting Gateways
 	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		gatewayMatches := getPolicySelectorTargetMatches(
+		allowed, _ := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -381,7 +381,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, gatewayMatches.Allowed)
+				targetNamespace := namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed)
 				t.processBackendTrafficPolicyForGateway(xdsIR,
 					gatewayMap, gatewayRouteMap, gatewayPolicyMerged, policy, currTarget, targetNamespace)
 			}
@@ -405,20 +405,20 @@ func (t *Translator) buildGatewayPolicyMap(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 ) {
 	for _, currPolicy := range backendTrafficPolicies {
-		gatewayMatches := getPolicySelectorTargetMatches(
+		allowed, _ := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			referenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if currTarget.Kind == resource.KindGateway {
 				// Check if the gateway exists
 				key := types.NamespacedName{
 					Name:      string(currTarget.Name),
-					Namespace: namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, gatewayMatches.Allowed),
+					Namespace: namespaceForPolicyTargetRef(currTarget, currPolicy.Namespace, allowed),
 				}
 				gateway, ok := gatewayMap[key]
 				if !ok {

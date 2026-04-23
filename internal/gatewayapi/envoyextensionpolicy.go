@@ -116,22 +116,22 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		routeMatches := getPolicySelectorTargetMatches(
+		allowed, denied := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(routeMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(routeMatches.Denied) > 0 {
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
 				policy = currPolicy
 				res = append(res, policy)
 				handledPolicies[policyName] = policy
 			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, routeMatches.Denied, t.GatewayControllerName, policy.Generation)
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
 			if isRouteRule(currTarget) {
@@ -175,22 +175,22 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		gatewayMatches := getPolicySelectorTargetMatches(
+		allowed, denied := getPolicySelectorTargetMatches(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
-		targetRefs := getPolicyTargetRefsFromMatches(gatewayMatches, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(gatewayMatches.Denied) > 0 {
+		targetRefs := getPolicyTargetRefsFromMatches(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
+		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {
 				policy = currPolicy
 				res = append(res, policy)
 				handledPolicies[policyName] = policy
 			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, gatewayMatches.Denied, t.GatewayControllerName, policy.Generation)
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 		for _, currTarget := range targetRefs {
 			if isListener(currTarget) {
