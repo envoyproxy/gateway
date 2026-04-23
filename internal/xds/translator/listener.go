@@ -409,13 +409,16 @@ func (t *Translator) addHCMToXDSListener(
 	// StripAnyHostPort uses the strip_port_mode oneof — must be assigned outside the struct
 	// literal to avoid a typed-nil that silently breaks xDS translation.
 	// StripMatchingHostPort is a standalone bool field (not part of the oneof).
-	if irListener.Host != nil && irListener.Host.StripPortMode != nil {
-		switch *irListener.Host.StripPortMode {
-		case ir.StripPortModeAny:
-			mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{StripAnyHostPort: true}
-		case ir.StripPortModeMatching:
-			mgr.StripMatchingHostPort = true
+	if irListener.Host != nil {
+		if irListener.Host.StripPortMode != nil {
+			switch *irListener.Host.StripPortMode {
+			case ir.StripPortModeAny:
+				mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{StripAnyHostPort: true}
+			case ir.StripPortModeMatching:
+				mgr.StripMatchingHostPort = true
+			}
 		}
+		mgr.StripTrailingHostDot = irListener.Host.StripTrailingHostDot
 	}
 
 	// Set the :scheme header to match the upstream transport protocol (http/https) if configured.

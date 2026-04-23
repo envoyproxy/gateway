@@ -18,6 +18,7 @@ http:
     maxRequestHeadersKB: 80
   host:
     stripPortMode: "Any"
+    stripTrailingHostDot: true
 - name: "second-listener"
   address: "::"
   port: 8082

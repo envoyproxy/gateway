@@ -9,6 +9,7 @@ clientTrafficPolicies:
       maxRequestHeaderBytes: 80Ki
     host:
       stripPortMode: Any
+      stripTrailingHostDot: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

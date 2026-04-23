@@ -813,10 +813,13 @@ func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPLis
 	if hostSettings == nil {
 		return nil
 	}
-	if hostSettings.StripPortMode != nil {
-		mode := ir.StripPortMode(*hostSettings.StripPortMode)
+	if hostSettings.StripPortMode != nil || hostSettings.StripTrailingHostDot != nil {
 		httpIR.Host = &ir.HostSettings{
-			StripPortMode: &mode,
+			StripTrailingHostDot: ptr.Deref(hostSettings.StripTrailingHostDot, false),
+		}
+		if hostSettings.StripPortMode != nil {
+			mode := ir.StripPortMode(*hostSettings.StripPortMode)
+			httpIR.Host.StripPortMode = &mode
 		}
 	}
 	return nil

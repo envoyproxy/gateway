@@ -3175,6 +3175,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `stripPortMode` | _[StripPortMode](#stripportmode)_ |  false  |  | StripPortMode configures how ports are stripped from the Host/Authority<br />header before route matching.<br />"Any" strips the port unconditionally, "Matching" strips it only when<br />it matches the listener's port.<br />If not set, no port stripping is performed (Envoy default). |
+| `stripTrailingHostDot` | _boolean_ |  false  |  | StripTrailingHostDot determines if the trailing dot of the host should be removed<br />from the Host/Authority header before any processing of the request.<br />This affects the upstream host header as well. Without this option, incoming requests<br />with host "example.com." will not match routes with domains set to "example.com".<br />When the host includes a port (e.g. "example.com.:443"), only the trailing dot<br />from the host section is stripped, leaving the port as-is ("example.com:443").<br />Defaults to false. |
 
 
 #### IPEndpoint

@@ -834,6 +834,8 @@ const (
 type HostSettings struct {
 	// StripPortMode defines how ports are stripped from the Host/Authority header.
 	StripPortMode *StripPortMode `json:"stripPortMode,omitempty" yaml:"stripPortMode,omitempty"`
+	// StripTrailingHostDot strips the trailing dot from the Host/Authority header before processing.
+	StripTrailingHostDot bool `json:"stripTrailingHostDot,omitempty" yaml:"stripTrailingHostDot,omitempty"`
 }
 
 // ClientTimeout sets the timeout configuration for downstream connections
