@@ -18,7 +18,8 @@ import (
 // +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? has(self.dynamicModule) : !has(self.dynamicModule)",message="If LoadBalancer type is DynamicModule, dynamicModule field needs to be set."
 // +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash', 'DynamicModule'] ? !has(self.slowStart) : true",message="Currently SlowStart is only supported for RoundRobin, LeastRequest, and BackendUtilization load balancers."
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not supported for ConsistentHash load balancers. Use weightedZones instead."
-// +kubebuilder:validation:XValidation:rule="self.type in ['BackendUtilization', 'DynamicModule'] ? !has(self.zoneAware) : true",message="ZoneAware routing is not supported for BackendUtilization and DynamicModule load balancers."
+// +kubebuilder:validation:XValidation:rule="self.type == 'BackendUtilization' && has(self.zoneAware) ? !has(self.zoneAware.preferLocal) : true",message="PreferLocal zone-aware routing is not currently supported for BackendUtilization load balancers. Only WeightedZones can be used with BackendUtilization."
+// +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.zoneAware) : true",message="ZoneAware routing is not supported for DynamicModule load balancers."
 // +kubebuilder:validation:XValidation:rule="has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) && has(self.zoneAware.weightedZones)) : true",message="ZoneAware PreferLocal and WeightedZones cannot be specified together."
 // +kubebuilder:validation:XValidation:rule="self.type == 'DynamicModule' ? !has(self.endpointOverride) : true",message="EndpointOverride is not supported for DynamicModule load balancers."
 type LoadBalancer struct {
