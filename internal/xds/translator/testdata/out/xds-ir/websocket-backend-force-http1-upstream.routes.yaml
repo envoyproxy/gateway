@@ -1,0 +1,21 @@
+- ignorePortInHostMatching: true
+  name: websocket-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: websocket-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: websocket-wss-route
+      route:
+        cluster: websocket-wss-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        prefix: /
+      name: ordinary-tls-http-route
+      route:
+        cluster: ordinary-tls-http-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

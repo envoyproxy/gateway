@@ -16,6 +16,7 @@ import (
 	"net/netip"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -471,12 +472,43 @@ type TLSConfig struct {
 type TLSCertificate struct {
 	// Name of the Secret object.
 	Name string `json:"name" yaml:"name"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 	// Certificate can be either a client or server certificate.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	// PrivateKey for the server.
 	PrivateKey PrivateBytes `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 	// OCSPStaple contains the stapled OCSP response associated with the certificate, if provided.
 	OCSPStaple []byte `json:"ocspStaple,omitempty" yaml:"ocspStaple,omitempty"`
+}
+
+// SDSConfig holds the configuration for a Secret Discovery Service (SDS) server.
+// +k8s:deepcopy-gen=true
+type SDSConfig struct {
+	// SecretName is an identifier for the SDS configuration.
+	SecretName string `json:"secretName" yaml:"secretName"`
+	// URL is the URL of the SDS server
+	URL string `json:"url" yaml:"url"`
+
+	// TODO: support additional SDS configuration options
+	// such as TLS settings for the SDS server, or authentication credentials if needed.
+}
+
+func NewSDSConfig(s *corev1.Secret) (*SDSConfig, error) {
+	sdsSecretName, hasSecretName := s.Data["secretName"]
+	sdsURLBytes, hasURL := s.Data["url"]
+	// TODO: support more sds options if needed.
+	if !hasSecretName || len(sdsSecretName) == 0 {
+		return nil, fmt.Errorf("no secretName found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+	if !hasURL || len(sdsURLBytes) == 0 {
+		return nil, fmt.Errorf("no url found in SDS reference secret %s/%s", s.Namespace, s.Name)
+	}
+
+	return &SDSConfig{
+		SecretName: string(sdsSecretName),
+		URL:        string(sdsURLBytes),
+	}, nil
 }
 
 // TLSCrl holds a single CRL's details
@@ -497,6 +529,8 @@ type TLSCACertificate struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	// Certificate content.
 	Certificate []byte `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	// SDS holds the configuration for a Secret Discovery Service (SDS) server.
+	SDS *SDSConfig `json:"sds,omitempty" yaml:"sds,omitempty"`
 }
 
 // SubjectAltName holds the subject alternative name for the certificate
@@ -1822,7 +1856,8 @@ func (r *RouteDestination) Validate() error {
 func (r *RouteDestination) NeedsClusterPerSetting() bool {
 	return r.HasMixedEndpoints() ||
 		r.HasFiltersInSettings() ||
-		(len(r.Settings) > 1 && r.HasPreferLocalZone())
+		(len(r.Settings) > 1 && r.HasPreferLocalZone()) ||
+		r.HasMixedUpstreamProtocolRequirements()
 }
 
 // HasMixedEndpoints returns true if the RouteDestination has endpoints of multiple types
@@ -1855,6 +1890,27 @@ func (r *RouteDestination) HasPreferLocalZone() bool {
 		}
 	}
 	return false
+}
+
+// HasMixedUpstreamProtocolRequirements returns true if destination settings require
+// mutually exclusive cluster-level upstream protocol configuration.
+func (r *RouteDestination) HasMixedUpstreamProtocolRequirements() bool {
+	hasForceHTTP1Upstream := false
+	hasHTTP2Upstream := false
+
+	for _, setting := range r.Settings {
+		if setting == nil {
+			continue
+		}
+		if setting.ForceHTTP1Upstream {
+			hasForceHTTP1Upstream = true
+		}
+		if setting.Protocol == HTTP2 || setting.Protocol == GRPC {
+			hasHTTP2Upstream = true
+		}
+	}
+
+	return hasForceHTTP1Upstream && hasHTTP2Upstream
 }
 
 func (r *RouteDestination) ToBackendWeights() *BackendWeights {
@@ -1906,8 +1962,11 @@ type DestinationSetting struct {
 	// Lower priority endpoints will be used only if higher priority levels are unavailable.
 	Priority *uint32 `json:"priority,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  AppProtocol            `json:"protocol,omitempty" yaml:"protocol,omitempty"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Protocol AppProtocol `json:"protocol,omitempty" yaml:"protocol,omitempty"`
+	// ForceHTTP1Upstream requires Envoy to use explicit HTTP/1.1 upstream protocol selection.
+	// This is used for websocket backends where upstream HTTP/2 negotiation would break upgrades.
+	ForceHTTP1Upstream bool                   `json:"forceHTTP1Upstream,omitempty" yaml:"forceHTTP1Upstream,omitempty"`
+	Endpoints          []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	// AddressTypeState specifies the state of DestinationEndpoint address type.
 	AddressType *DestinationAddressType `json:"addressType,omitempty" yaml:"addressType,omitempty"`
 	// IPFamily specifies the IP family (IPv4 or IPv6) to use for this destination's endpoints.
@@ -3023,7 +3082,7 @@ type OutlierDetection struct {
 	// BaseEjectionTime defines the base duration for which a host will be ejected on consecutive failures.
 	BaseEjectionTime *metav1.Duration `json:"baseEjectionTime,omitempty" yaml:"baseEjectionTime,omitempty"`
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
-	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
+	MaxEjectionPercent *uint32 `json:"maxEjectionPercent,omitempty" yaml:"maxEjectionPercent,omitempty"`
 	// FailurePercentageThreshold sets the failure percentage threshold for outlier detection.
 	FailurePercentageThreshold *uint32 `json:"failurePercentageThreshold,omitempty" yaml:"failurePercentageThreshold,omitempty"`
 	// AlwaysEjectOneEndpoint defines whether at least one host should be ejected, regardless of MaxEjectionPercent.
