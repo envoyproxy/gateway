@@ -10419,7 +10419,6 @@ spec:
   selector:
     app.kubernetes.io/name: alloy
     app.kubernetes.io/instance: gateway-addons-helm
-  internalTrafficPolicy: Cluster
   ports:
     - name: http-metrics
       port: 12345
@@ -10665,7 +10664,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: alloy
 spec:
-  minReadySeconds: 10
   selector:
     matchLabels:
       app.kubernetes.io/name: alloy
@@ -10996,10 +10994,6 @@ spec:
       partition: 0
   serviceName: loki-headless
   revisionHistoryLimit: 10
-  
-  persistentVolumeClaimRetentionPolicy:
-    whenDeleted: Delete
-    whenScaled: Delete
   selector:
     matchLabels:
       app.kubernetes.io/name: loki
@@ -11023,7 +11017,6 @@ spec:
       
       securityContext:
         fsGroup: 10001
-        fsGroupChangePolicy: OnRootMismatch
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
