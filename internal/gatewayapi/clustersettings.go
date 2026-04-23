@@ -55,8 +55,13 @@ func translateTrafficFeatures(policy *egv1a1.ClusterSettings) (*ir.TrafficFeatur
 		ret.CircuitBreaker = cb
 	}
 
-	// envoyProxy is nil here because translateTrafficFeatures is used by non-BTP callers
-	// (SecurityPolicy, EnvoyExtensionPolicy, Listener) where DynamicModule LB is not applicable.
+	// translateTrafficFeatures serves non-BTP callers (SecurityPolicy, EnvoyExtensionPolicy,
+	// Listener). DynamicModule LB needs per-Gateway EnvoyProxy resolution which isn't
+	// available here, so reject it with a context-specific error rather than letting
+	// buildLoadBalancer surface a misleading "EnvoyProxy is required" message.
+	if policy.LoadBalancer != nil && policy.LoadBalancer.Type == egv1a1.DynamicModuleLoadBalancerType {
+		return nil, fmt.Errorf("DynamicModule load balancer policy is only supported in BackendTrafficPolicy")
+	}
 	if lb, err := buildLoadBalancer(policy, nil); err != nil {
 		return nil, err
 	} else {

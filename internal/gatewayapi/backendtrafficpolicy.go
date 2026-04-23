@@ -467,34 +467,25 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 
 	if policy.Spec.MergeType == nil {
 		if policyUsesDynamicModuleLoadBalancer(policy) {
-			// DynamicModule LB validation depends on the parent Gateway's
-			// EnvoyProxy.spec.dynamicModules allowlist, so translate once per
-			// unique IRKey with that gateway's EnvoyProxy and report status
-			// per ancestor. In MergeGateways mode multiple parents share an
-			// IRKey, so dedup.
+			// DynamicModule LB validation depends on the parent Gateway's EnvoyProxy
+			// allowlist, so translate once per unique IRKey (MergeGateways mode shares
+			// IRKeys across parents) and set status per ancestor.
 			errByIRKey := make(map[string]error)
-			seen := make(map[string]struct{})
-			for _, pCtx := range parentRefCtxs {
+			translated := make(map[string]struct{})
+			for i, pCtx := range parentRefCtxs {
 				gw := pCtx.GetGateway()
 				if gw == nil {
 					continue
 				}
 				gwNN := utils.NamespacedName(gw.Gateway)
 				irKey := t.IRKey(gwNN)
-				if _, dup := seen[irKey]; dup {
-					continue
+				if _, done := translated[irKey]; !done {
+					translated[irKey] = struct{}{}
+					if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gw.envoyProxy); err != nil {
+						errByIRKey[irKey] = err
+					}
 				}
-				seen[irKey] = struct{}{}
-				if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, &gwNN, nil, gw.envoyProxy); err != nil {
-					errByIRKey[irKey] = err
-				}
-			}
-			for i, pCtx := range parentRefCtxs {
-				gw := pCtx.GetGateway()
-				if gw == nil {
-					continue
-				}
-				if err := errByIRKey[t.IRKey(utils.NamespacedName(gw.Gateway))]; err != nil {
+				if err := errByIRKey[irKey]; err != nil {
 					status.SetTranslationErrorForPolicyAncestor(&policy.Status,
 						ancestorRefs[i],
 						t.GatewayControllerName,
@@ -504,8 +495,6 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				}
 			}
 		} else {
-			// No DynamicModule LB; no other traffic feature consults
-			// EnvoyProxy, so a single translation fans out across all parents.
 			if err := t.translateBackendTrafficPolicyForRoute(policy, targetedRoute, currTarget, xdsIR, nil, nil, nil); err != nil {
 				status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 					ancestorRefs,
@@ -834,7 +823,7 @@ func resolveBackendTrafficPolicyRouteTargetRef(
 // DynamicModule LB type validates against EnvoyProxy.spec.dynamicModules; all
 // other traffic features are gateway-independent.
 func policyUsesDynamicModuleLoadBalancer(policy *egv1a1.BackendTrafficPolicy) bool {
-	return policy != nil && policy.Spec.LoadBalancer != nil &&
+	return policy.Spec.LoadBalancer != nil &&
 		policy.Spec.LoadBalancer.Type == egv1a1.DynamicModuleLoadBalancerType
 }
 
@@ -894,13 +883,12 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 	// 2. Only gateway policy has rate limits - preserve gateway policy's rule names
 	// 3. Only route policy has rate limits - use route policy's rule names (default behavior)
 	if policy.Spec.RateLimit != nil && parentPolicy.Spec.RateLimit != nil {
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy, envoyProxy)
-		tfRoute, _ := t.buildTrafficFeatures(policy, envoyProxy)
-
-		if tfGW != nil && tfRoute != nil &&
-			tfGW.RateLimit != nil && tfRoute.RateLimit != nil {
-
-			mergedRL, err := utils.Merge(tfGW.RateLimit, tfRoute.RateLimit, *policy.Spec.MergeType)
+		rlGW, gwErr := t.buildRateLimit(parentPolicy)
+		rlRoute, routeErr := t.buildRateLimit(policy)
+		if err := errors.Join(gwErr, routeErr); err != nil {
+			errs = errors.Join(errs, perr.WithMessage(err, "RateLimit"))
+		} else if rlGW != nil && rlRoute != nil {
+			mergedRL, err := utils.Merge(rlGW, rlRoute, *policy.Spec.MergeType)
 			if err != nil {
 				return fmt.Errorf("error merging rate limits: %w", err)
 			}
@@ -909,10 +897,11 @@ func (t *Translator) translateBackendTrafficPolicyForRouteWithMerge(
 		}
 	} else if policy.Spec.RateLimit == nil && parentPolicy.Spec.RateLimit != nil {
 		// Case 2: Only gateway policy has rate limits - preserve gateway policy's rule names
-		tfGW, _ := t.buildTrafficFeatures(parentPolicy, envoyProxy)
-		if tfGW != nil && tfGW.RateLimit != nil {
-			// Use the gateway policy's rate limit with its original rule names
-			tf.RateLimit = tfGW.RateLimit
+		rlGW, err := t.buildRateLimit(parentPolicy)
+		if err != nil {
+			errs = errors.Join(errs, perr.WithMessage(err, "RateLimit"))
+		} else if rlGW != nil {
+			tf.RateLimit = rlGW
 		}
 	}
 	// Case 3: Only route policy has rate limits or neither has rate limits - use default behavior (tf already built from merged policy)

@@ -1173,7 +1173,6 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		}
 	}
 
-	// If the LB policy uses a remote dynamic module, create the fetch cluster for it.
 	if lb.DynamicModuleLB != nil && lb.DynamicModuleLB.Remote != nil {
 		if err := addClusterFromURL(lb.DynamicModuleLB.Remote.URL, nil, tCtx); err != nil {
 			return err
