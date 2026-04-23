@@ -19,7 +19,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -181,7 +180,7 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
+		Weight:    new(uint32(1)),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
 		// TODO: tracked with issue #6861
@@ -250,13 +249,13 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 
 	switch {
 	case hasDualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4 && hasIPv6:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case hasIPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	default:
 		return nil
 	}

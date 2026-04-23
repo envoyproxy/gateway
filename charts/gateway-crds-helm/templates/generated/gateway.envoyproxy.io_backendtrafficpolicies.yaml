@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: backendtrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -155,6 +155,7 @@ spec:
               compression:
                 description: |-
                   The compression config for the http streams.
+
                   Deprecated: Use Compressor instead.
                 items:
                   description: |-
@@ -697,6 +698,8 @@ spec:
                         description: MaxEjectionPercent sets the maximum percentage
                           of hosts in a cluster that can be ejected.
                         format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                       splitExternalLocalOriginErrors:
                         default: false
@@ -1187,6 +1190,9 @@ spec:
                   This field cannot be set when targeting a parent resource (Gateway).
                   If unset, no merging occurs, and only the most specific configuration takes effect.
                 type: string
+                x-kubernetes-validations:
+                - message: Replace is not a valid MergeType for BackendTrafficPolicySpec
+                  rule: self != 'Replace'
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
@@ -1542,6 +1548,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -1574,6 +1586,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object
@@ -1911,6 +1932,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -1943,6 +1970,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object

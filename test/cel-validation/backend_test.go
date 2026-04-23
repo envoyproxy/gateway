@@ -15,7 +15,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -262,7 +261,7 @@ func TestBackend(t *testing.T) {
 		{
 			desc: "invalid type",
 			mutate: func(backend *egv1a1.Backend) {
-				backend.Spec = egv1a1.BackendSpec{Type: ptr.To[egv1a1.BackendType]("FOO")}
+				backend.Spec = egv1a1.BackendSpec{Type: new(egv1a1.BackendType("FOO"))}
 			},
 			wantErrors: []string{`spec.type: Unsupported value: "FOO": supported values: "Endpoints", "DynamicResolver"`},
 		},
@@ -270,7 +269,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver ok",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type:         new(egv1a1.BackendTypeDynamicResolver),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 				}
 			},
@@ -280,7 +279,7 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
 							FQDN: &egv1a1.FQDNEndpoint{
@@ -297,7 +296,7 @@ func TestBackend(t *testing.T) {
 			desc: "Invalid Unix socket path length",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type:         ptr.To(egv1a1.BackendTypeEndpoints),
+					Type:         new(egv1a1.BackendTypeEndpoints),
 					AppProtocols: []egv1a1.AppProtocolType{egv1a1.AppProtocolTypeH2C},
 					Endpoints: []egv1a1.BackendEndpoint{
 						{
@@ -317,10 +316,10 @@ func TestBackend(t *testing.T) {
 			desc: "dynamic resolver invalid WellKnownCACertificates and InsecureSkipVerify specified",
 			mutate: func(backend *egv1a1.Backend) {
 				backend.Spec = egv1a1.BackendSpec{
-					Type: ptr.To(egv1a1.BackendTypeDynamicResolver),
+					Type: new(egv1a1.BackendTypeDynamicResolver),
 					TLS: &egv1a1.BackendTLSSettings{
-						InsecureSkipVerify:      ptr.To(true),
-						WellKnownCACertificates: ptr.To(gwapiv1.WellKnownCACertificatesSystem),
+						InsecureSkipVerify:      new(true),
+						WellKnownCACertificates: new(gwapiv1.WellKnownCACertificatesSystem),
 					},
 				}
 			},

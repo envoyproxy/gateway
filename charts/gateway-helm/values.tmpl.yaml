@@ -42,6 +42,8 @@ deployment:
       tag: ""
     imagePullPolicy: ""
     imagePullSecrets: []
+    # -- Additional environment variables for the envoy-gateway container.
+    extraEnv: []
     resources:
       limits:
         memory: 1024Mi

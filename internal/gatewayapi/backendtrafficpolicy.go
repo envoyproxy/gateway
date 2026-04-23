@@ -248,6 +248,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 		SectionIndex: make(map[types.NamespacedName]sets.Set[string], gatewayMapSize),
 	}
 
+	policyCopies := backendTrafficPolicyCopiesWithStatusDeepCopy(backendTrafficPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.BackendTrafficPolicy, policyMapSize)
 
 	// Translate
@@ -260,7 +262,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap)
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -268,7 +270,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -280,7 +282,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Routes
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -288,7 +290,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -300,7 +302,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -308,7 +310,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -319,7 +321,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range backendTrafficPolicies {
+	for i, currPolicy := range backendTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -327,7 +329,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -959,7 +961,7 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 				if errs != nil {
 					// Return a 500 direct response
 					r.DirectResponse = &ir.CustomResponse{
-						StatusCode: ptr.To(uint32(500)),
+						StatusCode: new(uint32(500)),
 					}
 					routesWithDirectResponse.Insert(r.Name)
 					continue
@@ -1266,7 +1268,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if errs != nil {
 				// Return a 500 direct response
 				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 				continue
@@ -1336,6 +1338,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 	// EG uses the first rule without clientSelectors as the default route-level
 	// limit. If no such rule is found, EG uses a default limit of uint32 max.
 	var defaultLimit *ir.RateLimitValue
+	var defaultXRateLimitOption *egv1a1.XRateLimitHeadersOption
 	for _, rule := range local.Rules {
 		if len(rule.ClientSelectors) == 0 {
 			if defaultLimit != nil {
@@ -1345,6 +1348,8 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 				Requests: rule.Limit.Requests,
 				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 			}
+			// Capture the xRateLimit setting for the default bucket
+			defaultXRateLimitOption = rule.XRateLimitHeaders
 		}
 	}
 	// If no rule without clientSelectors is found, use uint32 max as the default
@@ -1377,7 +1382,7 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 			continue
 		}
 
-		irRule, err = buildRateLimitRule(rule)
+		irRule, err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1388,8 +1393,9 @@ func (t *Translator) buildLocalRateLimit(policy *egv1a1.BackendTrafficPolicy) (*
 
 	rateLimit := &ir.RateLimit{
 		Local: &ir.LocalRateLimit{
-			Default: *defaultLimit,
-			Rules:   irRules,
+			Default:                 *defaultLimit,
+			Rules:                   irRules,
+			DefaultXRateLimitOption: defaultXRateLimitOption,
 		},
 	}
 
@@ -1414,7 +1420,7 @@ func (t *Translator) buildGlobalRateLimit(policy *egv1a1.BackendTrafficPolicy) (
 	irRules := rateLimit.Global.Rules
 	var err error
 	for i, rule := range global.Rules {
-		irRules[i], err = buildRateLimitRule(rule)
+		irRules[i], err = buildRateLimitRule(&rule)
 		if err != nil {
 			return nil, err
 		}
@@ -1454,16 +1460,17 @@ func (t *Translator) buildBothRateLimit(policy *egv1a1.BackendTrafficPolicy) (*i
 	return rl, nil
 }
 
-func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
+func buildRateLimitRule(rule *egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 	irRule := &ir.RateLimitRule{
 		Limit: ir.RateLimitValue{
 			Requests: rule.Limit.Requests,
 			Unit:     ir.RateLimitUnit(rule.Limit.Unit),
 		},
-		HeaderMatches: make([]*ir.StringMatch, 0),
-		MethodMatches: make([]*ir.StringMatch, 0),
-		Shared:        rule.Shared,
-		ShadowMode:    rule.ShadowMode,
+		HeaderMatches:    make([]*ir.StringMatch, 0),
+		MethodMatches:    make([]*ir.StringMatch, 0),
+		Shared:           rule.Shared,
+		ShadowMode:       rule.ShadowMode,
+		XRateLimitOption: rule.XRateLimitHeaders,
 	}
 
 	for _, match := range rule.ClientSelectors {
@@ -1513,7 +1520,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 
 		for _, method := range match.Methods {
 			irRule.MethodMatches = append(irRule.MethodMatches, &ir.StringMatch{
-				Exact:  ptr.To(string(method.Value)),
+				Exact:  new(string(method.Value)),
 				Invert: method.Invert,
 			})
 		}
@@ -1523,20 +1530,20 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 			case gwapiv1.PathMatchPathPrefix:
 				if match.Path.Value == "/" {
 					irRule.PathMatch = &ir.StringMatch{
-						Prefix: ptr.To(match.Path.Value),
+						Prefix: new(match.Path.Value),
 						Invert: match.Path.Invert,
 					}
 				} else {
 					// envoy ratelimit HeaderMatcher doesn't support PathSeparatedPrefix like route matching,
 					// so we use regex to achieve the same path-separated prefix behavior.
 					irRule.PathMatch = &ir.StringMatch{
-						SafeRegex: ptr.To(regex.PathSeparatedPrefixRegex(match.Path.Value)),
+						SafeRegex: new(regex.PathSeparatedPrefixRegex(match.Path.Value)),
 						Invert:    match.Path.Invert,
 					}
 				}
 			case gwapiv1.PathMatchExact:
 				irRule.PathMatch = &ir.StringMatch{
-					Exact:  ptr.To(match.Path.Value),
+					Exact:  new(match.Path.Value),
 					Invert: match.Path.Invert,
 				}
 			case gwapiv1.PathMatchRegularExpression:
@@ -1544,7 +1551,7 @@ func buildRateLimitRule(rule egv1a1.RateLimitRule) (*ir.RateLimitRule, error) {
 					return nil, err
 				}
 				irRule.PathMatch = &ir.StringMatch{
-					SafeRegex: ptr.To(match.Path.Value),
+					SafeRegex: new(match.Path.Value),
 					Invert:    match.Path.Invert,
 				}
 			default:
@@ -1648,7 +1655,7 @@ func translateRateLimitCost(cost *egv1a1.RateLimitCostSpecifier) *ir.RateLimitCo
 		ret.Number = cost.Number
 	}
 	if cost.Metadata != nil {
-		ret.Format = ptr.To(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
+		ret.Format = new(fmt.Sprintf("%%DYNAMIC_METADATA(%s:%s)%%",
 			cost.Metadata.Namespace, cost.Metadata.Key))
 	}
 	return ret
@@ -1781,13 +1788,13 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 				}
 			}
 			if ro.Redirect.Hostname != nil {
-				redirect.Hostname = ptr.To(string(*ro.Redirect.Hostname))
+				redirect.Hostname = new(string(*ro.Redirect.Hostname))
 			}
 			if ro.Redirect.Port != nil {
-				redirect.Port = ptr.To(uint32(*ro.Redirect.Port))
+				redirect.Port = new(uint32(*ro.Redirect.Port))
 			}
 			if ro.Redirect.StatusCode != nil {
-				redirect.StatusCode = ptr.To(int32(*ro.Redirect.StatusCode))
+				redirect.StatusCode = new(int32(*ro.Redirect.StatusCode))
 			}
 
 			rules = append(rules, ir.ResponseOverrideRule{
@@ -1801,7 +1808,7 @@ func (t *Translator) buildResponseOverride(policy *egv1a1.BackendTrafficPolicy) 
 			}
 
 			if ro.Response.StatusCode != nil {
-				response.StatusCode = ptr.To(uint32(*ro.Response.StatusCode))
+				response.StatusCode = new(uint32(*ro.Response.StatusCode))
 			}
 
 			var err error
@@ -1898,7 +1905,7 @@ func (t *Translator) resolveCustomResponseBodyRefToInline(body *egv1a1.CustomRes
 		"namespace", policyNs,
 		"ref", body.ValueRef.Name,
 	)
-	body.Type = ptr.To(egv1a1.ResponseValueTypeInline)
+	body.Type = new(egv1a1.ResponseValueTypeInline)
 	body.Inline = &inlineStr
 	body.ValueRef = nil
 	return nil
@@ -1944,7 +1951,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 				if c.MinContentLength != nil {
 					minContentLength, ok := c.MinContentLength.AsInt64()
 					if ok {
-						irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+						irCompression.MinContentLength = new(uint32(minContentLength))
 					}
 				}
 				result = append(result, &irCompression)
@@ -1966,7 +1973,7 @@ func buildCompression(compression, compressor []*egv1a1.Compression) []*ir.Compr
 		if c.MinContentLength != nil {
 			minContentLength, ok := c.MinContentLength.AsInt64()
 			if ok {
-				irCompression.MinContentLength = ptr.To(uint32(minContentLength))
+				irCompression.MinContentLength = new(uint32(minContentLength))
 			}
 		}
 		result = append(result, &irCompression)
@@ -2024,4 +2031,16 @@ func buildRouteStatName(routeStatName string, metadata *ir.ResourceMetadata) *st
 	}
 
 	return &statName
+}
+
+// backendTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func backendTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.BackendTrafficPolicy) []*egv1a1.BackendTrafficPolicy {
+	copies := make([]*egv1a1.BackendTrafficPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

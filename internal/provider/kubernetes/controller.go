@@ -57,7 +57,7 @@ import (
 )
 
 var skipNameValidation = func() *bool {
-	return ptr.To(false)
+	return new(false)
 }
 
 var tracer = otel.Tracer("envoy-gateway/provider/runner")
@@ -745,7 +745,7 @@ func (r *gatewayAPIReconciler) processBackendRefs(ctx context.Context, gwcResour
 						Group:     caCertRef.Group,
 						Kind:      caCertRef.Kind,
 						Name:      caCertRef.Name,
-						Namespace: ptr.To(gwapiv1.Namespace(backend.Namespace)),
+						Namespace: new(gwapiv1.Namespace(backend.Namespace)),
 					}
 					err := r.processTLSCACertificateRefs(ctx, gwcResource, resourceMappings,
 						ref,
@@ -847,7 +847,7 @@ func (r *gatewayAPIReconciler) processTLSCACertificateRefs(ctx context.Context, 
 		Group:     gatewayapi.GroupPtr(string(caCertRef.Group)),
 		Kind:      gatewayapi.KindPtr(string(caCertRef.Kind)),
 		Name:      caCertRef.Name,
-		Namespace: ptr.To(ns),
+		Namespace: new(ns),
 	}
 	switch string(caCertRef.Kind) {
 	case resource.KindConfigMap:
@@ -1855,7 +1855,7 @@ func (r *gatewayAPIReconciler) insertProxyServiceIfExists(ctx context.Context, n
 		return
 	}
 	resourceMap.insertBackendRef(gwapiv1.BackendObjectReference{
-		Kind:      ptr.To(gwapiv1.Kind(resource.KindService)),
+		Kind:      new(gwapiv1.Kind(resource.KindService)),
 		Namespace: gatewayapi.NamespacePtr(svc.Namespace),
 		Name:      gwapiv1.ObjectName(svc.Name),
 	})

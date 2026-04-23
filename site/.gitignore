@@ -1,5 +1,4 @@
 /public
 resources/
-package-lock.json
 .hugo_build.lock
 dist/

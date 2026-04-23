@@ -149,9 +149,9 @@ func (t *Translator) processExtServiceDestination(
 		// relationship between the policy and a gateway.
 		// The owner policy of the BackendRef is used as the parent reference here.
 		gwapiv1.ParentReference{
-			Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-			Kind:      ptr.To(gwapiv1.Kind(policyKind)),
-			Namespace: ptr.To(gwapiv1.Namespace(policyNamespacedName.Namespace)),
+			Group:     new(gwapiv1.Group(egv1a1.GroupName)),
+			Kind:      new(gwapiv1.Kind(policyKind)),
+			Namespace: new(gwapiv1.Namespace(policyNamespacedName.Namespace)),
 			Name:      gwapiv1.ObjectName(policyNamespacedName.Name),
 		},
 		resources,
@@ -168,13 +168,13 @@ func (t *Translator) processExtServiceDestination(
 		ds.Weight = backendRef.Weight
 	} else {
 		// set default weight to 1
-		ds.Weight = ptr.To(uint32(1))
+		ds.Weight = new(uint32(1))
 	}
 
 	if backendRef.Fallback != nil {
 		// set only the secondary priority, the backend defaults to a primary priority if unset.
 		if ptr.Deref(backendRef.Fallback, false) {
-			ds.Priority = ptr.To(uint32(1))
+			ds.Priority = new(uint32(1))
 		}
 	}
 	return ds, nil

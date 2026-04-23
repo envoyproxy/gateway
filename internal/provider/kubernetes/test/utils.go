@@ -12,7 +12,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -90,7 +89,7 @@ func GetGateway(nsName types.NamespacedName, gwclass string, listenerPort int32)
 func GetSecureGateway(nsName types.NamespacedName, gwclass string, secretKindNSName GroupKindNamespacedName) *gwapiv1.Gateway {
 	secureGateway := GetGateway(nsName, gwclass, 8080)
 	secureGateway.Spec.Listeners[0].TLS = &gwapiv1.ListenerTLSConfig{
-		Mode: ptr.To(gwapiv1.TLSModeTerminate),
+		Mode: new(gwapiv1.TLSModeTerminate),
 		CertificateRefs: []gwapiv1.SecretObjectReference{{
 			Kind:      &secretKindNSName.Kind,
 			Namespace: &secretKindNSName.Namespace,
@@ -114,14 +113,14 @@ func GetSecret(nsName types.NamespacedName) *corev1.Secret {
 func GetServiceBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
 	return gwapiv1.BackendObjectReference{
 		Name: gwapiv1.ObjectName(name.Name),
-		Port: ptr.To(port),
+		Port: new(port),
 	}
 }
 
 func GetServiceImportBackendRef(name types.NamespacedName, port int32) gwapiv1.BackendObjectReference {
 	return gwapiv1.BackendObjectReference{
 		Name:  gwapiv1.ObjectName(name.Name),
-		Port:  ptr.To(port),
+		Port:  new(port),
 		Kind:  gatewayapi.KindPtr(resource.KindServiceImport),
 		Group: gatewayapi.GroupPtr(mcsapiv1a1.GroupName),
 	}
@@ -190,7 +189,7 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: gwapiv1.ObjectName(serviceName.Name),
-									Port: ptr.To(port),
+									Port: new(port),
 								},
 							},
 						},
@@ -221,7 +220,7 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: gwapiv1.ObjectName(serviceName.Name),
-								Port: ptr.To(port),
+								Port: new(port),
 							},
 						},
 					},
@@ -250,7 +249,7 @@ func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: gwapiv1.ObjectName(serviceName.Name),
-								Port: ptr.To(port),
+								Port: new(port),
 							},
 						},
 					},
@@ -279,7 +278,7 @@ func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: gwapiv1.ObjectName(serviceName.Name),
-								Port: ptr.To(port),
+								Port: new(port),
 							},
 						},
 					},
@@ -397,7 +396,7 @@ func GetEndpointSlice(nsName types.NamespacedName, svcName string, isServiceImpo
 			{
 				Addresses: []string{"10.0.0.1"},
 				Conditions: discoveryv1.EndpointConditions{
-					Ready: ptr.To(true),
+					Ready: new(true),
 				},
 			},
 		},

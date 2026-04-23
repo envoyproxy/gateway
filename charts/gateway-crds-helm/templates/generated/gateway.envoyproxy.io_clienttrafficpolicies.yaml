@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.20.1
   name: clienttrafficpolicies.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -716,6 +716,7 @@ spec:
                       PreserveXRequestID configures Envoy to keep the X-Request-ID header if passed for a request that is edge
                       (Edge request is the request from external clients to front Envoy) and not reset it, which is the current Envoy behaviour.
                       Defaults to false and cannot be combined with RequestID.
+
                       Deprecated: use RequestID=PreserveOrGenerate instead
                     type: boolean
                   requestID:

@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/utils/ptr"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -39,7 +37,7 @@ func BuildProxyArgs(
 
 	if bootstrapConfigOptions != nil {
 		// Configure local Envoy ServiceCluster
-		bootstrapConfigOptions.ServiceClusterName = ptr.To(serviceCluster)
+		bootstrapConfigOptions.ServiceClusterName = new(serviceCluster)
 
 		// If IPFamily is not set, try to determine it from the infrastructure.
 		if bootstrapConfigOptions.IPFamily == nil {

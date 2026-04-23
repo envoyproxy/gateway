@@ -13,7 +13,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/ptr"
 )
 
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
@@ -50,7 +49,7 @@ func DefaultEnvoyProxyHpaMetrics() []autoscalingv2.MetricSpec {
 				Name: corev1.ResourceCPU,
 				Target: autoscalingv2.MetricTarget{
 					Type:               autoscalingv2.UtilizationMetricType,
-					AverageUtilization: ptr.To[int32](80),
+					AverageUtilization: new(int32(80)),
 				},
 			},
 			Type: autoscalingv2.ResourceMetricSourceType,

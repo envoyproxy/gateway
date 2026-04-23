@@ -97,11 +97,13 @@ type ProxyMetricSink struct {
 type ProxyOpenTelemetrySink struct {
 	BackendCluster `json:",inline"`
 	// Host define the service hostname.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the service is exposed on.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional

@@ -24,6 +24,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
+
 func init() {
 	registerHTTPFilter(&extAuth{})
 }
@@ -106,6 +108,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 
 	if extAuth.RecomputeRoute != nil {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
+	}
+
+	if extAuth.IncludeRouteMetadata != nil && *extAuth.IncludeRouteMetadata {
+		config.RouteMetadataContextNamespaces = extAuthRouteMetadataContextNamespaces
 	}
 
 	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))

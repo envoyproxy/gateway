@@ -199,11 +199,13 @@ type FileEnvoyProxyAccessLog struct {
 type OpenTelemetryEnvoyProxyAccessLog struct {
 	BackendCluster `json:",inline"`
 	// Host define the extension service hostname.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional
 	Host *string `json:"host,omitempty"`
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: Use BackendRefs instead.
 	//
 	// +optional

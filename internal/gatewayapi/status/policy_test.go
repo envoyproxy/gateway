@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestSetConditionForPolicyAncestorsTruncatesMessages(t *testing.T) {
@@ -61,5 +63,24 @@ func TestBuildDeprecationWarningMessage(t *testing.T) {
 			result := buildDeprecationWarningMessage(tt.deprecatedFields)
 			assert.Equal(t, tt.expected, result)
 		})
+	}
+}
+
+func TestSetWarningForPolicyAncestorMergesWarnings(t *testing.T) {
+	policyStatus := &gwapiv1.PolicyStatus{}
+	ancestorRef := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("example")}
+
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, "example.com/controller",
+		egv1a1.PolicyReasonDeprecatedField, "deprecated field warning", 1)
+	SetWarningForPolicyAncestor(policyStatus, ancestorRef, "example.com/controller",
+		PolicyReasonUnsupportedHTTP3ClientValidation, "http3 warning", 1)
+
+	if assert.Len(t, policyStatus.Ancestors, 1) {
+		conditions := policyStatus.Ancestors[0].Conditions
+		if assert.Len(t, conditions, 1) {
+			assert.Equal(t, string(egv1a1.PolicyConditionWarning), conditions[0].Type)
+			assert.Equal(t, string(PolicyReasonMultipleWarnings), conditions[0].Reason)
+			assert.Equal(t, "deprecated field warning; http3 warning", conditions[0].Message)
+		}
 	}
 }

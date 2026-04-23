@@ -64,6 +64,9 @@ updates:
       - /tools
     schedule:
       interval: weekly
+    ignore:
+      # fortawesome/fontawesome-free should be updated with docsy.
+      - dependency-name: "@fortawesome/fontawesome-free"
   - package-ecosystem: pip
     directories:
       - /tools/src/codespell
