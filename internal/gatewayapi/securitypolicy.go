@@ -639,7 +639,7 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // - Empty/no Authorization is allowed and results in no-op on TCP.
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
-	if p.Spec.CORS != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
+	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
 		return fmt.Errorf("only authorization is supported for TCP (routes/listeners)")
 	}
 	if p.Spec.Authorization == nil || len(p.Spec.Authorization.Rules) == 0 {
@@ -844,6 +844,11 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
@@ -937,6 +942,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		// Pre-create security features to avoid repeated allocations
 		securityFeatures := &ir.SecurityFeatures{
 			CORS:          cors,
+			CSRF:          csrf,
 			JWT:           jwt,
 			OIDC:          oidc,
 			APIKeyAuth:    apiKeyAuth,
@@ -1071,6 +1077,11 @@ func (t *Translator) translateSecurityPolicyForGateway(
 		cors = t.buildCORS(policy.Spec.CORS)
 	}
 
+	var csrf *ir.CSRF
+	if policy.Spec.CSRF != nil {
+		csrf = t.buildCSRF(policy.Spec.CSRF)
+	}
+
 	if policy.Spec.JWT != nil {
 		if jwt, err = t.buildJWT(
 			policy,
@@ -1141,6 +1152,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// Pre-create security features and error response to avoid repeated allocations
 	securityFeatures := &ir.SecurityFeatures{
 		CORS:          cors,
+		CSRF:          csrf,
 		JWT:           jwt,
 		OIDC:          oidc,
 		APIKeyAuth:    apiKeyAuth,
@@ -1281,6 +1293,16 @@ func (t *Translator) buildCORS(cors *egv1a1.CORS) *ir.CORS {
 	}
 
 	return irCORS
+}
+
+func (t *Translator) buildCSRF(csrf *egv1a1.CSRF) *ir.CSRF {
+	var additionalOrigins []*ir.StringMatch
+	for _, origin := range csrf.AdditionalOrigins {
+		additionalOrigins = append(additionalOrigins, irStringMatch("csrf", origin))
+	}
+	return &ir.CSRF{
+		AdditionalOrigins: additionalOrigins,
+	}
 }
 
 func containsWildcard(s string) bool {

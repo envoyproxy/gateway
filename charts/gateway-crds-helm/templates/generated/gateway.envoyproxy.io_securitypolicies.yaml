@@ -618,6 +618,43 @@ spec:
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
                 type: object
+              csrf:
+                description: |-
+                  CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.
+                  When enabled, the CSRF filter checks that the Origin header matches the destination
+                  or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH).
+                properties:
+                  additionalOrigins:
+                    description: |-
+                      AdditionalOrigins specifies additional origins that are allowed to make requests.
+                      These are checked against the Origin header and if matched, the request is allowed.
+                      Each origin can be an exact, prefix, suffix, or regex match using StringMatch.
+                    items:
+                      description: |-
+                        StringMatch defines how to match any strings.
+                        This is a general purpose match condition that can be used by other EG APIs
+                        that need to match against a string.
+                      properties:
+                        type:
+                          default: Exact
+                          description: Type specifies how to match against a string.
+                          enum:
+                          - Exact
+                          - Prefix
+                          - Suffix
+                          - RegularExpression
+                          type: string
+                        value:
+                          description: Value specifies the string value that the match
+                            must have.
+                          maxLength: 1024
+                          minLength: 1
+                          type: string
+                      required:
+                      - value
+                      type: object
+                    type: array
+                type: object
               extAuth:
                 description: ExtAuth defines the configuration for External Authorization.
                 properties:

@@ -73,6 +73,13 @@ type SecurityPolicySpec struct {
 	// +optional
 	CORS *CORS `json:"cors,omitempty"`
 
+	// CSRF defines the configuration for Cross-Site Request Forgery (CSRF) protection.
+	// When enabled, the CSRF filter checks that the Origin header matches the destination
+	// or one of the additional allowed origins on mutating requests (POST, PUT, DELETE, PATCH).
+	//
+	// +optional
+	CSRF *CSRF `json:"csrf,omitempty"`
+
 	// BasicAuth defines the configuration for the HTTP Basic Authentication.
 	//
 	// +optional
