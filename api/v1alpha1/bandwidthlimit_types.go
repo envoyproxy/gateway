@@ -51,9 +51,10 @@ type BandwidthLimitValue struct {
 	Value resource.Quantity `json:"value"`
 
 	// Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour).
-	Unit RateLimitUnit `json:"unit"`
+	Unit BandwidthLimitUnit `json:"unit"`
 }
 
+// BandwidthLimitResponseTrailers defines the trailer headers appended to responses.
 type BandwidthLimitResponseTrailers struct {
 	// Prefix is prepended to each trailer header name.
 	// If not set, no prefix is added and the trailers are named as-is.
@@ -71,3 +72,21 @@ type BandwidthLimitResponseTrailers struct {
 	// +optional
 	Prefix *string `json:"prefix,omitempty"`
 }
+
+// BandwidthLimitUnit specifies the intervals for setting bandwidth limits.
+// Valid BandwidthLimitUnit values are "Second", "Minute", "Hour".
+//
+// +kubebuilder:validation:Enum=Second;Minute;Hour
+type BandwidthLimitUnit string
+
+// BandwidthLimitUnit constants.
+const (
+	// BandwidthLimitUnitSecond specifies the bandwidth limit interval to be 1 second.
+	BandwidthLimitUnitSecond BandwidthLimitUnit = "Second"
+
+	// BandwidthLimitUnitMinute specifies the bandwidth limit interval to be 1 minute.
+	BandwidthLimitUnitMinute BandwidthLimitUnit = "Minute"
+
+	// BandwidthLimitUnitHour specifies the bandwidth limit interval to be 1 hour.
+	BandwidthLimitUnitHour BandwidthLimitUnit = "Hour"
+)

@@ -633,7 +633,7 @@ _Appears in:_
 
 
 
-
+BandwidthLimitResponseTrailers defines the trailer headers appended to responses.
 
 _Appears in:_
 - [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
@@ -658,6 +658,23 @@ _Appears in:_
 | `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures bandwidth limits for traffic sent from the backend. |
 
 
+#### BandwidthLimitUnit
+
+_Underlying type:_ _string_
+
+BandwidthLimitUnit specifies the intervals for setting bandwidth limits.
+Valid BandwidthLimitUnit values are "Second", "Minute", "Hour".
+
+_Appears in:_
+- [BandwidthLimitValue](#bandwidthlimitvalue)
+
+| Value | Description |
+| ----- | ----------- |
+| `Second` | BandwidthLimitUnitSecond specifies the bandwidth limit interval to be 1 second.<br /> | 
+| `Minute` | BandwidthLimitUnitMinute specifies the bandwidth limit interval to be 1 minute.<br /> | 
+| `Hour` | BandwidthLimitUnitHour specifies the bandwidth limit interval to be 1 hour.<br /> | 
+
+
 #### BandwidthLimitValue
 
 
@@ -671,7 +688,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `value` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Value specifies the bandwidth limit. |
-| `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
+| `unit` | _[BandwidthLimitUnit](#bandwidthlimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
 
 
 #### BasicAuth
@@ -5204,7 +5221,6 @@ RateLimitUnit specifies the intervals for setting rate limits.
 Valid RateLimitUnit values are "Second", "Minute", "Hour", "Day", "Month" and "Year".
 
 _Appears in:_
-- [BandwidthLimitValue](#bandwidthlimitvalue)
 - [RateLimitValue](#ratelimitvalue)
 
 | Value | Description |

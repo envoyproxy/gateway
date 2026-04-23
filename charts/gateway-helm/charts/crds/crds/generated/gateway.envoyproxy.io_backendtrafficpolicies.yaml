@@ -69,9 +69,6 @@ spec:
                             - Second
                             - Minute
                             - Hour
-                            - Day
-                            - Month
-                            - Year
                             type: string
                           value:
                             allOf:
@@ -104,9 +101,6 @@ spec:
                             - Second
                             - Minute
                             - Hour
-                            - Day
-                            - Month
-                            - Year
                             type: string
                           value:
                             allOf:
