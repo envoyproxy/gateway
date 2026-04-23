@@ -78,6 +78,8 @@ http:
         roundRobin:
           slowStart:
             window: 300s
+            aggression: 1.5
+            minWeightPercent: 25
     destination:
       name: "sixth-route-dest"
       settings:
@@ -227,6 +229,8 @@ http:
           weightUpdatePeriod: 10s
           slowStart:
             window: 45s
+            aggression: 2
+            minWeightPercent: 15
           errorUtilizationPenaltyPercent: 100
           metricNamesForComputingUtilization:
           - "cpu_utilization"

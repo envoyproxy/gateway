@@ -134,6 +134,10 @@
           localityLbConfig:
             localityWeightedLbConfig: {}
           slowStartConfig:
+            aggression:
+              defaultValue: 1.5
+            minWeightPercent:
+              value: 25
             slowStartWindow: 300s
   name: sixth-route-dest
   perConnectionBufferLimitBytes: 32768
@@ -375,6 +379,10 @@
           metricNamesForComputingUtilization:
           - cpu_utilization
           slowStartConfig:
+            aggression:
+              defaultValue: 2
+            minWeightPercent:
+              value: 15
             slowStartWindow: 45s
           weightExpirationPeriod: 60s
           weightUpdatePeriod: 10s
