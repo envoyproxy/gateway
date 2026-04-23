@@ -1937,7 +1937,6 @@ func sourceFromAPI(s *egv1a1.ResponseOverrideSource) egv1a1.ResponseOverrideSour
 	return *s
 }
 
-
 func defaultResponseOverrideRuleName(policy *egv1a1.BackendTrafficPolicy, index int) string {
 	return fmt.Sprintf(
 		"%s/responseoverride/rule/%s",
