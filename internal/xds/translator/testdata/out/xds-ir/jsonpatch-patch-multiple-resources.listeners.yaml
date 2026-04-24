@@ -32,7 +32,6 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
-        preserveExternalRequestId: true
         routeConfig:
           name: ready_route
           virtualHosts:
