@@ -320,6 +320,7 @@ const (
 // +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerSourceRanges can only be set for LoadBalancer type",rule="!has(self.loadBalancerSourceRanges) || self.type == 'LoadBalancer'"
 // +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
+// +kubebuilder:validation:XValidation:message="healthCheckNodePort can only be set for LoadBalancer type with Local externalTrafficPolicy",rule="!has(self.healthCheckNodePort) || (self.type == 'LoadBalancer' && (!has(self.externalTrafficPolicy) || self.externalTrafficPolicy == 'Local'))"
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
 	// By default, no annotations are appended.
@@ -378,6 +379,19 @@ type KubernetesServiceSpec struct {
 	// +kubebuilder:default:="Local"
 	// +optional
 	ExternalTrafficPolicy *ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
+
+	// HealthCheckNodePort specifies the healthcheck nodePort for the Envoy Service.
+	// This only applies when Type is set to LoadBalancer and ExternalTrafficPolicy is set to Local.
+	// If a value is specified, is in-range, and is not in use, it will be used. If not specified,
+	// a value will be automatically allocated by the Kubernetes API server. External systems
+	// (e.g. load-balancers) can use this port to determine if a given node holds endpoints for
+	// this service or not. Specifying the value allows network policies to allowlist a known port
+	// rather than a randomly allocated one.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +optional
+	HealthCheckNodePort *int32 `json:"healthCheckNodePort,omitempty"`
 
 	// Patch defines how to perform the patch operation to the service
 	//

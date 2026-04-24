@@ -5392,6 +5392,11 @@ func (in *KubernetesServiceSpec) DeepCopyInto(out *KubernetesServiceSpec) {
 		*out = new(ServiceExternalTrafficPolicy)
 		**out = **in
 	}
+	if in.HealthCheckNodePort != nil {
+		in, out := &in.HealthCheckNodePort, &out.HealthCheckNodePort
+		*out = new(int32)
+		**out = **in
+	}
 	if in.Patch != nil {
 		in, out := &in.Patch, &out.Patch
 		*out = new(KubernetesPatchSpec)

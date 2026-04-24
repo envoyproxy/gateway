@@ -101,6 +101,19 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithHealthCheckNodePort",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				HealthCheckNodePort: new(int32(30123)),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				HealthCheckNodePort:   30123,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
 			name: "ClusterIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),

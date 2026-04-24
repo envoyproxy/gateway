@@ -42007,6 +42007,19 @@ spec:
                             - Local
                             - Cluster
                             type: string
+                          healthCheckNodePort:
+                            description: |-
+                              HealthCheckNodePort specifies the healthcheck nodePort for the Envoy Service.
+                              This only applies when Type is set to LoadBalancer and ExternalTrafficPolicy is set to Local.
+                              If a value is specified, is in-range, and is not in use, it will be used. If not specified,
+                              a value will be automatically allocated by the Kubernetes API server. External systems
+                              (e.g. load-balancers) can use this port to determine if a given node holds endpoints for
+                              this service or not. Specifying the value allows network policies to allowlist a known port
+                              rather than a randomly allocated one.
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
                           labels:
                             additionalProperties:
                               type: string
@@ -42087,6 +42100,11 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                        - message: healthCheckNodePort can only be set for LoadBalancer
+                            type with Local externalTrafficPolicy
+                          rule: '!has(self.healthCheckNodePort) || (self.type == ''LoadBalancer''
+                            && (!has(self.externalTrafficPolicy) || self.externalTrafficPolicy
+                            == ''Local''))'
                       envoyServiceAccount:
                         description: EnvoyServiceAccount defines the desired state
                           of the Envoy service account resource.
