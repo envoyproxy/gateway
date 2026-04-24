@@ -68,6 +68,19 @@ func Test_sortHTTPFilters(t *testing.T) {
 			},
 		},
 		{
+			name: "sort compressor and decompressor filters",
+			filters: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+				httpFilterForTest(egv1a1.EnvoyFilterDecompressor),
+				httpFilterForTest(egv1a1.EnvoyFilterCompressor),
+			},
+			want: []*hcmv3.HttpFilter{
+				httpFilterForTest(egv1a1.EnvoyFilterCompressor),
+				httpFilterForTest(egv1a1.EnvoyFilterDecompressor),
+				httpFilterForTest(egv1a1.EnvoyFilterRouter),
+			},
+		},
+		{
 			name: "custom filter order-singleton filter",
 			filters: []*hcmv3.HttpFilter{
 				httpFilterForTest(egv1a1.EnvoyFilterRouter),
