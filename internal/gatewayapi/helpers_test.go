@@ -898,7 +898,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				namespaceMap[ns.Name] = ns
 			}
 
-			results := getPolicyTargetRefs(
+			results := resolvePolicyTargets(
 				tc.policy,
 				tc.targets,
 				tc.grants,
@@ -909,6 +909,92 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				},
 			)
 			require.ElementsMatch(t, results, tc.results)
+		})
+	}
+}
+
+func TestResolvePolicyTargetsFromReferences(t *testing.T) {
+	testCases := []struct {
+		name            string
+		targetRefs      egv1a1.PolicyTargetReferences
+		policyNamespace string
+		expected        []policyTargetReferenceWithSectionName
+	}{
+		{
+			name: "target ref",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "eg",
+					},
+					SectionName: SectionNamePtr("http"),
+				},
+			},
+			policyNamespace: "default",
+			expected: []policyTargetReferenceWithSectionName{
+				{
+					Group:       "gateway.networking.k8s.io",
+					Kind:        "Gateway",
+					Name:        "eg",
+					Namespace:   "default",
+					SectionName: SectionNamePtr("http"),
+				},
+			},
+		},
+		{
+			name: "target refs",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "first",
+						},
+					},
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "second",
+						},
+					},
+				},
+			},
+			policyNamespace: "default",
+			expected: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "first",
+					Namespace: "default",
+				},
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "second",
+					Namespace: "default",
+				},
+			},
+		},
+		{
+			name: "empty target ref is ignored",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{},
+				},
+			},
+			policyNamespace: "default",
+			expected:        []policyTargetReferenceWithSectionName{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resolvePolicyTargetsFromReferences(tc.targetRefs, tc.policyNamespace)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

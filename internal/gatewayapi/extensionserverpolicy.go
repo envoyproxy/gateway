@@ -114,7 +114,7 @@ func extractTargetRefs(
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	ret := getPolicyTargetRefs(
+	ret := resolvePolicyTargets(
 		targetRefs,
 		gateways,
 		referenceGrants,

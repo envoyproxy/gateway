@@ -87,18 +87,9 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// before policy with no section so below loops can be flattened into 1.
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		// This loop only handles policies that target a specific section. When
-		// targeting a policy with a selector, it's not possible to specify a SectionName
-		// so there's no need to try to match targets with selectors
-		targetRefs := currPolicy.Spec.GetTargetRefs()
-		for _, currTarget := range targetRefs {
-			targetRef := policyTargetReferenceWithSectionName{
-				Group:       currTarget.Group,
-				Kind:        currTarget.Kind,
-				Name:        currTarget.Name,
-				Namespace:   gwapiv1.Namespace(currPolicy.Namespace),
-				SectionName: currTarget.SectionName,
-			}
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		for _, targetRef := range targetRefs {
 			if hasSectionName(&targetRef) {
 				policy, found := handledPolicies[policyName]
 				if !found {
@@ -114,7 +105,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					continue
 				}
 				key := utils.NamespacedName(gateway)
-				ancestorRef := getAncestorRefForPolicy(key, currTarget.SectionName)
+				ancestorRef := getAncestorRefForPolicy(key, targetRef.SectionName)
 
 				// Set conditions for resolve error, then skip current gateway
 				if resolveErr != nil {
@@ -129,11 +120,11 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				}
 
 				// Check if another policy targeting the same section exists
-				section := string(*(currTarget.SectionName))
+				section := string(*(targetRef.SectionName))
 				s, ok := policyMap[key]
 				if ok && s.Has(section) {
 					message := fmt.Sprintf("Unable to target section of %s, another ClientTrafficPolicy has already attached to it",
-						string(currTarget.Name))
+						string(targetRef.Name))
 
 					resolveErr = &status.PolicyResolveError{
 						Reason:  gwapiv1.PolicyReasonConflicted,
@@ -204,7 +195,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := resolvePolicySelectorTargets(
+		allowed, denied := resolvePolicyTargetsFromSelectors(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
@@ -212,11 +203,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			currPolicy.Namespace,
 			t.GetNamespace,
 		)
-		targetRefs := composePolicyTargetRefs(
-			allowed,
-			currPolicy.Spec.GetTargetRefs(),
-			currPolicy.Namespace,
-		)
+		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
 		if len(denied) > 0 {
 			policy, found := handledPolicies[policyName]
 			if !found {

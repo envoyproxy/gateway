@@ -143,23 +143,8 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting RouteRules (HTTP + TCP)
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := resolvePolicySelectorTargets(
-			currPolicy.Spec.TargetSelectors,
-			routes,
-			resources.ReferenceGrants,
-			currPolicy.Kind,
-			currPolicy.Namespace,
-			t.GetNamespace)
-		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				handledPolicies[policyName] = policy
-				res = append(res, policy)
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
-		}
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -176,13 +161,24 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting xRoutes (HTTP + TCP)
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(
-			currPolicy.Spec.PolicyTargetReferences,
+		allowed, denied := resolvePolicyTargetsFromSelectors(
+			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
+		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				handledPolicies[policyName] = policy
+				res = append(res, policy)
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
+		}
 		for _, currTarget := range targetRefs {
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -199,23 +195,8 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting Listeners
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := resolvePolicySelectorTargets(
-			currPolicy.Spec.TargetSelectors,
-			gateways,
-			resources.ReferenceGrants,
-			currPolicy.Kind,
-			currPolicy.Namespace,
-			t.GetNamespace)
-		targetRefs := composePolicyTargetRefs(allowed, currPolicy.Spec.GetTargetRefs(), currPolicy.Namespace)
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				handledPolicies[policyName] = policy
-				res = append(res, policy)
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
-		}
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
 			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -232,13 +213,24 @@ func (t *Translator) ProcessSecurityPolicies(
 	// Process the policies targeting Gateways
 	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(
-			currPolicy.Spec.PolicyTargetReferences,
+		allowed, denied := resolvePolicyTargetsFromSelectors(
+			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
 			currPolicy.Kind,
 			currPolicy.Namespace,
 			t.GetNamespace)
+		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				handledPolicies[policyName] = policy
+				res = append(res, policy)
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
+		}
 
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
@@ -271,7 +263,7 @@ func (t *Translator) buildGatewayPolicyMapForSecurity(
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
 ) {
 	for _, currPolicy := range securityPolicies {
-		targetRefs := getPolicyTargetRefs(
+		targetRefs := resolvePolicyTargets(
 			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			referenceGrants,
