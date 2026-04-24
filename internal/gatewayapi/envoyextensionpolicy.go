@@ -559,7 +559,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		for _, listener := range parentRefCtx.listeners {
 			irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 			if irListener != nil {
-				for _, r := range irListener.Routes {
+				var fallbackRoutes []*ir.HTTPRoute
+				for i, r := range irListener.Routes {
 					// If specified the sectionName must match route rule from ir route metadata.
 					if target.SectionName != nil && string(*target.SectionName) != r.Metadata.SectionName {
 						continue
@@ -600,9 +601,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 								Luas:           luas,
 								DynamicModules: dynamicModules,
 							}
+							if extensionsUsePercentage(r.EnvoyExtensions) {
+								fallback := irListener.Routes[i].DeepCopy()
+								fallback.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+								fallback.Name = r.Name + "/fallback"
+								fallbackRoutes = append(fallbackRoutes, fallback)
+							}
 						}
 					}
 				}
+				appendFallbackRoutes(irListener, fallbackRoutes)
 			}
 		}
 	}
@@ -670,7 +678,8 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 
 		// A Policy targeting the specific scope(xRoute rule, xRoute, Gateway listener) wins over a policy
 		// targeting a lesser specific scope(Gateway).
-		for _, r := range http.Routes {
+		var fallbackRoutes []*ir.HTTPRoute
+		for i, r := range http.Routes {
 			// if already set - there's a specific level policy, so skip
 			if r.EnvoyExtensions != nil {
 				continue
@@ -703,8 +712,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 					Luas:           luas,
 					DynamicModules: dynamicModules,
 				}
+				if extensionsUsePercentage(r.EnvoyExtensions) {
+					fallback := http.Routes[i].DeepCopy()
+					fallback.EnvoyExtensions = &ir.EnvoyExtensionFeatures{}
+					fallback.Name = r.Name + "/fallback"
+					fallbackRoutes = append(fallbackRoutes, fallback)
+				}
 			}
 		}
+		appendFallbackRoutes(http, fallbackRoutes)
 	}
 	if len(routesWithDirectResponse) > 0 {
 		t.Logger.Info("setting 500 direct response in routes due to errors in EnvoyExtensionPolicy",
@@ -764,8 +780,9 @@ func (t *Translator) buildLua(
 		return nil, fmt.Errorf("validation failed for lua body in policy with name %v: %w", name, err)
 	}
 	return &ir.Lua{
-		Name: name,
-		Code: luaCode,
+		Name:       name,
+		Code:       luaCode,
+		Percentage: lua.Percentage,
 	}, nil
 }
 
@@ -808,7 +825,8 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	extProcIRList := make([]ir.ExtProc, 0, len(policy.Spec.ExtProc))
 
 	hasFailClose := false
-	for idx, ep := range policy.Spec.ExtProc {
+	for idx := range policy.Spec.ExtProc {
+		ep := &policy.Spec.ExtProc[idx]
 		name := irConfigNameForExtProc(policy, idx)
 		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
 		if err != nil {
@@ -831,7 +849,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -869,6 +887,7 @@ func (t *Translator) buildExtProc(
 		Destination: *rd,
 		Traffic:     traffic,
 		Authority:   authority,
+		Percentage:  extProc.Percentage,
 	}
 
 	if extProc.MessageTimeout != nil {
@@ -1148,12 +1167,13 @@ func (t *Translator) buildWasm(
 		wasmName = *config.Name
 	}
 	wasmIR := &ir.Wasm{
-		Name:     name,
-		RootID:   config.RootID,
-		WasmName: wasmName,
-		Config:   config.Config,
-		FailOpen: failOpen,
-		Code:     code,
+		Name:       name,
+		RootID:     config.RootID,
+		WasmName:   wasmName,
+		Config:     config.Config,
+		FailOpen:   failOpen,
+		Code:       code,
+		Percentage: config.Percentage,
 	}
 
 	if config.Env != nil && len(config.Env.HostKeys) > 0 {
@@ -1266,6 +1286,51 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// appendFallbackRoutes inserts each fallback route immediately after its
+// corresponding main route (identified by name prefix) so that Envoy evaluates
+// the main route (with RuntimeFraction) before the fallback.
+func appendFallbackRoutes(irListener *ir.HTTPListener, fallbacks []*ir.HTTPRoute) {
+	if len(fallbacks) == 0 {
+		return
+	}
+	fallbackByMain := make(map[string]*ir.HTTPRoute, len(fallbacks))
+	for _, fb := range fallbacks {
+		mainName := strings.TrimSuffix(fb.Name, "/fallback")
+		fallbackByMain[mainName] = fb
+	}
+
+	newRoutes := make([]*ir.HTTPRoute, 0, len(irListener.Routes)+len(fallbacks))
+	for _, r := range irListener.Routes {
+		newRoutes = append(newRoutes, r)
+		if fb, ok := fallbackByMain[r.Name]; ok {
+			newRoutes = append(newRoutes, fb)
+		}
+	}
+	irListener.Routes = newRoutes
+}
+
+func extensionsUsePercentage(exts *ir.EnvoyExtensionFeatures) bool {
+	if exts == nil {
+		return false
+	}
+	for i := range exts.ExtProcs {
+		if exts.ExtProcs[i].Percentage != nil {
+			return true
+		}
+	}
+	for i := range exts.Wasms {
+		if exts.Wasms[i].Percentage != nil {
+			return true
+		}
+	}
+	for i := range exts.Luas {
+		if exts.Luas[i].Percentage != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
