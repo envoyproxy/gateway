@@ -329,7 +329,8 @@ func patchRouteWithPerRouteConfig(route *routev3.Route, irRoute *ir.HTTPRoute, h
 
 	// RateLimit filter is handled separately because it relies on the global
 	// rate limit server configuration if costs are not provided.
-	if err := patchRouteWithRateLimit(route, irRoute); err != nil {
+	// TODO: merge this into filter.PatchRoute
+	if err := patchRouteWithRateLimit(httpListener, route, irRoute); err != nil {
 		return nil
 	}
 

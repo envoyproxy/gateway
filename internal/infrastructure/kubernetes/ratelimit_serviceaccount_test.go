@@ -53,6 +53,11 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       "envoy-ratelimit",
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							Kind:       ratelimit.ResourceKindServiceAccount,
@@ -76,6 +81,11 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					Labels: map[string]string{
+						"app.kubernetes.io/name":       "envoy-ratelimit",
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
+					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
 							Kind:       ratelimit.ResourceKindServiceAccount,
