@@ -13,6 +13,9 @@ import (
 // This configuration probabilistically rejects requests based on the success rate
 // of previous requests in a configurable sliding time window.
 // All fields are optional and will use Envoy's defaults when not specified.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.successRateThreshold) || (self.successRateThreshold >= 1 && self.successRateThreshold <= 100)",message="successRateThreshold must be between 1 and 100"
+// +kubebuilder:validation:XValidation:rule="!has(self.maxRejectionProbability) || (self.maxRejectionProbability >= 0 && self.maxRejectionProbability <= 100)",message="maxRejectionProbability must be between 0 and 100"
 type AdmissionControl struct {
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	// Defaults to 30s if not specified.

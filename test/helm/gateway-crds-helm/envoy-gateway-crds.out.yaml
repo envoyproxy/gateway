@@ -647,6 +647,13 @@ spec:
                     minimum: 1
                     type: integer
                 type: object
+                x-kubernetes-validations:
+                - message: successRateThreshold must be between 1 and 100
+                  rule: '!has(self.successRateThreshold) || (self.successRateThreshold
+                    >= 1 && self.successRateThreshold <= 100)'
+                - message: maxRejectionProbability must be between 0 and 100
+                  rule: '!has(self.maxRejectionProbability) || (self.maxRejectionProbability
+                    >= 0 && self.maxRejectionProbability <= 100)'
               circuitBreaker:
                 description: |-
                   Circuit Breaker settings for the upstream connections and requests.

@@ -1709,11 +1709,16 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 	}
 
 	ac := &ir.AdmissionControl{
-		SamplingWindow:          parseSamplingWindow(policy.Spec.AdmissionControl.SamplingWindow),
 		SuccessRateThreshold:    policy.Spec.AdmissionControl.SuccessRateThreshold,
 		Aggression:              policy.Spec.AdmissionControl.Aggression,
 		RPSThreshold:            policy.Spec.AdmissionControl.RPSThreshold,
 		MaxRejectionProbability: policy.Spec.AdmissionControl.MaxRejectionProbability,
+	}
+
+	if policy.Spec.AdmissionControl.SamplingWindow != nil {
+		if d, err := time.ParseDuration(string(*policy.Spec.AdmissionControl.SamplingWindow)); err == nil {
+			ac.SamplingWindow = &metav1.Duration{Duration: d}
+		}
 	}
 
 	if policy.Spec.AdmissionControl.SuccessCriteria != nil {
@@ -1741,18 +1746,6 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 	}
 
 	return ac
-}
-
-// parseSamplingWindow converts a gwapiv1.Duration to a metav1.Duration for the IR.
-func parseSamplingWindow(d *gwapiv1.Duration) *metav1.Duration {
-	if d == nil {
-		return nil
-	}
-	duration, err := time.ParseDuration(string(*d))
-	if err != nil {
-		return nil
-	}
-	return &metav1.Duration{Duration: duration}
 }
 
 func makeIrStatusSet(in []egv1a1.HTTPStatus) []ir.HTTPStatus {

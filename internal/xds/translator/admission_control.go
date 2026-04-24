@@ -7,8 +7,6 @@ package translator
 
 import (
 	"errors"
-	"fmt"
-	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	admissioncontrolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/admission_control/v3"
@@ -60,11 +58,7 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 	}
 
 	if admissionControl.SamplingWindow != nil {
-		duration, err := parseDuration(admissionControl.SamplingWindow.Duration.String())
-		if err != nil {
-			return nil, fmt.Errorf("invalid samplingWindow: %w", err)
-		}
-		config.SamplingWindow = durationpb.New(duration)
+		config.SamplingWindow = durationpb.New(admissionControl.SamplingWindow.Duration)
 	}
 
 	if admissionControl.SuccessRateThreshold != nil {
@@ -125,10 +119,6 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 	}
 
 	return config, nil
-}
-
-func parseDuration(s string) (time.Duration, error) {
-	return time.ParseDuration(s)
 }
 
 // grpcStatusCodes maps a gRPC status code string name to its numeric value.

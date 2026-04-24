@@ -237,51 +237,6 @@ func TestBuildUpstreamAdmissionControlFilter(t *testing.T) {
 	}
 }
 
-func TestParseDuration(t *testing.T) {
-	tests := []struct {
-		name    string
-		input   string
-		want    time.Duration
-		wantErr bool
-	}{
-		{
-			name:    "valid duration 60s",
-			input:   "60s",
-			want:    60 * time.Second,
-			wantErr: false,
-		},
-		{
-			name:    "valid duration 30s",
-			input:   "30s",
-			want:    30 * time.Second,
-			wantErr: false,
-		},
-		{
-			name:    "valid duration 1m",
-			input:   "1m0s",
-			want:    time.Minute,
-			wantErr: false,
-		},
-		{
-			name:    "invalid duration",
-			input:   "invalid",
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseDuration(tt.input)
-			if tt.wantErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
 func TestGRPCStatusCodeToUint32(t *testing.T) {
 	tests := []struct {
 		name   string
