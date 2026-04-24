@@ -44,8 +44,9 @@ import (
 // and defines the topology of the provider and its managed components, wiring
 // them together.
 type Provider struct {
-	client  client.Client
-	manager manager.Manager
+	client        client.Client
+	manager       manager.Manager
+	providerReady chan struct{}
 }
 
 const (
@@ -328,8 +329,9 @@ func newProvider(ctx context.Context, restCfg *rest.Config, svrCfg *ec.Server,
 	}()
 
 	return &Provider{
-		manager: mgr,
-		client:  mgr.GetClient(),
+		manager:       mgr,
+		client:        mgr.GetClient(),
+		providerReady: svrCfg.ProviderReady,
 	}, nil
 }
 
@@ -348,6 +350,7 @@ func (p *Provider) Start(ctx context.Context) error {
 	go func() {
 		errChan <- p.manager.Start(ctx)
 	}()
+	go signalProviderReady(ctx, p.manager.GetCache().WaitForCacheSync, p.providerReady)
 
 	// Wait for the manager to exit or an explicit stop.
 	select {
@@ -355,5 +358,22 @@ func (p *Provider) Start(ctx context.Context) error {
 		return nil
 	case err := <-errChan:
 		return err
+	}
+}
+
+func signalProviderReady(
+	ctx context.Context,
+	waitForCacheSync func(context.Context) bool,
+	providerReady chan struct{},
+) {
+	if !waitForCacheSync(ctx) {
+		return
+	}
+
+	select {
+	case <-providerReady:
+		return
+	default:
+		close(providerReady)
 	}
 }

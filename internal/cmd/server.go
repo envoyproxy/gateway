@@ -177,6 +177,9 @@ func startRunners(ctx context.Context, cfg *config.Server, runnerErrors *message
 	// The Elected channel is used to block the tasks that are waiting for the leader to be elected.
 	// It will be closed once the leader is elected in the controller manager.
 	cfg.Elected = make(chan struct{})
+	// ProviderReady is used to block consumers of the provider's cached client until the provider has
+	// synced its cache.
+	cfg.ProviderReady = make(chan struct{})
 
 	// Setup the Extension Manager
 	var extMgr types.Manager

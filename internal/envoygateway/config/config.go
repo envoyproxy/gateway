@@ -41,6 +41,8 @@ type Server struct {
 	Logger logging.Logger
 	// Elected chan is used to signal when an EG instance is elected as leader.
 	Elected chan struct{}
+	// ProviderReady is closed once the Kubernetes provider cache is synced and the cached client is ready for consumers.
+	ProviderReady chan struct{}
 	// Stdout is the writer for standard output.
 	Stdout io.Writer
 	// Stderr is the writer for error output.
@@ -81,6 +83,7 @@ func New(stdout, stderr io.Writer) (*Server, error) {
 		Stdout:              stdout,
 		Stderr:              stderr,
 		Elected:             make(chan struct{}),
+		ProviderReady:       make(chan struct{}),
 		KubernetesClient:    NewKubernetesClientHolder(),
 	}, nil
 }

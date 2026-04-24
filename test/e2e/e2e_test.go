@@ -13,7 +13,6 @@ import (
 	"os"
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -110,9 +109,6 @@ func TestE2E(t *testing.T) {
 	})
 	timedTests := WrapConformanceTestsWithTiming(tests.ConformanceTests, recorder)
 	cSuite.Setup(t, timedTests)
-	if shouldWaitForRateLimit(*flags.RunTest) {
-		tests.WaitForPods(t, c, "envoy-gateway-system", map[string]string{"app.kubernetes.io/component": "ratelimit"}, corev1.PodRunning, &tests.PodReady)
-	}
 	if cSuite.RunTest != "" {
 		tlog.Logf(t, "Running E2E test %s", cSuite.RunTest)
 	} else {
@@ -122,31 +118,4 @@ func TestE2E(t *testing.T) {
 	if err != nil {
 		tlog.Fatalf(t, "Failed to run E2E tests: %v", err)
 	}
-}
-
-func shouldWaitForRateLimit(runTest string) bool {
-	rateLimitTests := sets.New(
-		tests.RateLimitCIDRMatchTest.ShortName,
-		tests.RateLimitCIDRInvertMatchAlwaysEnforceTest.ShortName,
-		tests.RateLimitCIDRInvertAlwaysExemptTest.ShortName,
-		tests.RateLimitHeaderMatchTest.ShortName,
-		tests.RateLimitMethodMatchTest.ShortName,
-		tests.RateLimitPathMatchTest.ShortName,
-		tests.GlobalRateLimitHeaderInvertMatchTest.ShortName,
-		tests.RateLimitHeadersDisabled.ShortName,
-		tests.RateLimitBasedJwtClaimsTest.ShortName,
-		tests.RateLimitMultipleListenersTest.ShortName,
-		tests.RateLimitHeadersAndCIDRMatchTest.ShortName,
-		tests.UsageRateLimitTest.ShortName,
-		tests.RateLimitGlobalSharedCidrMatchTest.ShortName,
-		tests.RateLimitGlobalSharedGatewayHeaderMatchTest.ShortName,
-		tests.RateLimitGlobalMergeTest.ShortName,
-		tests.RateLimitGlobalShadowModeTest.ShortName,
-		tests.RateLimitQueryParametersTest.ShortName,
-	)
-
-	if runTest != "" {
-		return rateLimitTests.Has(runTest)
-	}
-	return true
 }

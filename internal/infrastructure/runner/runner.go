@@ -7,10 +7,7 @@ package runner
 
 import (
 	"context"
-	"sync"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/telepresenceio/watchable"
 	"k8s.io/utils/ptr"
 
@@ -21,6 +18,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
+var newInfraManager = infrastructure.NewManager
+
 type Config struct {
 	config.Server
 	InfraIR      *message.InfraIR
@@ -30,9 +29,6 @@ type Config struct {
 type Runner struct {
 	Config
 	mgr infrastructure.Manager
-
-	rateLimitInfraMu          sync.Mutex
-	rateLimitInfraInitialized bool
 }
 
 // Close implements Runner interface.
@@ -58,7 +54,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
-	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
+	r.mgr, err = newInfraManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -69,6 +65,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		// Subscribe and Close in same goroutine to avoid race condition.
 		sub := r.InfraIR.Subscribe(ctx)
 		go r.updateProxyInfraFromSubscription(ctx, sub)
+
+		// Create the shared ratelimit infra during startup.
+		go r.initializeRateLimitInfra(ctx)
 
 		r.Logger.Info("started")
 		<-ctx.Done()
@@ -111,8 +110,6 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			default:
 			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
-
-			r.ensureRateLimitInfraInitialized(ctx)
 
 			val := update.Value
 
@@ -161,35 +158,32 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 	}
 }
 
-func (r *Runner) ensureRateLimitInfraInitialized(ctx context.Context) {
-	r.rateLimitInfraMu.Lock()
-	defer r.rateLimitInfraMu.Unlock()
-
-	// Rate limit infra is shared across all proxy infra, so skip further
-	// initialization work once one attempt has completed successfully.
-	if r.rateLimitInfraInitialized {
+func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
+	if !r.waitForProviderReady(ctx) {
 		return
 	}
 
 	if r.EnvoyGateway.RateLimit != nil {
-		err := backoff.Retry(func() error {
-			return r.mgr.CreateOrUpdateRateLimitInfra(ctx)
-		}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second)))
-		if err != nil {
-			r.Logger.Error(err, "failed to create ratelimit infra after retries")
-			return
+		if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
+			r.Logger.Error(err, "failed to create ratelimit infra")
 		}
-		r.Logger.Info("rate limit infra created successfully")
-	} else {
-		err := backoff.Retry(func() error {
-			return r.mgr.DeleteRateLimitInfra(ctx)
-		}, backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(5*time.Second)))
-		if err != nil {
-			r.Logger.Error(err, "failed to delete ratelimit infra after retries")
-			return
-		}
-		r.Logger.Info("rate limit infra deleted successfully")
+		return
 	}
 
-	r.rateLimitInfraInitialized = true
+	if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+		r.Logger.Error(err, "failed to delete ratelimit infra")
+	}
+}
+
+func (r *Runner) waitForProviderReady(ctx context.Context) bool {
+	if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+		return true
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-r.ProviderReady:
+		return true
+	}
 }
