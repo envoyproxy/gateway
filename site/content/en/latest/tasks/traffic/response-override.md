@@ -265,10 +265,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-override-local
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   responseOverride:
     - match:
         statusCodes:
@@ -293,10 +293,10 @@ kind: BackendTrafficPolicy
 metadata:
   name: response-override-local
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: foo
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
   responseOverride:
     - match:
         statusCodes:
