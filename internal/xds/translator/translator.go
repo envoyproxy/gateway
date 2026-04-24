@@ -160,7 +160,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 	}
 
 	// All XDS resources is ready, let's do the patch.
-	if err := processJSONPatches(tCtx, xdsIR.GlobalResources, xdsIR.EnvoyPatchPolicies); err != nil {
+	if err := processJSONPatches(tCtx, xdsIR.EnvoyPatchPolicies); err != nil {
 		// Since JSONPatch error is user-triggered, we don't fail the entire xDS translation so that the remaining
 		// valid xDS resources can be sent to the proxy.
 		t.Logger.Error(err, "Failed to process JSON patches")
@@ -1008,9 +1008,6 @@ func findXdsListeners(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []
 		if !ok {
 			continue
 		}
-		if strings.HasPrefix(listener.Name, readyListenerPrefix) {
-			continue
-		}
 		if stringMatched(name, listener.Name) {
 			result = append(result, r)
 		}
@@ -1050,7 +1047,7 @@ func findXdsRouteConfigs(tCtx *types.ResourceVersionTable, name *ir.StringMatch)
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	resources := findXdsClusters(tCtx, nil, &ir.StringMatch{Exact: &name})
+	resources := findXdsClusters(tCtx, &ir.StringMatch{Exact: &name})
 	if len(resources) > 0 {
 		return resources[0].(*clusterv3.Cluster)
 	}
@@ -1058,23 +1055,15 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 }
 
 // findXdsClusters finds xds clusters.
-func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
+func findXdsClusters(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
 	}
 
-	skippedClusters := sets.New(getRateLimitServiceClusterName(), wasmHTTPServiceClusterName)
-	// skip. proxy service cluster
-	if gResources != nil && gResources.ProxyServiceCluster != nil {
-		skippedClusters.Insert(gResources.ProxyServiceCluster.Name)
-	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
 		cluster, ok := r.(*clusterv3.Cluster)
 		if !ok {
-			continue
-		}
-		if skippedClusters.Has(cluster.Name) {
 			continue
 		}
 		if stringMatched(name, cluster.Name) {
@@ -1086,22 +1075,14 @@ func findXdsClusters(tCtx *types.ResourceVersionTable, gResources *ir.GlobalReso
 }
 
 // findXdsEndpoints finds xds endpoints.
-func findXdsEndpoints(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
+func findXdsEndpoints(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
 		return nil
-	}
-	skippedClusters := sets.New(getRateLimitServiceClusterName(), wasmHTTPServiceClusterName)
-	// skip. proxy service cluster
-	if gResources != nil && gResources.ProxyServiceCluster != nil {
-		skippedClusters.Insert(gResources.ProxyServiceCluster.Name)
 	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
 		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
 		if !ok {
-			continue
-		}
-		if skippedClusters.Has(endpoint.ClusterName) {
 			continue
 		}
 		if stringMatched(name, endpoint.ClusterName) {
@@ -1114,7 +1095,7 @@ func findXdsEndpoints(tCtx *types.ResourceVersionTable, gResources *ir.GlobalRes
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
 func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
-	resources := findXdsSecrets(tCtx, nil, &ir.StringMatch{Exact: &name})
+	resources := findXdsSecrets(tCtx, &ir.StringMatch{Exact: &name})
 	if len(resources) > 0 {
 		return resources[0].(*tlsv3.Secret)
 	}
@@ -1122,25 +1103,14 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 }
 
 // findXdsSecrets finds xds secrets.
-func findXdsSecrets(tCtx *types.ResourceVersionTable, gResources *ir.GlobalResources, name *ir.StringMatch) []cachetypes.Resource {
+func findXdsSecrets(tCtx *types.ResourceVersionTable, name *ir.StringMatch) []cachetypes.Resource {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
 		return nil
-	}
-	// skip secrets that are used for
-	skippedSecrets := sets.New(
-		"xds_trusted_ca", "jwt-sa-bearer",
-	)
-	// envoy client certificate
-	if gResources != nil && gResources.EnvoyClientCertificate != nil {
-		skippedSecrets.Insert(gResources.EnvoyClientCertificate.Name)
 	}
 	var result []cachetypes.Resource
 	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
 		secret, ok := r.(*tlsv3.Secret)
 		if !ok {
-			continue
-		}
-		if skippedSecrets.Has(secret.Name) {
 			continue
 		}
 		if stringMatched(name, secret.Name) {

@@ -46,7 +46,8 @@
   name: second-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- circuitBreakers:
+- altStatName: altStatName
+  circuitBreakers:
     thresholds:
     - maxRetries: 1024
   commonLbConfig: {}
