@@ -17,6 +17,7 @@ bug fixes: |
   Fixed BackendTLSPolicy selection to prefer section name over wildcard match on the same backend.
   Fixed missing deprecated field warning in ClientTrafficPolicy and SecurityPolicy.
   Fixed ClientTrafficPolicy TLS cipher validation rejecting supported IANA/RFC cipher suite names.
+  Fixed invalid TLS certificate on one Gateway breaking other Gateways' listeners in mergeGateways mode by skipping non-ready listeners from the shared xDS IR and excluding them from TLS overlap checks.
 
 # Enhancements that improve performance.
 performance improvements: |
