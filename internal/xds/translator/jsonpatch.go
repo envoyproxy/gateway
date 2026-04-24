@@ -120,7 +120,6 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			}
 
 			var patchErrors error
-			var anyPatched bool
 			for _, dest := range dests {
 				var (
 					resourceJSON []byte
@@ -170,15 +169,10 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
-
-				// Mark that at least one dest has been patched successfully,
-				// so that we can report partial success if there are multiple dests and some of them fail
-				anyPatched = true
 			}
 
-			// If there are multiple dests and some of them fail,
-			// consider it as successful and ignore the failures to patch other dests.
-			if !anyPatched && patchErrors != nil {
+			// Report all patch errors, including partial failures
+			if patchErrors != nil {
 				tErrs = errors.Join(tErrs, patchErrors)
 			}
 		}
