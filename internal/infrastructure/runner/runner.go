@@ -18,8 +18,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
-var newInfraManager = infrastructure.NewManager
-
 type Config struct {
 	config.Server
 	InfraIR      *message.InfraIR
@@ -54,7 +52,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		return nil
 	}
 	errNotifier := message.RunnerErrorNotifier{RunnerName: r.Name(), RunnerErrors: r.RunnerErrors}
-	r.mgr, err = newInfraManager(ctx, &r.Server, r.Logger, errNotifier)
+	r.mgr, err = infrastructure.NewManager(ctx, &r.Server, r.Logger, errNotifier)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
@@ -110,7 +108,6 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			default:
 			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
-
 			val := update.Value
 
 			if update.Delete {
