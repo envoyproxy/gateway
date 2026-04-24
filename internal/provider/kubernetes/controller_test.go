@@ -2450,6 +2450,48 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			expectedNames: sets.New("sp-gateway", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
 		},
 		{
+			name: "ExtensionServerPolicy includes grants for its group kind and configured target kinds",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.ExtensionServerPolicies = append(resourceTree.ExtensionServerPolicies, unstructured.Unstructured{
+					Object: map[string]any{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       "FooPolicy",
+						"metadata": map[string]any{
+							"name":      "foo",
+							"namespace": policyNS,
+						},
+						"spec": map[string]any{
+							"targetRefs": []any{
+								map[string]any{
+									"group": gwapiv1.GroupName,
+									"kind":  resource.KindGateway,
+									"name":  "gateway",
+								},
+							},
+						},
+					},
+				})
+			},
+			referenceGrants: []client.Object{
+				func() *gwapiv1b1.ReferenceGrant {
+					rg := refGrant("ext-gateway", gatewayNS, "FooPolicy", policyNS, gwapiv1.GroupName, resource.KindGateway)
+					rg.Spec.From[0].Group = "gateway.example.io"
+					return rg
+				}(),
+				func() *gwapiv1b1.ReferenceGrant {
+					rg := refGrant("ext-http-route", routeNS, "FooPolicy", policyNS, gwapiv1.GroupName, resource.KindHTTPRoute)
+					rg.Spec.From[0].Group = "gateway.example.io"
+					return rg
+				}(),
+				func() *gwapiv1b1.ReferenceGrant {
+					rg := refGrant("ext-wrong-group", gatewayNS, "FooPolicy", policyNS, gwapiv1.GroupName, resource.KindGateway)
+					rg.Spec.From[0].Group = "other.example.io"
+					return rg
+				}(),
+			},
+			expectedNames: sets.New("ext-gateway"),
+		},
+		{
 			name: "ignores non matching grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
