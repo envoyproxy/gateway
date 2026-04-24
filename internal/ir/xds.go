@@ -3536,9 +3536,13 @@ type ExtProc struct {
 	AllowModeOverride bool `json:"allowModeOverride,omitempty" yaml:"allowModeOverride,omitempty"`
 
 	// CustomName is a user-assigned logical name for this extension instance,
-	// used to resolve %EG_EXT_FILTER_STATE(name:attribute)% operators in access
+	// used to resolve %EG_EXT_PROC_FILTER_STATE(name:attribute)% operators in access
 	// log format strings to the corresponding Envoy filter state key at translation time.
 	CustomName string `json:"customName,omitempty" yaml:"customName,omitempty"`
+
+	// StatPrefix is the prefix used for Envoy statistics emitted by this ext-proc filter instance.
+	// Empty string means fall back to the sanitized internal name.
+	StatPrefix string `json:"statPrefix,omitempty" yaml:"statPrefix,omitempty"`
 }
 
 // Lua holds the information associated with Lua extensions

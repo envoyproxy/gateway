@@ -10,6 +10,7 @@ envoyExtensionPolicies:
       - name: grpc-backend-1
         port: 9000
       name: auth
+      statPrefix: auth-east
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -44,7 +45,7 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend-2
         port: 9000
-      name: auth
+      name: enrich
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -59,18 +60,49 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: ext-proc name(s) [auth] already claimed on listener default/gateway-1/http
-          by an older policy; %EG_EXT_PROC_FILTER_STATE% access log operator will
-          not resolve for this policy; spec.targetRef is deprecated, use spec.targetRefs
-          instead
-        reason: Warnings
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
         status: "True"
         type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: policy-for-httproute-3
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-3
+        port: 9000
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
       - lastTransitionTime: null
         message: Policy has been accepted.
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -89,7 +121,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -169,6 +201,43 @@ httpRoutes:
       matches:
       - path:
           value: /bar
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-3
+    namespace: default
+  spec:
+    hostnames:
+    - www.baz.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /baz
   status:
     parents:
     - conditions:
@@ -291,7 +360,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute-1/extproc/0
-            statPrefix: auth
+            statPrefix: auth-east
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -325,6 +394,7 @@ xdsIR:
         envoyExtensions:
           extProcs:
           - authority: grpc-backend-2.default:9000
+            customName: enrich
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy
@@ -345,7 +415,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute-2/extproc/0
-            statPrefix: auth
+            statPrefix: enrich
         hostname: www.bar.com
         isHTTP2: false
         metadata:
@@ -357,6 +427,59 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /bar
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-3
+            namespace: default
+          name: httproute/default/httproute-3/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-3/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        envoyExtensions:
+          extProcs:
+          - authority: grpc-backend-3.default:9000
+            destination:
+              metadata:
+                kind: EnvoyExtensionPolicy
+                name: policy-for-httproute-3
+                namespace: default
+              name: envoyextensionpolicy/default/policy-for-httproute-3/extproc/0
+              settings:
+              - addressType: IP
+                endpoints:
+                - host: 9.9.9.9
+                  port: 9000
+                metadata:
+                  kind: Service
+                  name: grpc-backend-3
+                  namespace: default
+                  sectionName: "9000"
+                name: envoyextensionpolicy/default/policy-for-httproute-3/extproc/0/backend/0
+                protocol: GRPC
+                weight: 1
+            name: envoyextensionpolicy/default/policy-for-httproute-3/extproc/0
+        hostname: www.baz.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-3
+          namespace: default
+        name: httproute/default/httproute-3/rule/0/match/0/www_baz_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /baz
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

@@ -107,6 +107,10 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 
 	config.ProcessingMode = buildProcessingMode(extProc)
 
+	if extProc.StatPrefix != "" {
+		config.StatPrefix = extProc.StatPrefix
+	}
+
 	if extProc.FailOpen != nil {
 		config.FailureModeAllow = *extProc.FailOpen
 	}

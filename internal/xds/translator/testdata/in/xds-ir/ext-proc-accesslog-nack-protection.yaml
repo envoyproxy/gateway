@@ -2,14 +2,14 @@ accesslog:
   text:
   - path: "/dev/stdout"
     format: |
-      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_FILTER_STATE(nonexistent:latency_ns)%
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
   json:
   - path: "/dev/stdout"
     json:
     - key: method
       value: "%REQ(:METHOD)%"
     - key: ep_latency
-      value: "%EG_EXT_FILTER_STATE(nonexistent:latency_ns)%"
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
 http:
 # Listener 1: non-TLS — HCM lives in DefaultFilterChain
 - name: "envoy-gateway/gateway-1/http"
@@ -31,13 +31,13 @@ http:
     destination:
       name: httproute/default/httproute-1/rule/0
       settings:
-        - addressType: IP
-          endpoints:
-            - host: 1.2.3.4
-              port: 8080
-          protocol: HTTP
-          weight: 1
-          name: httproute/default/httproute-1/rule/0/backend/0
+      - addressType: IP
+        endpoints:
+        - host: 1.2.3.4
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-1/rule/0/backend/0
 # Listener 2: TLS — HCM lives in a named FilterChain
 - name: "envoy-gateway/gateway-1/https"
   address: "0.0.0.0"
@@ -66,10 +66,10 @@ http:
     destination:
       name: httproute/default/httproute-2/rule/0
       settings:
-        - addressType: IP
-          endpoints:
-            - host: 5.6.7.8
-              port: 8080
-          protocol: HTTP
-          weight: 1
-          name: httproute/default/httproute-2/rule/0/backend/0
+      - addressType: IP
+        endpoints:
+        - host: 5.6.7.8
+          port: 8080
+        protocol: HTTP
+        weight: 1
+        name: httproute/default/httproute-2/rule/0/backend/0

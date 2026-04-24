@@ -214,6 +214,216 @@ Verify the BackendTLSPolicy configuration:
 kubectl get backendtlspolicy/grpc-ext-proc-btls -o yaml
 ```
 
+### Observability
+
+Each `extProc` entry exposes two optional fields for observability:
+
+- **`name`**: assigns a friendly identifier to the ext-proc instance. Once set, you can reference it in your `EnvoyProxy` access log format strings using the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` operator. Envoy Gateway resolves this at xDS translation time — Envoy only ever sees the standard `%FILTER_STATE(...)%` form.
+
+- **`statPrefix`**: controls the Envoy stat prefix for this filter instance (e.g. `ext_proc.<statPrefix>.streams_started`). When unset, defaults to `name` if `name` is set, otherwise Envoy uses its own default. Use a shared `statPrefix` across deployments to aggregate metrics, or distinct values to isolate per-deployment counters.
+
+#### Access log operator
+
+Assign a `name` to an ext-proc entry in your `EnvoyExtensionPolicy`. Names consist of lowercase alphanumeric characters and hyphens:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: ext-proc-example
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: myapp
+  extProc:
+  - name: auth-service
+    backendRefs:
+    - name: grpc-ext-proc
+      port: 9002
+EOF
+```
+
+Use the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` operator in any text or JSON access log format string in your `EnvoyProxy`. Available attributes depend on what the ext-proc service writes to filter state; common ones include `latency_ns` and `grpc_status_code`. The operator also passes through Envoy's optional format arguments verbatim (serialization type and max length):
+
+```
+%EG_EXT_PROC_FILTER_STATE(auth-service:latency_ns:TYPED:64)%
+```
+
+Text format example:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: ext-proc-accesslog
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] %REQ(:METHOD)% %RESPONSE_CODE% auth_latency=%EG_EXT_PROC_FILTER_STATE(auth-service:latency_ns)%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+EOF
+```
+
+JSON format is also supported:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: ext-proc-accesslog-json
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: JSON
+            json:
+              method: "%REQ(:METHOD)%"
+              response_code: "%RESPONSE_CODE%"
+              auth_latency_ns: "%EG_EXT_PROC_FILTER_STATE(auth-service:latency_ns)%"
+              auth_grpc_status: "%EG_EXT_PROC_FILTER_STATE(auth-service:grpc_status_code)%"
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+EOF
+```
+
+A single format string can reference ext-proc instances from multiple EEPs — each operator resolves independently by name.
+
+#### Name conflicts and shared names
+
+Names are not validated for uniqueness across policies. When multiple `EnvoyExtensionPolicy` resources targeting routes on the same listener claim the same name, **oldest policy wins**: the EEP with the earliest creation timestamp retains the name; newer ones receive a `Warning` condition with reason `AmbiguousDefinition` and their operator resolves to `[EG_UNRESOLVED:name]`. The routes themselves still execute their own ext-proc filters normally.
+
+For the grouping pattern to work correctly, routes must reside on **separate listeners** — each listener gets its own HCM and isolated ext-proc filter chain. When routes share a listener/port, they share the same HCM and operator resolution is not per-route.
+
+> **MergeGateways (non-TLS):** When [`MergeGateways`](https://gateway.envoyproxy.io/docs/api/extension_types/#mergegatewaysconfig) is enabled, non-TLS listeners on the same port share a single HCM. Name collisions across gateways are resolved silently with no warning — the oldest merged gateway wins. Use distinct names across merged gateways.
+
+A common safe pattern is duplicating the same ext-proc policy across namespaces, each on a dedicated listener:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-team-a
+  namespace: namespace-a
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-team-b
+  namespace: namespace-b
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 8081
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route-a
+  namespace: namespace-a
+spec:
+  parentRefs:
+  - name: gateway-team-a
+    namespace: namespace-a
+  rules:
+  - backendRefs:
+    - name: service-a
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route-b
+  namespace: namespace-b
+spec:
+  parentRefs:
+  - name: gateway-team-b
+    namespace: namespace-b
+  rules:
+  - backendRefs:
+    - name: service-b
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: auth-policy
+  namespace: namespace-a
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-a
+  extProc:
+  - name: auth-service
+    backendRefs:
+    - name: grpc-auth
+      namespace: namespace-a
+      port: 9002
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: auth-policy
+  namespace: namespace-b
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: route-b
+  extProc:
+  - name: auth-service
+    backendRefs:
+    - name: grpc-auth
+      namespace: namespace-b
+      port: 9002
+EOF
+```
+
+A single access log format covers both gateways because each listener resolves the operator against its own isolated filter chain:
+
+```yaml
+spec:
+  telemetry:
+    accessLog:
+      settings:
+        - format:
+            type: Text
+            text: |
+              [%START_TIME%] %REQ(:METHOD)% %RESPONSE_CODE% auth_latency=%EG_EXT_PROC_FILTER_STATE(auth-service:latency_ns)%
+          sinks:
+            - type: File
+              file:
+                path: /dev/stdout
+```
+
+For a full explanation of the design, see the [Ext-Proc Observability design document](/community/design/ext-proc-observability).
+
 ### Testing
 
 Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../../quickstart) is set. If not, follow the

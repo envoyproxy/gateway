@@ -86,34 +86,38 @@ func init() {
 	}
 }
 
-// egExtFilterStateRe matches %EG_EXT_FILTER_STATE(name:attribute[:<format_args>])% operators.
-// Optional trailing :<format_args> mirrors %FILTER_STATE% args and is passed through verbatim.
-var egExtFilterStateRe = regexp.MustCompile(`%EG_EXT_FILTER_STATE\(([^:]+):([^):]+)((?::[^)]*)*)\)%`)
+// egExtFilterStateRe matches %EG_EXT_PROC_FILTER_STATE(name:args)% operators where args is passed
+// through verbatim as the %FILTER_STATE% arguments after the key. Users are responsible for
+// including the correct serialize type, e.g. %EG_EXT_PROC_FILTER_STATE(auth-proc:FIELD:latency_ns)%.
+var egExtFilterStateRe = regexp.MustCompile(`%EG_EXT_PROC_FILTER_STATE\(([^:)]+)(:[^)]*)\)%`)
 
-const egOperatorPrefix = "%EG_EXT_FILTER_STATE("
+const egOperatorPrefix = "%EG_EXT_PROC_FILTER_STATE("
 
 // resolveEGOperators rewrites all EG-synthetic access log operators to their canonical Envoy equivalents.
-// Currently handles %EG_EXT_FILTER_STATE(name:attr)% → %FILTER_STATE(<filter-name>:attr)%.
-// Operators that cannot be resolved (no matching ext-proc) are replaced with "-".
+// Handles %EG_EXT_PROC_FILTER_STATE(name:args)% → %FILTER_STATE(<filter-name>:args)%.
+// args is passed through verbatim — users control the serialize type and any additional arguments.
+// Operators that cannot be resolved (no matching ext-proc) are replaced with "[EG_UNRESOLVED:name]"
+// so users can distinguish a translation-time name lookup failure from a runtime filter state miss.
 func resolveEGOperators(format string, extensions []ir.ExtProc) string {
 	if !strings.Contains(format, egOperatorPrefix) {
 		return format
 	}
 	return egExtFilterStateRe.ReplaceAllStringFunc(format, func(match string) string {
 		parts := egExtFilterStateRe.FindStringSubmatch(match)
-		name, attr, suffix := parts[1], parts[2], parts[3]
-		for _, ep := range extensions {
+		name, args := parts[1], parts[2]
+		for i := range extensions {
+			ep := &extensions[i]
 			if ep.CustomName == name {
 				filterStateName := fmt.Sprintf("%s/%s", string(egv1a1.EnvoyFilterExtProc), ep.Name)
-				return fmt.Sprintf("%%FILTER_STATE(%s:%s%s)%%", filterStateName, attr, suffix)
+				return fmt.Sprintf("%%FILTER_STATE(%s%s)%%", filterStateName, args)
 			}
 		}
-		return "-"
+		return fmt.Sprintf("[EG_UNRESOLVED:%s]", name)
 	})
 }
 
 // hasUnresolvedEGOperators reports whether any access log entry in the slice
-// still contains unresolved EG-synthetic operators (e.g. %EG_EXT_FILTER_STATE(...)%).
+// still contains unresolved EG-synthetic operators (e.g. %EG_EXT_PROC_FILTER_STATE(...)%).
 func hasUnresolvedEGOperators(logs []*accesslog.AccessLog) bool {
 	for _, al := range logs {
 		if accessLogEntryHasUnresolvedEGOperators(al) {
@@ -209,7 +213,7 @@ func patchAccessLogEntry(al *accesslog.AccessLog, extensions []ir.ExtProc) (*acc
 }
 
 // collectListenerExtProcs returns the deduplicated ext-proc instances across all routes
-// on a single IR listener, for use in %EG_EXT_FILTER_STATE(...)% operator resolution.
+// on a single IR listener, for use in %EG_EXT_PROC_FILTER_STATE(...)% operator resolution.
 func collectListenerExtProcs(irListener *ir.HTTPListener) []ir.ExtProc {
 	seen := map[string]struct{}{}
 	var result []ir.ExtProc
@@ -217,10 +221,11 @@ func collectListenerExtProcs(irListener *ir.HTTPListener) []ir.ExtProc {
 		if route.EnvoyExtensions == nil {
 			continue
 		}
-		for _, ep := range route.EnvoyExtensions.ExtProcs {
+		for i := range route.EnvoyExtensions.ExtProcs {
+			ep := &route.EnvoyExtensions.ExtProcs[i]
 			if _, ok := seen[ep.Name]; !ok {
 				seen[ep.Name] = struct{}{}
-				result = append(result, ep)
+				result = append(result, *ep)
 			}
 		}
 	}

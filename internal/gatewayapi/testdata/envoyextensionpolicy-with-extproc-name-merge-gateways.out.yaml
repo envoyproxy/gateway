@@ -342,6 +342,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute-1/extproc/0
+            statPrefix: auth
         hostname: www.foo.com
         isHTTP2: false
         metadata:
@@ -411,6 +412,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-httproute-2/extproc/0
+            statPrefix: auth
         hostname: www.bar.com
         isHTTP2: false
         metadata:

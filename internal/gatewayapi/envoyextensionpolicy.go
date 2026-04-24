@@ -622,7 +622,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 									ancestorRefs,
 									t.GatewayControllerName,
 									egv1a1.PolicyReasonAmbiguousDefinition,
-									fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by an older policy; %%EG_EXT_FILTER_STATE%% access log operator will not resolve for this policy",
+									fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by an older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
 										conflictedNames, irListener.Name),
 									policy.Generation,
 								)
@@ -649,7 +649,6 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 
 	return errs
 }
-
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
@@ -844,7 +843,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -865,7 +864,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
@@ -907,6 +906,13 @@ func (t *Translator) buildExtProc(
 
 	if extProc.Name != nil {
 		extProcIR.CustomName = *extProc.Name
+	}
+
+	switch {
+	case extProc.StatPrefix != nil:
+		extProcIR.StatPrefix = *extProc.StatPrefix
+	case extProc.Name != nil:
+		extProcIR.StatPrefix = *extProc.Name
 	}
 
 	if extProc.MessageTimeout != nil {

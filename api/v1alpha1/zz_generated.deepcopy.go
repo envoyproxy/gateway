@@ -3196,6 +3196,11 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.StatPrefix != nil {
+		in, out := &in.StatPrefix, &out.StatPrefix
+		*out = new(string)
+		**out = **in
+	}
 	if in.MessageTimeout != nil {
 		in, out := &in.MessageTimeout, &out.MessageTimeout
 		*out = new(v1.Duration)

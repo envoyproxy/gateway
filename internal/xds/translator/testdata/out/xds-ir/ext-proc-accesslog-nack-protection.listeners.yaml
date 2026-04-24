@@ -9,7 +9,7 @@
       logFormat:
         textFormatSource:
           inlineString: |
-            [%START_TIME%] %REQ(:METHOD)% ep=-
+            [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
       path: /dev/stdout
   - filter:
       responseFlagFilter:
@@ -20,7 +20,7 @@
       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
       logFormat:
         jsonFormat:
-          ep_latency: '-'
+          ep_latency: '[EG_UNRESOLVED:nonexistent]'
           method: '%REQ(:METHOD)%'
       path: /dev/stdout
   address:
@@ -39,14 +39,14 @@
             logFormat:
               textFormatSource:
                 inlineString: |
-                  [%START_TIME%] %REQ(:METHOD)% ep=-
+                  [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
             path: /dev/stdout
         - name: envoy.access_loggers.file
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
               jsonFormat:
-                ep_latency: '-'
+                ep_latency: '[EG_UNRESOLVED:nonexistent]'
                 method: '%REQ(:METHOD)%'
             path: /dev/stdout
         commonHttpProtocolOptions:
@@ -86,7 +86,7 @@
       logFormat:
         textFormatSource:
           inlineString: |
-            [%START_TIME%] %REQ(:METHOD)% ep=-
+            [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
       path: /dev/stdout
   - filter:
       responseFlagFilter:
@@ -97,7 +97,7 @@
       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
       logFormat:
         jsonFormat:
-          ep_latency: '-'
+          ep_latency: '[EG_UNRESOLVED:nonexistent]'
           method: '%REQ(:METHOD)%'
       path: /dev/stdout
   address:
@@ -119,14 +119,14 @@
             logFormat:
               textFormatSource:
                 inlineString: |
-                  [%START_TIME%] %REQ(:METHOD)% ep=-
+                  [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
             path: /dev/stdout
         - name: envoy.access_loggers.file
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
               jsonFormat:
-                ep_latency: '-'
+                ep_latency: '[EG_UNRESOLVED:nonexistent]'
                 method: '%REQ(:METHOD)%'
             path: /dev/stdout
         commonHttpProtocolOptions:

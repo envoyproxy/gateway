@@ -9,7 +9,7 @@
       logFormat:
         textFormatSource:
           inlineString: |
-            [%START_TIME%] %REQ(:METHOD)% req_proc=- resp_proc=-
+            [%START_TIME%] %REQ(:METHOD)% req_proc=[EG_UNRESOLVED:req-processor] resp_proc=[EG_UNRESOLVED:resp-processor]
       path: /dev/stdout
   - filter:
       responseFlagFilter:
@@ -21,8 +21,8 @@
       logFormat:
         jsonFormat:
           method: '%REQ(:METHOD)%'
-          req_processor_latency_ns: '-'
-          resp_processor_latency_ns: '-'
+          req_processor_latency_ns: '[EG_UNRESOLVED:req-processor]'
+          resp_processor_latency_ns: '[EG_UNRESOLVED:resp-processor]'
       path: /dev/stdout
   address:
     socketAddress:
@@ -40,7 +40,7 @@
             logFormat:
               textFormatSource:
                 inlineString: |
-                  [%START_TIME%] %REQ(:METHOD)% req_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:latency_ns)% resp_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:latency_ns)%
+                  [%START_TIME%] %REQ(:METHOD)% req_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:FIELD:bytes_sent)% resp_proc=%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:FIELD:bytes_sent)%
             path: /dev/stdout
         - name: envoy.access_loggers.file
           typedConfig:
@@ -48,8 +48,8 @@
             logFormat:
               jsonFormat:
                 method: '%REQ(:METHOD)%'
-                req_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:latency_ns)%'
-                resp_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:latency_ns)%'
+                req_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/0:FIELD:bytes_sent)%'
+                resp_processor_latency_ns: '%FILTER_STATE(envoy.filters.http.ext_proc/envoyextensionpolicy/default/my-eep/extproc/1:FIELD:bytes_sent)%'
             path: /dev/stdout
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST

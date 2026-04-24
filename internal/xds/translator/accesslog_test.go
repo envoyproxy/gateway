@@ -36,41 +36,41 @@ func TestResolveEGExtFilterStateOperators(t *testing.T) {
 	}{
 		{
 			name:     "resolves labeled ext-proc in text format",
-			format:   "[%START_TIME%] %EG_EXT_FILTER_STATE(auth:latency_ns)%",
-			expected: "[%START_TIME%] %FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:latency_ns)%",
+			format:   "[%START_TIME%] %EG_EXT_PROC_FILTER_STATE(auth:FIELD:bytes_sent)%",
+			expected: "[%START_TIME%] %FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:FIELD:bytes_sent)%",
 		},
 		{
 			name:     "resolves second labeled ext-proc",
-			format:   "%EG_EXT_FILTER_STATE(enrichment:grpc_status_code)%",
-			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/1:grpc_status_code)%",
+			format:   "%EG_EXT_PROC_FILTER_STATE(enrichment:FIELD:bytes_sent)%",
+			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/1:FIELD:bytes_sent)%",
 		},
 		{
 			name:     "multiple operators in same string",
-			format:   "%EG_EXT_FILTER_STATE(auth:latency_ns)% %EG_EXT_FILTER_STATE(enrichment:grpc_status_code)%",
-			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:latency_ns)% %FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/1:grpc_status_code)%",
+			format:   "%EG_EXT_PROC_FILTER_STATE(auth:FIELD:bytes_sent)% %EG_EXT_PROC_FILTER_STATE(enrichment:FIELD:bytes_sent)%",
+			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:FIELD:bytes_sent)% %FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/1:FIELD:bytes_sent)%",
 		},
 		{
-			name:     "passes through serialization type",
-			format:   "%EG_EXT_FILTER_STATE(auth:latency_ns:TYPED)%",
-			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:latency_ns:TYPED)%",
+			name:     "passes through TYPED serialize type",
+			format:   "%EG_EXT_PROC_FILTER_STATE(auth:TYPED)%",
+			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:TYPED)%",
 		},
 		{
-			name:     "passes through serialization type and max length",
-			format:   "%EG_EXT_FILTER_STATE(auth:latency_ns:PLAIN:64)%",
-			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:latency_ns:PLAIN:64)%",
+			name:     "passes through PLAIN serialize type with max length",
+			format:   "%EG_EXT_PROC_FILTER_STATE(auth:PLAIN:64)%",
+			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:PLAIN:64)%",
 		},
 		{
-			name:     "unknown label replaced with dash",
-			format:   "%EG_EXT_FILTER_STATE(unknown:latency_ns)%",
-			expected: "-",
+			name:     "unknown label replaced with unresolved sentinel",
+			format:   "%EG_EXT_PROC_FILTER_STATE(unknown:FIELD:bytes_sent)%",
+			expected: "[EG_UNRESOLVED:unknown]",
 		},
 		{
 			name:     "mixed: known and unknown labels in same string",
-			format:   "%EG_EXT_FILTER_STATE(auth:latency_ns)% %EG_EXT_FILTER_STATE(unknown:grpc_status_code)%",
-			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:latency_ns)% -",
+			format:   "%EG_EXT_PROC_FILTER_STATE(auth:FIELD:bytes_sent)% %EG_EXT_PROC_FILTER_STATE(unknown:FIELD:bytes_sent)%",
+			expected: "%FILTER_STATE(envoy.filters.http.ext_proc/ns/extproc/my-eep/0:FIELD:bytes_sent)% [EG_UNRESOLVED:unknown]",
 		},
 		{
-			name:     "no EG_EXT_FILTER_STATE operator — unchanged",
+			name:     "no EG_EXT_PROC_FILTER_STATE operator — unchanged",
 			format:   "[%START_TIME%] %REQ(:METHOD)%",
 			expected: "[%START_TIME%] %REQ(:METHOD)%",
 		},
@@ -80,16 +80,16 @@ func TestResolveEGExtFilterStateOperators(t *testing.T) {
 			expected: "",
 		},
 		{
-			name:     "resolves with nil extProcs list — replaced with dash",
-			format:   "%EG_EXT_FILTER_STATE(auth:latency_ns)%",
-			expected: "-",
+			name:     "resolves with nil extProcs list — replaced with unresolved sentinel",
+			format:   "%EG_EXT_PROC_FILTER_STATE(auth:FIELD:bytes_sent)%",
+			expected: "[EG_UNRESOLVED:auth]",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eps := extProcs
-			if tt.name == "resolves with nil extProcs list — replaced with dash" {
+			if tt.name == "resolves with nil extProcs list — replaced with unresolved sentinel" {
 				eps = nil
 			}
 			got := resolveEGOperators(tt.format, eps)

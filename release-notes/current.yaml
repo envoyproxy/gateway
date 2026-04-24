@@ -46,7 +46,8 @@ new features: |
   Added support for OpenTelemetry sampler configuration for tracing.
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
-  Added support for `%EG_EXT_FILTER_STATE(name:attribute)%`, a synthetic access log operator that resolves ext-proc filter state references by a user-defined name at xDS translation time, without requiring knowledge of EG's internal filter naming conventions.
+  Added support for `name` field on ext-proc entries in `EnvoyExtensionPolicy`, enabling the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` access log operator that resolves ext-proc filter state by a user-defined name at xDS translation time, without requiring knowledge of EG's internal filter naming conventions.
+  Added support for `statPrefix` field on ext-proc entries in `EnvoyExtensionPolicy`, allowing users to control the Envoy stat prefix for ext-proc filter instances to get readable metric names and intentionally aggregate or isolate stats across deployments.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
