@@ -3332,19 +3332,67 @@ spec:
               rule: '(has(self.targetRef) && !has(self.targetRefs)) || (!has(self.targetRef)
                 && has(self.targetRefs)) || (has(self.targetSelectors) && self.targetSelectors.size()
                 > 0) '
-            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
-              rule: 'has(self.targetRef) ? self.targetRef.group == ''gateway.networking.k8s.io''
-                : true '
-            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
+            - message: this policy can only have a targetRef.group of gateway.networking.k8s.io,
+                multicluster.x-k8s.io, gateway.envoyproxy.io, or an empty string
+              rule: 'has(self.targetRef) ? self.targetRef.group in [''gateway.networking.k8s.io'',
+                '''', ''multicluster.x-k8s.io'', ''gateway.envoyproxy.io''] : true '
+            - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute/Service/ServiceImport/Backend
               rule: 'has(self.targetRef) ? self.targetRef.kind in [''Gateway'', ''HTTPRoute'',
-                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''] : true'
-            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group ==
-                ''gateway.networking.k8s.io'') : true '
-            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
-                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute''])
+                ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'', ''Service'',
+                ''ServiceImport'', ''Backend''] : true'
+            - message: this policy can only have a targetRefs[*].group of gateway.networking.k8s.io,
+                multicluster.x-k8s.io, gateway.envoyproxy.io, or an empty string
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.group in
+                [''gateway.networking.k8s.io'', '''', ''multicluster.x-k8s.io'', ''gateway.envoyproxy.io''])
                 : true '
+            - message: this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute/Service/ServiceImport/Backend
+              rule: 'has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in [''Gateway'',
+                ''HTTPRoute'', ''GRPCRoute'', ''UDPRoute'', ''TCPRoute'', ''TLSRoute'',
+                ''Service'', ''ServiceImport'', ''Backend'']) : true '
+            - message: rateLimit is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.rateLimit)'
+            - message: faultInjection is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.faultInjection)'
+            - message: useClientProtocol is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.useClientProtocol)'
+            - message: compression is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.compression)'
+            - message: compressor is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.compressor)'
+            - message: responseOverride is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.responseOverride)'
+            - message: httpUpgrade is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.httpUpgrade)'
+            - message: requestBuffer is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.requestBuffer)'
+            - message: telemetry is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.telemetry)'
+            - message: routingType is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.routingType)'
+            - message: retry is not allowed when targeting a backend
+              rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
+                ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.retry)'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: requestBuffer cannot be used together with httpUpgrade
