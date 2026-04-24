@@ -1,0 +1,85 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: default
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.foo.com
+    parentRefs:
+    - namespace: default
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /foo
+      backendRefs:
+      - name: service-1
+        port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: grpc-backend
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-grpc-backend
+    namespace: default
+    labels:
+      kubernetes.io/service-name: grpc-backend
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+envoyExtensionPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    extProc:
+    - backendRefs:
+      - Name: grpc-backend
+        Port: 9000
+      observabilityMode: true
+      processingMode:
+        request:
+          body: Streamed
+        response:
+          body: Streamed

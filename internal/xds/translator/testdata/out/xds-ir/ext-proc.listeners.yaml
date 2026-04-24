@@ -79,6 +79,7 @@
               receivingNamespaces:
                 untyped:
                 - envoy.filters.http.prc_ext
+            observabilityMode: true
             processingMode:
               requestHeaderMode: SKIP
               requestTrailerMode: SKIP
