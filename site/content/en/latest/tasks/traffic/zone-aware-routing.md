@@ -11,6 +11,27 @@ Zone-aware routing may be enabled in one of two ways:
 
 When both a backendRef and a [BackendTrafficPolicy][BackendTrafficPolicy] include a configuration for zone awareness, the [BackendTrafficPolicy][BackendTrafficPolicy] takes precedence.
 
+## Supported Combinations
+
+The `zoneAware` field supports two modes: `preferLocal` (prefer same-zone endpoints while maintaining overall balance) and `weightedZones` (explicit per-zone traffic weights). Not all load balancing policies support both modes:
+
+| LB Policy | `preferLocal` | `weightedZones` |
+|---|---|---|
+| `RoundRobin` | ✓ | ✓ |
+| `LeastRequest` | ✓ | ✓ |
+| `Random` | ✓ | ✓ |
+| `ConsistentHash` | ✗ | ✓ |
+| `BackendUtilization` | ✗ | ✓ |
+| `DynamicModule` | ✗ | ✗ |
+
+**Why some combinations are unsupported:**
+
+- **`ConsistentHash` + `preferLocal`**: Envoy's consistent hashing policies (Maglev/RingHash) route based on a request hash rather than endpoint locality, so the prefer-local algorithm cannot be layered on top. Use `weightedZones` to influence traffic distribution across zones while preserving hash-based affinity.
+- **`BackendUtilization` + `preferLocal`**: Envoy's `wrr_locality` extension, which wraps `BackendUtilization` with locality-weight support, does not implement the prefer-local routing algorithm. Only `weightedZones` is supported.
+- **`DynamicModule` + any zone-aware mode**: Custom load balancing modules manage their own endpoint selection entirely. Zone-aware routing cannot be layered on top of an opaque third-party algorithm.
+
+`preferLocal` and `weightedZones` are mutually exclusive and cannot be set together for any policy.
+
 ## Prerequisites
 * The Kubernetes cluster's nodes must indicate topology information via the `topology.kubernetes.io/zone` [well-known label][Kubernetes well-known metadata].
 * There must be at least two valid topology zones for scheduling.
@@ -119,6 +140,8 @@ spec:
 
 ### Option 2: BackendTrafficPolicy
 Zone aware routing can also be enabled directly with a [BackendTrafficPolicy][BackendTrafficPolicy].
+
+#### PreferLocal
 The example below configures similar behavior to Kubernetes Traffic Distribution and forces all traffic to the local zone via the `force` field instead
 of Envoy's default behavior which _prefers_ routing locally as much as possible while still achieving overall equal request distribution across all endpoints.
 
@@ -165,6 +188,63 @@ spec:
         minEndpointsThreshold: 1 # Zone-aware routing is disabled if total number of endpoints is less than this threshold
         force: # Forces all traffic to stay within the local zone, regardless of upstream endpoint distribution between zones
           minEndpointsInZoneThreshold: 1  # If fewer local endpoints exist than this threshold, fallback to standard zone-aware routing behavior
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+#### WeightedZones
+`weightedZones` distributes traffic across zones proportionally according to explicit weights. Zones not listed receive a default weight of 1.
+This mode is supported by `RoundRobin`, `LeastRequest`, `Random`, `ConsistentHash`, and `BackendUtilization`.
+
+The example below routes 70% of traffic to `us-east-1a` and 30% to `us-east-1b` using `BackendUtilization`, which combines ORCA-based backend load metrics with locality weighting via Envoy's `wrr_locality` extension.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: zone-weighted-routing
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: zone-aware-routing
+  loadBalancer:
+    type: BackendUtilization
+    backendUtilization: {}
+    zoneAware:
+      weightedZones:
+      - zone: us-east-1a
+        weight: 70
+      - zone: us-east-1b
+        weight: 30
+EOF
+```
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+```yaml
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: zone-weighted-routing
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: zone-aware-routing
+  loadBalancer:
+    type: BackendUtilization
+    backendUtilization: {}
+    zoneAware:
+      weightedZones:
+      - zone: us-east-1a
+        weight: 70
+      - zone: us-east-1b
+        weight: 30
 ```
 {{% /tab %}}
 {{< /tabpane >}}

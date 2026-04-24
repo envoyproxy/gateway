@@ -13,6 +13,8 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	cswrrv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/client_side_weighted_round_robin/v3"
+	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
+	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -282,6 +284,117 @@ func TestBuildClusterWithBackendUtilizationSlowStart(t *testing.T) {
 	require.NotNil(t, cswrr.SlowStartConfig)
 	require.NotNil(t, cswrr.SlowStartConfig.SlowStartWindow)
 	require.Equal(t, window, cswrr.SlowStartConfig.SlowStartWindow.AsDuration())
+}
+
+func TestBuildClusterWithBackendUtilizationWeightedZones(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-bu-wz",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
+			},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			BackendUtilization: &ir.BackendUtilization{},
+			WeightedZones: []ir.WeightedZoneConfig{
+				{Zone: "us-east-1a", Weight: 80},
+				{Zone: "us-east-1b", Weight: 20},
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	// The top-level policy should be wrr_locality
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.wrr_locality", policy.TypedExtensionConfig.Name)
+	require.Equal(t,
+		"type.googleapis.com/envoy.extensions.load_balancing_policies.wrr_locality.v3.WrrLocality",
+		policy.TypedExtensionConfig.TypedConfig.TypeUrl,
+	)
+
+	// Unmarshal and verify the child policy is CSWRR
+	wrrLocality := &wrr_localityv3.WrrLocality{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(wrrLocality)
+	require.NoError(t, err)
+	require.NotNil(t, wrrLocality.EndpointPickingPolicy)
+	require.Len(t, wrrLocality.EndpointPickingPolicy.Policies, 1)
+	childPolicy := wrrLocality.EndpointPickingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", childPolicy.TypedExtensionConfig.Name)
+
+	// Verify CSWRR can be unmarshaled
+	cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+	err = childPolicy.TypedExtensionConfig.TypedConfig.UnmarshalTo(cswrr)
+	require.NoError(t, err)
+}
+
+func TestBuildClusterWithEndpointOverrideBackendUtilizationWeightedZones(t *testing.T) {
+	args := &xdsClusterArgs{
+		name:         "test-cluster-eo-bu-wz",
+		endpointType: EndpointTypeStatic,
+		settings: []*ir.DestinationSetting{{
+			Endpoints: []*ir.DestinationEndpoint{
+				{Host: "127.0.0.1", Port: 8080, Zone: new("us-east-1a")},
+				{Host: "127.0.0.2", Port: 8080, Zone: new("us-east-1b")},
+			},
+		}},
+		loadBalancer: &ir.LoadBalancer{
+			BackendUtilization: &ir.BackendUtilization{
+				BlackoutPeriod: ir.MetaV1DurationPtr(10 * time.Second),
+			},
+			WeightedZones: []ir.WeightedZoneConfig{
+				{Zone: "us-east-1a", Weight: 80},
+				{Zone: "us-east-1b", Weight: 20},
+			},
+			EndpointOverride: &ir.EndpointOverride{
+				ExtractFrom: []ir.EndpointOverrideExtractFrom{{
+					Header: new("x-fallback-host"),
+				}},
+			},
+		},
+	}
+
+	result, err := buildXdsCluster(args)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	cluster := result.cluster
+	require.NotNil(t, cluster)
+
+	require.NotNil(t, cluster.LoadBalancingPolicy)
+	require.Len(t, cluster.LoadBalancingPolicy.Policies, 1)
+	policy := cluster.LoadBalancingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.override_host", policy.TypedExtensionConfig.Name)
+
+	overrideHost := &override_hostv3.OverrideHost{}
+	err = policy.TypedExtensionConfig.TypedConfig.UnmarshalTo(overrideHost)
+	require.NoError(t, err)
+	require.NotNil(t, overrideHost.FallbackPolicy)
+	require.Len(t, overrideHost.FallbackPolicy.Policies, 1)
+
+	fallbackPolicy := overrideHost.FallbackPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.wrr_locality", fallbackPolicy.TypedExtensionConfig.Name)
+
+	wrrLocality := &wrr_localityv3.WrrLocality{}
+	err = fallbackPolicy.TypedExtensionConfig.TypedConfig.UnmarshalTo(wrrLocality)
+	require.NoError(t, err)
+	require.NotNil(t, wrrLocality.EndpointPickingPolicy)
+	require.Len(t, wrrLocality.EndpointPickingPolicy.Policies, 1)
+
+	childPolicy := wrrLocality.EndpointPickingPolicy.Policies[0]
+	require.Equal(t, "envoy.load_balancing_policies.client_side_weighted_round_robin", childPolicy.TypedExtensionConfig.Name)
+
+	cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+	err = childPolicy.TypedExtensionConfig.TypedConfig.UnmarshalTo(cswrr)
+	require.NoError(t, err)
+	require.Equal(t, 10*time.Second, cswrr.BlackoutPeriod.AsDuration())
 }
 
 func TestGetHealthCheckOverridesHostname(t *testing.T) {
