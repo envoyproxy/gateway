@@ -1642,6 +1642,7 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 		resource.KindClientTrafficPolicy:  sets.New[string](),
 		resource.KindBackendTrafficPolicy: sets.New[string](),
 		resource.KindEnvoyExtensionPolicy: sets.New[string](),
+		resource.KindSecurityPolicy:       sets.New[string](),
 	}
 	for _, policy := range resourceTree.ClientTrafficPolicies {
 		policyFromNamespaces[resource.KindClientTrafficPolicy].Insert(policy.Namespace)
@@ -1651,6 +1652,9 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 	}
 	for _, policy := range resourceTree.EnvoyExtensionPolicies {
 		policyFromNamespaces[resource.KindEnvoyExtensionPolicy].Insert(policy.Namespace)
+	}
+	for _, policy := range resourceTree.SecurityPolicies {
+		policyFromNamespaces[resource.KindSecurityPolicy].Insert(policy.Namespace)
 	}
 
 	allowedTargetKinds := map[string]sets.Set[string]{
@@ -1670,6 +1674,12 @@ func (r *gatewayAPIReconciler) processPolicyTargetReferenceGrants(
 			resource.KindTLSRoute,
 			resource.KindTCPRoute,
 			resource.KindUDPRoute,
+		),
+		resource.KindSecurityPolicy: sets.New[string](
+			resource.KindGateway,
+			resource.KindHTTPRoute,
+			resource.KindGRPCRoute,
+			resource.KindTCPRoute,
 		),
 	}
 

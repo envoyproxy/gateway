@@ -2434,6 +2434,22 @@ func TestProcessPolicyTargetReferenceGrants(t *testing.T) {
 			expectedNames: sets.New("eep-gateway", "eep-route"),
 		},
 		{
+			name: "SecurityPolicy includes gateway and supported route target grants",
+			mutateTree: func(resourceTree *resource.Resources) {
+				resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &egv1a1.SecurityPolicy{
+					ObjectMeta: metav1.ObjectMeta{Namespace: policyNS, Name: "sp"},
+				})
+			},
+			referenceGrants: []client.Object{
+				refGrant("sp-gateway", gatewayNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGateway),
+				refGrant("sp-http-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindHTTPRoute),
+				refGrant("sp-grpc-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindGRPCRoute),
+				refGrant("sp-tcp-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTCPRoute),
+				refGrant("sp-tls-route", routeNS, resource.KindSecurityPolicy, policyNS, gwapiv1.GroupName, resource.KindTLSRoute),
+			},
+			expectedNames: sets.New("sp-gateway", "sp-http-route", "sp-grpc-route", "sp-tcp-route"),
+		},
+		{
 			name: "ignores non matching grants",
 			mutateTree: func(resourceTree *resource.Resources) {
 				resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &egv1a1.BackendTrafficPolicy{
