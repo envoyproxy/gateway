@@ -993,7 +993,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-				if routeHasBackendHostRewrite(r) {
+				// When auto-host-rewrite is configured and the user didn't explicitly set
+				// a health check hostname, use per-endpoint FQDN for health checks.
+				if routeHasBackendHostRewrite(r) && !hasExplicitHealthCheckHostname(policy) {
 					r.Traffic.HealthCheck.SetActiveHostFrom(ir.HealthCheckHostFromEndpoint)
 				}
 
@@ -1284,7 +1286,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-			if routeHasBackendHostRewrite(r) {
+			if routeHasBackendHostRewrite(r) && !hasExplicitHealthCheckHostname(policy) {
 				r.Traffic.HealthCheck.SetActiveHostFrom(ir.HealthCheckHostFromEndpoint)
 			}
 
@@ -2059,4 +2061,14 @@ func routeHasBackendHostRewrite(r *ir.HTTPRoute) bool {
 		r.URLRewrite.Host != nil &&
 		r.URLRewrite.Host.Backend != nil &&
 		*r.URLRewrite.Host.Backend
+}
+
+// hasExplicitHealthCheckHostname returns true if the user explicitly set
+// healthCheck.active.http.hostname in the BackendTrafficPolicy spec.
+// When set, the explicit hostname takes precedence over per-endpoint FQDN.
+func hasExplicitHealthCheckHostname(policy *egv1a1.BackendTrafficPolicy) bool {
+	return policy.Spec.HealthCheck != nil &&
+		policy.Spec.HealthCheck.Active != nil &&
+		policy.Spec.HealthCheck.Active.HTTP != nil &&
+		policy.Spec.HealthCheck.Active.HTTP.Hostname != nil
 }
