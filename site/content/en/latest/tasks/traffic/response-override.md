@@ -345,3 +345,96 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/status/401
 
 The body is empty and the `content-type` is the backend's own — no custom JSON, confirming that
 `source: Local` only intercepts Envoy-generated responses.
+
+To see the inverse behaviour, change `source` to `Backend`. Now the same custom JSON body is applied
+to upstream 401s, but Envoy-generated 401s (e.g. from JWT authentication) pass through unchanged.
+
+{{< tabpane text=true >}}
+{{% tab header="Apply from stdin" %}}
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-local
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      source: Backend
+      response:
+        contentType: application/json
+        body:
+          type: Inline
+          inline: '{"error": "Authentication required. Please provide a valid token."}'
+EOF
+```
+
+{{% /tab %}}
+{{% tab header="Apply from file" %}}
+Save and apply the following resource to your cluster:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-local
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: eg
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      source: Backend
+      response:
+        contentType: application/json
+        body:
+          type: Inline
+          inline: '{"error": "Authentication required. Please provide a valid token."}'
+```
+
+{{% /tab %}}
+{{< /tabpane >}}
+
+A backend-generated 401 (via `/status/401`) is now overridden with the custom JSON body:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://localhost:8888/status/401
+```
+
+```console
+< HTTP/1.1 401 Unauthorized
+< content-type: application/json
+< content-length: 67
+<
+{"error": "Authentication required. Please provide a valid token."}
+```
+
+However, a request to `/foo` without a JWT still receives Envoy's own plain-text rejection,
+because `source: Backend` does not intercept Envoy-generated responses:
+
+```shell
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/foo
+```
+
+```console
+< HTTP/1.1 401 Unauthorized
+< content-type: text/plain
+< content-length: 15
+<
+Jwt is missing
+```
+
+The body is Envoy's default message and the `content-type` is `text/plain` — no custom JSON,
+confirming that `source: Backend` only intercepts responses from the upstream backend.
