@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -170,6 +171,76 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"loadBalancerSourceRanges can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "healthCheckNodePort-pass-with-default-trafficPolicy",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                new(egv1a1.ServiceTypeLoadBalancer),
+								HealthCheckNodePort: ptr.To[int32](30123),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "healthCheckNodePort-pass-with-explicit-Local",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                  new(egv1a1.ServiceTypeLoadBalancer),
+								ExternalTrafficPolicy: ptr.To(egv1a1.ServiceExternalTrafficPolicyLocal),
+								HealthCheckNodePort:   ptr.To[int32](30123),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "healthCheckNodePort-fail-non-LoadBalancer",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                new(egv1a1.ServiceTypeClusterIP),
+								HealthCheckNodePort: ptr.To[int32](30123),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"healthCheckNodePort can only be set for LoadBalancer type with Local externalTrafficPolicy"},
+		},
+		{
+			desc: "healthCheckNodePort-fail-Cluster-trafficPolicy",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                  new(egv1a1.ServiceTypeLoadBalancer),
+								ExternalTrafficPolicy: ptr.To(egv1a1.ServiceExternalTrafficPolicyCluster),
+								HealthCheckNodePort:   ptr.To[int32](30123),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"healthCheckNodePort can only be set for LoadBalancer type with Local externalTrafficPolicy"},
 		},
 		{
 			desc: "ServiceTypeLoadBalancer-with-valid-IP",

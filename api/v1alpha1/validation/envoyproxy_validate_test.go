@@ -336,6 +336,70 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "envoy service type 'LoadBalancer' with healthCheckNodePort",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								HealthCheckNodePort: new(int32(30123)),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "non envoy service type 'LoadBalancer' with healthCheckNodePort",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								HealthCheckNodePort: new(int32(30123)),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with Cluster externalTrafficPolicy and healthCheckNodePort",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                  egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								ExternalTrafficPolicy: egv1a1.GetKubernetesServiceExternalTrafficPolicy(egv1a1.ServiceExternalTrafficPolicyCluster),
+								HealthCheckNodePort:   new(int32(30123)),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
