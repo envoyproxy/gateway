@@ -131,7 +131,8 @@ envoyPatchPolicies:
       from: "/endpoints/1/load_balancing_weight"
       path: "/endpoints/0/load_balancing_weight"
   # Patch route.typed_per_filter_config property.
-  - name: envoy-gateway/gateway-1/http
+  - name:
+      exact: "envoy-gateway/gateway-1/http"
     operation:
       jsonPath: ..routes[?(@.name=~"httproute/default/httproute-1")]
       op: add
