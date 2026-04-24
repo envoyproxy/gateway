@@ -27,3 +27,4 @@ sources:
 dependencies:
   - name: crds
     version: "0.0.0"
+    condition: crds.enabled
