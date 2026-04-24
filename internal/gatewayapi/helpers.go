@@ -1006,9 +1006,7 @@ func resolvePolicyTargetsFromReferences(
 	return ret
 }
 
-// composePolicyTargetRefs returns a list of policy target refs that are allowed by the policy's TargetSelectors, including:
-// 1. Target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
-// 2. Plain target refs specified in the policy.
+// composePolicyTargetRefs combines the allowed target refs derived from the selectors and the plain target refs specified in the policy.
 func composePolicyTargetRefs[T client.Object](
 	matches []policySelectedTarget[T],
 	plainTargetRefs []policyTargetReferenceWithSectionName,

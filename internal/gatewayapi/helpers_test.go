@@ -201,7 +201,7 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 	}
 }
 
-func TestGetPolicyTargetRefs(t *testing.T) {
+func TestResolvePolicyTargets(t *testing.T) {
 	testCases := []struct {
 		name       string
 		policy     egv1a1.PolicyTargetReferences
