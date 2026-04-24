@@ -199,7 +199,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindClientTrafficPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace,
 		)

@@ -118,6 +118,7 @@ func extractTargetRefs(
 		targetRefs,
 		gateways,
 		referenceGrants,
+		policy.GroupVersionKind().Group,
 		policy.GetKind(),
 		policy.GetNamespace(),
 		namespaceLookup,

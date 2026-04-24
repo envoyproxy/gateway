@@ -904,6 +904,7 @@ func resolvePolicyTargetsFromSelectors[T client.Object](
 	targetSelectors []egv1a1.TargetSelector,
 	potentialTargets []T,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policyGroup string,
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
@@ -939,7 +940,7 @@ func resolvePolicyTargetsFromSelectors[T client.Object](
 			// Check if cross-namespace reference is allowed if the policy and target are in different namespaces.
 			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
-					group:     egv1a1.GroupVersion.Group,
+					group:     policyGroup,
 					kind:      policyKind,
 					namespace: policyNamespace,
 				},
@@ -1047,6 +1048,7 @@ func resolvePolicyTargets[T client.Object](
 	targetRefs egv1a1.PolicyTargetReferences,
 	potentialTargets []T,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
+	policGroup string,
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
@@ -1055,6 +1057,7 @@ func resolvePolicyTargets[T client.Object](
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
+		policGroup,
 		policyKind,
 		policyNamespace,
 		namespaceLookup)

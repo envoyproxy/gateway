@@ -165,7 +165,8 @@ func (t *Translator) ProcessSecurityPolicies(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindSecurityPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
@@ -217,7 +218,8 @@ func (t *Translator) ProcessSecurityPolicies(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindSecurityPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
@@ -267,7 +269,8 @@ func (t *Translator) buildGatewayPolicyMapForSecurity(
 			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			referenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindSecurityPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		for _, currTarget := range targetRefs {

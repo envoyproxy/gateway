@@ -902,6 +902,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 				tc.policy,
 				tc.targets,
 				tc.grants,
+				egv1a1.GroupName,
 				egv1a1.KindBackendTrafficPolicy,
 				"default",
 				func(name string) *corev1.Namespace {

@@ -95,7 +95,8 @@ func BuildBTPRoutingTypeIndex(
 			btp.Spec.PolicyTargetReferences,
 			allTargets,
 			referenceGrants,
-			btp.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
 			btp.Namespace,
 			namespaceLookup,
 		)
@@ -298,7 +299,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
@@ -353,7 +355,8 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
@@ -402,7 +405,8 @@ func (t *Translator) buildGatewayPolicyMap(
 			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			referenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindBackendTrafficPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		for _, currTarget := range targetRefs {

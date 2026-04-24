@@ -140,7 +140,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			currPolicy.Spec.TargetSelectors,
 			routes,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
@@ -196,7 +197,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			currPolicy.Spec.TargetSelectors,
 			gateways,
 			resources.ReferenceGrants,
-			currPolicy.Kind,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
 			currPolicy.Namespace,
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
