@@ -1109,7 +1109,7 @@ func setPolicyTargetRefNotPermittedStatus[T client.Object](
 	}
 }
 
-// leagcy function to get policy target refs without considering cross-namespace policy attachment.
+// legacy function to get policy target refs without considering cross-namespace policy attachment.
 // This is only used for extension server policies.
 // TODO: add cross-namesapce policy attachment to extension server if needed, and remove this function.
 func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
