@@ -164,6 +164,7 @@ infraIR:
           - addressType: FQDN
             endpoints:
             - host: otel-collector.example.com
+              hostname: otel-collector.example.com
               port: 443
             metadata:
               kind: Backend
@@ -192,6 +193,7 @@ xdsIR:
           - addressType: FQDN
             endpoints:
             - host: otel-collector.example.com
+              hostname: otel-collector.example.com
               port: 443
             metadata:
               kind: Backend
@@ -267,6 +269,7 @@ xdsIR:
         - addressType: FQDN
           endpoints:
           - host: otel-collector.example.com
+            hostname: otel-collector.example.com
             port: 443
           metadata:
             kind: Backend

@@ -1004,14 +1004,16 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
-	// If Active Health Check has an explicit hostname override, it will be used on Cluster.
-	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
-	// so that Envoy can use it for health checking.
-	// Note: The "*" wildcard is not an explicit user-provided hostname
-	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
+	if ep == nil || ep.Hostname == nil {
 		return ""
 	}
-	if ep == nil || ep.Hostname == nil {
+	// When HostFrom is Endpoint (auto-host-rewrite configured), use the endpoint FQDN
+	// as the Host header for health checks, overriding the cluster-level host.
+	if hc.Active.HostFrom != nil && *hc.Active.HostFrom == ir.HealthCheckHostFromEndpoint {
+		return *ep.Hostname
+	}
+	// Otherwise, if the cluster-level host is explicitly set, skip per-endpoint override.
+	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
 		return ""
 	}
 	return *ep.Hostname

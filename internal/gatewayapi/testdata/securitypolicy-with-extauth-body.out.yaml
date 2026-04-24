@@ -289,6 +289,7 @@ xdsIR:
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
+                    hostname: primary.foo.com
                     port: 3000
                   metadata:
                     kind: Backend
@@ -348,6 +349,7 @@ xdsIR:
                 - addressType: FQDN
                   endpoints:
                   - host: primary.foo.com
+                    hostname: primary.foo.com
                     port: 3000
                   metadata:
                     kind: Backend

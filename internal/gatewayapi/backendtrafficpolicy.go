@@ -993,6 +993,9 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 
 				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+				if routeHasBackendHostRewrite(r) {
+					r.Traffic.HealthCheck.SetActiveHostFrom(ir.HealthCheckHostFromEndpoint)
+				}
 
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -1281,6 +1284,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 
 			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+			if routeHasBackendHostRewrite(r) {
+				r.Traffic.HealthCheck.SetActiveHostFrom(ir.HealthCheckHostFromEndpoint)
+			}
 
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol
@@ -2043,4 +2049,14 @@ func backendTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.BackendTraf
 		copies[i] = &out
 	}
 	return copies
+}
+
+// routeHasBackendHostRewrite returns true if the route has hostname.type: Backend
+// (auto-host-rewrite) configured, meaning the backend FQDN should be used as the
+// Host header for both requests and health checks.
+func routeHasBackendHostRewrite(r *ir.HTTPRoute) bool {
+	return r.URLRewrite != nil &&
+		r.URLRewrite.Host != nil &&
+		r.URLRewrite.Host.Backend != nil &&
+		*r.URLRewrite.Host.Backend
 }

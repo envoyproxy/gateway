@@ -353,6 +353,7 @@ xdsIR:
                 - addressType: FQDN
                   endpoints:
                   - host: oauth.foo.com
+                    hostname: oauth.foo.com
                     port: 443
                   metadata:
                     kind: Backend

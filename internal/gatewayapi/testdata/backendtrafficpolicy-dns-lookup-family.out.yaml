@@ -415,6 +415,7 @@ xdsIR:
           - addressType: FQDN
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
+              hostname: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
             metadata:
               kind: Backend
@@ -436,6 +437,7 @@ xdsIR:
               - addressType: FQDN
                 endpoints:
                 - host: backend-v2.gateway-conformance-infra.svc.cluster.local
+                  hostname: backend-v2.gateway-conformance-infra.svc.cluster.local
                   port: 9090
                 metadata:
                   kind: Backend
@@ -481,6 +483,7 @@ xdsIR:
                 - addressType: FQDN
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
+                    hostname: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
                   metadata:
                     kind: Backend
@@ -511,6 +514,7 @@ xdsIR:
           - addressType: FQDN
             endpoints:
             - host: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
+              hostname: grpc-infra-backend.gateway-conformance-infra.svc.cluster.local
               port: 8080
             metadata:
               kind: Backend
@@ -547,6 +551,7 @@ xdsIR:
                 - addressType: FQDN
                   endpoints:
                   - host: backend-v3.gateway-conformance-infra.svc.cluster.local
+                    hostname: backend-v3.gateway-conformance-infra.svc.cluster.local
                     port: 8080
                   metadata:
                     kind: Backend

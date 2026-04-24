@@ -3111,11 +3111,32 @@ type ActiveHealthCheck struct {
 	// Overrides defines the configuration of the overriding health check settings for all endpoints
 	// in the backend cluster.
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
+	// HostFrom determines the source of the Host header for health check requests.
+	// "Route" uses the route hostname (default). "Endpoint" uses the backend endpoint FQDN,
+	// set when hostname.type: Backend (auto-host-rewrite) is configured.
+	HostFrom *HealthCheckHostFrom `json:"hostFrom,omitempty" yaml:"hostFrom,omitempty"`
 }
+
+// HealthCheckHostFrom defines the source of the Host header for health check requests.
+type HealthCheckHostFrom string
+
+const (
+	// HealthCheckHostFromRoute uses the route hostname for health checks (default).
+	HealthCheckHostFromRoute HealthCheckHostFrom = "Route"
+	// HealthCheckHostFromEndpoint uses the backend endpoint FQDN for per-endpoint health checks.
+	HealthCheckHostFromEndpoint HealthCheckHostFrom = "Endpoint"
+)
 
 func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
 	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
 		h.Active.HTTP.Host = host
+	}
+}
+
+// SetActiveHostFrom sets the HostFrom field on the active health check.
+func (h *HealthCheck) SetActiveHostFrom(from HealthCheckHostFrom) {
+	if h != nil && h.Active != nil {
+		h.Active.HostFrom = &from
 	}
 }
 

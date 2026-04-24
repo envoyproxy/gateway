@@ -2511,7 +2511,13 @@ func (t *Translator) processBackendDestinationSetting(
 			}
 		case bep.FQDN != nil:
 			addrTypeMap[ir.FQDN]++
-			irde = ir.NewDestEndpoint(bep.Hostname, bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
+			// Auto-derive endpoint hostname from FQDN when not explicitly set.
+			// This enables per-endpoint health check Host headers for external backends.
+			hostname := bep.Hostname
+			if hostname == nil {
+				hostname = &bep.FQDN.Hostname
+			}
+			irde = ir.NewDestEndpoint(hostname, bep.FQDN.Hostname, uint32(bep.FQDN.Port), false, bep.Zone)
 		case bep.Unix != nil:
 			addrTypeMap[ir.UDS]++
 			irde = &ir.DestinationEndpoint{
