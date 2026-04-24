@@ -1,0 +1,33 @@
+date: March 12, 2026
+
+# Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
+breaking changes: |
+
+# Updates addressing vulnerabilities, security flaws, or compliance requirements.
+security updates: |
+  Bump golang to `1.25.8` for security fixes to the go command and the `crypto/tls` package.
+  Bump Envoy Proxy image to v1.37.1 for fixing several security issues and bug fixes. For more details, please refer to the [Envoy Proxy v1.37.1 release notes](https://github.com/envoyproxy/envoy/releases/tag/v1.37.1).
+  Bump Envoy ratelimit image to `c8765e89` with security fixes for Go.
+
+# New features or capabilities added in this release.
+new features: |
+
+bug fixes: |
+  Fixed an issue where specifying Value in ConnectionLimit was not optional. It now uses the Envoy default value if absent.
+  Fixed route and policy status aggregation across multiple GatewayClasses managed by the same controller, so resources preserve status from all relevant parents and ancestors instead of being overwritten by the last processed GatewayClass.
+  Fixed an issue where endpoint hostname was not respected when doing an active health check.
+  Fixed an issue where computeHosts did not work when both listener and route had wildcard hostnames.
+  Fixed local object reference resolution from parent policy in merged BackendTrafficPolicies.
+  Fixed XListenerSet not allowing xRoutes from the same namespace when configured to allow them.
+  Fixed API key authentication dropping non-first client IDs when credential Secrets contain multiple keys.
+  Fixed an issue where SecurityPolicy route-target status included unmanaged Gateway parents when HTTPRoute had mixed parentRefs.
+  Fixed an issue where ratelimit ConfigMap and HPA were not automatically cleaned up when the parent envoy-gateway Deployment was deleted.
+
+# Enhancements that improve performance.
+performance improvements: |
+
+# Deprecated features or APIs.
+deprecations: |
+
+# Other notable changes not covered by the above sections.
+Other changes: |

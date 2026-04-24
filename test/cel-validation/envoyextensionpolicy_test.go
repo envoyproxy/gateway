@@ -15,7 +15,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -292,7 +291,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -322,10 +321,10 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 								BackendRefs: []egv1a1.BackendRef{
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Group: ptr.To(gwapiv1.Group("multicluster.x-k8s.io")),
-											Kind:  ptr.To(gwapiv1.Kind("ServiceImport")),
+											Group: new(gwapiv1.Group("multicluster.x-k8s.io")),
+											Kind:  new(gwapiv1.Kind("ServiceImport")),
 											Name:  "grpc-proc-service-import",
-											Port:  ptr.To(gwapiv1.PortNumber(80)),
+											Port:  new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -355,9 +354,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 								BackendRefs: []egv1a1.BackendRef{
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Group: ptr.To(gwapiv1.Group("unsupported")),
+											Group: new(gwapiv1.Group("unsupported")),
 											Name:  "grpc-proc-service",
-											Port:  ptr.To(gwapiv1.PortNumber(80)),
+											Port:  new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -390,9 +389,9 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 								BackendRefs: []egv1a1.BackendRef{
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Kind: ptr.To(gwapiv1.Kind("unsupported")),
+											Kind: new(gwapiv1.Kind("unsupported")),
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -426,17 +425,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("not-a-body-mode")),
 								},
 							},
 						},
@@ -468,7 +467,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -478,7 +477,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									Attributes: []string{"request.headers"},
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -505,7 +504,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -515,7 +514,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									Attributes: []string{"response.headers"},
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -542,12 +541,12 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -574,20 +573,20 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("Buffered")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("Buffered")),
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -614,20 +613,20 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 							},
-							FailOpen: ptr.To(false),
+							FailOpen: new(false),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -654,17 +653,17 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 							},
 						},
@@ -693,20 +692,20 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("Buffered")),
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -736,20 +735,20 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
 							},
 							ProcessingMode: &egv1a1.ExtProcProcessingMode{
 								Request: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("Buffered")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("Buffered")),
 								},
 								Response: &egv1a1.ProcessingModeOptions{
-									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
+									Body: new(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 							},
-							FailOpen: ptr.To(true),
+							FailOpen: new(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -775,7 +774,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					Lua: []egv1a1.Lua{
 						{
 							Type:   egv1a1.LuaValueTypeInline,
-							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+							Inline: new("function envoy_on_response(response_handle) -- Do something -- end"),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -855,7 +854,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					Lua: []egv1a1.Lua{
 						{
 							Type:   egv1a1.LuaValueTypeValueRef,
-							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+							Inline: new("function envoy_on_response(response_handle) -- Do something -- end"),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -941,7 +940,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					Lua: []egv1a1.Lua{
 						{
 							Type:   egv1a1.LuaValueTypeInline,
-							Inline: ptr.To("function envoy_on_response(response_handle) -- Do something -- end"),
+							Inline: new("function envoy_on_response(response_handle) -- Do something -- end"),
 							ValueRef: &gwapiv1.LocalObjectReference{
 								Kind:  gwapiv1.Kind("ConfigMap"),
 								Name:  gwapiv1.ObjectName("eg"),
@@ -965,6 +964,128 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				": Exactly one of inline or valueRef must be set with correct type.",
 			},
 		},
+		// DynamicModules
+		{
+			desc: "valid DynamicModule with all fields",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Name:           "my-module",
+							FilterName:     new("my-filter"),
+							TerminalFilter: new(false),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid DynamicModule with minimal fields",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Name: "my-module",
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "DynamicModule with empty name",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Name: "",
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.dynamicModule[0].name: Invalid value:",
+				"should be at least 1 chars long",
+			},
+		},
+		{
+			desc: "multiple valid DynamicModules",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Name:       "module-a",
+							FilterName: new("filter-a"),
+						},
+						{
+							Name:           "module-b",
+							TerminalFilter: new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "DynamicModule with terminalFilter true",
+			mutate: func(eep *egv1a1.EnvoyExtensionPolicy) {
+				eep.Spec = egv1a1.EnvoyExtensionPolicySpec{
+					DynamicModule: []egv1a1.DynamicModule{
+						{
+							Name:           "terminal-module",
+							TerminalFilter: new(true),
+						},
+					},
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
 		{
 			desc: "target selectors without targetRefs or targetRef",
 			mutate: func(sp *egv1a1.EnvoyExtensionPolicy) {
@@ -972,7 +1093,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -995,7 +1116,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1090,7 +1211,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1146,7 +1267,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1186,7 +1307,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "grpc-proc-service",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},

@@ -21,6 +21,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	pb "github.com/envoyproxy/gateway/proto/extension"
@@ -162,7 +163,6 @@ func (t *testingExtensionServer) PostClusterModify(_ context.Context, req *pb.Po
 
 			modifiedCluster.EdsClusterConfig = nil
 			modifiedCluster.LoadAssignment = nil
-			modifiedCluster.LbPolicy = clusterV3.Cluster_CLUSTER_PROVIDED
 			modifiedCluster.CommonLbConfig = nil
 			modifiedCluster.ClusterDiscoveryType = &clusterV3.Cluster_Type{Type: clusterV3.Cluster_ORIGINAL_DST}
 			poolCount++
@@ -171,6 +171,26 @@ func (t *testingExtensionServer) PostClusterModify(_ context.Context, req *pb.Po
 
 	return &pb.PostClusterModifyResponse{
 		Cluster: modifiedCluster,
+	}, nil
+}
+
+func (t *testingExtensionServer) PostEndpointsModify(_ context.Context, req *pb.PostEndpointsModifyRequest) (*pb.PostEndpointsModifyResponse, error) {
+	for _, endpoint := range req.LoadAssignment.Endpoints {
+		for _, lbEndpoint := range endpoint.LbEndpoints {
+			lbEndpoint.Metadata = &coreV3.Metadata{
+				FilterMetadata: map[string]*structpb.Struct{
+					"envoy-gateway.extension": {
+						Fields: map[string]*structpb.Value{
+							"hook": structpb.NewStringValue("applied"),
+						},
+					},
+				},
+			}
+		}
+	}
+
+	return &pb.PostEndpointsModifyResponse{
+		LoadAssignment: req.LoadAssignment,
 	}, nil
 }
 

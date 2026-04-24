@@ -134,13 +134,8 @@ type EnvoyGatewaySpec struct {
 
 // GatewayAPI defines an experimental Gateway API resource that can be enabled.
 // +enum
-// +kubebuilder:validation:Enum=XListenerSet;XBackendTrafficPolicy
+// +kubebuilder:validation:Enum=XBackendTrafficPolicy
 type GatewayAPI string
-
-const (
-	// XListenerSet enables the Gateway API XListenerSet resource.
-	XListenerSet GatewayAPI = "XListenerSet"
-)
 
 // GatewayAPISettings provides a mechanism to opt into experimental Gateway API resources.
 // These APIs are experimental today and are subject to change or removal as they mature.
@@ -232,6 +227,8 @@ type LeaderElection struct {
 type EnvoyGatewayTelemetry struct {
 	// Metrics defines metrics configuration for envoy gateway.
 	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
+	// Traces defines traces configuration for envoy gateway.
+	Traces *EnvoyGatewayTraces `json:"traces,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -315,6 +312,8 @@ type ExtensionAPISettings struct {
 	// DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.
 	// If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.
 	DisableLua bool `json:"disableLua"`
+	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
+	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.
@@ -788,12 +787,14 @@ type ExtensionService struct {
 	BackendEndpoint `json:",inline"`
 
 	// Host define the extension service hostname.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port defines the port the extension service is exposed on.
+	//
 	// Deprecated: use the appropriate transport attribute instead (FQDN,IP,Unix)
 	//
 	// +optional

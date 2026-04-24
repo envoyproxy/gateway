@@ -8,13 +8,14 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -38,28 +39,30 @@ var ProxyProtocolTest = suite.ConformanceTest{
 
 		// Update the backend FQDN to point to the service in the same namespace when using gateway namespace mode.
 		if IsGatewayNamespaceMode() {
-			backend := &egv1a1.Backend{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindBackend,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
+			require.NoError(t, wait.PollUntilContextTimeout(t.Context(), time.Second, suite.TimeoutConfig.MaxTimeToConsistency, true, func(ctx context.Context) (bool, error) {
+				backend := &egv1a1.Backend{}
+				err := suite.Client.Get(ctx, types.NamespacedName{
 					Name:      "proxy-protocol-backend",
 					Namespace: ns,
-				},
-				Spec: egv1a1.BackendSpec{
-					Endpoints: []egv1a1.BackendEndpoint{
-						{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: fmt.Sprintf("%s.%s.svc", gwNN.Name, gwNN.Namespace),
-								Port:     443,
-							},
+				}, backend)
+				if err != nil {
+					return false, nil
+				}
+				backend.Spec.Endpoints = []egv1a1.BackendEndpoint{
+					{
+						FQDN: &egv1a1.FQDNEndpoint{
+							Hostname: fmt.Sprintf("%s.%s.svc", gwNN.Name, gwNN.Namespace),
+							Port:     443,
 						},
 					},
-				},
-			}
+				}
 
-			require.NoError(t, suite.Client.Patch(t.Context(), backend, client.Apply, patchOpts...))
+				if err := suite.Client.Update(ctx, backend); err != nil {
+					return false, nil
+				}
+
+				return true, nil
+			}))
 		}
 
 		BackendMustBeAccepted(t, suite.Client, types.NamespacedName{

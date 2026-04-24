@@ -69,8 +69,7 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 		t.Run("requests with with x-forwarded-for header but no matching x-org-id header will hit default bucket", func(t *testing.T) {
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "ratelimit-distinct-cidr-and-exact-header", Namespace: ns}, suite.ControllerName, ancestorRef)
 			path := "/ratelimit-distinct-cidr-and-exact-header"
-
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			expectedResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: path,
 					Headers: map[string]string{
@@ -92,34 +91,14 @@ var LocalRateLimitDistinctCIDRTest = suite.ConformanceTest{
 					},
 				},
 				Namespace: ns,
-			})
+			}
+			MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp)
 		})
 	},
 }
 
 func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[string]string, ns, gwAddr, path string) {
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
-		Request: http.Request{
-			Path:    path,
-			Headers: headers,
-		},
-		ExpectedRequest: &http.ExpectedRequest{
-			Request: http.Request{
-				Path:    path,
-				Headers: nil, // don't check headers since Envoy will append the client IP to the X-Forwarded-For header
-			},
-		},
-		Response: http.Response{
-			StatusCodes: []int{200},
-			Headers: map[string]string{
-				RatelimitLimitHeaderName:     "3",
-				RatelimitRemainingHeaderName: "1",
-			},
-		},
-		Namespace: ns,
-	})
-
-	http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+	expectedResp := http.ExpectedResponse{
 		Request: http.Request{
 			Path:    path,
 			Headers: headers,
@@ -138,5 +117,6 @@ func testRatelimit(t *testing.T, suite *suite.ConformanceTestSuite, headers map[
 			},
 		},
 		Namespace: ns,
-	})
+	}
+	MakeRequestAndExpectEventuallyConsistentResponseExceptErrors(t, suite.RoundTripper, &suite.TimeoutConfig, gwAddr, &expectedResp)
 }

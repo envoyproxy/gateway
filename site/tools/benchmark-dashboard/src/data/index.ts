@@ -6,6 +6,10 @@ import {
   LatencyComparison,
   ResourceComparison
 } from './types';
+import { benchmarkData as v171TestSuite } from './versions/v1.7.1';
+import { benchmarkData as v170TestSuite } from './versions/v1.7.0';
+import { benchmarkData as v165TestSuite } from './versions/v1.6.5';
+import { benchmarkData as v164TestSuite } from './versions/v1.6.4';
 import { benchmarkData as v161TestSuite } from './versions/v1.6.1';
 import { benchmarkData as v160TestSuite } from './versions/v1.6.0';
 import { benchmarkData as v155TestSuite } from './versions/v1.5.5';
@@ -38,8 +42,18 @@ import { benchmarkData as v112TestSuite } from './versions/v1.1.2';
 import { benchmarkData as v111TestSuite } from './versions/v1.1.1';
 import { benchmarkData as v110TestSuite } from './versions/v1.1.0';
 
+import { benchmarkData as v166TestSuite } from './versions/v1.6.6';
+
+import { benchmarkData as v172TestSuite } from './versions/v1.7.2';
+
 // Import all version data
 export const allTestSuites: TestSuite[] = [
+  v172TestSuite,
+  v166TestSuite,
+  v171TestSuite,
+  v170TestSuite,
+  v165TestSuite,
+  v164TestSuite,
   v161TestSuite,
   v160TestSuite,
   v155TestSuite,
@@ -135,8 +149,8 @@ export const generatePerformanceComparison = (versions?: string[]): PerformanceC
       routes: result.routes,
       phase: result.phase,
       throughput: result.throughput,
-      meanLatency: result.latency.mean / 1000, // convert to ms
-      p95Latency: result.latency.percentiles.p95 / 1000, // convert to ms
+      meanLatency: result.latency.mean,
+      p95Latency: result.latency.percentiles.p95,
       totalMemory: result.resources.envoyGateway.memory.mean + result.resources.envoyProxy.memory.mean,
       totalCpu: result.resources.envoyGateway.cpu.mean + result.resources.envoyProxy.cpu.mean
     }))
@@ -153,12 +167,12 @@ export const generateLatencyComparison = (versions?: string[]): LatencyCompariso
       runId: suite.metadata.runId,
       routes: result.routes,
       phase: result.phase,
-      p50: result.latency.percentiles.p50 / 1000, // convert to ms
-      p75: result.latency.percentiles.p75 / 1000,
-      p90: result.latency.percentiles.p90 / 1000,
-      p95: result.latency.percentiles.p95 / 1000,
-      p99: result.latency.percentiles.p99 / 1000,
-      p999: result.latency.percentiles.p999 / 1000
+      p50: result.latency.percentiles.p50,
+      p75: result.latency.percentiles.p75,
+      p90: result.latency.percentiles.p90,
+      p95: result.latency.percentiles.p95,
+      p99: result.latency.percentiles.p99,
+      p999: result.latency.percentiles.p999
     }))
   );
 };
@@ -212,12 +226,12 @@ export const performanceSummary = {
 export const latencyPercentileComparison = benchmarkResults.map(result => ({
   routes: result.routes,
   phase: result.phase,
-  p50: result.latency.percentiles.p50 / 1000, // convert to ms
-  p75: result.latency.percentiles.p75 / 1000,
-  p90: result.latency.percentiles.p90 / 1000,
-  p95: result.latency.percentiles.p95 / 1000,
-  p99: result.latency.percentiles.p99 / 1000,
-  p999: result.latency.percentiles.p999 / 1000
+  p50: result.latency.percentiles.p50,
+  p75: result.latency.percentiles.p75,
+  p90: result.latency.percentiles.p90,
+  p95: result.latency.percentiles.p95,
+  p99: result.latency.percentiles.p99,
+  p999: result.latency.percentiles.p999
 }));
 
 export const resourceTrends = benchmarkResults.map(result => ({
@@ -234,8 +248,8 @@ export const performanceMatrix = benchmarkResults.map(result => ({
   routes: result.routes,
   phase: result.phase,
   throughput: result.throughput,
-  meanLatency: result.latency.mean / 1000, // convert to ms
-  p95Latency: result.latency.percentiles.p95 / 1000, // convert to ms
+  meanLatency: result.latency.mean,
+  p95Latency: result.latency.percentiles.p95,
   totalMemory: result.resources.envoyGateway.memory.mean + result.resources.envoyProxy.memory.mean,
   totalCpu: result.resources.envoyGateway.cpu.mean + result.resources.envoyProxy.cpu.mean
 }));

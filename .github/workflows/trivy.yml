@@ -15,10 +15,10 @@ jobs:
     permissions:
       contents: read  # for actions/checkout to fetch code
     name: Image Scan
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       # We need to fetch tags so go binary will be built with the recent vX.Y.Z-rc.0 tag,
       # which will help to avoid false positives in trivy scan.
       # `fetch-tags: true` doesn't work: https://github.com/actions/checkout/issues/1471
@@ -35,7 +35,7 @@ jobs:
         IMAGE=envoy-proxy/gateway-dev TAG=${{ github.sha }} make image
 
     - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@c1824fd6edce30d7ab345a9989de00bbd46ef284  # v0.34.0
+      uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
       with:
         image-ref: envoy-proxy/gateway-dev:${{ github.sha }}
         exit-code: '1'

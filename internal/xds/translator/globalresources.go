@@ -14,7 +14,6 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/utils/ptr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -81,7 +80,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	// Create cluster if it does not exist
 	host, port := t.getRateLimitServiceGrpcHostPort()
 	ds := &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
+		Weight:    new(uint32(1)),
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		Name:      destinationSettingName(clusterName),
@@ -154,7 +153,7 @@ func containsWasm(httpListeners []*ir.HTTPListener) bool {
 
 func (t *Translator) createWasmHTTPServiceCluster(tCtx *types.ResourceVersionTable, envoyClientCertificate *ir.TLSCertificate, metrics *ir.Metrics) error {
 	ds := &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
+		Weight:    new(uint32(1)),
 		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, wasmHTTPServiceFQDN(t.ControllerNamespace), wasmHTTPServicePort, false, nil)},
 		Name:      destinationSettingName(wasmHTTPServiceClusterName),

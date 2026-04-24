@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -198,7 +197,7 @@ func runStatus(ctx context.Context, logOut io.Writer, cli client.Client, inputRe
 		resourceKind = resource.KindUDPRoute
 
 	case "tlsroute":
-		tlsroute := gwapiv1a3.TLSRouteList{}
+		tlsroute := gwapiv1.TLSRouteList{}
 		if err := cli.List(ctx, &tlsroute, client.InNamespace(namespace)); err != nil {
 			return err
 		}

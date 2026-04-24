@@ -15,6 +15,7 @@ import (
 	extauthv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
+
+var extAuthRouteMetadataContextNamespaces = []string{envoyGatewayXdsMetadataNamespace}
 
 func init() {
 	registerHTTPFilter(&extAuth{})
@@ -107,6 +110,10 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		config.ClearRouteCache = *extAuth.RecomputeRoute
 	}
 
+	if extAuth.IncludeRouteMetadata != nil && *extAuth.IncludeRouteMetadata {
+		config.RouteMetadataContextNamespaces = extAuthRouteMetadataContextNamespaces
+	}
+
 	headersToExtAuth := make([]*matcherv3.StringMatcher, 0, len(extAuth.HeadersToExtAuth))
 	for _, header := range extAuth.HeadersToExtAuth {
 		headersToExtAuth = append(headersToExtAuth, &matcherv3.StringMatcher{
@@ -165,6 +172,11 @@ func extAuthConfig(extAuth *ir.ExtAuth) (*extauthv3.ExtAuthz, error) {
 		}
 	}
 
+	if extAuth.StatusOnError != nil {
+		config.StatusOnError = &typev3.HttpStatus{
+			Code: typev3.StatusCode(*extAuth.StatusOnError),
+		}
+	}
 	return config, nil
 }
 
@@ -247,14 +259,21 @@ func (*extAuth) patchResources(tCtx *types.ResourceVersionTable,
 		if !routeContainsExtAuth(route) {
 			continue
 		}
-		if route.Security.ExtAuth.HTTP != nil {
+		if http := route.Security.ExtAuth.HTTP; http != nil {
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.HTTP.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&http.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, http.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		} else {
+			grpc := route.Security.ExtAuth.GRPC
 			if err := createExtServiceXDSCluster(
-				&route.Security.ExtAuth.GRPC.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				&grpc.Destination, route.Security.ExtAuth.Traffic, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+			if err := processClientCertificates(tCtx, grpc.Destination.Settings); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

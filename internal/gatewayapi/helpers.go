@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -143,15 +142,15 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 	return string(parentRef.Name) == gateway.Name
 }
 
-// GetReferencedListeners returns whether a given parent ref references a Gateway or XListenerSet
-// in the given list, and if so, a list of the Listeners within that Gateway or XListenerSet that
+// GetReferencedListeners returns whether a given parent ref references a Gateway or ListenerSet
+// in the given list, and if so, a list of the Listeners within that Gateway or ListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
-// in the Gateway or XListenerSet, depending on whether section name is specified or not).
+// in the Gateway or ListenerSet, depending on whether section name is specified or not).
 func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
-	// The parentRef is an XListenerSet
-	if isRefToXListenerSet(parentRef) {
+	// The parentRef is an ListenerSet
+	if isRefToListenerSet(parentRef) {
 		ns := routeNamespace
 		if parentRef.Namespace != nil {
 			ns = *parentRef.Namespace
@@ -159,11 +158,11 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 		var matchedListenerSet bool
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if !listener.isFromXListenerSet() {
+				if !listener.isFromListenerSet() {
 					continue
 				}
-				if listener.xListenerSet.Namespace != string(ns) ||
-					listener.xListenerSet.Name != string(parentRef.Name) {
+				if listener.listenerSet.Namespace != string(ns) ||
+					listener.listenerSet.Name != string(parentRef.Name) {
 					continue
 				}
 				matchedListenerSet = true
@@ -180,7 +179,7 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	for _, gateway := range gateways {
 		if IsRefToGateway(routeNamespace, parentRef, utils.NamespacedName(gateway)) {
 			for _, listener := range gateway.listeners {
-				if listener.isFromXListenerSet() {
+				if listener.isFromListenerSet() {
 					continue
 				}
 				// The parentRef may be to the entire Gateway, or to a specific listener.
@@ -195,9 +194,9 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 	return false, referencedListeners
 }
 
-func isRefToXListenerSet(parentRef gwapiv1.ParentReference) bool {
-	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindXListenerSet &&
-		parentRef.Group != nil && string(*parentRef.Group) == gwapixv1a1.GroupVersion.Group {
+func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
+	if parentRef.Kind != nil && string(*parentRef.Kind) == resource.KindListenerSet &&
+		parentRef.Group != nil && string(*parentRef.Group) == gwapiv1.GroupVersion.Group {
 		return true
 	}
 	return false
@@ -333,18 +332,35 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 		case listenerHostnameVal == routeHostname:
 			hostnamesSet.Insert(routeHostname)
 
+		// Both listener and route hostnames are wildcards. If one pattern contains
+		// the other, their intersection is the more specific hostname.
+		// Examples:
+		// - listener "*.example.com" and route "*.com" intersect as "*.example.com"
+		// - listener "*.com" and route "*.example.com" intersect as "*.example.com"
+
+		case strings.HasPrefix(listenerHostnameVal, "*") && strings.HasPrefix(routeHostname, "*"):
+			// the route hostname must be more wildcard than the listener hostname to match
+			// e.g. listener hostname *.example.com would match route hostname *.com.
+			// use regex to check this
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
+				hostnamesSet.Insert(listenerHostnameVal)
+			}
+
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
+				hostnamesSet.Insert(routeHostname)
+			}
+
 		// Listener has a wildcard hostname: check if the route hostname matches.
 		case strings.HasPrefix(listenerHostnameVal, "*"):
-			if hostnameMatchesWildcardHostname(routeHostname, listenerHostnameVal) {
+			if wildcardHostnameMatchesHostname(listenerHostnameVal, routeHostname) {
 				hostnamesSet.Insert(routeHostname)
 			}
 
 		// Route has a wildcard hostname: check if the listener hostname matches.
 		case strings.HasPrefix(routeHostname, "*"):
-			if hostnameMatchesWildcardHostname(listenerHostnameVal, routeHostname) {
+			if wildcardHostnameMatchesHostname(routeHostname, listenerHostnameVal) {
 				hostnamesSet.Insert(listenerHostnameVal)
 			}
-
 		}
 	}
 
@@ -370,16 +386,39 @@ func computeHosts(routeHostnames []string, listenerContext *ListenerContext) []s
 	return hostnamesSet.List()
 }
 
-// hostnameMatchesWildcardHostname returns true if hostname has the non-wildcard
-// portion of wildcardHostname as a suffix, plus at least one DNS label matching the
-// wildcard.
-func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
-	if !strings.HasSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*")) {
+// wildcardHostnameMatchesHostname returns true if wildcardHostname matches hostname.
+// ref: https://github.com/kubernetes-sigs/gateway-api/pull/1173, this's different with RFC-2818
+// e.g. *.com matches *.example.com, *.example.com matches foo.example.com
+func wildcardHostnameMatchesHostname(wildcardHostname, hostname string) bool {
+	// Strip the leading "*" from wildcardHostname
+	wildcardSuffix := strings.TrimPrefix(wildcardHostname, "*")
+
+	// If hostname is not a wildcard, check if it matches the pattern
+	if !strings.HasPrefix(hostname, "*") {
+		// hostname must end with the wildcard suffix
+		if !strings.HasSuffix(hostname, wildcardSuffix) {
+			return false
+		}
+		// The part before the suffix should be non-empty (there's a label matching the wildcard)
+		wildcardMatch := strings.TrimSuffix(hostname, wildcardSuffix)
+		return len(wildcardMatch) > 0
+	}
+
+	// Both are wildcards - strip the leading "*" from hostname too
+	hostnameSuffix := strings.TrimPrefix(hostname, "*")
+
+	// Check if the hostname suffix ends with the wildcard suffix
+	// This means wildcardHostname is a broader pattern
+	if !strings.HasSuffix(hostnameSuffix, wildcardSuffix) {
 		return false
 	}
 
-	wildcardMatch := strings.TrimSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*"))
-	return len(wildcardMatch) > 0
+	// Get the remaining part after removing the wildcard suffix from hostname
+	remaining := strings.TrimSuffix(hostnameSuffix, wildcardSuffix)
+
+	// The remaining part should have content (can't be identical patterns)
+	// and should start with "." to be a valid subdomain
+	return len(remaining) > 0 && strings.HasPrefix(remaining, ".")
 }
 
 func containsPort(ports []*protocolPort, port *protocolPort) bool {
@@ -437,8 +476,8 @@ func extractGatewayNameFromListener(listenerName string) string {
 }
 
 func irListenerName(listener *ListenerContext) string {
-	if listener.isFromXListenerSet() {
-		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.xListenerSet.Namespace, listener.xListenerSet.Name, listener.Name)
+	if listener.isFromListenerSet() {
+		return fmt.Sprintf("%s/%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.listenerSet.Namespace, listener.listenerSet.Name, listener.Name)
 	}
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
@@ -478,35 +517,71 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	if len(tlsSecrets) == 0 {
+func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range tlsSecrets {
-		cert := ir.TLSCertificate{
-			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[corev1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
-		}
-
-		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
-		if ok && len(ocspStaple) > 0 {
-			cert.OCSPStaple = ocspStaple
-		}
+	for i, tlsSecret := range config.secrets {
+		cert := getTLSCertificateFromSecret(tlsSecret)
 		tlsListenerConfigs.Certificates[i] = cert
+	}
+
+	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
+		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
+		tlsListenerConfigs.ClientValidationEnabled = true
+		convertClientValidationModeType(config.frontendTLSValidation.Mode, tlsListenerConfigs)
+		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
 }
 
+func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
+	switch mode {
+	case egv1a1.ClientValidationRequest:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationRequireAny:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationVerifyIfGiven:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = false
+	case egv1a1.ClientValidationRequireAndVerify:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	default:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	}
+}
+
+func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
+	return tlsSecret.Data[corev1.TLSCertKey] != nil && tlsSecret.Data[corev1.TLSPrivateKeyKey] != nil
+}
+
+func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
+	cert := ir.TLSCertificate{
+		Name:        irTLSListenerConfigName(tlsSecret),
+		Certificate: tlsSecret.Data[corev1.TLSCertKey],
+		PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
+	}
+
+	ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+	if ok && len(ocspStaple) > 0 {
+		cert.OCSPStaple = ocspStaple
+	}
+	return cert
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(config)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -519,6 +594,21 @@ func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 
 func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irGatewayTLSCACertName(gtw *gwapiv1.Gateway, suffix string) string {
+	return fmt.Sprintf("gateway/%s/%s/%s/%s", gtw.Namespace, gtw.Name, suffix, CACertKey)
+}
+
+func frontendValidationMode(mode gwapiv1.FrontendValidationModeType) egv1a1.ClientValidationModeType {
+	switch mode {
+	case gwapiv1.AllowValidOnly:
+		return egv1a1.ClientValidationRequireAndVerify
+	case gwapiv1.AllowInsecureFallback:
+		return egv1a1.ClientValidationRequest
+	default:
+		return egv1a1.ClientValidationRequireAndVerify
+	}
 }
 
 func irTLSCACertName(namespace, name string) string {
@@ -624,7 +714,6 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	mask, _ := ipn.Mask.Size()
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
-		IP:      ip.String(),
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
@@ -742,19 +831,19 @@ func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
 	// If ipFamilyPolicy is RequireDualStack, return DualStack
 	if service.Spec.IPFamilyPolicy != nil &&
 		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	}
 
 	// Check ipFamilies array
 	if len(service.Spec.IPFamilies) > 0 {
 		if len(service.Spec.IPFamilies) > 1 {
-			return ptr.To(egv1a1.DualStack)
+			return new(egv1a1.DualStack)
 		}
 		switch service.Spec.IPFamilies[0] {
 		case corev1.IPv4Protocol:
-			return ptr.To(egv1a1.IPv4)
+			return new(egv1a1.IPv4)
 		case corev1.IPv6Protocol:
-			return ptr.To(egv1a1.IPv6)
+			return new(egv1a1.IPv6)
 		}
 	}
 
@@ -769,11 +858,11 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	default:
 		return nil
 	}

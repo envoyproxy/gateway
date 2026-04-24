@@ -546,7 +546,7 @@ _Appears in:_
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
 | `responseOverride` | _[ResponseOverride](#responseoverride) array_ |  false  |  | ResponseOverride defines the configuration to override specific responses with a custom one.<br />If multiple configurations are specified, the first one to match wins. |
 | `httpUpgrade` | _[ProtocolUpgradeConfig](#protocolupgradeconfig) array_ |  false  |  | HTTPUpgrade defines the configuration for HTTP protocol upgrades.<br />If not specified, the default upgrade configuration(websocket) will be used. |
-| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings. |
+| `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings.<br />Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. WebSocket upgrades may be enabled by default for HTTP/1.1 routes, so do not enable this option on routes that need those protocols because requests can hang instead of being forwarded upstream. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 
 
@@ -620,6 +620,7 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/brotli
 
 _Appears in:_
 - [Compression](#compression)
+
 
 
 
@@ -5879,6 +5880,4 @@ https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/compression/zstd/c
 
 _Appears in:_
 - [Compression](#compression)
-
-
 

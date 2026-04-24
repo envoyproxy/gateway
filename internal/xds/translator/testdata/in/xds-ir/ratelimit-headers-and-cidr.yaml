@@ -25,6 +25,7 @@ http:
             cidrMatch:
               cidr: 192.168.0.0/16
               maskLen: 16
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -49,6 +50,7 @@ http:
             cidrMatch:
               cidr: 192.168.0.0/16
               maskLen: 16
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -73,6 +75,7 @@ http:
             cidrMatch:
               cidr: 192.168.0.0/16
               maskLen: 16
+              isIPv6: false
             limit:
               requests: 5
               unit: second
@@ -84,6 +87,7 @@ http:
             cidrMatch:
               cidr: 192.169.0.0/16
               maskLen: 16
+              isIPv6: false
             limit:
               requests: 10
               unit: second

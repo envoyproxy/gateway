@@ -525,7 +525,6 @@
                   "serviceName": "httproute/default/backend/rule/0"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {
@@ -580,7 +579,6 @@
                   "serviceName": "grpcroute/default/backend/rule/0"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {
@@ -646,7 +644,6 @@
                   "serviceName": "tcproute/default/backend/rule/-1"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {
@@ -701,7 +698,6 @@
                   "serviceName": "tlsroute/default/backend/rule/-1"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {
@@ -756,7 +752,6 @@
                   "serviceName": "udproute/default/backend/rule/-1"
                 },
                 "ignoreHealthOnHostRemoval": true,
-                "lbPolicy": "LEAST_REQUEST",
                 "loadBalancingPolicy": {
                   "policies": [
                     {

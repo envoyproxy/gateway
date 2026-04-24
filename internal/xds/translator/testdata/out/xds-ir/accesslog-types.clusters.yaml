@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: direct-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -34,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_0_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -65,7 +63,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_0_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -96,7 +93,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_1_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -127,7 +123,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_1_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -158,7 +153,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_2_1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -189,7 +183,6 @@
       resourceApiVersion: V3
     serviceName: accesslog_als_2_2
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -216,7 +209,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_0_3
     endpoints:
@@ -257,7 +249,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_1_3
     endpoints:
@@ -298,7 +289,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: accesslog_otel_2_3
     endpoints:

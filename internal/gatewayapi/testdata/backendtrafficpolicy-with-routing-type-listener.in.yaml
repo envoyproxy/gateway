@@ -1,0 +1,94 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: https
+          protocol: HTTPS
+          port: 443
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: tls-secret
+          allowedRoutes:
+            namespaces:
+              from: All
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-secret
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNsekNDQVg4Q0ZIZU9wV1lOdFlhRlFlL3lGRWVHMDdEMXNjSWJNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1CTXgKRVRBUEJnTlZCQU1NQ0dvdVpHOXRZV2x1TUI0WERUSXlNVEF5TVRFek1UZzBPVm9YRFRJeU1URXlNREV6TVRnMApPVm93RXpFUk1BOEdBMVVFQXd3SWFpNWtiMjFoYVc0d2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUJEd0F3CmdnRUtBb0lCQVFESGc2R0ZYbWlhdWl1WDU3R25ycWpYazkvd1JwbTZUcFdkWk9NYjBWQ05PQkVTREhxR1ZBMHEKbEdRdEQzNjZMS3krSDRCcGdJeXBrSG9mOWg4VlpCWi8zaFh5OEVJOUFCTytxTU9xRXVocytWUU5kY2g0Wlp5RAppNGpSZVByRCs3akJEY3Y5czR6ZmNKZjRLMkhJT1dVQUNvWnhTVTRXTWZsZnhqdVE3OFVPM0pJanRtTk1pMHVkClNpbzNsS2NNY3dGejlyUnR4WlNJTUR0VmtHQWJWNzJ6UWdpdUNjVE9TZTEzd3BJQWdNalRVVDZ3S3hqZEpXTGcKeTNDQmpRRVIyT3dGZ1FzaEJVa1p1ZW1vcHVFZU1aL09ncG1GTlR3bjJTN2VYdk1GblpqRVhhdkFpaE9UZUNLUQQ4dUdSSVE0Z3hzMzg3TVVDR1VIbXpLSjg0djhRMUJBdkFnTUJBQUV3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCCkFHRm9KZWpBSHhkY2dCWFkzYUxOKzJISm5yR2dHTEpycHFFaXc5T0NvVWJ3Uk0yRFdzVCtJa0ttYWVOeWhiaU4KRHpLazh0VnJGYTN4WDVRTXRGbjJrQXJxZ3lJT0lBa2JZZ1RFUS9Nd2ZPcWMyQzI0RDRqNDB4QXF6NlB5dUl0VgozM2pDTHhYRURJSGV1bVNZV2FjMTBRQlc2UjhOdnE0a0RISXF2bHNHMUQ4SXdlRkNLQjJSMnZ2Nmo1SHhLK041CnpOV0JhTzIrWFVlbkwvQmpKZmtVVkFWRWxsRERaRjFOZk5SL25WeDhLSjFhYXg5RHNLeG1mQStnYXhNZEJMVWMKSEsyLzlzaTBBU2QvVU1WNXA2bm5tWG5GYXJ2WE5mYXVPUGNzSzJPL2NheElmZ0sxOG10RTBnWnpFZVlteG82bgpYdzA5UThVdTgvRXF5S21rR0FFa2JXUT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREhnNkdGWG1pYXVpdVgKNTdHbnJxalhrOS93UnBtNlRwV2RaT01iMFZDTk9CRVNESHFHVkEwcWxHUXREMzY2TEt5K0g0QnBnSXlwa0hvZgo5aDhWWkJaLzNoWHk4RUk5QUJPdXFNT3FFdWhzK1ZRTmRjaDRaWnlEaTRqUmVQckQrN2pCRGN2OXM0emZjSmY0CksySElPV1VBQ29aeFNVNFdNZmxmeGp1UTc4VU8zSklqdG1OTWkwdWRTaW8zbEtjTWN3Rno5clJ0eFpTSU1EdFYKa0dBYlY3MnpRZ2l1Q2NUT1NlMTN3cElBZ01qVFVUNndLeGpkSldMZ3kzQ0JqUUVSMk93RmdRc2hCVWtadWVtbwpwdUVlTVovT2dwbUZOVHduMlM3ZVh2TUZuWmpFWGF2QWloT1RlQ0tRRHVHUklRNGd4czM4N01VQ0dVSG16S0o4CjR2OFExQkF2QWdNQkFBRUNnZ0VBYTBYbHo2UUM4VGxVaFdYbVJMM2VSdGFMczFGVjY3bjFjN0RiKzU0R09NRzkKYlg5ckRLTTVkZE9NaXBMR3I3cVdvN3kyblVRNFUxMkdCR3ZJTldNZHRlTHFqSVNVQVk5SkJ0V2JWZEdkcDMxdApXYzVJWU9Mc1VRaUhLQ3Z2azNWK3N0SERUSk5VYitTMERoNzk2bkdTTUE1bXkrWjkyMVVpVXEzTkh1dUNnME5tClUxQUJOWjlRZDdxelhrNEMxNkRtU043dUcrNmxUaU8ybU95dGFuVVJLbDBaVk5FYlEwQkFhVnk5WjNvdWM1Y3IKL1liU1F1U1BMYTFCOW52cXhKTGhJNmUyNmZMWWhPQndHYTBVMlhxQlFKM2dTWFRZZFNnTHVRYkIxN3FGMENURgpac3R6MTkxUEdQMEVpN2RNWmtjT1dzRTdKa3hXY0cwU0wyNEVQZ1JRb1FLQmdRRHN6NHdhZkJ4aFJyU0lFMW1wCi9TQkh1c3dYZXZKeTN2RmZ5blZGRkwxdGFJNHlQT2Y2ZlJ4bzYwL2N1dEhxTW9iUnAvOHRIS3lDY2p5emN4emgKVHhPMFN1NjBMbTFOelY1b0lwRlNKMko4VTR6eFViK3dkdnNWWjZHQitNbFBoZkFQYkR3a3l4ckFEaGsyRkhWeQp2U2lpZVhrQ2cwVkQ3elFBUEhjbU5Nc25Ud0tCZ1FEWHZhUFdaSVNRdWxmRXE3V3U4WHN6OUc1VGloNEVmTy9FCmNYZkFVTFlmSUpHejduVG0vTTQ1K1JtVHpzaTRxTDVMV3N1dzhZNnRTV25xT3FKazBLUk1SZG5KakVUWjdHTGoKWDhqc2dCQXRGcnFieU5lYytXQjBxWjRoV3hTb2FRdXBqalRqQmdZMDl6T2ZOdkI1bzVCeGo5UlFKM3hKRGFOVgpqUm52T2lpOXR3S0JnRmlIUkdqRVg4UVhMSWNISnFzQy9wbis5T1BiVThmaFdXL0hTbjZmWDZsQThnQ3R6S01PCmhnS1VJR0lsUExUclQ1S2JLRTdDNUpNcFZXcndWTkJWUGQ3YjJ5MFlNKzFwZ0Flb0RBWHVUVHdFQUpYQk5UYmwKYXhJYU5icUVPT1FGdGMybkVsTW05T3RFRjBQSHRlOWxPMmZRVExKWExFNHpZVDBvaWxIKytrNUhBb0dBUlhBOQp3SEIwM0RXTnVlMVhnb1hZY3IyUVQxYnFseGEzUjBjRVI1SHlXekI1M3I5N2lESEh4UDBTa1VoN0V2UWd1VHZHCnVFMUQzY2tBeG5BWEdQcXA4NXMxYU5UZUU5SE5reTN4Y1B5VlVGZjI1dW5FNHFGak9XbmhEeG00ckxkOVY2R2oKMFpLS1E3bmdKM0hPZHRqMmxnaXJPclptNlRxSGJZRTVBUHZIdDhNQ2dZQVU1NU9teFNrS2srbnJUMkZuS1JmaApocU5vN0RCOFVCQjdJRDBIYmR6S3p4TTQrU0cxSy9jUHM5cVJJUEFyK1JCT0VnNGNidCt0b3doTVpVZ0dGV25QCnJFSFJJWEE5WWkxTnh2clBBNFAzcENTS29PaHdYYlp5VThrVWpiRTBWL0w2dTVob1FtWnpNRFRxY0dsK3pBTjgKVlo5NHNUTnBCQjQybitEakp6Zk1KUT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-http
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                value: "/foo"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-https
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: https
+      rules:
+        - matches:
+            - path:
+                value: "/bar"
+          backendRefs:
+            - name: service-2
+              port: 8080
+backendTrafficPolicies:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-gateway
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+      routingType: Endpoint
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: BackendTrafficPolicy
+    metadata:
+      namespace: envoy-gateway
+      name: policy-for-http-listener
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        sectionName: http
+      routingType: Service

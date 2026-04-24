@@ -70,6 +70,7 @@ helm uninstall eg -n envoy-gateway-system
 | config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
+| deployment.envoyGateway.extraEnv | list | `[]` | Additional environment variables for the envoy-gateway container. |
 | deployment.envoyGateway.image.repository | string | `""` |  |
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
@@ -87,6 +88,8 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.pod.affinity | object | `{}` |  |
 | deployment.pod.annotations."prometheus.io/port" | string | `"19001"` |  |
 | deployment.pod.annotations."prometheus.io/scrape" | string | `"true"` |  |
+| deployment.pod.extraVolumeMounts | list | `[]` |  |
+| deployment.pod.extraVolumes | list | `[]` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.pod.nodeSelector | object | `{}` |  |
 | deployment.pod.tolerations | list | `[]` |  |
@@ -119,6 +122,7 @@ helm uninstall eg -n envoy-gateway-system
 | hpa.metrics | list | `[]` |  |
 | hpa.minReplicas | int | `1` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
+| namespaceOverride | string | `""` | Override the namespace for resources deployed by the chart. Defaults to the release namespace. |
 | podDisruptionBudget.minAvailable | int | `0` |  |
 | service.annotations | object | `{}` |  |
 | service.trafficDistribution | string | `""` |  |

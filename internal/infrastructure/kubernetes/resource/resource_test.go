@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -66,11 +65,11 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				AllocateLoadBalancerNodePorts: ptr.To(true),
+				AllocateLoadBalancerNodePorts: new(true),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                          corev1.ServiceTypeLoadBalancer,
-				AllocateLoadBalancerNodePorts: ptr.To(true),
+				AllocateLoadBalancerNodePorts: new(true),
 				SessionAffinity:               corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy:         corev1.ServiceExternalTrafficPolicyTypeLocal,
 			},
@@ -92,7 +91,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithLoadBalancerIP",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				LoadBalancerIP: ptr.To("10.11.12.13"),
+				LoadBalancerIP: new("10.11.12.13"),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,

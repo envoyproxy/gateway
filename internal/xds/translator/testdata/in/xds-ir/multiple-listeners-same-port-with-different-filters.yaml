@@ -6,7 +6,6 @@ http:
     address: 0.0.0.0
     hostnames:
       - 'www.foo.com'
-    isHTTP2: false
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true
@@ -75,7 +74,6 @@ http:
     address: 0.0.0.0
     hostnames:
       - 'www.bar.com'
-    isHTTP2: false
     path:
       escapedSlashesAction: UnescapeAndRedirect
       mergeSlashes: true

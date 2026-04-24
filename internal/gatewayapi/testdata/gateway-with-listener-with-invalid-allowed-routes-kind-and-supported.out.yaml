@@ -19,7 +19,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: FooRoute is not supported, kind must be one of [HTTPRoute]
@@ -55,8 +55,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: No listeners included by this parent ref allowed this attachment.
-        reason: NotAllowedByListeners
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null
@@ -71,6 +71,13 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - name: envoy-gateway/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -106,6 +113,21 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      name: envoy-gateway/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

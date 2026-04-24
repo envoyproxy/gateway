@@ -15,8 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
-	gwapixv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -33,12 +31,50 @@ type GatewayContext struct {
 
 	listeners  []*ListenerContext
 	envoyProxy *egv1a1.EnvoyProxy
+	backendTLS *egv1a1.BackendTLSConfig
+}
+
+type ResourceMetadata struct {
+	Name      string
+	Namespace string
+	Kind      string
+}
+
+// GetBackendTLSConfig returns the BackendTLSConfig for the Gateway.
+// Precedence order (highest to lowest):
+// 1. Gateway.spec.tls.backend configuration
+// 2. EnvoyProxy.spec.backendTLS (attached to Gateway or GatewayClass)
+//
+// TODO: Merging fields in EnvoyProxy and Gateway TLS configs should be considered.
+func (g *GatewayContext) GetBackendTLSConfig() (*egv1a1.BackendTLSConfig, *ResourceMetadata) {
+	// If Gateway.spec.tls.backend is configured, it takes precedence over
+	// EnvoyProxy.spec.backendTLS even when translation produced no usable
+	// backendTLS config (for example, due to invalid clientCertificateRef).
+	if g.Gateway != nil && g.Spec.TLS != nil && g.Spec.TLS.Backend != nil {
+		if g.backendTLS == nil {
+			return nil, nil
+		}
+		return g.backendTLS, &ResourceMetadata{
+			Namespace: g.Namespace,
+			Name:      g.Name,
+			Kind:      resource.KindGateway,
+		}
+	}
+	if g.envoyProxy != nil && g.envoyProxy.Spec.BackendTLS != nil {
+		return g.envoyProxy.Spec.BackendTLS, &ResourceMetadata{
+			Namespace: g.envoyProxy.Namespace,
+			Name:      g.envoyProxy.Name,
+			Kind:      egv1a1.KindEnvoyProxy,
+		}
+	}
+	return nil, nil
 }
 
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
 func (g *GatewayContext) ResetListeners() {
 	numListeners := len(g.Spec.Listeners)
+	g.Status.AttachedListenerSets = nil
 	g.Status.Listeners = make([]gwapiv1.ListenerStatus, numListeners)
 	g.listeners = make([]*ListenerContext, numListeners)
 	for i := range g.Spec.Listeners {
@@ -52,36 +88,44 @@ func (g *GatewayContext) ResetListeners() {
 	}
 }
 
-func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) {
+// attachEnvoyProxy merges EnvoyProxy configurations from multiple levels and attaches the result.
+// Returns an error if the merge fails, which should be logged by the caller.
+// On error, the envoyProxy is still set using fallback priority-based selection
+// so the gateway can continue to function, but administrators should investigate the merge failure.
+func (g *GatewayContext) attachEnvoyProxy(resources *resource.Resources, epMap map[types.NamespacedName]*egv1a1.EnvoyProxy) error {
 	// Priority order (highest to lowest):
 	// 1. Gateway-level EnvoyProxy (via parametersRef)
 	// 2. GatewayClass-level EnvoyProxy
 	// 3. Default EnvoyProxySpec from EnvoyGateway configuration
+
+	var gatewayProxy *egv1a1.EnvoyProxy
 
 	if g.Spec.Infrastructure != nil && g.Spec.Infrastructure.ParametersRef != nil && !IsMergeGatewaysEnabled(resources) {
 		ref := g.Spec.Infrastructure.ParametersRef
 		if string(ref.Group) == egv1a1.GroupVersion.Group && ref.Kind == egv1a1.KindEnvoyProxy {
 			ep, exists := epMap[types.NamespacedName{Namespace: g.Namespace, Name: ref.Name}]
 			if exists {
-				g.envoyProxy = ep
-				return
+				gatewayProxy = ep
 			}
 		}
-		// not found, fallthrough to use envoyProxy attached to gatewayclass
 	}
 
-	// Use GatewayClass-level EnvoyProxy if available
-	if resources.EnvoyProxyForGatewayClass != nil {
-		g.envoyProxy = resources.EnvoyProxyForGatewayClass
-		return
-	}
+	// Merge all EnvoyProxy configs. On error, MergeEnvoyProxyConfigs returns a fallback
+	// configuration so the gateway can continue to function.
+	merged, err := MergeEnvoyProxyConfigs(
+		resources.EnvoyProxyDefaultSpec,
+		resources.EnvoyProxyForGatewayClass,
+		gatewayProxy,
+	)
+	g.envoyProxy = merged
+	return err
+}
 
-	// Fall back to default EnvoyProxySpec from EnvoyGateway configuration
-	if resources.EnvoyProxyDefaultSpec != nil {
-		// Create a synthetic EnvoyProxy object from the default spec
-		g.envoyProxy = &egv1a1.EnvoyProxy{
-			Spec: *resources.EnvoyProxyDefaultSpec,
-		}
+func (g *GatewayContext) IncreaseAttachedListenerSets() {
+	if g.Status.AttachedListenerSets == nil {
+		g.Status.AttachedListenerSets = new(int32(1))
+	} else {
+		*g.Status.AttachedListenerSets++
 	}
 }
 
@@ -94,30 +138,54 @@ type ListenerContext struct {
 	gateway           *GatewayContext
 	listenerStatusIdx int
 
-	// xListenerSet is the XListenerSet that this listener belongs to.
+	// listenerSet is the ListenerSet that this listener belongs to.
 	// If nil, this listener belongs to the Gateway.
-	xListenerSet          *gwapixv1a1.XListenerSet
-	xListenerSetStatusIdx int
+	listenerSet          *gwapiv1.ListenerSet
+	listenerSetStatusIdx int
 
 	namespaceSelector labels.Selector
-	tlsSecrets        []*corev1.Secret
-	certDNSNames      []string
+
+	tls ListenerTLSConfig
 
 	httpIR *ir.HTTPListener
 }
 
-// isFromXListenerSet returns true if the listener belongs to an XListenerSet instead of a Gateway.
-func (l *ListenerContext) isFromXListenerSet() bool {
-	return l.xListenerSet != nil
+type ListenerTLSConfig struct {
+	secrets               []*corev1.Secret
+	certDNSNames          []string
+	frontendTLSValidation *ListenerFrontendTLSValidation
+}
+
+type ListenerFrontendTLSValidation struct {
+	ValidateError error
+	*ir.TLSCACertificate
+	Mode egv1a1.ClientValidationModeType
+}
+
+func (l *ListenerContext) frontendTLSValidationInvalid() bool {
+	if l.tls.frontendTLSValidation == nil {
+		return false
+	}
+
+	if l.tls.frontendTLSValidation.ValidateError != nil {
+		return true
+	}
+
+	return false
+}
+
+// isFromListenerSet returns true if the listener belongs to a ListenerSet instead of a Gateway.
+func (l *ListenerContext) isFromListenerSet() bool {
+	return l.listenerSet != nil
 }
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
-	if l.isFromXListenerSet() {
+	if l.isFromListenerSet() {
 		if len(kinds) > 0 {
-			l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds = make([]gwapixv1a1.RouteGroupKind, len(kinds))
-			copy(l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds, kinds)
+			l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].SupportedKinds = make([]gwapiv1.RouteGroupKind, len(kinds))
+			copy(l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].SupportedKinds, kinds)
 		} else {
-			l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds = []gwapixv1a1.RouteGroupKind{}
+			l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].SupportedKinds = []gwapiv1.RouteGroupKind{}
 		}
 	} else {
 		if len(kinds) > 0 {
@@ -129,33 +197,40 @@ func (l *ListenerContext) SetSupportedKinds(kinds ...gwapiv1.RouteGroupKind) {
 	}
 }
 
+// IncrementAttachedRoutes increments the number of attached routes for the listener in the status.
+//
+// xref: https://github.com/kubernetes-sigs/gateway-api/issues/2402
+// Namely:
+// - AttachedRoutes should be set on Listeners that are valid or invalid
+// - The count of AttachedRoutes should include Routes that are valid or invalid
 func (l *ListenerContext) IncrementAttachedRoutes() {
-	if l.isFromXListenerSet() {
-		l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes++
+	if l.isFromListenerSet() {
+		l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].AttachedRoutes++
 	} else {
 		l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
 	}
 }
 
 func (l *ListenerContext) AttachedRoutes() int32 {
-	if l.isFromXListenerSet() {
-		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].AttachedRoutes
+	if l.isFromListenerSet() {
+		return l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].AttachedRoutes
 	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes
 }
 
 func (l *ListenerContext) AllowsKind(kind gwapiv1.RouteGroupKind) bool {
 	var supportedKinds []gwapiv1.RouteGroupKind
-	if l.xListenerSet != nil {
-		// Convert XListenerSet supported kinds to Gateway API kinds
+	if l.listenerSet != nil {
+		// Convert ListenerSet supported kinds to Gateway API kinds
 		// Since they are alias types, we can cast them
-		supportedKinds = append(supportedKinds, l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].SupportedKinds...)
+		supportedKinds = append(supportedKinds, l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].SupportedKinds...)
 	} else {
 		supportedKinds = l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds
 	}
 
 	for _, allowed := range supportedKinds {
-		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
+		// The default group is "gateway.networking.k8s.io"
+		if GroupDerefOr(allowed.Group, "gateway.networking.k8s.io") == GroupDerefOr(kind.Group, "gateway.networking.k8s.io") &&
 			allowed.Kind == kind.Kind {
 			return true
 		}
@@ -189,8 +264,8 @@ func (l *ListenerContext) AllowsNamespace(namespace *corev1.Namespace) bool {
 
 func (l *ListenerContext) IsReady() bool {
 	var conditions []metav1.Condition
-	if l.isFromXListenerSet() {
-		conditions = l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
+	if l.isFromListenerSet() {
+		conditions = l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].Conditions
 	} else {
 		conditions = l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 	}
@@ -205,27 +280,30 @@ func (l *ListenerContext) IsReady() bool {
 }
 
 func (l *ListenerContext) GetNamespace() string {
-	if l.isFromXListenerSet() {
-		return l.xListenerSet.Namespace
+	if l.isFromListenerSet() {
+		return l.listenerSet.Namespace
 	}
 	return l.gateway.Namespace
 }
 
 func (l *ListenerContext) GetConditions() []metav1.Condition {
-	if l.isFromXListenerSet() {
-		return l.xListenerSet.Status.Listeners[l.xListenerSetStatusIdx].Conditions
+	if l.isFromListenerSet() {
+		return l.listenerSet.Status.Listeners[l.listenerSetStatusIdx].Conditions
 	}
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
 func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionType, conditionStatus metav1.ConditionStatus, reason gwapiv1.ListenerConditionReason, message string) {
-	if l.isFromXListenerSet() {
-		// Convert Gateway API types to XListenerSet types
+	if l.isFromListenerSet() {
+		r := string(reason)
+		if reason == gwapiv1.ListenerReasonInvalid {
+			r = string(gwapiv1.ListenerSetReasonListenersNotValid)
+		}
+		// Convert Gateway API types to ListenerSet types
 		// Note: The string values are expected to match between the APIs
-		status.SetXListenerSetListenerStatusCondition(l.xListenerSet, l.xListenerSetStatusIdx,
-			gwapixv1a1.ListenerEntryConditionType(conditionType),
-			conditionStatus,
-			gwapixv1a1.ListenerEntryConditionReason(reason),
+		status.SetListenerSetListenerStatusCondition(l.listenerSet, l.listenerSetStatusIdx,
+			gwapiv1.ListenerEntryConditionType(conditionType),
+			conditionStatus, r,
 			message)
 	} else {
 		status.SetGatewayListenerStatusCondition(l.gateway.Gateway, l.listenerStatusIdx,
@@ -237,7 +315,7 @@ func (l *ListenerContext) SetCondition(conditionType gwapiv1.ListenerConditionTy
 }
 
 func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*corev1.Secret) {
-	l.tlsSecrets = tlsSecrets
+	l.tls.secrets = tlsSecrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -366,7 +444,7 @@ func (r *GRPCRouteContext) SetRouteParentContext(forParentRef gwapiv1.ParentRefe
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
-	*gwapiv1a3.TLSRoute
+	*gwapiv1.TLSRoute
 
 	ParentRefs map[gwapiv1.ParentReference]*RouteParentContext
 }
@@ -534,6 +612,22 @@ func GetParentReferences(route RouteContext) []gwapiv1.ParentReference {
 	return route.GetParentReferences()
 }
 
+// GetManagedParentReferences returns route parentRefs that are managed by this controller.
+func GetManagedParentReferences(route RouteContext) []gwapiv1.ParentReference {
+	parentRefs := GetParentReferences(route)
+	managed := make([]gwapiv1.ParentReference, 0, len(parentRefs))
+	for _, parentRef := range parentRefs {
+		// RouteParentContext is only created for parentRefs handled by this
+		// translator run. If absent, the parentRef points to a Gateway that is
+		// not managed by this controller.
+		if route.GetRouteParentContext(parentRef) == nil {
+			continue
+		}
+		managed = append(managed, parentRef)
+	}
+	return managed
+}
+
 // GetRouteStatus returns the RouteStatus object associated with the Route.
 func GetRouteStatus(route RouteContext) *gwapiv1.RouteStatus {
 	return route.GetRouteStatus()
@@ -686,7 +780,7 @@ type RouteParentContext struct {
 	// a single field pointing to *gwapiv1.RouteStatus.
 	HTTPRoute *gwapiv1.HTTPRoute
 	GRPCRoute *gwapiv1.GRPCRoute
-	TLSRoute  *gwapiv1a3.TLSRoute
+	TLSRoute  *gwapiv1.TLSRoute
 	TCPRoute  *gwapiv1a2.TCPRoute
 	UDPRoute  *gwapiv1a2.UDPRoute
 
@@ -771,6 +865,7 @@ type TranslatorContext struct {
 	ConfigMapMap          map[types.NamespacedName]*corev1.ConfigMap
 	ClusterTrustBundleMap map[types.NamespacedName]*certificatesv1b1.ClusterTrustBundle
 	EndpointSliceMap      map[backendServiceKey][]*discoveryv1.EndpointSlice
+	BTPRoutingTypeIndex   *BTPRoutingTypeIndex
 }
 
 func (t *TranslatorContext) GetNamespace(name string) *corev1.Namespace {

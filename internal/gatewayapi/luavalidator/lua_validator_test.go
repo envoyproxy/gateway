@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/utils/ptr"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
@@ -144,7 +142,7 @@ func Test_BasicValidation(t *testing.T) {
                   end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: ptr.To(egv1a1.LuaValidationInsecureSyntax),
+					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax),
 				},
 			},
 			expectedErrSubstring: "",
@@ -161,7 +159,7 @@ func Test_BasicValidation(t *testing.T) {
                   end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: ptr.To(egv1a1.LuaValidationInsecureSyntax),
+					LuaValidation: new(egv1a1.LuaValidationInsecureSyntax),
 				},
 			},
 			expectedErrSubstring: "<string> at EOF:   syntax error",
@@ -178,7 +176,7 @@ func Test_BasicValidation(t *testing.T) {
                    end`,
 			proxy: &egv1a1.EnvoyProxy{
 				Spec: egv1a1.EnvoyProxySpec{
-					LuaValidation: ptr.To(egv1a1.LuaValidationDisabled),
+					LuaValidation: new(egv1a1.LuaValidationDisabled),
 				},
 			},
 			expectedErrSubstring: "",

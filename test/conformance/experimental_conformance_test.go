@@ -16,44 +16,28 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/yaml"
-
-	internalconf "github.com/envoyproxy/gateway/internal/gatewayapi/conformance"
-	"github.com/envoyproxy/gateway/test/e2e"
-	ege2etest "github.com/envoyproxy/gateway/test/e2e/tests"
 )
 
 func TestExperimentalConformance(t *testing.T) {
 	flag.Parse()
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 
-	internalSuite := internalconf.EnvoyGatewaySuite(ege2etest.IsGatewayNamespaceMode())
-
-	opts := conformance.DefaultOptions(t)
-	opts.SkipTests = internalSuite.SkipTests
-	opts.SupportedFeatures = internalSuite.SupportedFeatures
-	opts.ExemptFeatures = internalSuite.ExemptFeatures
+	opts := conformanceOpts(t)
 
 	opts.ConformanceProfiles = sets.New(
 		suite.GatewayHTTPConformanceProfileName,
 		suite.GatewayTLSConformanceProfileName,
 		suite.GatewayGRPCConformanceProfileName,
 	)
-	opts.Hook = e2e.Hook
 
-	// I don't know why this happens, but the UDPRoute test failed on dual stack
-	// because on some VM(e.g. Ubuntu 22.04), the ipv4 address for UDP gateway is not
-	// reachable. There's a same test in our e2e test fixtures that passed, it's so odd.
-	// So we skip this test on dual stack for now.
-	if ege2etest.IPFamily == "dual" {
-		opts.SkipTests = append(opts.SkipTests,
-			tests.UDPRouteTest.ShortName,
-		)
+	// If focusing on a single test, clear the skip list to ensure it runs.
+	if opts.RunTest != "" {
+		opts.SkipTests = nil
 	}
 
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",

@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/http"
 )
 
 type FiltersTranslator interface {
@@ -207,6 +208,16 @@ func (t *Translator) ProcessGRPCFilters(
 		default:
 			errs.Add(t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext))
 		}
+	}
+
+	if httpFiltersContext.DirectResponse != nil && len(httpFiltersContext.Mirrors) > 0 {
+		httpFiltersContext.DirectResponse = nil
+		httpFiltersContext.Mirrors = nil
+
+		errs.Add(status.NewRouteStatusError(
+			errors.New(requestMirrorDirectResponseConflictMsg),
+			gwapiv1.RouteReasonIncompatibleFilters,
+		).WithType(gwapiv1.RouteConditionAccepted))
 	}
 
 	return httpFiltersContext, errs.GetAllErrors()
@@ -417,7 +428,7 @@ func (t *Translator) processRedirectFilter(
 	if redirect.StatusCode != nil {
 		redirectCode := int32(*redirect.StatusCode)
 		// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
-		if redirectCode == 301 || redirectCode == 302 {
+		if http.SupportedRedirectCodes.Has(redirectCode) {
 			redir.StatusCode = &redirectCode
 		} else {
 			return status.NewRouteStatusError(
@@ -873,7 +884,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 							}
 						case egv1a1.BackendHTTPHostnameModifier:
 							hm = &ir.HTTPHostModifier{
-								Backend: ptr.To(true),
+								Backend: new(true),
 							}
 						}
 
@@ -888,22 +899,28 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						}
 					}
 
+					if hrf.Spec.URLRewrite.AppendXForwardedHost != nil {
+						if filterContext.URLRewrite == nil {
+							filterContext.URLRewrite = &ir.URLRewrite{}
+						}
+						filterContext.URLRewrite.AppendXForwardedHost = hrf.Spec.URLRewrite.AppendXForwardedHost
+					}
+
 				}
 
 				if hrf.Spec.DirectResponse != nil {
 					dr := &ir.CustomResponse{}
 					if hrf.Spec.DirectResponse.Body != nil {
-						body := hrf.Spec.DirectResponse.Body
 						var err error
-						if dr.Body, err = t.getCustomResponseBody(body, filterNs); err != nil {
+						if dr.Body, err = t.getCustomResponseBody(hrf.Spec.DirectResponse.Body, filterNs); err != nil {
 							return t.processInvalidHTTPFilter(string(extFilter.Kind), filterContext, err)
 						}
 					}
 
 					if hrf.Spec.DirectResponse.StatusCode != nil {
-						dr.StatusCode = ptr.To(uint32(*hrf.Spec.DirectResponse.StatusCode))
+						dr.StatusCode = new(uint32(*hrf.Spec.DirectResponse.StatusCode))
 					} else {
-						dr.StatusCode = ptr.To(uint32(200))
+						dr.StatusCode = new(uint32(200))
 					}
 
 					if hrf.Spec.DirectResponse.ContentType != nil {
@@ -938,7 +955,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 
 				if hrf.Spec.CredentialInjection != nil {
 					secret, err := t.validateSecretRef(
-						false,
+						true,
 						crossNamespaceFrom{
 							group:     egv1a1.GroupName,
 							kind:      resource.KindHTTPRouteFilter,
@@ -1041,8 +1058,15 @@ func (t *Translator) processRequestMirrorFilter(
 
 	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
 	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
 	if err != nil {
+		// Gateway API conformance: When backendRef Service exists but has no endpoints,
+		// the ResolvedRefs condition should NOT be set to False.
+		// so we return the custom condition error to handle this case and set the status in the caller function.
+		if err.Reason() == status.RouteReasonEndpointsNotFound {
+			return status.NewRouteStatusError(
+				fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(status.RouteConditionBackendsAvailable)
+		}
 		return err
 	}
 
@@ -1053,9 +1077,9 @@ func (t *Translator) processRequestMirrorFilter(
 
 	var percent *float32
 	if f := mirrorFilter.Fraction; f != nil {
-		percent = ptr.To(100 * float32(f.Numerator) / float32(ptr.Deref(f.Denominator, int32(100))))
+		percent = new(100 * float32(f.Numerator) / float32(ptr.Deref(f.Denominator, int32(100))))
 	} else if p := mirrorFilter.Percent; p != nil {
-		percent = ptr.To(float32(*p))
+		percent = new(float32(*p))
 	}
 
 	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
@@ -1118,7 +1142,7 @@ func (t *Translator) processCORSFilter(
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unresolved due to HTTP filter error", "error", errMsg)
 	filterContext.DirectResponse = &ir.CustomResponse{
-		StatusCode: ptr.To(uint32(500)),
+		StatusCode: new(uint32(500)),
 	}
 	return status.NewRouteStatusError(
 		errors.New(errMsg),
@@ -1133,7 +1157,7 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) status.Error {
 	t.Logger.Info("marking route unsupported due to HTTP filter type", "filterType", filterType)
 	filterContext.DirectResponse = &ir.CustomResponse{
-		StatusCode: ptr.To(uint32(500)),
+		StatusCode: new(uint32(500)),
 	}
 	return status.NewRouteStatusError(
 		fmt.Errorf("unsupported filter type: %s", filterType),
@@ -1144,7 +1168,7 @@ func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterConte
 func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) status.Error {
 	t.Logger.Info("marking route invalid due to HTTP filter error", "filterType", filterType, "error", err)
 	filterContext.DirectResponse = &ir.CustomResponse{
-		StatusCode: ptr.To(uint32(500)),
+		StatusCode: new(uint32(500)),
 	}
 	return status.NewRouteStatusError(
 		fmt.Errorf("invalid filter %s: %w", filterType, err),

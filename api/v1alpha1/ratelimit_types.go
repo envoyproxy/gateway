@@ -54,7 +54,7 @@ type GlobalRateLimit struct {
 	// matches two rules, one rate limited and one not, the final decision will be
 	// to rate limit the request.
 	//
-	// +kubebuilder:validation:MaxItems=128
+	// +kubebuilder:validation:MaxItems=256
 	Rules []RateLimitRule `json:"rules"`
 }
 
@@ -70,6 +70,23 @@ type LocalRateLimit struct {
 	// +kubebuilder:validation:XValidation:rule="self.all(r, !has(r.cost) || !has(r.cost.response))", message="response cost is not supported for Local Rate Limits"
 	Rules []RateLimitRule `json:"rules"`
 }
+
+// XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+// Valid values are "Off" and "DraftVersion03".
+// This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+//
+// +kubebuilder:validation:Enum=Off;DraftVersion03
+type XRateLimitHeadersOption string
+
+const (
+	// XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,
+	// regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDisabled XRateLimitHeadersOption = "Disabled"
+
+	// XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03
+	// for this rate limit rule, regardless of the global ClientTrafficPolicy setting.
+	XRateLimitHeadersOptionDraftVersion03 XRateLimitHeadersOption = "DraftVersion03"
+)
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
@@ -119,6 +136,12 @@ type RateLimitRule struct {
 	//
 	// +optional
 	ShadowMode *bool `json:"shadowMode,omitempty"`
+	// XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+	// When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+	// If not set, the rule inherits the listener-level setting (default behavior).
+	//
+	// +optional
+	XRateLimitHeaders *XRateLimitHeadersOption `json:"xRateLimitHeaders,omitempty"`
 }
 
 type RateLimitCost struct {
@@ -306,9 +329,18 @@ type SourceMatch struct {
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
 	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
+	//
+	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Value string `json:"value"`
+
+	// Invert specifies whether the source range match result will be inverted.
+	// When true, the rule matches when the client IP is not in the specified range(s).
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Invert *bool `json:"invert,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
@@ -400,7 +432,12 @@ type PathMatch struct {
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
-	Requests uint          `json:"requests"`
+	// Requests is the number of requests (or cost units, when used with
+	// cost-based rate limiting) allowed per Unit.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=4294967295
+	Requests uint32        `json:"requests"`
 	Unit     RateLimitUnit `json:"unit"`
 }
 

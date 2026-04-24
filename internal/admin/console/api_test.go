@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -482,7 +481,7 @@ func TestHandleAPIConfigDumpWithResourceFilter(t *testing.T) {
 					},
 				},
 			},
-			TLSRoutes: []*gwapiv1a3.TLSRoute{
+			TLSRoutes: []*gwapiv1.TLSRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "tr",

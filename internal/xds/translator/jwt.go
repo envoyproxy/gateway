@@ -116,7 +116,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener, jwtAuthn *jwtauthnv3.JwtAuthenti
 				err        error
 			)
 
-			claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
+			claimToHeaders := make([]*jwtauthnv3.JwtClaimToHeader, 0, len(irProvider.ClaimToHeaders))
 			for _, claimToHeader := range irProvider.ClaimToHeaders {
 				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
 					HeaderName: claimToHeader.Header,
@@ -321,10 +321,13 @@ func (*jwt) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRo
 				continue
 			}
 
-			// If the rmote JWKS has a destination, use it.
+			// If the remote JWKS has a destination, use it.
 			if jwks.Destination != nil && len(jwks.Destination.Settings) > 0 {
 				if err := createExtServiceXDSCluster(
 					jwks.Destination, jwks.Traffic, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				if err := processClientCertificates(tCtx, jwks.Destination.Settings); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			} else {

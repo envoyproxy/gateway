@@ -106,3 +106,8 @@ metadata:
     app.kubernetes.io/name: envoy-ratelimit
   name: statsd-exporter-config
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+    uid: test-owner-reference-uid-for-deployment

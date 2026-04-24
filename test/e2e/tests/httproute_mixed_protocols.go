@@ -31,6 +31,35 @@ var HTTPRouteMixedProtocols = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
+		// Wait for the BackendTLSPolicy to be accepted before making requests to ensure the TLS backend is ready.
+		kubernetes.BackendTLSPolicyMustHaveAcceptedConditionTrue(t, suite.Client, suite.TimeoutConfig, types.NamespacedName{
+			Name:      "policy-btls",
+			Namespace: "gateway-conformance-infra",
+		}, gwNN)
+
+		// Make sure both backends are healthy before making requests to verify traffic is routed correctly.
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/infra-backend-v1",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+			Backend:   "infra-backend-v1",
+		})
+
+		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/tls-backend-2",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+			Backend:   "tls-backend-2",
+		})
+
 		// Make requests to both backends to verify traffic is routed correctly.
 		responses := []http.ExpectedResponse{
 			{

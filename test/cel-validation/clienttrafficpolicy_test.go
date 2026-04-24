@@ -16,7 +16,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -164,8 +163,8 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					TLS: &egv1a1.ClientTLSSettings{
 						TLSSettings: egv1a1.TLSSettings{
-							MinVersion: ptr.To(egv1a1.TLSv12),
-							MaxVersion: ptr.To(egv1a1.TLSv11),
+							MinVersion: new(egv1a1.TLSv12),
+							MaxVersion: new(egv1a1.TLSv11),
 						},
 					},
 				}
@@ -190,7 +189,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					TLS: &egv1a1.ClientTLSSettings{
 						TLSSettings: egv1a1.TLSSettings{
-							MaxVersion: ptr.To(egv1a1.TLSv11),
+							MaxVersion: new(egv1a1.TLSv11),
 						},
 					},
 				}
@@ -215,7 +214,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
 						XForwardedFor: &egv1a1.XForwardedForSettings{
-							NumTrustedHops: ptr.To(uint32(1)),
+							NumTrustedHops: new(uint32(1)),
 						},
 						CustomHeader: &egv1a1.CustomHeaderExtensionSettings{
 							Name: "x-client-ip-address",
@@ -243,7 +242,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
 						XForwardedFor: &egv1a1.XForwardedForSettings{
-							NumTrustedHops: ptr.To(uint32(1)),
+							NumTrustedHops: new(uint32(1)),
 							TrustedCIDRs: []egv1a1.CIDR{
 								"192.168.1.0/24",
 								"10.0.0.0/16",
@@ -350,7 +349,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					TLS: &egv1a1.ClientTLSSettings{
 						TLSSettings: egv1a1.TLSSettings{
-							MinVersion: ptr.To(egv1a1.TLSv13),
+							MinVersion: new(egv1a1.TLSv13),
 							Ciphers:    []string{"[ECDHE-ECDSA-AES128-GCM-SHA256|ECDHE-ECDSA-CHACHA20-POLY1305]"},
 						},
 					},
@@ -398,7 +397,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					Connection: &egv1a1.ClientConnection{
-						BufferLimit: ptr.To(resource.MustParse("15m")),
+						BufferLimit: new(resource.MustParse("15m")),
 					},
 				}
 			},
@@ -407,7 +406,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
-			desc: "invalid Connection Limit Empty",
+			desc: "valid Connection Limit Empty",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -424,9 +423,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{
-				"spec.connection.connectionLimit.value: Invalid value: 0: spec.connection.connectionLimit.value in body should be greater than or equal to 1",
-			},
+			wantErrors: []string{},
 		},
 		{
 			desc: "invalid Connection Limit < 1",
@@ -443,13 +440,60 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					Connection: &egv1a1.ClientConnection{
 						ConnectionLimit: &egv1a1.ConnectionLimit{
-							Value: -1, // Value: 0 is covered by existence test, as 0 is the nil value.
+							Value: new(int64(-1)),
 						},
 					},
 				}
 			},
 			wantErrors: []string{
 				"spec.connection.connectionLimit.value: Invalid value: -1: spec.connection.connectionLimit.value in body should be greater than or equal to 1",
+			},
+		},
+		{
+			desc: "valid Connection Limit with only optional fields",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							MaxConnectionDuration:    new(gwapiv1.Duration("300s")),
+							MaxRequestsPerConnection: new(uint32(100)),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid Connection Limit closeDelay without value",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					Connection: &egv1a1.ClientConnection{
+						ConnectionLimit: &egv1a1.ConnectionLimit{
+							CloseDelay: new(gwapiv1.Duration("5s")),
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"closeDelay can only be configured when value is set",
 			},
 		},
 		{
@@ -466,7 +510,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HTTP2: &egv1a1.HTTP2Settings{
-						InitialStreamWindowSize: ptr.To(resource.MustParse("15m")),
+						InitialStreamWindowSize: new(resource.MustParse("15m")),
 					},
 				}
 			},
@@ -488,7 +532,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					HTTP2: &egv1a1.HTTP2Settings{
-						InitialConnectionWindowSize: ptr.To(resource.MustParse("15m")),
+						InitialConnectionWindowSize: new(resource.MustParse("15m")),
 					},
 				}
 			},
@@ -511,7 +555,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					},
 					Headers: &egv1a1.HeaderSettings{
 						XForwardedClientCert: &egv1a1.XForwardedClientCert{
-							Mode: ptr.To(egv1a1.XFCCForwardModeSanitize),
+							Mode: new(egv1a1.XFCCForwardModeSanitize),
 							CertDetailsToAdd: []egv1a1.XFCCCertData{
 								egv1a1.XFCCCertDataChain,
 							},
@@ -591,7 +635,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
 						TargetSelectors: []egv1a1.TargetSelector{
 							{
-								Group: ptr.To(gwapiv1.Group("gateway.networking.k8s.io")),
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
 								Kind:  "HTTPRoute",
 								MatchLabels: map[string]string{
 									"eg/namespace": "reference-apps",
@@ -618,8 +662,8 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					Headers: &egv1a1.HeaderSettings{
-						PreserveXRequestID: ptr.To(true),
-						RequestID:          ptr.To(egv1a1.RequestIDActionGenerate),
+						PreserveXRequestID: new(true),
+						RequestID:          new(egv1a1.RequestIDActionGenerate),
 					},
 				}
 			},

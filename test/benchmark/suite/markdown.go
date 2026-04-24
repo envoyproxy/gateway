@@ -85,9 +85,9 @@ func renderProtoResult(r *proto.Result) string {
 		if len(stat.GetPercentiles()) <= 1 {
 			continue
 		}
-		sb.WriteString(fmt.Sprintf("%s (%d samples)\n", statIDFriendlyStatName(stat.Id), stat.Count))
-		sb.WriteString(fmt.Sprintf("  min: %s | mean: %s | max: %s | pstdev: %s\n",
-			stat.GetMin().AsDuration(), stat.GetMean().AsDuration(), stat.GetMax().AsDuration(), stat.GetPstdev().AsDuration()))
+		fmt.Fprintf(&sb, "%s (%d samples)\n", statIDFriendlyStatName(stat.Id), stat.Count)
+		fmt.Fprintf(&sb, "  min: %s | mean: %s | max: %s | pstdev: %s\n",
+			stat.GetMin().AsDuration(), stat.GetMean().AsDuration(), stat.GetMax().AsDuration(), stat.GetPstdev().AsDuration())
 		sb.WriteString("\n")
 		sb.WriteString("  Percentile\tCount\t\tValue\n")
 
@@ -98,8 +98,8 @@ func renderProtoResult(r *proto.Result) string {
 				if current >= p && lastPercentile < current {
 					lastPercentile = current
 					if float64(current) > 0 && float64(current) < 1 {
-						sb.WriteString(fmt.Sprintf("  %f\t\t%d\t\t%s\n",
-							percentile.GetPercentile(), percentile.Count, percentile.GetDuration().AsDuration()))
+						fmt.Fprintf(&sb, "  %f\t\t%d\t\t%s\n",
+							percentile.GetPercentile(), percentile.Count, percentile.GetDuration().AsDuration())
 					}
 					break
 				}

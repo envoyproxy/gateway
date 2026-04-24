@@ -24,7 +24,7 @@ helm-package:
 helm-package.%: helm-generate.%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
-	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
+	$(GO_TOOL) helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
 
 .PHONY: helm-push
 helm-push: ## Push envoy gateway relevant helm charts to OCI registry.
@@ -38,7 +38,7 @@ helm-push:
 helm-push.%: helm-package.%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
-	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
+	$(GO_TOOL) helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
 .PHONY: helm-generate
 helm-generate:
@@ -73,11 +73,12 @@ helm-generate.%:
 helm-template: ## Render helm chart templates with test values.
 	@for chart in $(CHARTS); do \
   		$(LOG_TARGET); \
-  		$(MAKE) $(addprefix helm-generate., $$(basename $${chart})); \
+  		$(MAKE) $(addprefix helm-template., $$(basename $${chart})); \
   	done
 
 .PHONY: helm-template.%
 helm-template.%: ## Render helm chart templates with test values.
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval CHART_NAME := $(COMMAND))
 	$(call log, "Run helm template for chart: ${CHART_NAME}!");
 	@for file in $(wildcard test/helm/${CHART_NAME}/*.in.yaml); do \

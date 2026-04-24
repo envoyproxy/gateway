@@ -102,9 +102,10 @@ func (r *ResourceRender) ConfigMap(_ string) (*corev1.ConfigMap, error) {
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      "statsd-exporter-config",
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            "statsd-exporter-config",
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Data: map[string]string{
 			"conf.yaml": statsConf,
@@ -181,10 +182,11 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       ResourceKindServiceAccount,
 			APIVersion: apiVersion,
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace(),
 			Name:      InfraName,
+			Labels:    rateLimitLabels(),
 		},
 	}
 
@@ -254,8 +256,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					ServiceAccountName:            InfraName,
-					AutomountServiceAccountToken:  ptr.To(false),
-					TerminationGracePeriodSeconds: ptr.To[int64](300),
+					AutomountServiceAccountToken:  new(false),
+					TerminationGracePeriodSeconds: new(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
@@ -268,8 +270,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					TopologySpreadConstraints:     r.rateLimitDeployment.Pod.TopologySpreadConstraints,
 				},
 			},
-			RevisionHistoryLimit:    ptr.To[int32](10),
-			ProgressDeadlineSeconds: ptr.To[int32](600),
+			RevisionHistoryLimit:    new(int32(10)),
+			ProgressDeadlineSeconds: new(int32(600)),
 		},
 	}
 
@@ -325,9 +327,10 @@ func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPod
 			Kind:       "HorizontalPodAutoscaler",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace(),
-			Name:      r.Name(),
-			Labels:    rateLimitLabels(),
+			Namespace:       r.Namespace(),
+			Name:            r.Name(),
+			Labels:          rateLimitLabels(),
+			OwnerReferences: r.ownerReferences(),
 		},
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{

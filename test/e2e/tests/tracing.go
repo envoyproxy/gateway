@@ -8,14 +8,19 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 	"github.com/envoyproxy/gateway/test/utils/tracing"
@@ -76,6 +81,25 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 				tracing.ExpectedTraceCount(t, suite, gwAddr, &expectedResponse, tags)
 			})
 		}
+
+		t.Run("ControlPlane", func(t *testing.T) {
+			tags := map[string]string{
+				"service.name": "envoy-gateway",
+			}
+			err := wait.PollUntilContextTimeout(t.Context(), time.Second, time.Minute, true, func(_ context.Context) (done bool, err error) {
+				count, err := tracing.QueryTraceFromTempo(t, suite.Client, tags)
+				if err != nil {
+					tlog.Logf(t, "failed to get trace count from tempo: %v", err)
+					return false, nil
+				}
+				if count > 0 {
+					return true, nil
+				}
+				return false, nil
+			})
+
+			require.NoError(t, err, "failed to get control-plane trace from tempo within timeout")
+		})
 	},
 }
 

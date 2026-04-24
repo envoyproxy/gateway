@@ -36,6 +36,13 @@ message PostClusterExtensionContext {
     repeated ExtensionResource backend_extension_resources = 1;
 }
 
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
+// additional context information can be added to this message as more use-cases are discovered
+message PostEndpointsExtensionContext {
+
+}
+
 
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
@@ -59,7 +66,7 @@ message PostTranslateExtensionContext {
 
 // ExtensionResource stores the data for a K8s API object referenced in an HTTPRouteFilter
 // extensionRef. It is constructed from an unstructured.Unstructured marshalled to JSON. An extension
-// can marshal the bytes from this resource back into an unstructured.Unstructured and then 
+// can marshal the bytes from this resource back into an unstructured.Unstructured and then
 // perform type checking to obtain the resource.
 message ExtensionResource {
     bytes unstructured_bytes = 1;

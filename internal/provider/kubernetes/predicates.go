@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	mcsapiv1a1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -53,7 +52,7 @@ func (r *gatewayAPIReconciler) hasMatchingController(gc *gwapiv1.GatewayClass) b
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
-	ok, err := r.checkObjectNamespaceLabels(obj)
+	ok, err := checkObjectNamespaceLabels(context.Background(), r.client, r.namespaceLabel, obj)
 	if err != nil {
 		r.log.Error(
 			err, "failed to get Namespace",
@@ -68,27 +67,33 @@ type NamespaceGetter interface {
 	GetNamespace() string
 }
 
-// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
-func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(obj metav1.Object) (bool, error) {
+// checkObjectNamespaceLabels returns true if the namespace of provided object has
+// the provided labels or false otherwise.
+// Cluster-scoped resources (empty namespace) always return true.
+func checkObjectNamespaceLabels(ctx context.Context, c client.Client, namespaceSelector *metav1.LabelSelector, obj metav1.Object) (bool, error) {
 	var nsString string
-	// TODO: it requires extra condition validate cluster resources or resources without namespace?
+	// Cluster-scoped resources should not be filtered
 	if nsString = obj.GetNamespace(); len(nsString) == 0 {
-		return false, nil
+		return true, nil
 	}
 
 	ns := &corev1.Namespace{}
-	if err := r.client.Get(
-		context.Background(),
+	if err := c.Get(
+		ctx,
 		client.ObjectKey{
 			Namespace: "", // Namespace object should have an empty Namespace
 			Name:      nsString,
 		},
 		ns,
 	); err != nil {
+		// Namespace not found means the object doesn't match (it will likely be deleted soon)
+		if kerrors.IsNotFound(err) {
+			return false, nil
+		}
 		return false, err
 	}
 
-	return matchLabelsAndExpressions(r.namespaceLabel, ns.Labels), nil
+	return matchLabelsAndExpressions(namespaceSelector, ns.Labels), nil
 }
 
 // matchLabelsAndExpressions extracts information from a given label selector and checks whether
@@ -169,10 +174,8 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(secret *corev1.Secret)
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		if r.isBackendTLSPolicyReferencingSecret(&nsName) {
-			return true
-		}
+	if r.isBackendTLSPolicyReferencingSecret(&nsName) {
+		return true
 	}
 
 	if r.hrfCRDExists {
@@ -213,10 +216,8 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
-			return true
-		}
+	if r.isBackendTLSPolicyReferencingClusterTrustBundle(ctb) {
+		return true
 	}
 
 	if r.ctpCRDExists {
@@ -225,7 +226,25 @@ func (r *gatewayAPIReconciler) validateClusterTrustBundleForReconcile(ctb *certi
 		}
 	}
 
+	if r.eepCRDExists {
+		if r.isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb) {
+			return true
+		}
+	}
+
 	return false
+}
+
+func (r *gatewayAPIReconciler) isEnvoyExtensionPolicyReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
+	eepList := &egv1a1.EnvoyExtensionPolicyList{}
+	if err := r.client.List(context.Background(), eepList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(clusterTrustBundleEepIndex, ctb.Name),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated EnvoyExtensionPolicy")
+		return false
+	}
+
+	return len(eepList.Items) > 0
 }
 
 func (r *gatewayAPIReconciler) isCtpReferencingClusterTrustBundle(ctb *certificatesv1b1.ClusterTrustBundle) bool {
@@ -524,30 +543,26 @@ func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.Namespace
 		return true
 	}
 
-	if r.grpcRouteCRDExists {
-		grpcRouteList := &gwapiv1.GRPCRouteList{}
-		if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
-		}); err != nil && !kerrors.IsNotFound(err) {
-			r.log.Error(err, "failed to find associated GRPCRoutes")
-			return false
-		}
-		if len(grpcRouteList.Items) > 0 {
-			return true
-		}
+	grpcRouteList := &gwapiv1.GRPCRouteList{}
+	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated GRPCRoutes")
+		return false
+	}
+	if len(grpcRouteList.Items) > 0 {
+		return true
 	}
 
-	if r.tlsRouteCRDExists {
-		tlsRouteList := &gwapiv1a3.TLSRouteList{}
-		if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
-		}); err != nil && !kerrors.IsNotFound(err) {
-			r.log.Error(err, "failed to find associated TLSRoutes")
-			return false
-		}
-		if len(tlsRouteList.Items) > 0 {
-			return true
-		}
+	tlsRouteList := &gwapiv1.TLSRouteList{}
+	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
+	}); err != nil && !kerrors.IsNotFound(err) {
+		r.log.Error(err, "failed to find associated TLSRoutes")
+		return false
+	}
+	if len(tlsRouteList.Items) > 0 {
+		return true
 	}
 
 	if r.tcpRouteCRDExists {
@@ -838,18 +853,16 @@ func (r *gatewayAPIReconciler) validateConfigMapForReconcile(obj client.Object) 
 		}
 	}
 
-	if r.bTLSPolicyCRDExists {
-		btlsList := &gwapiv1.BackendTLSPolicyList{}
-		if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
-		}); err != nil {
-			r.log.Error(err, "unable to find associated BackendTLSPolicy")
-			return false
-		}
+	btlsList := &gwapiv1.BackendTLSPolicyList{}
+	if err := r.client.List(context.Background(), btlsList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(configMapBtlsIndex, utils.NamespacedName(configMap).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated BackendTLSPolicy")
+		return false
+	}
 
-		if len(btlsList.Items) > 0 {
-			return true
-		}
+	if len(btlsList.Items) > 0 {
+		return true
 	}
 
 	if r.btpCRDExists {

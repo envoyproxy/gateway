@@ -1,0 +1,431 @@
+clientTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
+    name: policy-for-valid-listener
+    namespace: default
+  spec:
+    clientIPDetection:
+      customHeader:
+        failClosed: false
+        name: x-real-client-ip
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-valid
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http-valid
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gatewayClass:
+  apiVersion: gateway.networking.k8s.io/v1
+  kind: GatewayClass
+  metadata:
+    name: envoy-gateway-class
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: geoip-proxy
+      namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http-valid
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http-invalid
+      port: 8081
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-valid
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-invalid
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-valid
+    namespace: default
+  spec:
+    hostnames:
+    - valid.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http-valid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /geo-valid
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http-valid
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-invalid
+    namespace: default
+  spec:
+    hostnames:
+    - invalid.example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http-invalid
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /geo-invalid
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http-invalid
+infraIR:
+  default/gateway-1:
+    proxy:
+      config:
+        apiVersion: gateway.envoyproxy.io/v1alpha1
+        kind: EnvoyProxy
+        metadata:
+          name: geoip-proxy
+          namespace: default
+        spec:
+          geoIP:
+            provider:
+              maxMind:
+                anonymousIpDbSource:
+                  local:
+                    path: /db/GeoIP2-Anonymous-IP.mmdb
+                cityDbSource:
+                  local:
+                    path: /db/GeoLite2-City.mmdb
+              type: MaxMind
+          logging: {}
+        status: {}
+      listeners:
+      - name: default/gateway-1/http-valid
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      - name: default/gateway-1/http-invalid
+        ports:
+        - containerPort: 8081
+          name: http-8081
+          protocol: HTTP
+          servicePort: 8081
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-1
+      namespace: envoy-gateway-system
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    name: geoip-policy
+    namespace: default
+  spec:
+    authorization:
+      defaultAction: Deny
+      rules:
+      - action: Allow
+        name: allow-us-seattle-proxy
+        principal:
+          clientIPGeoLocations:
+          - anonymous:
+              isProxy: true
+            city: Seattle
+            country: US
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: 'Authorization: authorization clientIPGeoLocations requires ClientTrafficPolicy.spec.clientIPDetection
+          to be configured.'
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+xdsIR:
+  default/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      clientIPDetection:
+        customHeader:
+          failClosed: false
+          name: x-real-client-ip
+      externalPort: 80
+      geoIPProvider:
+        maxMind:
+          anonymousIpDbPath: /db/GeoIP2-Anonymous-IP.mmdb
+          cityDbPath: /db/GeoLite2-City.mmdb
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http-valid
+      name: default/gateway-1/http-valid
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-valid
+            namespace: default
+          name: httproute/default/httproute-valid/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-valid/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: valid.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-valid
+          namespace: default
+        name: httproute/default/httproute-valid/rule/0/match/0/valid_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /geo-valid
+        security:
+          authorization:
+            defaultAction: Deny
+            rules:
+            - action: Allow
+              name: allow-us-seattle-proxy
+              principal:
+                clientIPGeoLocations:
+                - anonymous:
+                    isProxy: true
+                  city: Seattle
+                  country: US
+    - address: 0.0.0.0
+      externalPort: 8081
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http-invalid
+      name: default/gateway-1/http-invalid
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 8081
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-invalid
+            namespace: default
+          name: httproute/default/httproute-invalid/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-invalid/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        directResponse:
+          statusCode: 500
+        hostname: invalid.example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-invalid
+          namespace: default
+        name: httproute/default/httproute-invalid/rule/0/match/0/invalid_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /geo-invalid
+        security:
+          authorization:
+            defaultAction: Deny
+            rules:
+            - action: Allow
+              name: allow-us-seattle-proxy
+              principal:
+                clientIPGeoLocations:
+                - anonymous:
+                    isProxy: true
+                  city: Seattle
+                  country: US
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

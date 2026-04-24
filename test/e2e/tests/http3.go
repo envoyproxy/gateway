@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	tlsutils "sigs.k8s.io/gateway-api/conformance/utils/tls"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -61,14 +62,13 @@ var HTTP3Test = suite.ConformanceTest{
 				Namespace: ConformanceInfraNamespace,
 			}
 
-			cPem, keyPem, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: secretName, Namespace: ConformanceInfraNamespace})
+			serverCertificate, _, _, err := GetTLSSecret(suite.Client, types.NamespacedName{Name: secretName, Namespace: ConformanceInfraNamespace})
 			if err != nil {
 				t.Fatalf("unexpected error finding TLS secret: %v", err)
 			}
 
-			req := http.MakeRequest(t, &expected, gwAddr, "HTTPS", "https")
-			WaitForConsistentMTLSResponse(t, quicRoundTripper, &req, &expected, suite.TimeoutConfig.RequiredConsecutiveSuccesses, suite.TimeoutConfig.MaxTimeToConsistency,
-				cPem, keyPem, host)
+			tlsutils.MakeTLSRequestAndExpectEventuallyConsistentResponse(t, quicRoundTripper, suite.TimeoutConfig,
+				gwAddr, serverCertificate, nil, nil, host, expected)
 		}
 
 		testHTTP3("foo.example.com", "foo-com-tls")

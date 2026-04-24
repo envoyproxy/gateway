@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ include "eg.namespace" . }}
   {{- with .Values.deployment.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -59,6 +59,9 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
+        {{- with .Values.deployment.envoyGateway.extraEnv }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
         image: {{ include "eg.image" . }}
         imagePullPolicy: {{ include "eg.image.pullPolicy" . }}
         livenessProbe:
@@ -94,6 +97,9 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
+        {{- with .Values.deployment.pod.extraVolumeMounts }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- include "eg.image.pullSecrets" . | nindent 6 }}
       {{- with .Values.deployment.priorityClassName }}
       priorityClassName: {{ . | quote }}
@@ -108,3 +114,6 @@ spec:
       - name: certs
         secret:
           secretName: envoy-gateway
+      {{- with .Values.deployment.pod.extraVolumes }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}

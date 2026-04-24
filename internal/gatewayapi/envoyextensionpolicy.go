@@ -8,6 +8,7 @@ package gatewayapi
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +47,31 @@ func deprecatedFieldsUsedInEnvoyExtensionPolicy(policy *egv1a1.EnvoyExtensionPol
 	return deprecatedFields
 }
 
+func validateDynamicModuleRemoteURL(rawURL string) error {
+	parsedURL, err := url.ParseRequestURI(rawURL)
+	if err != nil {
+		return err
+	}
+
+	switch parsedURL.Scheme {
+	case "http", "https":
+	default:
+		return fmt.Errorf("unsupported URL scheme %q", parsedURL.Scheme)
+	}
+
+	if parsedURL.Hostname() == "" {
+		return errors.New("URL must include a hostname")
+	}
+
+	if port := parsedURL.Port(); port != "" {
+		if _, err := strconv.Atoi(port); err != nil {
+			return fmt.Errorf("invalid URL port %q: %w", port, err)
+		}
+	}
+
+	return nil
+}
+
 func (t *Translator) ProcessEnvoyExtensionPolicies(
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
 	gateways []*GatewayContext,
@@ -77,6 +103,8 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// The routes are grouped by sectionNames of their targetRefs.
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string])
 
+	policyCopies := envoyExtensionPolicyCopiesWithStatusDeepCopy(envoyExtensionPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.EnvoyExtensionPolicy)
 
 	// Translate
@@ -86,7 +114,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -94,7 +122,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -106,7 +134,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting xRoutes
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -114,7 +142,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -126,7 +154,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Listeners
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -134,7 +162,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -146,7 +174,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	}
 
 	// Process the policies targeting Gateways
-	for _, currPolicy := range envoyExtensionPolicies {
+	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -154,7 +182,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -200,7 +228,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	// Find the Gateway that the route belongs to and add it to the
 	// gatewayRouteMap and ancestor list, which will be used to check
 	// policy overrides and populate its ancestor status.
-	parentRefs := GetParentReferences(targetedRoute)
+	parentRefs := GetManagedParentReferences(targetedRoute)
 	for _, p := range parentRefs {
 		if p.Kind == nil || *p.Kind == resource.KindGateway {
 			namespace := targetedRoute.GetNamespace()
@@ -482,11 +510,11 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	resources *resource.Resources,
 ) error {
 	var (
-		wasms                             []ir.Wasm
-		luas                              []ir.Lua
-		wasmFailOpen, extProcFailOpen     bool
-		wasmError, luaError, extProcError error
-		errs                              error
+		wasms                                                 []ir.Wasm
+		luas                                                  []ir.Lua
+		wasmFailOpen, extProcFailOpen                         bool
+		wasmError, luaError, extProcError, dynamicModuleError error
+		errs                                                  error
 	)
 
 	if wasms, wasmError, wasmFailOpen = t.buildWasms(policy, resources); wasmError != nil {
@@ -516,9 +544,15 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var extProcs []ir.ExtProc
-		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx.envoyProxy); extProcError != nil {
+		if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gtwCtx); extProcError != nil {
 			extProcError = perr.WithMessage(extProcError, "ExtProc")
 			errs = errors.Join(errs, extProcError)
+		}
+
+		var dynamicModules []ir.DynamicModule
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gtwCtx.envoyProxy); dynamicModuleError != nil {
+			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
+			errs = errors.Join(errs, dynamicModuleError)
 		}
 
 		irKey := t.getIRKey(gtwCtx.Gateway)
@@ -551,16 +585,20 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 						if extProcError != nil {
 							failRoute = failRoute || !extProcFailOpen
 						}
+						if dynamicModuleError != nil {
+							failRoute = true
+						}
 						if failRoute {
 							r.DirectResponse = &ir.CustomResponse{
-								StatusCode: ptr.To(uint32(500)),
+								StatusCode: new(uint32(500)),
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-								ExtProcs: extProcs,
-								Wasms:    wasms,
-								Luas:     luas,
+								ExtProcs:       extProcs,
+								Wasms:          wasms,
+								Luas:           luas,
+								DynamicModules: dynamicModules,
 							}
 						}
 					}
@@ -587,15 +625,16 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	resources *resource.Resources,
 ) error {
 	var (
-		extProcs                          []ir.ExtProc
-		wasms                             []ir.Wasm
-		luas                              []ir.Lua
-		wasmFailOpen, extProcFailOpen     bool
-		wasmError, luaError, extProcError error
-		errs                              error
+		extProcs                                              []ir.ExtProc
+		wasms                                                 []ir.Wasm
+		luas                                                  []ir.Lua
+		dynamicModules                                        []ir.DynamicModule
+		wasmFailOpen, extProcFailOpen                         bool
+		wasmError, luaError, extProcError, dynamicModuleError error
+		errs                                                  error
 	)
 
-	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway.envoyProxy); extProcError != nil {
+	if extProcs, extProcError, extProcFailOpen = t.buildExtProcs(policy, resources, gateway); extProcError != nil {
 		extProcError = perr.WithMessage(extProcError, "ExtProc")
 		errs = errors.Join(errs, extProcError)
 	}
@@ -606,6 +645,10 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	if luas, luaError = t.buildLuas(policy, gateway.envoyProxy); luaError != nil {
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
+	}
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gateway.envoyProxy); dynamicModuleError != nil {
+		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
+		errs = errors.Join(errs, dynamicModuleError)
 	}
 
 	irKey := t.getIRKey(gateway.Gateway)
@@ -645,16 +688,20 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 			if extProcError != nil {
 				failRoute = failRoute || !extProcFailOpen
 			}
+			if dynamicModuleError != nil {
+				failRoute = true
+			}
 			if failRoute {
 				r.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
-					ExtProcs: extProcs,
-					Wasms:    wasms,
-					Luas:     luas,
+					ExtProcs:       extProcs,
+					Wasms:          wasms,
+					Luas:           luas,
+					DynamicModules: dynamicModules,
 				}
 			}
 		}
@@ -748,7 +795,7 @@ func (t *Translator) getLuaBodyFromLocalObjectReference(
 	}
 }
 
-func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) ([]ir.ExtProc, error, bool) {
+func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resources *resource.Resources, gtwCtx *GatewayContext) ([]ir.ExtProc, error, bool) {
 	var (
 		failOpen bool
 		errs     error
@@ -763,7 +810,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, envoyProxy)
+		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -787,7 +834,7 @@ func (t *Translator) buildExtProc(
 	extProc egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
-	envoyProxy *egv1a1.EnvoyProxy,
+	gtwCtx *GatewayContext,
 ) (*ir.ExtProc, error) {
 	var (
 		rd        *ir.RouteDestination
@@ -795,7 +842,7 @@ func (t *Translator) buildExtProc(
 		err       error
 	)
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, envoyProxy, "extproc", extProcIdx); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(policy, extProc.BackendRefs, ir.GRPC, resources, gtwCtx, "extproc", extProcIdx); err != nil {
 		return nil, err
 	}
 
@@ -840,7 +887,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Request != nil {
 			extProcIR.RequestHeaderProcessing = true
 			if extProc.ProcessingMode.Request.Body != nil {
-				extProcIR.RequestBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
+				extProcIR.RequestBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Request.Body))
 			}
 
 			if extProc.ProcessingMode.Request.Attributes != nil {
@@ -851,7 +898,7 @@ func (t *Translator) buildExtProc(
 		if extProc.ProcessingMode.Response != nil {
 			extProcIR.ResponseHeaderProcessing = true
 			if extProc.ProcessingMode.Response.Body != nil {
-				extProcIR.ResponseBodyProcessingMode = ptr.To(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
+				extProcIR.ResponseBodyProcessingMode = new(ir.ExtProcBodyProcessingMode(*extProc.ProcessingMode.Response.Body))
 			}
 
 			if extProc.ProcessingMode.Response.Attributes != nil {
@@ -950,6 +997,7 @@ func (t *Translator) buildWasm(
 		// downloaded from the original HTTP server or the OCI registry
 		originalChecksum string
 		servingURL       string // the wasm module download URL from the EG HTTP server
+		caCert           []byte
 		err              error
 	)
 
@@ -983,11 +1031,23 @@ func (t *Translator) buildWasm(
 
 		http := config.Code.HTTP
 
+		if http.TLS != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      resource.KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
+			if caCert, err = t.validateAndGetDataAtKeyInRef(http.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+				return nil, err
+			}
+		}
+
 		if servingURL, checksum, err = t.WasmCache.Get(http.URL, &wasm.GetOptions{
 			Checksum:        originalChecksum,
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}
@@ -1013,6 +1073,17 @@ func (t *Translator) buildWasm(
 			return nil, fmt.Errorf("missing Image field in Wasm code source")
 		}
 
+		if image.TLS != nil {
+			from := crossNamespaceFrom{
+				group:     egv1a1.GroupName,
+				kind:      resource.KindEnvoyExtensionPolicy,
+				namespace: policy.Namespace,
+			}
+			if caCert, err = t.validateAndGetDataAtKeyInRef(image.TLS.CACertificateRef, "ca.crt", resources, from); err != nil {
+				return nil, err
+			}
+		}
+
 		if image.PullSecretRef != nil {
 			from := crossNamespaceFrom{
 				group:     egv1a1.GroupName,
@@ -1021,7 +1092,7 @@ func (t *Translator) buildWasm(
 			}
 
 			if secret, err = t.validateSecretRef(
-				false, from, *image.PullSecretRef, resources); err != nil {
+				true, from, *image.PullSecretRef, resources); err != nil {
 				return nil, err
 			}
 
@@ -1057,6 +1128,7 @@ func (t *Translator) buildWasm(
 			PullPolicy:      pullPolicy,
 			ResourceName:    irConfigNameForWasm(policy, idx),
 			ResourceVersion: policy.ResourceVersion,
+			CACert:          caCert,
 		}); err != nil {
 			return nil, err
 		}
@@ -1106,4 +1178,104 @@ func irConfigNameForWasm(policy client.Object, index int) string {
 		"%s/wasm/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int) string {
+	return fmt.Sprintf(
+		"%s/dynamic-module/%s",
+		irConfigName(policy),
+		strconv.Itoa(index))
+}
+
+func (t *Translator) buildDynamicModules(
+	policy *egv1a1.EnvoyExtensionPolicy,
+	envoyProxy *egv1a1.EnvoyProxy,
+) ([]ir.DynamicModule, error) {
+	var errs error
+
+	if policy == nil || len(policy.Spec.DynamicModule) == 0 {
+		return nil, nil
+	}
+
+	// Build registry lookup map from EnvoyProxy
+	registry := make(map[string]*egv1a1.DynamicModuleEntry)
+	if envoyProxy != nil {
+		for i := range envoyProxy.Spec.DynamicModules {
+			entry := &envoyProxy.Spec.DynamicModules[i]
+			registry[entry.Name] = entry
+		}
+	}
+
+	dmIRList := make([]ir.DynamicModule, 0, len(policy.Spec.DynamicModule))
+
+	for idx, dm := range policy.Spec.DynamicModule {
+		name := irConfigNameForDynamicModule(policy, idx)
+
+		// Validate module exists in registry
+		entry, ok := registry[dm.Name]
+		if !ok {
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q is not registered in the EnvoyProxy dynamicModules allowlist", dm.Name))
+			continue
+		}
+
+		filterName := ptr.Deref(dm.FilterName, "")
+
+		dmIR := ir.DynamicModule{
+			Name:           name,
+			FilterName:     filterName,
+			Config:         dm.Config,
+			DoNotClose:     ptr.Deref(entry.DoNotClose, false),
+			LoadGlobally:   ptr.Deref(entry.LoadGlobally, false),
+			TerminalFilter: ptr.Deref(dm.TerminalFilter, false),
+		}
+
+		switch sourceType := ptr.Deref(entry.Source.Type, egv1a1.LocalDynamicModuleSourceType); sourceType {
+		case egv1a1.RemoteDynamicModuleSourceType:
+			if entry.Source.Remote == nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source configured", dm.Name))
+				continue
+			}
+			if entry.Source.Remote.URL == "" {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source URL configured", dm.Name))
+				continue
+			}
+			if entry.Source.Remote.SHA256 == "" {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no remote source SHA256 configured", dm.Name))
+				continue
+			}
+			if err := validateDynamicModuleRemoteURL(entry.Source.Remote.URL); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err))
+				continue
+			}
+			dmIR.Remote = &ir.RemoteDynamicModuleSource{
+				URL:    entry.Source.Remote.URL,
+				SHA256: entry.Source.Remote.SHA256,
+			}
+		case egv1a1.LocalDynamicModuleSourceType:
+			if entry.Source.Local == nil {
+				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
+				continue
+			}
+			dmIR.Path = entry.Source.Local.Path
+		default:
+			errs = errors.Join(errs, fmt.Errorf("dynamic module %q has unsupported source type %q", dm.Name, sourceType))
+			continue
+		}
+
+		dmIRList = append(dmIRList, dmIR)
+	}
+
+	return dmIRList, errs
+}
+
+// envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func envoyExtensionPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyExtensionPolicy) []*egv1a1.EnvoyExtensionPolicy {
+	copies := make([]*egv1a1.EnvoyExtensionPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

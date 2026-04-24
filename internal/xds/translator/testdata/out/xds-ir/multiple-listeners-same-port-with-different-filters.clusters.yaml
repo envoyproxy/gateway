@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -34,7 +33,6 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-2/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -58,7 +56,6 @@
       resourceApiVersion: V3
     serviceName: securitypolicy/default/policy-for-http-route-2/envoy-gateway/http-backend
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -82,7 +79,6 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-3/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -102,7 +98,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: oauth_foo_com_443
     endpoints:

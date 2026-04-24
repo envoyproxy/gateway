@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: dest-1
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -21,6 +20,7 @@
             localityWeightedLbConfig: {}
   name: dest-1
   outlierDetection:
+    alwaysEjectOneHost: true
     baseEjectionTime: 30s
     consecutive5xx: 5
     consecutiveGatewayFailure: 0

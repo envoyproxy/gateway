@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: httproute/ns1/domain1/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -37,7 +36,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: www_googleapis_com_443
     endpoints:
@@ -84,7 +82,6 @@
       resourceApiVersion: V3
     serviceName: httproute/ns2/domain2/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

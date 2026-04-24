@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -29,7 +28,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1a3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -49,7 +47,7 @@ func TestMain(m *testing.M) {
 	// related to https://github.com/kubernetes-sigs/controller-runtime/pull/2902
 	// this is a workaround to skip the name validation for the test
 	skipNameValidation = func() *bool {
-		return ptr.To(true)
+		return new(true)
 	}
 	healthProbeBindAddress = "" // Disable health probe listener to avoid "address already in use" error.
 	os.Exit(m.Run())
@@ -72,7 +70,7 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Disable webhook server for provider test to avoid non-existent cert errors
-	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)}
+	svr.EnvoyGateway.Provider.Kubernetes.TopologyInjector = &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)}
 	require.NoError(t, err)
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
 	require.NoError(t, err)
@@ -452,8 +450,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/"),
 									},
 								},
 							},
@@ -462,7 +460,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -493,8 +491,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/redirect/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/redirect/"),
 									},
 								},
 							},
@@ -502,11 +500,11 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 								{
 									Type: gwapiv1.HTTPRouteFilterType("RequestRedirect"),
 									RequestRedirect: &gwapiv1.HTTPRequestRedirectFilter{
-										Scheme:   ptr.To("https"),
+										Scheme:   new("https"),
 										Hostname: &redirectHostname,
 										Path: &gwapiv1.HTTPPathModifier{
 											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: ptr.To("/newpath"),
+											ReplaceFullPath: new("/newpath"),
 										},
 										Port:       &redirectPort,
 										StatusCode: &redirectStatus,
@@ -539,8 +537,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/rewrite/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/rewrite/"),
 									},
 								},
 							},
@@ -549,7 +547,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -561,7 +559,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 										Hostname: &rewriteHostname,
 										Path: &gwapiv1.HTTPPathModifier{
 											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: ptr.To("/newpath"),
+											ReplaceFullPath: new("/newpath"),
 										},
 									},
 								},
@@ -592,8 +590,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/addheader/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/addheader/"),
 									},
 								},
 							},
@@ -602,7 +600,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -656,8 +654,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/remheader/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/remheader/"),
 									},
 								},
 							},
@@ -666,7 +664,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -709,8 +707,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/addheader/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/addheader/"),
 									},
 								},
 							},
@@ -719,7 +717,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -773,8 +771,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/remheader/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/remheader/"),
 									},
 								},
 							},
@@ -783,7 +781,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -826,8 +824,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/mirror/"),
+										Type:  new(gwapiv1.PathMatchPathPrefix),
+										Value: new("/mirror/"),
 									},
 								},
 							},
@@ -836,7 +834,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -847,7 +845,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
 											Name: "test",
-											Port: ptr.To(gwapiv1.PortNumber(80)),
+											Port: new(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -954,7 +952,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Port:     int32(8080),
 					Protocol: gwapiv1.TLSProtocolType,
 					TLS: &gwapiv1.ListenerTLSConfig{
-						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+						Mode: new(gwapiv1.TLSModePassthrough),
 					},
 				},
 			},
@@ -976,16 +974,16 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 
 	testCases := []struct {
 		name  string
-		route gwapiv1a3.TLSRoute
+		route gwapiv1.TLSRoute
 	}{
 		{
 			name: "tlsroute",
-			route: gwapiv1a3.TLSRoute{
+			route: gwapiv1.TLSRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tlsroute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1a3.TLSRouteSpec{
+				Spec: gwapiv1.TLSRouteSpec{
 					CommonRouteSpec: gwapiv1.CommonRouteSpec{
 						ParentRefs: []gwapiv1.ParentReference{
 							{
@@ -994,13 +992,13 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 						},
 					},
 					Hostnames: []gwapiv1a2.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1a2.TLSRouteRule{
+					Rules: []gwapiv1.TLSRouteRule{
 						{
 							BackendRefs: []gwapiv1a2.BackendRef{
 								{
 									BackendObjectReference: gwapiv1.BackendObjectReference{
 										Name: "test",
-										Port: ptr.To(gwapiv1.PortNumber(90)),
+										Port: new(gwapiv1.PortNumber(90)),
 									},
 								},
 							},
@@ -1108,7 +1106,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 					Port:     int32(8043),
 					Protocol: gwapiv1.TLSProtocolType,
 					TLS: &gwapiv1.ListenerTLSConfig{
-						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+						Mode: new(gwapiv1.TLSModePassthrough),
 					},
 				},
 			},
@@ -1128,25 +1126,25 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	tlsRoute := gwapiv1a3.TLSRoute{
+	tlsRoute := gwapiv1.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1a3.TLSRouteSpec{
+		Spec: gwapiv1.TLSRouteSpec{
 			CommonRouteSpec: gwapiv1.CommonRouteSpec{
 				ParentRefs: []gwapiv1.ParentReference{{
 					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
 			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
-			Rules: []gwapiv1a2.TLSRouteRule{
+			Rules: []gwapiv1.TLSRouteRule{
 				{
 					BackendRefs: []gwapiv1a2.BackendRef{
 						{
 							BackendObjectReference: gwapiv1.BackendObjectReference{
 								Name: "test-common-svc",
-								Port: ptr.To(gwapiv1.PortNumber(90)),
+								Port: new(gwapiv1.PortNumber(90)),
 							},
 						},
 					},
@@ -1170,15 +1168,15 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 			Rules: []gwapiv1.HTTPRouteRule{{
 				Matches: []gwapiv1.HTTPRouteMatch{{
 					Path: &gwapiv1.HTTPPathMatch{
-						Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-						Value: ptr.To("/"),
+						Type:  new(gwapiv1.PathMatchPathPrefix),
+						Value: new("/"),
 					},
 				}},
 				BackendRefs: []gwapiv1.HTTPBackendRef{{
 					BackendRef: gwapiv1.BackendRef{
 						BackendObjectReference: gwapiv1.BackendObjectReference{
 							Name: "test-common-svc",
-							Port: ptr.To(gwapiv1.PortNumber(80)),
+							Port: new(gwapiv1.PortNumber(80)),
 						},
 					},
 				}},
@@ -1256,7 +1254,7 @@ func TestNamespacedProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 		Client:         egv1a1.DefaultKubernetesClient(),
 		// Disable webhook server for provider test to avoid non-existent cert errors
-		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
+		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
 	}
 
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)
@@ -1318,7 +1316,7 @@ func TestNamespaceSelectorProvider(t *testing.T) {
 		LeaderElection: egv1a1.DefaultLeaderElection(),
 		Client:         egv1a1.DefaultKubernetesClient(),
 		// Disable webhook server for provider test to avoid non-existent cert errors
-		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: ptr.To(true)},
+		TopologyInjector: &egv1a1.EnvoyGatewayTopologyInjector{Disable: new(true)},
 	}
 
 	resources, provider, err := newProviderWithMetricsServerDisabled(t, cliCfg, svr)

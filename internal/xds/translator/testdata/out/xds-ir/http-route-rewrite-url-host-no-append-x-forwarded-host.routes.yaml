@@ -1,0 +1,47 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - gateway.envoyproxy.io
+    name: first-listener/gateway_envoyproxy_io
+    routes:
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /origin
+      name: rewrite-route-no-append
+      route:
+        cluster: rewrite-route-dest
+        hostRewriteLiteral: 3.3.3.3
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /host-header
+      name: rewrite-host-header-no-append
+      route:
+        cluster: rewrite-route-dest
+        hostRewriteHeader: foo
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        pathSeparatedPrefix: /host-backend
+      name: rewrite-host-backend-with-append
+      route:
+        appendXForwardedHost: true
+        autoHostRewrite: true
+        cluster: rewrite-route-dest
+        prefixRewrite: /rewrite
+        upgradeConfigs:
+        - upgradeType: websocket

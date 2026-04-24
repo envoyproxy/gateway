@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -115,15 +116,11 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 	}
 
 	if extProc.RequestAttributes != nil {
-		var attrs []string
-		attrs = append(attrs, extProc.RequestAttributes...)
-		config.RequestAttributes = attrs
+		config.RequestAttributes = slices.Clone(extProc.RequestAttributes)
 	}
 
 	if extProc.ResponseAttributes != nil {
-		var attrs []string
-		attrs = append(attrs, extProc.ResponseAttributes...)
-		config.ResponseAttributes = attrs
+		config.ResponseAttributes = slices.Clone(extProc.ResponseAttributes)
 	}
 
 	if extProc.Traffic != nil && extProc.Traffic.Retry != nil {
@@ -138,18 +135,14 @@ func extProcConfig(extProc *ir.ExtProc) (*extprocv3.ExternalProcessor, error) {
 		config.MetadataOptions = &extprocv3.MetadataOptions{}
 
 		if extProc.ForwardingMetadataNamespaces != nil {
-			var ns []string
-			ns = append(ns, extProc.ForwardingMetadataNamespaces...)
 			config.MetadataOptions.ForwardingNamespaces = &extprocv3.MetadataOptions_MetadataNamespaces{
-				Untyped: ns,
+				Untyped: slices.Clone(extProc.ForwardingMetadataNamespaces),
 			}
 		}
 
 		if extProc.ReceivingMetadataNamespaces != nil {
-			var ns []string
-			ns = append(ns, extProc.ReceivingMetadataNamespaces...)
 			config.MetadataOptions.ReceivingNamespaces = &extprocv3.MetadataOptions_MetadataNamespaces{
-				Untyped: ns,
+				Untyped: slices.Clone(extProc.ReceivingMetadataNamespaces),
 			}
 		}
 	}

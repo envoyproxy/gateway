@@ -41,15 +41,16 @@ spec:
               service.version: v1.0.0
               deployment.environment: production
     tracing:
-      samplingRate: 100
       provider:
         type: OpenTelemetry
         backendRefs:
           - group: gateway.envoyproxy.io
             kind: Backend
             name: otel-collector
-        # Authorization header sent as gRPC initial metadata
         openTelemetry:
+          sampler:
+            type: AlwaysOn
+          # Authorization header sent as gRPC initial metadata
           headers:
             - name: Authorization
               value: Bearer fake

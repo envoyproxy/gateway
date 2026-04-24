@@ -6,7 +6,6 @@
   dnsLookupFamily: V4_PREFERRED
   dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: first-route-dest
     endpoints:

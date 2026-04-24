@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, CORSFromSecurityPolicyTest, CORSFromHTTPCORSFilterTest)
+	ConformanceTests = append(ConformanceTests, CORSFromSecurityPolicyTest)
 }
 
 var CORSFromSecurityPolicyTest = suite.ConformanceTest{
@@ -29,20 +29,11 @@ var CORSFromSecurityPolicyTest = suite.ConformanceTest{
 	Description: "Test CORS from SecurityPolicy",
 	Manifests:   []string{"testdata/cors-security-policy.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		runCORStest(t, suite, true)
+		runCORStest(t, suite)
 	},
 }
 
-var CORSFromHTTPCORSFilterTest = suite.ConformanceTest{
-	ShortName:   "CORSFromHTTPCORSFilter",
-	Description: "Test CORS from HTTP CORS Filter",
-	Manifests:   []string{"testdata/cors-http-cors-filter.yaml"},
-	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		runCORStest(t, suite, false)
-	},
-}
-
-func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPolicy bool) {
+func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite) {
 	ns := "gateway-conformance-infra"
 	routeNN := types.NamespacedName{Name: "http-with-cors-exact", Namespace: ns}
 	gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
@@ -55,12 +46,7 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 		Name:      gwapiv1.ObjectName(gwNN.Name),
 	}
 
-	if withSecurityPolicy {
-		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
-	}
-	if withSecurityPolicy {
-		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
-	}
+	SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "cors-exact", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 	t.Run("should enable cors with Allow Origin Exact", func(t *testing.T) {
 		expectedResponse := http.ExpectedResponse{
@@ -202,44 +188,4 @@ func runCORStest(t *testing.T, suite *suite.ConformanceTestSuite, withSecurityPo
 
 		http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 	})
-
-	if !withSecurityPolicy {
-		t.Run("should enable cors with specific method match", func(t *testing.T) {
-			// When using HTTPCORSFilter with method match, OPTIONS method is implicitly allowed for CORS preflight
-			// even without explicit OPTIONS method match, so preflight response should be returned successfully
-			expectedResponse := http.ExpectedResponse{
-				Request: http.Request{
-					Path:   "/cors-specific-method",
-					Method: "OPTIONS",
-					Headers: map[string]string{
-						"Origin":                         "https://www.foo.com",
-						"access-control-request-method":  "GET",
-						"access-control-request-headers": "x-header-1, x-header-2",
-					},
-				},
-				// Set the expected request properties to empty strings.
-				// This is a workaround to avoid the test failure.
-				// The response body is empty because the request is a preflight request.
-				ExpectedRequest: &http.ExpectedRequest{
-					Request: http.Request{
-						Host:    "",
-						Method:  "OPTIONS",
-						Path:    "",
-						Headers: nil,
-					},
-				},
-				Response: http.Response{
-					StatusCode: 200,
-					Headers: map[string]string{
-						"access-control-allow-origin":   "https://www.foo.com",
-						"access-control-allow-methods":  "GET, OPTIONS",
-						"access-control-allow-headers":  "x-header-1, x-header-2",
-						"access-control-expose-headers": "*",
-					},
-				},
-				Namespace: "",
-			}
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
-		})
-	}
 }

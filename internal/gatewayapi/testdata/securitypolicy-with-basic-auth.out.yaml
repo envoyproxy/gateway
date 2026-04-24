@@ -148,8 +148,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret1
     targetRef:
       group: gateway.networking.k8s.io
@@ -186,8 +184,6 @@ securityPolicies:
   spec:
     basicAuth:
       users:
-        group: null
-        kind: null
         name: users-secret2
     targetRef:
       group: gateway.networking.k8s.io
@@ -246,7 +242,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

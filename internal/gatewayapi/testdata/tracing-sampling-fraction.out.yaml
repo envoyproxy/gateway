@@ -254,7 +254,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*.envoyproxy.io'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -300,7 +299,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -315,7 +313,6 @@ xdsIR:
       externalPort: 8888
       hostnames:
       - example.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-2
@@ -382,5 +379,5 @@ xdsIR:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317
         type: OpenTelemetry
-      samplingRate: 0.01
+      samplingRate: 1
       serviceName: envoy-gateway-class

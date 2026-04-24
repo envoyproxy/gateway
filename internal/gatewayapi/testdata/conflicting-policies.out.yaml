@@ -291,7 +291,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*.192.168.0.15.nip.io'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -337,7 +336,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - qccbahgo.qccbahgo
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: mfqjpuycbgjrtdww

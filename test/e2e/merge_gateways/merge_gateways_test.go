@@ -48,6 +48,7 @@ func TestMergeGateways(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		RunTest:              *flags.RunTest,
+		TimeoutConfig:        tests.TimeoutConfig(),
 		// SupportedFeatures cannot be empty, so we set it to SupportGateway
 		// All e2e tests should leave Features empty.
 		SupportedFeatures: sets.New(features.SupportGateway),

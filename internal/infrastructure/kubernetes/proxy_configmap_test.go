@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -227,7 +226,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			require.NoError(t, setupOwnerReferenceResources(ctx, kube.Client))
 			if tc.gatewayNamespaceMode {
 				kube.EnvoyGateway.Provider.Kubernetes.Deploy = &egv1a1.KubernetesDeployMode{
-					Type: ptr.To(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
+					Type: new(egv1a1.KubernetesDeployModeTypeGatewayNamespace),
 				}
 			}
 

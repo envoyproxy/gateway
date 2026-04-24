@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: httproute/default/httproute-1/rule/0
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -48,7 +47,6 @@
     timeout: 0.500s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: MAGLEV
   loadAssignment:
     clusterName: securitypolicy/default/policy-for-route/jwt/0
     endpoints:
@@ -108,6 +106,11 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
+          tlsCertificateSdsSecretConfigs:
+          - name: default/jwt-tls
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
         sni: foo.bar.com
   type: STRICT_DNS
   typedExtensionProtocolOptions:

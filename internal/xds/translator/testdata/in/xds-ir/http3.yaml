@@ -4,7 +4,6 @@ http:
     hostnames:
       - "*.example.com"
     http3: {}
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1
@@ -29,7 +28,6 @@ http:
     hostnames:
       - foo.example.com
     http3: {}
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1
@@ -85,7 +83,6 @@ http:
     hostnames:
       - bar.example.com
     http3: {}
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1

@@ -27,12 +27,27 @@ descriptors:
                       replaces: []
                     descriptors: []
                     shadow_mode: true
+                    quota_mode: false
                     detailed_metric: false
+                    value_to_metric: false
+                    share_threshold: false
                 shadow_mode: true
+                quota_mode: false
                 detailed_metric: false
+                value_to_metric: false
+                share_threshold: false
             shadow_mode: true
+            quota_mode: false
             detailed_metric: false
+            value_to_metric: false
+            share_threshold: false
         shadow_mode: true
+        quota_mode: false
         detailed_metric: false
+        value_to_metric: false
+        share_threshold: false
     shadow_mode: false
+    quota_mode: false
     detailed_metric: false
+    value_to_metric: false
+    share_threshold: false

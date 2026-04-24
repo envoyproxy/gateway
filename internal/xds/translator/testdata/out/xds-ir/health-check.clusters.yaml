@@ -25,7 +25,6 @@
     timeout: 0.500s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -66,11 +65,15 @@
       path: /healthz
       receive:
       - binary: cG9uZw==
+      retriableStatuses:
+      - end: "430"
+        start: "429"
+      - end: "504"
+        start: "503"
     interval: 5s
     timeout: 1s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -112,7 +115,6 @@
     timeout: 1s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -154,7 +156,6 @@
     timeout: 1s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -194,7 +195,6 @@
     timeout: 1s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

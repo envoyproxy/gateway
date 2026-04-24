@@ -1,0 +1,9 @@
+{
+  "name": "tools",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "linkinator": "7.6.1",
+    "markdownlint-cli": "0.48.0"
+  }
+}

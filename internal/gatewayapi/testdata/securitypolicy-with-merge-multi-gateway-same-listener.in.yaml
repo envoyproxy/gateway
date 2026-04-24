@@ -1,0 +1,159 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-2
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-1
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http
+    basicAuth:
+      users:
+        name: users-secret
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-2
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-2
+      sectionName: http
+    extAuth:
+      http:
+        backendRefs:
+        - name: auth-service
+          namespace: envoy-gateway
+          port: 9001
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    cors:
+      allowOrigins:
+      - "https://www.example.com"
+      allowMethods:
+      - GET
+      - POST
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: auth-service
+  spec:
+    ports:
+    - port: 9001
+      name: http
+      protocol: TCP
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: ReferenceGrant
+  metadata:
+    namespace: envoy-gateway
+    name: allow-securitypolicy-to-auth-service
+  spec:
+    from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: default
+    to:
+    - group: ""
+      kind: Service
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-auth-service
+    namespace: envoy-gateway
+    labels:
+      kubernetes.io/service-name: auth-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 9001
+  endpoints:
+  - addresses:
+    - 10.0.0.1
+    conditions:
+      ready: true
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: users-secret
+  type: Opaque
+  data:
+    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9

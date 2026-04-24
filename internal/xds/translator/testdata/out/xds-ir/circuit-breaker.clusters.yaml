@@ -6,6 +6,10 @@
       maxPendingRequests: 1
       maxRequests: 1
       maxRetries: 2
+      retryBudget:
+        budgetPercent:
+          value: 10
+        minRetryConcurrency: 1
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
@@ -15,7 +19,6 @@
       resourceApiVersion: V3
     serviceName: first-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

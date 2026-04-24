@@ -10,6 +10,20 @@ spec:
     - backendRefs:
         - name: infra-backend-v1
           port: 8080
+      matches:
+        - path:
+            type: PathPrefix
+            value: /infra-backend-v1
+    - backendRefs:
+        - name: tls-backend-2
+          port: 443
+      matches:
+        - path:
+            type: PathPrefix
+            value: /tls-backend-2
+    - backendRefs:
+        - name: infra-backend-v1
+          port: 8080
         - name: tls-backend-2
           port: 443
       matches:

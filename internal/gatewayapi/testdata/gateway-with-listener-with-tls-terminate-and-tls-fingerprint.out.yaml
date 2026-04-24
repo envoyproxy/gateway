@@ -59,9 +59,7 @@ gateways:
       protocol: HTTPS
       tls:
         certificateRefs:
-        - group: null
-          kind: null
-          name: tls-secret-1
+        - name: tls-secret-1
         mode: Terminate
   status:
     listeners:
@@ -230,7 +228,6 @@ xdsIR:
       externalPort: 443
       hostnames:
       - foo.bar.com
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1

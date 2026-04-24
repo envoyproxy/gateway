@@ -19,7 +19,6 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -153,22 +152,18 @@ func createExtServiceXDSCluster(rd *ir.RouteDestination, traffic *ir.TrafficFeat
 	} else {
 		endpointType = EndpointTypeStatic
 	}
-	return addXdsCluster(tCtx, &xdsClusterArgs{
-		name:              rd.Name,
-		settings:          rd.Settings,
-		tSocket:           tSocket,
-		loadBalancer:      traffic.LoadBalancer,
-		proxyProtocol:     traffic.ProxyProtocol,
-		circuitBreaker:    traffic.CircuitBreaker,
-		healthCheck:       traffic.HealthCheck,
-		timeout:           traffic.Timeout,
-		tcpkeepalive:      traffic.TCPKeepalive,
-		backendConnection: traffic.BackendConnection,
-		endpointType:      endpointType,
-		dns:               traffic.DNS,
-		http2Settings:     traffic.HTTP2,
-		metadata:          rd.Metadata,
-	})
+
+	args := &xdsClusterArgs{
+		name:         rd.Name,
+		settings:     rd.Settings,
+		tSocket:      tSocket,
+		endpointType: endpointType,
+		metadata:     rd.Metadata,
+	}
+
+	applyTraffic(args, traffic)
+
+	return addXdsCluster(tCtx, args)
 }
 
 // addClusterFromURL adds a cluster to the resource version table from the provided URL.
@@ -185,7 +180,7 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 	}
 
 	ds = &ir.DestinationSetting{
-		Weight:    ptr.To[uint32](1),
+		Weight:    new(uint32(1)),
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, uc.hostname, uc.port, false, nil)},
 		Name:      destinationSettingName(uc.name),
 		// TODO: tracked with issue #6861
@@ -206,19 +201,24 @@ func addClusterFromURL(url string, traffic *ir.TrafficFeatures, tCtx *types.Reso
 		clusterArgs.tSocket = tSocket
 	}
 
-	if traffic != nil {
-		clusterArgs.loadBalancer = traffic.LoadBalancer
-		clusterArgs.proxyProtocol = traffic.ProxyProtocol
-		clusterArgs.circuitBreaker = traffic.CircuitBreaker
-		clusterArgs.healthCheck = traffic.HealthCheck
-		clusterArgs.timeout = traffic.Timeout
-		clusterArgs.tcpkeepalive = traffic.TCPKeepalive
-		clusterArgs.backendConnection = traffic.BackendConnection
-		clusterArgs.dns = traffic.DNS
-		clusterArgs.http2Settings = traffic.HTTP2
-	}
+	applyTraffic(clusterArgs, traffic)
 
 	return addXdsCluster(tCtx, clusterArgs)
+}
+
+func applyTraffic(args *xdsClusterArgs, traffic *ir.TrafficFeatures) {
+	if traffic == nil {
+		return
+	}
+	args.loadBalancer = traffic.LoadBalancer
+	args.proxyProtocol = traffic.ProxyProtocol
+	args.circuitBreaker = traffic.CircuitBreaker
+	args.healthCheck = traffic.HealthCheck
+	args.timeout = traffic.Timeout
+	args.tcpkeepalive = traffic.TCPKeepalive
+	args.backendConnection = traffic.BackendConnection
+	args.dns = traffic.DNS
+	args.http2Settings = traffic.HTTP2
 }
 
 // determineIPFamily determines the IP family based on multiple destination settings
@@ -249,13 +249,13 @@ func determineIPFamily(settings []*ir.DestinationSetting) *egv1a1.IPFamily {
 
 	switch {
 	case hasDualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4 && hasIPv6:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	case hasIPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case hasIPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	default:
 		return nil
 	}

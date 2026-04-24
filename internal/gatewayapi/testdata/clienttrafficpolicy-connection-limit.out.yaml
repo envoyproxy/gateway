@@ -70,6 +70,36 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
+    name: target-gateway-1-section-http-3
+    namespace: envoy-gateway
+  spec:
+    connection:
+      connectionLimit:
+        maxConnectionDuration: 300s
+        maxRequestsPerConnection: 100
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      sectionName: http-3
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: ClientTrafficPolicy
+  metadata:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
@@ -88,7 +118,7 @@ clientTrafficPolicies:
       conditions:
       - lastTransitionTime: null
         message: There are existing ClientTrafficPolicies that are overriding these
-          sections [http-1 http-2]
+          sections [http-1 http-2 http-3]
         reason: Overridden
         status: "True"
         type: Overridden
@@ -124,6 +154,12 @@ gateways:
       name: http-2
       port: 8080
       protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: Same
+      name: http-3
+      port: 9090
+      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 0
@@ -172,6 +208,29 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http-3
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -188,6 +247,12 @@ infraIR:
           name: http-8080
           protocol: HTTP
           servicePort: 8080
+      - name: envoy-gateway/gateway-1/http-3
+        ports:
+        - containerPort: 9090
+          name: http-9090
+          protocol: HTTP
+          servicePort: 9090
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -235,7 +300,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -259,7 +323,6 @@ xdsIR:
       - '*'
       http1:
         disableSafeMaxConnectionDuration: true
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway-1
@@ -270,6 +333,24 @@ xdsIR:
         escapedSlashesAction: UnescapeAndRedirect
         mergeSlashes: true
       port: 8080
+    - address: 0.0.0.0
+      connection:
+        limit:
+          maxConnectionDuration: 5m0s
+          maxRequestsPerConnection: 100
+      externalPort: 9090
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-3
+      name: envoy-gateway/gateway-1/http-3
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 9090
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

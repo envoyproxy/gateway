@@ -137,6 +137,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	if err := processSDSClusters(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -160,7 +164,7 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		t.Logger.Error(err, "Failed to process JSON patches")
 	}
 
-	// Check if an extension want to inject any clusters/secrets
+	// Check if an extension want to modify the generated xDS resources
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager, xdsIR.ExtensionServerPolicies); err != nil {
 		// If the extension server returns an error, and the extension server is not configured to fail open,
@@ -312,7 +316,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
 
-		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
+		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil //nolint:govet // nilness false positive: tcpXDSListener is reassigned each iteration by findXdsListenerByHostPort
 		tlsEnabled = httpListener.TLS != nil
 
 		switch {
@@ -391,12 +395,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			// When the DefaultFilterChain is shared by multiple Gateway HTTP
 			// Listeners, we need to add the HTTP filters associated with the
 			// HTTPListener to the HCM if they have not yet been added.
-			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener); err != nil {
+			if err = t.addHTTPFiltersToHCM(tcpXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 				errs = errors.Join(errs, err)
 				continue
 			}
 			if http3Enabled {
-				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener); err != nil {
+				if err = t.addHTTPFiltersToHCM(quicXDSListener.DefaultFilterChain, httpListener, accessLog); err != nil {
 					errs = errors.Join(errs, err)
 					continue
 				}
@@ -409,32 +413,28 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if httpListener.TLS != nil {
 			for c := range httpListener.TLS.Certificates {
 				secret := buildXdsTLSCertSecret(&httpListener.TLS.Certificates[c])
-				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = errors.Join(errs, err)
+				if secret != nil {
+					if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 
 			if httpListener.TLS.CACertificate != nil {
 				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate, httpListener.TLS.Crl)
-				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-					errs = errors.Join(errs, err)
+				if caSecret != nil {
+					if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
-
 		}
 
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, cert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&cert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 		}
@@ -692,7 +692,7 @@ func virtualHostName(httpListener *ir.HTTPListener, underscoredHostname string, 
 	return fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname)
 }
 
-func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener) error {
+func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, httpListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	var (
 		hcm *hcmv3.HttpConnectionManager
 		err error
@@ -703,7 +703,7 @@ func (t *Translator) addHTTPFiltersToHCM(filterChain *listenerv3.FilterChain, ht
 	}
 
 	// Add http filters to the HCM if they have not yet been added.
-	if err = t.patchHCMWithFilters(hcm, httpListener); err != nil {
+	if err = t.patchHCMWithFilters(hcm, httpListener, accesslog); err != nil {
 		return err
 	}
 	return replaceHCMInFilterChain(hcm, filterChain)
@@ -761,6 +761,8 @@ func (t *Translator) processTCPListenerXdsTranslation(
 	// The XDS translation is done in a best-effort manner, so we collect all
 	// errors and return them at the end.
 	var errs, err error
+	var sharedEmptyTCPRoute *ir.TCPRoute
+	emptyFilterChainAdded := make(map[string]bool)
 
 	for _, tcpListener := range tcpListeners {
 		// Search for an existing listener, if it does not exist, create one.
@@ -804,35 +806,34 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				// add tls route client certs
 				for _, cert := range route.TLS.Terminate.ClientCertificates {
 					secret := buildXdsTLSCertSecret(&cert)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						errs = errors.Join(errs, err)
+					if secret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 
 				for _, s := range route.TLS.Terminate.Certificates {
 					secret := buildXdsTLSCertSecret(&s)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						errs = errors.Join(errs, err)
+					if secret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 				if route.TLS.Terminate.CACertificate != nil {
 					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate, route.TLS.Terminate.Crl)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-						errs = errors.Join(errs, err)
+					if caSecret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, clientCert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&clientCert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 			if err := t.addXdsTCPFilterChain(
@@ -851,28 +852,37 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// If there are no routes, add a route without a destination to the listener to create a filter chain
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
+			// Reuse shared EmptyCluster across all listeners without routes
 			if findXdsCluster(tCtx, emptyClusterName) == nil {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
 			}
 
-			emptyRoute := &ir.TCPRoute{
-				Name: emptyClusterName,
-				Destination: &ir.RouteDestination{
+			if sharedEmptyTCPRoute == nil {
+				sharedEmptyTCPRoute = &ir.TCPRoute{
 					Name: emptyClusterName,
-				},
+					Destination: &ir.RouteDestination{
+						Name: emptyClusterName,
+					},
+				}
 			}
-			if err := t.addXdsTCPFilterChain(
-				xdsListener,
-				emptyRoute,
-				emptyClusterName,
-				accesslog,
-				tcpListener.Timeout,
-				tcpListener.Connection,
-				tcpListener.TLS,
-			); err != nil {
-				errs = errors.Join(errs, err)
+
+			// Only add the filter chain once per xDS listener; multiple IR listeners may share
+			// the same address/port and map to the same xDS listener.
+			if !emptyFilterChainAdded[xdsListener.Name] {
+				if err := t.addXdsTCPFilterChain(
+					xdsListener,
+					sharedEmptyTCPRoute,
+					emptyClusterName,
+					accesslog,
+					tcpListener.Timeout,
+					tcpListener.Connection,
+					tcpListener.TLS,
+				); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				emptyFilterChainAdded[xdsListener.Name] = true
 			}
 		}
 	}
@@ -953,7 +963,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 			loadBalancer: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 				PreferLocal: &ir.PreferLocalZone{
-					MinEndpointsThreshold: ptr.To[uint64](1),
+					MinEndpointsThreshold: new(uint64(1)),
 				},
 			},
 			metadata: svcCluster.Metadata,
@@ -991,8 +1001,8 @@ func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener := r.(*listenerv3.Listener)
-		if listener.Name == name {
+		listener, ok := r.(*listenerv3.Listener)
+		if ok && listener.Name == name {
 			return listener
 		}
 	}
@@ -1007,8 +1017,8 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
-		route := r.(*routev3.RouteConfiguration)
-		if route.Name == name {
+		route, ok := r.(*routev3.RouteConfiguration)
+		if ok && route.Name == name {
 			return route
 		}
 	}
@@ -1023,8 +1033,8 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster := r.(*clusterv3.Cluster)
-		if cluster.Name == name {
+		cluster, ok := r.(*clusterv3.Cluster)
+		if ok && cluster.Name == name {
 			return cluster
 		}
 	}
@@ -1039,8 +1049,8 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
-		endpoint := r.(*endpointv3.ClusterLoadAssignment)
-		if endpoint.ClusterName == name {
+		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
+		if ok && endpoint.ClusterName == name {
 			return endpoint
 		}
 	}
@@ -1066,8 +1076,8 @@ func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret 
 	}
 
 	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
-		secret := r.(*tlsv3.Secret)
-		if secret.Name == name {
+		secret, ok := r.(*tlsv3.Secret)
+		if ok && secret.Name == name {
 			return secret
 		}
 	}
@@ -1112,14 +1122,25 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		if shouldValidateTLS {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
 			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-				return err
+			if secret != nil {
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
+				}
 			}
 		}
 	}
 	// Use EDS for static endpoints
 	switch args.endpointType {
 	case EndpointTypeStatic:
+		// Only process the PostEndpoints hook for EDS endpoints
+		// DNS endpoints can be modified by the PostCluster hook if needed
+		if err := processExtensionPostEndpointsHook(xdsEndpoints, args.extensionMgr); err != nil {
+			if args.extensionMgr != nil && !(*args.extensionMgr).FailOpen() {
+				return err
+			} else {
+				args.logger.Error(err, "Extension Manager PostEndpoints failure")
+			}
+		}
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
@@ -1173,6 +1194,12 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 			},
 		}
 	}
+
+	// For SDS based CA certificate, the secret will be generated by SDS server, so we can skip adding the secret here
+	if tlsConfig.CACertificate.SDS != nil {
+		return nil
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
@@ -1192,6 +1219,12 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 			SdsConfig: makeConfigSource(),
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
+	}
+	if tlsConfig.CACertificate.SDS != nil {
+		// get secret from SDS
+		sds := tlsConfig.CACertificate.SDS
+		clusterName := sdsClusterNameFromURL(sds.URL)
+		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(sds.SecretName, clusterName)
 	}
 	hasSANValidations := false
 
@@ -1279,15 +1312,18 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 		tlsCtx.CommonTlsContext.AlpnProtocols = tlsConfig.ALPNProtocols
 	}
 
-	if len(tlsConfig.ClientCertificates) > 0 {
-		for _, cert := range tlsConfig.ClientCertificates {
-			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
-				tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
-				&tlsv3.SdsSecretConfig{
-					Name:      cert.Name,
-					SdsConfig: makeConfigSource(),
-				})
+	for _, clientCert := range tlsConfig.ClientCertificates {
+		if sds := clientCert.SDS; sds != nil {
+			clusterName := sdsClusterNameFromURL(sds.URL)
+			sds := sdsSecretConfig(sds.SecretName, clusterName)
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs, sds)
+			continue
 		}
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      clientCert.Name,
+				SdsConfig: makeConfigSource(),
+			})
 	}
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
@@ -1301,4 +1337,21 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting) error {
+	var errs error
+	for _, st := range settings {
+		if st.TLS != nil {
+			for _, c := range st.TLS.ClientCertificates {
+				secret := buildXdsTLSCertSecret(&c)
+				if secret != nil {
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+			}
+		}
+	}
+	return errs
 }

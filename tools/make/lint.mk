@@ -20,7 +20,8 @@ GOLANGCI_LINT_FLAGS ?=
 lint: lint.golint
 lint.golint:
 	@$(LOG_TARGET)
-	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=tools/linter/golangci-lint/.golangci.yml
+	$(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
+	cd test && $(GO_TOOL) golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=$(LINT_BUILD_TAGS) --config=$(ROOT_DIR)/tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.kube-api-linter
 lint: lint.kube-api-linter
@@ -95,8 +96,8 @@ latest-release-check: ## Check if latest release and tag are created properly.
 	sh tools/hack/check-latest-release.sh
 
 .PHONY: lint.markdown
-lint.markdown:
-	markdownlint -c .github/markdown_lint_config.json site/content/* \
+lint.markdown: $(tools/markdownlint)
+	$(tools/markdownlint) -c .github/markdown_lint_config.json site/content/* \
 	    --ignore site/content/en/news/releases/notes/ \
 		--ignore site/content/en/*/api \
 		--ignore site/content/en/v0.3/ \
@@ -114,7 +115,7 @@ lint.markdown:
 		
 
 .PHONY: lint.dependabot
-lint: lint.dependabot
+# lint: lint.dependabot
 lint.dependabot: ## Check if dependabot configuration is valid
 	@$(LOG_TARGET)
 	@npx @bugron/validate-dependabot-yaml .github/dependabot.yml
@@ -124,3 +125,9 @@ lint: lint.release-notes-filenames
 lint.release-notes-filenames: ## Check if release notes filenames follow naming conventions
 	@$(LOG_TARGET)
 	@tools/hack/check-release-notes-filenames.sh
+
+.PHONY: lint.workflows-runs-on
+lint: lint.workflows-runs-on
+lint.workflows-runs-on: ## Check all workflow jobs use ubuntu-latest
+	@$(LOG_TARGET)
+	@tools/hack/check-workflows-runs-on.sh

@@ -5,7 +5,6 @@ gatewayClass:
     name: eg
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
-  status: {}
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -117,7 +116,6 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
-      isHTTP2: false
       metadata:
         kind: Gateway
         name: eg

@@ -65,6 +65,17 @@ type EnvoyExtensionPolicySpec struct {
 	// +kubebuilder:validation:MaxItems=16
 	// +optional
 	Lua []Lua `json:"lua,omitempty"`
+
+	// DynamicModule is an ordered list of dynamic module HTTP filters
+	// that should be added to the envoy filter chain.
+	// Each module must be registered in the EnvoyProxy resource's dynamicModules
+	// allowlist.
+	// Order matters, as the filters will be loaded in the order they are
+	// defined in this list.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	DynamicModule []DynamicModule `json:"dynamicModule,omitempty"`
 }
 
 //+kubebuilder:object:root=true

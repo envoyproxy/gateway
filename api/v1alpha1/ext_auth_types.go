@@ -64,6 +64,29 @@ type ExtAuth struct {
 	// +optional
 	RecomputeRoute *bool `json:"recomputeRoute,omitempty"`
 
+	// IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
+	// external authorization service as context.
+	//
+	// This includes Envoy Gateway's built-in metadata for the selected route in
+	// the "envoy-gateway" metadata namespace.
+	//
+	// The metadata is exposed under the "resources" field as a list of route
+	// resource objects. For example:
+	//
+	// envoy-gateway:
+	//   resources:
+	//   - kind: HTTPRoute
+	//     name: backend
+	//     namespace: default
+	//     annotations:
+	//       foo: bar
+	//
+	// The resource object may include fields such as kind, namespace, name,
+	// sectionName, and supported route annotations.
+	//
+	// +optional
+	IncludeRouteMetadata *bool `json:"includeRouteMetadata,omitempty"`
+
 	// ContextExtensions are analogous to http_request.headers, however these
 	// contents will not be sent to the upstream server. This provides an
 	// extension mechanism for sending additional information to the auth server
@@ -75,7 +98,15 @@ type ExtAuth struct {
 	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=name
-	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty"`
+	ContextExtensions []*ContextExtension `json:"contextExtensions,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
+
+	// Sets the HTTP status that is returned when the authorization service returns an error
+	// or cannot be reached. Defaults to 403 Forbidden.
+	// Only 4xx and 5xx status codes are supported.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=400;401;402;403;404;405;406;407;408;409;410;411;412;413;414;415;416;417;421;422;423;424;426;428;429;431;500;501;502;503;504;505;506;507;508;510;511
+	StatusOnError *int32 `json:"statusOnError,omitempty"`
 }
 
 // ContextExtensionValueType defines the types of values for ContextExtension supported by Envoy Gateway.

@@ -39,12 +39,12 @@ var FileAccessLogTest = suite.ConformanceTest{
 		}
 		match := "test-annotation-value"
 
-		t.Run("Positive", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 
+		t.Run("Positive", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
@@ -64,11 +64,6 @@ var FileAccessLogTest = suite.ConformanceTest{
 		})
 
 		t.Run("Negative", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
-
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
@@ -88,17 +83,33 @@ var FileAccessLogTest = suite.ConformanceTest{
 		t.Run("Listener Logs", func(t *testing.T) {
 			// Ensure that Listener is emitting the log: protocol and response code should be
 			// empty in listener logs as they are upstream L7 attributes
-			expectedMatch := "LISTENER ACCESS LOG - 0"
-			ns := "gateway-conformance-infra"
-			routeNN := types.NamespacedName{Name: "accesslog-file", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
-			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+			expectedMatch := "LISTENER"
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/path-that-does-not-exist",
+					Headers: map[string]string{
+						"connection":              "close",
+						"x-envoy-listener-logged": "1",
+					},
+				},
+				Response: httputils.Response{
+					StatusCodes: []int{404},
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 1)
+		})
+
+		t.Run("Upstream Logs", func(t *testing.T) {
 			expectedResponse := httputils.ExpectedResponse{
 				Request: httputils.Request{
 					Path: "/file",
 					Headers: map[string]string{
-						"connection": "close",
+						"connection":              "close",
+						"x-envoy-upstream-logged": "1",
 					},
 				},
 				ExpectedRequest: &httputils.ExpectedRequest{
@@ -114,7 +125,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 			// make sure listener is ready
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
-			runLogTest(t, suite, gwAddr, &expectedResponse, labels, expectedMatch, 0)
+			runLogTest(t, suite, gwAddr, &expectedResponse, labels, "UPSTREAM", 1)
 		})
 	},
 }

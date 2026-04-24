@@ -166,13 +166,16 @@ accessLog:
     - format: |
         this is a Global log
       path: /dev/stdout
+    - format: |
+        Upstream access log: [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE%\n
+      logType: Upstream
+      path: /dev/stdout
   json:
     - path: "/dev/stdout"
 http:
   - address: 0.0.0.0
     hostnames:
       - '*'
-    isHTTP2: false
     metadata:
       kind: Gateway
       name: gateway-1
