@@ -190,6 +190,12 @@ func validateEnvoyGatewayExtensionManagers(eg *egv1a1.EnvoyGateway) error {
 		return fmt.Errorf("extensionManager and extensionManagers are mutually exclusive")
 	}
 
+	// Mirror +kubebuilder:validation:MinItems=1 for EnvoyGatewaySpec.ExtensionManagers:
+	// reject an explicitly-set-but-empty list. A nil slice means the field was omitted.
+	if eg.ExtensionManagers != nil && len(eg.ExtensionManagers) == 0 {
+		return fmt.Errorf("extensionManagers must contain at least one entry when specified")
+	}
+
 	if len(eg.ExtensionManagers) > 0 {
 		names := make(map[string]struct{})
 		for i, em := range eg.ExtensionManagers {

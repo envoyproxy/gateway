@@ -41,6 +41,7 @@ type EnvoyGateway struct {
 }
 
 // EnvoyGatewaySpec defines the desired state of Envoy Gateway.
+// +kubebuilder:validation:XValidation:rule="!(has(self.extensionManager) && has(self.extensionManagers))",message="extensionManager and extensionManagers are mutually exclusive"
 type EnvoyGatewaySpec struct {
 	// Gateway defines desired Gateway API specific configuration. If unset,
 	// default configuration parameters will apply.
@@ -108,6 +109,7 @@ type EnvoyGatewaySpec struct {
 	// leading to high Confidentiality, Integrity and Availability risks.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=1
 	ExtensionManagers []ExtensionManager `json:"extensionManagers,omitempty"`
 
 	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
