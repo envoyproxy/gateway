@@ -48,6 +48,7 @@ new features: |
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
 
 bug fixes: |
+  Fixed invalid TLS certificate on one Gateway breaking other Gateways' listeners in mergeGateways mode by skipping non-ready listeners from the shared xDS IR and excluding them from TLS overlap checks.
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.
   Fixed ClientTrafficPolicy to disable HTTP/3 and surface a warning on the policy when downstream client TLS validation is configured, instead of generating a rejected QUIC listener.
