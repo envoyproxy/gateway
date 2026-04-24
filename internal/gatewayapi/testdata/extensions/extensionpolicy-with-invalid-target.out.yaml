@@ -102,6 +102,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-envoy-gateway-gateway-1-196ae069
           sectionName: "8080"
         name: envoy-gateway/gateway-1
@@ -112,6 +113,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-envoy-gateway-gateway-1-196ae069
             sectionName: "8080"
           name: envoy-gateway/gateway-1

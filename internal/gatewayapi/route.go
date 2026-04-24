@@ -56,19 +56,20 @@ type RoutesTranslator interface {
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*HTTPRouteContext {
 	relevantHTTPRoutes := make([]*HTTPRouteContext, 0, len(httpRoutes))
+	httpRouteCopies := httpRouteCopiesWithStatusDeepCopy(httpRoutes)
 
 	// HTTPRoutes are already sorted by the provider layer
 
-	for _, h := range httpRoutes {
+	for i, h := range httpRoutes {
 		if h == nil {
 			panic("received nil httproute")
 		}
-		httpRoute := &HTTPRouteContext{HTTPRoute: h}
+		httpRoute := &HTTPRouteContext{HTTPRoute: httpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(httpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(httpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -83,19 +84,20 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*gwapiv1.HTTPRoute, gateways
 
 func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*GRPCRouteContext {
 	relevantGRPCRoutes := make([]*GRPCRouteContext, 0, len(grpcRoutes))
+	grpcRouteCopies := grpcRouteCopiesWithStatusDeepCopy(grpcRoutes)
 
 	// GRPCRoutes are already sorted by the provider layer
 
-	for _, g := range grpcRoutes {
+	for i, g := range grpcRoutes {
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
+		grpcRoute := &GRPCRouteContext{GRPCRoute: grpcRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1266,18 +1268,19 @@ func filterEGPrefix(in map[string]string) map[string]string {
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*gwapiv1a3.TLSRoute, gateways []*GatewayContext, resources *resource.Resources, xdsIR resource.XdsIRMap) []*TLSRouteContext {
 	relevantTLSRoutes := make([]*TLSRouteContext, 0, len(tlsRoutes))
+	tlsRouteCopies := tlsRouteCopiesWithStatusDeepCopy(tlsRoutes)
 	// TLSRoutes are already sorted by the provider layer
 
-	for _, tls := range tlsRoutes {
+	for i, tls := range tlsRoutes {
 		if tls == nil {
 			panic("received nil tlsroute")
 		}
-		tlsRoute := &TLSRouteContext{TLSRoute: tls}
+		tlsRoute := &TLSRouteContext{TLSRoute: tlsRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tlsRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(tlsRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1413,18 +1416,19 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*gwapiv1a2.UDPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*UDPRouteContext {
 	relevantUDPRoutes := make([]*UDPRouteContext, 0, len(udpRoutes))
+	udpRouteCopies := udpRouteCopiesWithStatusDeepCopy(udpRoutes)
 	// UDPRoutes are already sorted by the provider layer
 
-	for _, u := range udpRoutes {
+	for i, u := range udpRoutes {
 		if u == nil {
 			panic("received nil udproute")
 		}
-		udpRoute := &UDPRouteContext{UDPRoute: u}
+		udpRoute := &UDPRouteContext{UDPRoute: udpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(udpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(udpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1564,18 +1568,19 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*gwapiv1a2.TCPRoute, gateways 
 	xdsIR resource.XdsIRMap,
 ) []*TCPRouteContext {
 	relevantTCPRoutes := make([]*TCPRouteContext, 0, len(tcpRoutes))
+	tcpRouteCopies := tcpRouteCopiesWithStatusDeepCopy(tcpRoutes)
 	// TCPRoutes are already sorted by the provider layer
 
-	for _, tcp := range tcpRoutes {
+	for i, tcp := range tcpRoutes {
 		if tcp == nil {
 			panic("received nil tcproute")
 		}
-		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
+		tcpRoute := &TCPRouteContext{TCPRoute: tcpRouteCopies[i]}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways, resources)
+		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways)
 		if !relevantRoute {
 			continue
 		}
@@ -1786,20 +1791,20 @@ func (t *Translator) processDestination(name string, backendRefContext BackendRe
 
 	switch KindDerefOr(backendRef.Kind, resource.KindService) {
 	case resource.KindServiceImport:
-		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceImportDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
 	case resource.KindService:
-		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources, envoyProxy)
+		ds, err = t.processServiceDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, envoyProxy)
 		if err != nil {
 			return emptyDS, nil, err
 		}
-		svc := resources.GetService(backendNamespace, string(backendRef.Name))
+		svc := t.GetService(backendNamespace, string(backendRef.Name))
 		ds.IPFamily = getServiceIPFamily(svc)
 		ds.PreferLocal = processPreferLocalZone(svc)
 	case egv1a1.KindBackend:
-		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol, resources)
+		ds = t.processBackendDestinationSetting(name, backendRef.BackendObjectReference, backendNamespace, protocol)
 	default:
 		// Handle custom backend resources defined in extension manager
 		if t.isCustomBackendResource(backendRef.Group, KindDerefOr(backendRef.Kind, resource.KindService)) {
@@ -1882,7 +1887,6 @@ func (t *Translator) processServiceImportDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
@@ -1890,7 +1894,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+	serviceImport := t.GetServiceImport(backendNamespace, string(backendRef.Name))
 	var servicePort mcsapiv1a1.ServicePort
 	for _, port := range serviceImport.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1905,7 +1909,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), resource.KindServiceImport)
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -1915,7 +1919,7 @@ func (t *Translator) processServiceImportDestinationSetting(
 		}
 	} else {
 		// Fall back to Service ClusterIP routing
-		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		backendIps := t.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
 			ep := ir.NewDestEndpoint(nil, ip, uint32(*backendRef.Port), false, nil)
 			endpoints = append(endpoints, ep)
@@ -1936,7 +1940,6 @@ func (t *Translator) processServiceDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 	envoyProxy *egv1a1.EnvoyProxy,
 ) (*ir.DestinationSetting, status.Error) {
 	var (
@@ -1944,7 +1947,7 @@ func (t *Translator) processServiceDestinationSetting(
 		addrType  *ir.DestinationAddressType
 	)
 
-	service := resources.GetService(backendNamespace, string(backendRef.Name))
+	service := t.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == *backendRef.Port {
@@ -1960,7 +1963,7 @@ func (t *Translator) processServiceDestinationSetting(
 
 	// Route to endpoints by default
 	if !t.IsEnvoyServiceRouting(envoyProxy) {
-		endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
+		endpointSlices := t.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, resource.KindService))
 		endpoints, addrType = getIREndpointsFromEndpointSlices(endpointSlices, servicePort.Name, getServicePortProtocol(servicePort.Protocol))
 		if len(endpoints) == 0 {
 			return nil, status.NewRouteStatusError(
@@ -2098,7 +2101,10 @@ func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
 // Gateways' listeners, and if so, gets the list of listeners that allow it to
 // attach for each parentRef.
-func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *resource.Resources) bool {
+func (t *Translator) processAllowedListenersForParentRefs(
+	routeContext RouteContext,
+	gateways []*GatewayContext,
+) bool {
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
@@ -2131,7 +2137,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		for _, listener := range selectedListeners {
 			acceptedKind := routeContext.GetRouteType()
 			if listener.AllowsKind(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: acceptedKind}) &&
-				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
+				listener.AllowsNamespace(t.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
 			}
 		}
@@ -2286,7 +2292,10 @@ func (t *Translator) processBackendExtensions(
 	return nil
 }
 
-func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backendNamespace string, resources *resource.Resources) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+func (t *Translator) getTargetBackendReference(
+	backendRef gwapiv1.BackendObjectReference,
+	backendNamespace string,
+) gwapiv1.LocalPolicyTargetReferenceWithSectionName {
 	ref := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
 		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
 			Group: func() gwapiv1.Group {
@@ -2310,7 +2319,7 @@ func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backen
 
 	switch {
 	case backendRef.Kind == nil || *backendRef.Kind == resource.KindService:
-		if service := resources.GetService(backendNamespace, string(backendRef.Name)); service != nil {
+		if service := t.GetService(backendNamespace, string(backendRef.Name)); service != nil {
 			for _, port := range service.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2322,7 +2331,7 @@ func getTargetBackendReference(backendRef gwapiv1.BackendObjectReference, backen
 		}
 
 	case *backendRef.Kind == resource.KindServiceImport:
-		if si := resources.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
+		if si := t.GetServiceImport(backendNamespace, string(backendRef.Name)); si != nil {
 			for _, port := range si.Spec.Ports {
 				if port.Port == *backendRef.Port {
 					if port.Name != "" {
@@ -2346,12 +2355,11 @@ func (t *Translator) processBackendDestinationSetting(
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	protocol ir.AppProtocol,
-	resources *resource.Resources,
 ) *ir.DestinationSetting {
 	var dstAddrType *ir.DestinationAddressType
 
 	addrTypeMap := make(map[ir.DestinationAddressType]int)
-	backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+	backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 	for _, ap := range backend.Spec.AppProtocols {
 		protocol = backendAppProtocolToIRAppProtocol(ap, protocol)
 	}
@@ -2469,4 +2477,57 @@ func buildStatName(pattern string, route RouteContext, ruleName *gwapiv1.Section
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterRouteRuleNumber, fmt.Sprintf("%d", idx))
 	statName = strings.ReplaceAll(statName, egv1a1.StatFormatterBackendRefs, strings.Join(refs, "|"))
 	return statName
+}
+
+// Shallow-copy helpers that deep-copy only the Status field.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+
+func httpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.HTTPRoute) []*gwapiv1.HTTPRoute {
+	copies := make([]*gwapiv1.HTTPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func grpcRouteCopiesWithStatusDeepCopy(routes []*gwapiv1.GRPCRoute) []*gwapiv1.GRPCRoute {
+	copies := make([]*gwapiv1.GRPCRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func tlsRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a3.TLSRoute) []*gwapiv1a3.TLSRoute {
+	copies := make([]*gwapiv1a3.TLSRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func udpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.UDPRoute) []*gwapiv1a2.UDPRoute {
+	copies := make([]*gwapiv1a2.UDPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
+}
+
+func tcpRouteCopiesWithStatusDeepCopy(routes []*gwapiv1a2.TCPRoute) []*gwapiv1a2.TCPRoute {
+	copies := make([]*gwapiv1a2.TCPRoute, len(routes))
+	for i, r := range routes {
+		out := *r
+		r.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

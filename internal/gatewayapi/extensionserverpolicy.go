@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -36,14 +38,16 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	policyCopies := extensionServerPolicyCopiesWithStatusDeepCopy(policies)
+
 	var errs error
 	// Process the policies targeting Gateways. Only update the policy status if it was accepted.
 	// A policy is considered accepted if at least one targetRef contained inside matched a listener.
-	for policyIndex, policy := range policies {
-		policy := &policy
+	for i := range policies {
+		policy := policyCopies[i]
 		var policyStatus gwapiv1.PolicyStatus
 		accepted := false
-		targetRefs, err := extractTargetRefs(policy, gateways)
+		targetRefs, err := extractTargetRefs(&policy, gateways)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err))
 			continue
@@ -55,7 +59,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
-			gateway := resolveExtServerPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+			gateway := resolveExtServerPolicyGatewayTargetRef(&policy, currTarget, gatewayMap)
 			if gateway == nil {
 				// unable to find a matching Gateway for policy
 				continue
@@ -64,12 +68,12 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			// Append policy extension server policy list for related gateway.
 			gatewayKey := t.getIRKey(gateway.Gateway)
 			unstructuredPolicy := &ir.UnstructuredRef{
-				Object: &policies[policyIndex],
+				Object: &policy,
 			}
 			xdsIR[gatewayKey].ExtensionServerPolicies = append(xdsIR[gatewayKey].ExtensionServerPolicies, unstructuredPolicy)
 
 			// Set conditions for translation if it got any
-			if t.translateExtServerPolicyForGateway(policy, gateway, currTarget, xdsIR) {
+			if t.translateExtServerPolicyForGateway(&policy, gateway, currTarget, xdsIR) {
 				// Set Accepted condition if it is unset
 				// Only add a status condition if the policy was added into the IR
 				// Find its ancestor reference by resolved gateway, even with resolve error
@@ -80,8 +84,8 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 		}
 		if accepted {
-			res = append(res, *policy)
 			policy.Object["status"] = PolicyStatusToUnstructured(policyStatus)
+			res = append(res, policy)
 		}
 	}
 
@@ -187,4 +191,18 @@ func (t *Translator) translateExtServerPolicyForGateway(
 		found = true
 	}
 	return found
+}
+
+// extensionServerPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied status entries.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func extensionServerPolicyCopiesWithStatusDeepCopy(policies []unstructured.Unstructured) []unstructured.Unstructured {
+	copies := make([]unstructured.Unstructured, len(policies))
+	for i, p := range policies {
+		p.Object = maps.Clone(p.Object) // shallow copy map - no shared ref for "status" key
+		if statusObj, ok := policies[i].Object["status"].(map[string]any); ok {
+			p.Object["status"] = runtime.DeepCopyJSON(statusObj)
+		}
+		copies[i] = p
+	}
+	return copies
 }

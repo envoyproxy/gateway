@@ -64,6 +64,10 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// TranslatorContext holds pre-indexed resource maps for efficient lookup resources
+	// during translation operations.
+	*TranslatorContext
+
 	// GatewayControllerName is the name of the Gateway API controller
 	GatewayControllerName string
 
@@ -142,6 +146,7 @@ func newTranslateResult(
 	securityPolicies []*egv1a1.SecurityPolicy,
 	backendTLSPolicies []*gwapiv1.BackendTLSPolicy,
 	envoyExtensionPolicies []*egv1a1.EnvoyExtensionPolicy,
+	envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy,
 	extPolicies []unstructured.Unstructured,
 	backends []*egv1a1.Backend,
 	xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap,
@@ -210,6 +215,9 @@ func newTranslateResult(
 	if len(envoyExtensionPolicies) > 0 {
 		translateResult.EnvoyExtensionPolicies = envoyExtensionPolicies
 	}
+	if len(envoyPatchPolicies) > 0 {
+		translateResult.EnvoyPatchPolicies = envoyPatchPolicies
+	}
 	if len(extPolicies) > 0 {
 		translateResult.ExtensionServerPolicies = extPolicies
 	}
@@ -223,6 +231,19 @@ func newTranslateResult(
 func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult, error) {
 	var errs error
 
+	// Preprocessing to improve get resources operations performance.
+	translatorContext := &TranslatorContext{}
+	translatorContext.SetNamespaces(resources.Namespaces)
+	translatorContext.SetServices(resources.Services)
+	translatorContext.SetServiceImports(resources.ServiceImports)
+	translatorContext.SetBackends(resources.Backends)
+	translatorContext.SetSecrets(resources.Secrets)
+	translatorContext.SetConfigMaps(resources.ConfigMaps)
+	translatorContext.SetClusterTrustBundles(resources.ClusterTrustBundles)
+	translatorContext.SetEndpointSlicesForBackend(resources.EndpointSlices)
+
+	t.TranslatorContext = translatorContext
+
 	// Get Gateways belonging to our GatewayClass.
 	acceptedGateways, failedGateways := t.GetRelevantGateways(resources)
 
@@ -235,7 +256,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	t.ProcessListeners(acceptedGateways, xdsIR, infraIR, resources)
 
 	// Process EnvoyPatchPolicies
-	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
+	envoyPatchPolicies := t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(acceptedGateways, xdsIR, infraIR)
@@ -284,8 +305,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
-		resources, acceptedGateways, routes, xdsIR)
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(resources, acceptedGateways, routes, xdsIR)
 
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
@@ -330,7 +350,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		allGateways, httpRoutes, grpcRoutes, tlsRoutes,
 		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
 		securityPolicies, resources.BackendTLSPolicies, envoyExtensionPolicies,
-		extServerPolicies, backends, xdsIR, infraIR), errs
+		envoyPatchPolicies, extServerPolicies, backends, xdsIR, infraIR), errs
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

@@ -54,7 +54,8 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 )
 
-func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
+func (t *Translator) ProcessSecurityPolicies(
+	securityPolicies []*egv1a1.SecurityPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	resources *resource.Resources,
@@ -94,6 +95,8 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	// The routes are grouped by sectionNames of their targetRefs
 	gatewayRouteMap := make(map[string]map[string]sets.Set[string], gatewayMapSize)
 
+	policyCopies := securityPolicyCopiesWithStatusDeepCopy(securityPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.SecurityPolicy, policyMapSize)
 
 	// Translate
@@ -103,7 +106,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 	// 4. Finally, the policies targeting Gateways
 
 	// Process the policies targeting RouteRules (HTTP + TCP)
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -111,7 +114,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -122,7 +125,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 	// Process the policies targeting xRoutes (HTTP + TCP)
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -130,7 +133,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -141,7 +144,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 	// Process the policies targeting Listeners
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -149,7 +152,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -160,7 +163,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 		}
 	}
 	// Process the policies targeting Gateways
-	for _, currPolicy := range securityPolicies {
+	for i, currPolicy := range securityPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -168,7 +171,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -1039,7 +1042,7 @@ func (t *Translator) buildJWT(
 			}
 			provider.RemoteJWKS = remoteJWKS
 		} else {
-			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS, resources)
+			localJWKS, err := t.buildLocalJWKS(policy, p.LocalJWKS)
 			if err != nil {
 				return nil, err
 			}
@@ -1196,7 +1199,6 @@ func (t *Translator) buildRemoteJWKS(
 func (t *Translator) buildLocalJWKS(
 	policy *egv1a1.SecurityPolicy,
 	localJWKS *egv1a1.LocalJWKS,
-	resources *resource.Resources,
 ) (string, error) {
 	jwksType := egv1a1.LocalJWKSTypeInline
 	if localJWKS.Type != nil {
@@ -1204,7 +1206,7 @@ func (t *Translator) buildLocalJWKS(
 	}
 
 	if jwksType == egv1a1.LocalJWKSTypeValueRef {
-		cm := resources.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
+		cm := t.GetConfigMap(policy.Namespace, string(localJWKS.ValueRef.Name))
 		if cm == nil {
 			return "", fmt.Errorf("local JWKS ConfigMap %s/%s not found", policy.Namespace, localJWKS.ValueRef.Name)
 		}
@@ -1277,8 +1279,7 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	if clientSecret, err = t.validateSecretRef(
-		false, from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
@@ -1325,7 +1326,7 @@ func (t *Translator) buildOIDC(
 	// HMAC secret is generated by the CertGen job and stored in a secret
 	// We need to rotate the HMAC secret in the future, probably the same
 	// way we rotate the certs generated by the CertGen job.
-	hmacSecret := resources.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
+	hmacSecret := t.GetSecret(t.ControllerNamespace, oidcHMACSecretName)
 	if hmacSecret == nil {
 		return nil, fmt.Errorf("HMAC secret %s/%s not found", t.ControllerNamespace, oidcHMACSecretName)
 	}
@@ -1384,7 +1385,11 @@ func (t *Translator) buildOIDC(
 	return irOIDC, nil
 }
 
-func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy) (*ir.OIDCProvider, error) {
+func (t *Translator) buildOIDCProvider(
+	policy *egv1a1.SecurityPolicy,
+	resources *resource.Resources,
+	envoyProxy *egv1a1.EnvoyProxy,
+) (*ir.OIDCProvider, error) {
 	var (
 		provider              = policy.Spec.OIDC.Provider
 		tokenEndpoint         string
@@ -1415,7 +1420,8 @@ func (t *Translator) buildOIDCProvider(policy *egv1a1.SecurityPolicy, resources 
 	}
 
 	if len(provider.BackendRefs) > 0 {
-		if rd, err = t.translateExtServiceBackendRefs(policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
+		if rd, err = t.translateExtServiceBackendRefs(
+			policy, provider.BackendRefs, protocol, resources, envoyProxy, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -1707,8 +1713,7 @@ func (t *Translator) buildAPIKeyAuth(
 	seenKeys := make(sets.Set[string])
 
 	for _, ref := range policy.Spec.APIKeyAuth.CredentialRefs {
-		credentialsSecret, err := t.validateSecretRef(
-			false, from, ref, resources)
+		credentialsSecret, err := t.validateSecretRef(false, from, ref, resources)
 		if err != nil {
 			return nil, err
 		}
@@ -1759,8 +1764,7 @@ func (t *Translator) buildBasicAuth(
 		kind:      resource.KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if usersSecret, err = t.validateSecretRef(
-		false, from, basicAuth.Users, resources); err != nil {
+	if usersSecret, err = t.validateSecretRef(false, from, basicAuth.Users, resources); err != nil {
 		return nil, err
 	}
 
@@ -1878,7 +1882,8 @@ func (t *Translator) buildExtAuth(
 		}
 	}
 
-	if rd, err = t.translateExtServiceBackendRefs(policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
+	if rd, err = t.translateExtServiceBackendRefs(
+		policy, backendRefs, protocol, resources, envoyProxy, "extauth", 0); err != nil {
 		return nil, err
 	}
 
@@ -1888,7 +1893,7 @@ func (t *Translator) buildExtAuth(
 		// When translated to XDS, the authority is used on the filter level not on the cluster level.
 		// There's no way to translate to XDS and use a different authority for each backendref
 		if authority == "" {
-			authority = backendRefAuthority(resources, &backendRef.BackendObjectReference, policy)
+			authority = t.backendRefAuthority(&backendRef.BackendObjectReference, policy)
 		}
 	}
 
@@ -1941,7 +1946,10 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 	}
 }
 
-func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.BackendObjectReference, policy *egv1a1.SecurityPolicy) string {
+func (t *Translator) backendRefAuthority(
+	backendRef *gwapiv1.BackendObjectReference,
+	policy *egv1a1.SecurityPolicy,
+) string {
 	if backendRef == nil {
 		return ""
 	}
@@ -1949,7 +1957,7 @@ func backendRefAuthority(resources *resource.Resources, backendRef *gwapiv1.Back
 	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
 	backendKind := KindDerefOr(backendRef.Kind, resource.KindService)
 	if backendKind == resource.KindBackend {
-		backend := resources.GetBackend(backendNamespace, string(backendRef.Name))
+		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
 		if backend != nil {
 			// TODO: exists multi FQDN endpoints?
 			for _, ep := range backend.Spec.Endpoints {
@@ -2022,4 +2030,16 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		"%s/authorization/rule/%s",
 		irConfigName(policy),
 		strconv.Itoa(index))
+}
+
+// securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func securityPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.SecurityPolicy) []*egv1a1.SecurityPolicy {
+	copies := make([]*egv1a1.SecurityPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

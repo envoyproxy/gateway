@@ -21,8 +21,10 @@ import (
 )
 
 func (t *Translator) ProcessBackends(backends []*egv1a1.Backend, backendTLSPolicies []*gwapiv1.BackendTLSPolicy) []*egv1a1.Backend {
+	backendCopies := backendCopiesWithStatusDeepCopy(backends)
 	res := make([]*egv1a1.Backend, 0, len(backends))
-	for _, backend := range backends {
+	for i := range backends {
+		backend := backendCopies[i]
 		// Ensure Backends are enabled
 		if !t.BackendEnabled {
 			status.UpdateBackendStatusAcceptedCondition(backend, false,
@@ -194,4 +196,16 @@ func validateHostname(hostname, typeName string, allowLocalhost bool) *status.Ro
 	}
 
 	return nil
+}
+
+// backendCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func backendCopiesWithStatusDeepCopy(backends []*egv1a1.Backend) []*egv1a1.Backend {
+	copies := make([]*egv1a1.Backend, len(backends))
+	for i, b := range backends {
+		out := *b
+		b.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

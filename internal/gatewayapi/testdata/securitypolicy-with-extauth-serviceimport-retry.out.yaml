@@ -255,6 +255,7 @@ xdsIR:
     globalResources:
       proxyServiceCluster:
         metadata:
+          kind: Service
           name: envoy-default-gateway-1-bfd08ef4
           namespace: envoy-gateway-system
           sectionName: "8080"
@@ -266,6 +267,7 @@ xdsIR:
             port: 8080
             zone: zone1
           metadata:
+            kind: Service
             name: envoy-default-gateway-1-bfd08ef4
             namespace: envoy-gateway-system
             sectionName: "8080"
@@ -300,6 +302,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-1
               namespace: default
               sectionName: "8080"
@@ -371,6 +374,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-2
               namespace: default
               sectionName: "8080"
@@ -442,6 +446,7 @@ xdsIR:
             - host: 7.7.7.7
               port: 8080
             metadata:
+              kind: Service
               name: service-3
               namespace: default
               sectionName: "8080"

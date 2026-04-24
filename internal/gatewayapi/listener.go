@@ -835,10 +835,10 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 		kind := KindDerefOr(ref.Kind, resource.KindService)
 		switch kind {
 		case resource.KindService:
-			if err := validateBackendRefService(ref.BackendObjectReference, resources, ns, corev1.ProtocolTCP); err != nil {
+			if err := t.validateBackendRefService(ref.BackendObjectReference, ns, corev1.ProtocolTCP); err != nil {
 				return nil, nil, err
 			}
-			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources, envoyProxy)
+			ds, err := t.processServiceDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, envoyProxy)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -847,7 +847,7 @@ func (t *Translator) processBackendRefs(name string, backendCluster egv1a1.Backe
 			if err := t.validateBackendRefBackend(ref.BackendObjectReference, resources, ns, true); err != nil {
 				return nil, nil, err
 			}
-			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP, resources)
+			ds := t.processBackendDestinationSetting(name, ref.BackendObjectReference, ns, ir.TCP)
 			// Dynamic resolver destinations are not supported for none-route destinations
 			if ds.IsDynamicResolver {
 				return nil, nil, errors.New("dynamic resolver destinations are not supported")
