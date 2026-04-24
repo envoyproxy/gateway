@@ -25,13 +25,16 @@ import (
 var _ types.XDSHookClient = (*compositeXDSHookClient)(nil)
 
 // hookClientEntry pairs an XDSHookClient with its parent manager's metadata.
+// Matching is by group/kind only, mirroring runner.ExtensionGroupKinds and
+// Manager.HasExtension; exact-GVK matching would silently drop resources
+// when CRDs serve multiple versions.
 type hookClientEntry struct {
 	name              string
 	client            types.XDSHookClient
 	failOpen          bool
-	resourceGVKSet    sets.Set[schema.GroupVersionKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
-	policyGVKSet      sets.Set[schema.GroupVersionKind] // used for per-extension policy filtering in PostHTTPListenerModifyHook, PostTranslateModifyHook
-	translationConfig *egv1a1.TranslationConfig         // used for per-extension resource-type gating in PostTranslateModifyHook
+	resourceGKSet     sets.Set[schema.GroupKind] // used for per-extension resource filtering in PostRouteModifyHook, PostClusterModifyHook
+	policyGKSet       sets.Set[schema.GroupKind] // used for per-extension policy filtering in PostHTTPListenerModifyHook, PostTranslateModifyHook
+	translationConfig *egv1a1.TranslationConfig  // used for per-extension resource-type gating in PostTranslateModifyHook
 }
 
 // compositeXDSHookClient chains multiple XDSHookClient calls sequentially.
@@ -43,7 +46,7 @@ type compositeXDSHookClient struct {
 func (c *compositeXDSHookClient) PostRouteModifyHook(r *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
 	current := r
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGVK(extensionResources, entry.resourceGVKSet)
+		filtered := filterResourcesByGK(extensionResources, entry.resourceGKSet)
 		result, err := entry.client.PostRouteModifyHook(current, routeHostnames, filtered)
 		if err != nil {
 			if entry.failOpen {
@@ -89,7 +92,7 @@ func (c *compositeXDSHookClient) PostEndpointsModifyHook(loadAssignment *endpoin
 func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener, extensionResources []*unstructured.Unstructured) (*listener.Listener, error) {
 	current := l
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGVK(extensionResources, entry.policyGVKSet)
+		filtered := filterResourcesByGK(extensionResources, entry.policyGKSet)
 		result, err := entry.client.PostHTTPListenerModifyHook(current, filtered)
 		if err != nil {
 			if entry.failOpen {
@@ -105,7 +108,7 @@ func (c *compositeXDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener
 func (c *compositeXDSHookClient) PostClusterModifyHook(cl *cluster.Cluster, extensionResources []*unstructured.Unstructured) (*cluster.Cluster, error) {
 	current := cl
 	for _, entry := range c.entries {
-		filtered := filterResourcesByGVK(extensionResources, entry.resourceGVKSet)
+		filtered := filterResourcesByGK(extensionResources, entry.resourceGKSet)
 		result, err := entry.client.PostClusterModifyHook(current, filtered)
 		if err != nil {
 			if entry.failOpen {
@@ -139,8 +142,8 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 	currentRoutes := routes
 
 	for _, entry := range c.entries {
-		// Per-extension policy filtering: only send policies matching this extension's declared GVKs
-		filteredPolicies := filterPoliciesByGVK(extensionPolicies, entry.policyGVKSet)
+		// Per-extension policy filtering: only send policies matching this extension's declared GKs
+		filteredPolicies := filterPoliciesByGK(extensionPolicies, entry.policyGKSet)
 
 		// Per-extension resource-type gating: only pass resource types this extension declared interest in.
 		// This mirrors the behavior in processExtensionPostTranslationHook (extension.go) where
@@ -191,10 +194,12 @@ func (c *compositeXDSHookClient) PostTranslateModifyHook(
 	return currentClusters, currentSecrets, currentListeners, currentRoutes, nil
 }
 
-// filterResourcesByGVK returns only those unstructured resources whose GVK matches the given set.
+// filterResourcesByGK returns only those unstructured resources whose group/kind matches
+// the given set. Version is intentionally ignored so behavior matches single-manager mode,
+// where runner.ExtensionGroupKinds and Manager.HasExtension also match by group+kind only.
 // If the set is nil or empty, all resources are returned (for backward compatibility).
-func filterResourcesByGVK(resources []*unstructured.Unstructured, gvkSet sets.Set[schema.GroupVersionKind]) []*unstructured.Unstructured {
-	if gvkSet.Len() == 0 {
+func filterResourcesByGK(resources []*unstructured.Unstructured, gkSet sets.Set[schema.GroupKind]) []*unstructured.Unstructured {
+	if gkSet.Len() == 0 {
 		return resources
 	}
 	var filtered []*unstructured.Unstructured
@@ -202,17 +207,18 @@ func filterResourcesByGVK(resources []*unstructured.Unstructured, gvkSet sets.Se
 		if r == nil {
 			continue
 		}
-		if gvkSet.Has(r.GroupVersionKind()) {
+		if gkSet.Has(r.GroupVersionKind().GroupKind()) {
 			filtered = append(filtered, r)
 		}
 	}
 	return filtered
 }
 
-// filterPoliciesByGVK returns only those policies whose GVK matches the given set.
+// filterPoliciesByGK returns only those policies whose group/kind matches the given set.
+// Version is intentionally ignored; see filterResourcesByGK for rationale.
 // If the set is nil or empty, all policies are returned (for backward compatibility).
-func filterPoliciesByGVK(policies []*ir.UnstructuredRef, gvkSet sets.Set[schema.GroupVersionKind]) []*ir.UnstructuredRef {
-	if gvkSet.Len() == 0 {
+func filterPoliciesByGK(policies []*ir.UnstructuredRef, gkSet sets.Set[schema.GroupKind]) []*ir.UnstructuredRef {
+	if gkSet.Len() == 0 {
 		return policies
 	}
 	var filtered []*ir.UnstructuredRef
@@ -220,7 +226,7 @@ func filterPoliciesByGVK(policies []*ir.UnstructuredRef, gvkSet sets.Set[schema.
 		if p == nil || p.Object == nil {
 			continue
 		}
-		if gvkSet.Has(p.Object.GroupVersionKind()) {
+		if gkSet.Has(p.Object.GroupVersionKind().GroupKind()) {
 			filtered = append(filtered, p)
 		}
 	}

@@ -106,13 +106,13 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 				extension: *ext,
 			}
 
-			resourceGVKSet, policyGVKSet := buildManagerGVKSets(ext)
+			resourceGKSet, policyGKSet := buildManagerGKSets(ext)
 
 			named = append(named, namedManager{
 				name:            ext.Name,
 				manager:         mgr,
-				resourceGVKSet:  resourceGVKSet,
-				policyGVKSet:    policyGVKSet,
+				resourceGKSet:   resourceGKSet,
+				policyGKSet:     policyGKSet,
 				cleanupHookConn: mgr.CleanupHookConns,
 			})
 		}
@@ -121,24 +121,26 @@ func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
 	}
 }
 
-// buildManagerGVKSets returns (resourceGVKSet, policyGVKSet) for an ExtensionManager.
-// resourceGVKSet covers Resources + BackendResources (used for per-extension filtering
-// in PostRouteModifyHook / PostClusterModifyHook). policyGVKSet covers PolicyResources
+// buildManagerGKSets returns (resourceGKSet, policyGKSet) for an ExtensionManager.
+// resourceGKSet covers Resources + BackendResources (used for per-extension filtering
+// in PostRouteModifyHook / PostClusterModifyHook). policyGKSet covers PolicyResources
 // (used in PostHTTPListenerModifyHook / PostTranslateModifyHook).
-func buildManagerGVKSets(ext *egv1a1.ExtensionManager) (sets.Set[schema.GroupVersionKind], sets.Set[schema.GroupVersionKind]) {
-	resourceGVKSet := sets.New[schema.GroupVersionKind]()
+// Version is intentionally dropped so matching aligns with runner.ExtensionGroupKinds
+// and Manager.HasExtension, which also compare by group+kind only.
+func buildManagerGKSets(ext *egv1a1.ExtensionManager) (sets.Set[schema.GroupKind], sets.Set[schema.GroupKind]) {
+	resourceGKSet := sets.New[schema.GroupKind]()
 	for _, gvk := range ext.Resources {
-		resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+		resourceGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 	}
 	for _, gvk := range ext.BackendResources {
-		resourceGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+		resourceGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 	}
 
-	policyGVKSet := sets.New[schema.GroupVersionKind]()
+	policyGKSet := sets.New[schema.GroupKind]()
 	for _, gvk := range ext.PolicyResources {
-		policyGVKSet.Insert(schema.GroupVersionKind{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+		policyGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 	}
-	return resourceGVKSet, policyGVKSet
+	return resourceGKSet, policyGKSet
 }
 
 func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {

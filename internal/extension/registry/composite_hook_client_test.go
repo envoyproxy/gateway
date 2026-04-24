@@ -182,14 +182,14 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:           "ext1",
-					client:         client1,
-					resourceGVKSet: sets.New(fooV1FooFilterGVK),
+					name:          "ext1",
+					client:        client1,
+					resourceGKSet: sets.New(fooV1FooFilterGVK.GroupKind()),
 				},
 				{
-					name:           "ext2",
-					client:         client2,
-					resourceGVKSet: sets.New(barV1BarBackendGVK),
+					name:          "ext2",
+					client:        client2,
+					resourceGKSet: sets.New(barV1BarBackendGVK.GroupKind()),
 				},
 			},
 		}
@@ -209,7 +209,32 @@ func TestCompositeHookClient_PostRouteModifyHook(t *testing.T) {
 		assert.Equal(t, barV1BarBackendGVK, ext2Resources[0].GetObjectKind().GroupVersionKind())
 	})
 
-	t.Run("no resourceGVKSet passes all resources", func(t *testing.T) {
+	t.Run("resource matching ignores version (group/kind only)", func(t *testing.T) {
+		// Regression test: a CRD served at v2 must still reach an extension that
+		// declared v1 for the same group/kind, matching single-manager behavior.
+		var received []*unstructured.Unstructured
+		client := &mockXDSHookClient{
+			postRouteModifyHook: func(r *route.Route, _ []string, resources []*unstructured.Unstructured) (*route.Route, error) {
+				received = resources
+				return r, nil
+			},
+		}
+		declaredGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooFilter"}
+		composite := &compositeXDSHookClient{
+			entries: []hookClientEntry{
+				{name: "ext1", client: client, resourceGKSet: sets.New(declaredGVK.GroupKind())},
+			},
+		}
+		servedAtV2 := []*unstructured.Unstructured{
+			{Object: map[string]interface{}{"apiVersion": "foo.io/v2", "kind": "FooFilter"}},
+		}
+
+		_, err := composite.PostRouteModifyHook(&route.Route{Name: "test"}, nil, servedAtV2)
+		require.NoError(t, err)
+		require.Len(t, received, 1)
+	})
+
+	t.Run("no resourceGKSet passes all resources", func(t *testing.T) {
 		var receivedResources []*unstructured.Unstructured
 		client := &mockXDSHookClient{
 			postRouteModifyHook: func(r *route.Route, _ []string, resources []*unstructured.Unstructured) (*route.Route, error) {
@@ -480,14 +505,14 @@ func TestCompositeHookClient_PostHTTPListenerModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:         "ext1",
-					client:       client1,
-					policyGVKSet: sets.New(fooV1FooPolicyGVK),
+					name:        "ext1",
+					client:      client1,
+					policyGKSet: sets.New(fooV1FooPolicyGVK.GroupKind()),
 				},
 				{
-					name:         "ext2",
-					client:       client2,
-					policyGVKSet: sets.New(barV1BarPolicyGVK),
+					name:        "ext2",
+					client:      client2,
+					policyGKSet: sets.New(barV1BarPolicyGVK.GroupKind()),
 				},
 			},
 		}
@@ -603,14 +628,14 @@ func TestCompositeHookClient_PostClusterModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:           "ext1",
-					client:         client1,
-					resourceGVKSet: sets.New(fooV1FooBackendGVK),
+					name:          "ext1",
+					client:        client1,
+					resourceGKSet: sets.New(fooV1FooBackendGVK.GroupKind()),
 				},
 				{
-					name:           "ext2",
-					client:         client2,
-					resourceGVKSet: sets.New(barV1BarBackend),
+					name:          "ext2",
+					client:        client2,
+					resourceGKSet: sets.New(barV1BarBackend.GroupKind()),
 				},
 			},
 		}
@@ -702,14 +727,14 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		composite := &compositeXDSHookClient{
 			entries: []hookClientEntry{
 				{
-					name:         "ext1",
-					client:       client1,
-					policyGVKSet: sets.New(fooV1FooPolicyGVK),
+					name:        "ext1",
+					client:      client1,
+					policyGKSet: sets.New(fooV1FooPolicyGVK.GroupKind()),
 				},
 				{
-					name:         "ext2",
-					client:       client2,
-					policyGVKSet: sets.New(barV1BarPolicyGVK),
+					name:        "ext2",
+					client:      client2,
+					policyGKSet: sets.New(barV1BarPolicyGVK.GroupKind()),
 				},
 			},
 		}
@@ -913,9 +938,9 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 		assert.Equal(t, "from-ext2", rr[1].Name)
 	})
 
-	t.Run("filterPoliciesByGVK skips nil entries", func(t *testing.T) {
+	t.Run("filterPoliciesByGK skips nil entries", func(t *testing.T) {
 		fooV1FooPolicyGVK := schema.GroupVersionKind{Group: "foo.io", Version: "v1", Kind: "FooPolicy"}
-		gvkSet := sets.New(fooV1FooPolicyGVK)
+		gkSet := sets.New(fooV1FooPolicyGVK.GroupKind())
 		policies := []*ir.UnstructuredRef{
 			nil,
 			{Object: nil},
@@ -925,12 +950,12 @@ func TestCompositeHookClient_PostTranslateModifyHook(t *testing.T) {
 			}}},
 		}
 
-		filtered := filterPoliciesByGVK(policies, gvkSet)
+		filtered := filterPoliciesByGK(policies, gkSet)
 		require.Len(t, filtered, 1)
 		assert.Equal(t, fooV1FooPolicyGVK, filtered[0].Object.GetObjectKind().GroupVersionKind())
 	})
 
-	t.Run("no policyGVKSet passes all policies", func(t *testing.T) {
+	t.Run("no policyGKSet passes all policies", func(t *testing.T) {
 		var receivedPolicies []*ir.UnstructuredRef
 
 		client := &mockXDSHookClient{

@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,17 +23,17 @@ import (
 // NewInMemoryCompositeManager builds a CompositeManager with one namedManager per
 // supplied ExtensionManager config. All entries share a single in-process gRPC server
 // (bufconn) so tests exercise the composite code path without needing distinct servers.
-// Returns the composite Manager, a cleanup func that tears down the gRPC server and
-// connection, and any construction error.
+// Callers tear down the bufconn/server by calling CleanupHookConns() on the returned
+// Manager (idempotent — safe to call multiple times).
 func NewInMemoryCompositeManager(
 	exts []*egv1a1.ExtensionManager,
 	server extension.EnvoyGatewayExtensionServer,
-) (extTypes.Manager, func(), error) {
+) (extTypes.Manager, error) {
 	if server == nil {
-		return nil, nil, fmt.Errorf("in-memory composite manager must be passed a server")
+		return nil, fmt.Errorf("in-memory composite manager must be passed a server")
 	}
 	if len(exts) == 0 {
-		return nil, nil, fmt.Errorf("in-memory composite manager requires at least one extension")
+		return nil, fmt.Errorf("in-memory composite manager requires at least one extension")
 	}
 
 	buffer := 10 * 1024 * 1024
@@ -53,7 +54,19 @@ func NewInMemoryCompositeManager(
 	if err != nil {
 		baseServer.Stop()
 		lis.Close()
-		return nil, nil, err
+		return nil, err
+	}
+
+	// All entries share a single bufconn/server, so the cleanup must run at most
+	// once even though it's wired to every entry's cleanupHookConn (and
+	// CompositeManager.CleanupHookConns invokes every entry's callback).
+	var once sync.Once
+	cleanup := func() {
+		once.Do(func() {
+			_ = conn.Close()
+			baseServer.Stop()
+			lis.Close()
+		})
 	}
 
 	named := make([]namedManager, 0, len(exts))
@@ -62,20 +75,15 @@ func NewInMemoryCompositeManager(
 			extension:          *ext,
 			extensionConnCache: conn,
 		}
-		resourceGVKSet, policyGVKSet := buildManagerGVKSets(ext)
+		resourceGKSet, policyGKSet := buildManagerGKSets(ext)
 		named = append(named, namedManager{
-			name:           ext.Name,
-			manager:        mgr,
-			resourceGVKSet: resourceGVKSet,
-			policyGVKSet:   policyGVKSet,
+			name:            ext.Name,
+			manager:         mgr,
+			resourceGKSet:   resourceGKSet,
+			policyGKSet:     policyGKSet,
+			cleanupHookConn: cleanup,
 		})
 	}
 
-	cleanup := func() {
-		_ = conn.Close()
-		baseServer.Stop()
-		lis.Close()
-	}
-
-	return NewCompositeManager(named), cleanup, nil
+	return NewCompositeManager(named), nil
 }

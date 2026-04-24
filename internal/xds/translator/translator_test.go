@@ -557,12 +557,12 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen(t *testing.T) {
 			}
 			ext := buildExtensionManagerConfig(true)
 
-			extMgr, closeFunc, err := registry.NewInMemoryCompositeManager(
+			extMgr, err := registry.NewInMemoryCompositeManager(
 				[]*egv1a1.ExtensionManager{&ext},
 				&testingExtensionServer{},
 			)
 			require.NoError(t, err)
-			defer closeFunc()
+			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
 			_, err = tr.Translate(x)
@@ -624,12 +624,12 @@ func TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed(t *testing.T) {
 			extB := buildExtensionManagerConfig(false)
 			extB.Name = "ext-b"
 
-			extMgr, closeFunc, err := registry.NewInMemoryCompositeManager(
+			extMgr, err := registry.NewInMemoryCompositeManager(
 				[]*egv1a1.ExtensionManager{&extA, &extB},
 				&testingExtensionServer{},
 			)
 			require.NoError(t, err)
-			defer closeFunc()
+			defer extMgr.CleanupHookConns()
 			tr.ExtensionManager = &extMgr
 
 			_, err = tr.Translate(x)

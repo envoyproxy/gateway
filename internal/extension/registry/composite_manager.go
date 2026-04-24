@@ -16,12 +16,15 @@ import (
 
 var _ extTypes.Manager = (*CompositeManager)(nil)
 
-// namedManager pairs a Manager with its name and declared resource/policy GVKs.
+// namedManager pairs a Manager with its name and declared resource/policy
+// Group/Kinds. Version is intentionally dropped: the rest of the pipeline
+// (runner.ExtensionGroupKinds, Manager.HasExtension, Gateway API
+// extensionRef) matches extensions by group+kind only.
 type namedManager struct {
 	name            string
 	manager         extTypes.Manager
-	resourceGVKSet  sets.Set[schema.GroupVersionKind] // Resources + BackendResources GVKs
-	policyGVKSet    sets.Set[schema.GroupVersionKind] // PolicyResources GVKs
+	resourceGKSet   sets.Set[schema.GroupKind] // Resources + BackendResources GKs
+	policyGKSet     sets.Set[schema.GroupKind] // PolicyResources GKs
 	cleanupHookConn func()
 }
 
@@ -148,11 +151,11 @@ func (c *CompositeManager) collectHookClients(
 		}
 		if client != nil {
 			entry := hookClientEntry{
-				name:           nm.name,
-				client:         client,
-				failOpen:       nm.manager.FailOpen(),
-				resourceGVKSet: nm.resourceGVKSet,
-				policyGVKSet:   nm.policyGVKSet,
+				name:          nm.name,
+				client:        client,
+				failOpen:      nm.manager.FailOpen(),
+				resourceGKSet: nm.resourceGKSet,
+				policyGKSet:   nm.policyGKSet,
 			}
 			if includeTranslationConfig {
 				entry.translationConfig = nm.manager.GetTranslationHookConfig()
