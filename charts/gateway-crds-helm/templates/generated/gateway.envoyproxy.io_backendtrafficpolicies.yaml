@@ -453,6 +453,8 @@ spec:
                         description: GrpcStatus specifies the GRPC status code to
                           be returned
                         format: int32
+                        maximum: 16
+                        minimum: 0
                         type: integer
                       httpStatus:
                         description: StatusCode specifies the HTTP status code to
@@ -802,6 +804,8 @@ spec:
                         description: MaxEjectionPercent sets the maximum percentage
                           of hosts in a cluster that can be ejected.
                         format: int32
+                        maximum: 100
+                        minimum: 0
                         type: integer
                       splitExternalLocalOriginErrors:
                         default: false
@@ -1272,10 +1276,14 @@ spec:
                     load balancers. Use weightedZones instead.
                   rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware) ?
                     !has(self.zoneAware.preferLocal) : true'
-                - message: ZoneAware routing is not supported for BackendUtilization
-                    and DynamicModule load balancers.
-                  rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                    ? !has(self.zoneAware) : true'
+                - message: PreferLocal zone-aware routing is not currently supported
+                    for BackendUtilization load balancers. Only WeightedZones can
+                    be used with BackendUtilization.
+                  rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                    ? !has(self.zoneAware.preferLocal) : true'
+                - message: ZoneAware routing is not supported for DynamicModule load
+                    balancers.
+                  rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware) : true'
                 - message: ZoneAware PreferLocal and WeightedZones cannot be specified
                     together.
                   rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal) &&
@@ -1650,6 +1658,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -1682,6 +1696,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object
@@ -2019,6 +2042,12 @@ spec:
                                 the selected requests have reached the limit.
                               properties:
                                 requests:
+                                  description: |-
+                                    Requests is the number of requests (or cost units, when used with
+                                    cost-based rate limiting) allowed per Unit.
+                                  format: int32
+                                  maximum: 4294967295
+                                  minimum: 1
                                   type: integer
                                 unit:
                                   description: |-
@@ -2051,6 +2080,15 @@ spec:
                                 If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).
                                 Default: false.
                               type: boolean
+                            xRateLimitHeaders:
+                              description: |-
+                                XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.
+                                When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.
+                                If not set, the rule inherits the listener-level setting (default behavior).
+                              enum:
+                              - "Off"
+                              - DraftVersion03
+                              type: string
                           required:
                           - limit
                           type: object

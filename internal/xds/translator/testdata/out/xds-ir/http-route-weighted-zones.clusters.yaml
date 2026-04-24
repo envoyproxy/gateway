@@ -43,3 +43,32 @@
   name: route-with-weighted-zones-maglev-dest/backend/0
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: route-with-weighted-zones-backend-utilization-dest/backend/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.wrr_locality
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.wrr_locality.v3.WrrLocality
+          endpointPickingPolicy:
+            policies:
+            - typedExtensionConfig:
+                name: envoy.load_balancing_policies.client_side_weighted_round_robin
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.client_side_weighted_round_robin.v3.ClientSideWeightedRoundRobin
+                  blackoutPeriod: 10s
+                  weightExpirationPeriod: 60s
+  name: route-with-weighted-zones-backend-utilization-dest/backend/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
