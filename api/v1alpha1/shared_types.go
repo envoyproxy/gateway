@@ -809,7 +809,6 @@ type ResponseOverride struct {
 	// All (default) overrides both.
 	//
 	// +optional
-	// +kubebuilder:default=All
 	Source *ResponseOverrideSource `json:"source,omitempty"`
 }
 

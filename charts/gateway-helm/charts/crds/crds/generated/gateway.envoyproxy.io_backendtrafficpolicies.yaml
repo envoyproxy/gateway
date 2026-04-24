@@ -2443,7 +2443,6 @@ spec:
                           type: integer
                       type: object
                     source:
-                      default: All
                       description: |-
                         Source specifies which responses this rule applies to.
                         Local overrides only Envoy-generated responses (e.g. auth failures).
