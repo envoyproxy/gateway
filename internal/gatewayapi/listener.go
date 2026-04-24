@@ -291,6 +291,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				continue
 			}
 
+			// In mergeGateways mode, skip listeners that are not programmed (e.g., invalid
+			// TLS certificates). This prevents broken listeners from being added to the
+			// shared xDS IR, where they could affect listeners from other Gateways by
+			// becoming a default filter chain and capturing traffic meant for valid listeners.
+			if t.MergeGateways && !listener.IsReady() {
+				continue
+			}
+
 			address := netutils.IPv4ListenerAddress
 			ipFamily := getEnvoyIPFamily(gateway.envoyProxy)
 			if ipFamily != nil && (*ipFamily == egv1a1.IPv6 || *ipFamily == egv1a1.DualStack) {
@@ -383,7 +391,9 @@ func (t *Translator) checkOverlappingTLSConfig(gateways []*GatewayContext) {
 		httpsListeners := []*ListenerContext{}
 		for _, gateway := range gateways {
 			for _, listener := range gateway.listeners {
-				if listener.Protocol == gwapiv1.HTTPSProtocolType {
+				// Skip non-ready listeners so they don't set TLSOverlaps on
+				// ready listeners that no longer share the xDS IR with them.
+				if listener.Protocol == gwapiv1.HTTPSProtocolType && listener.IsReady() {
 					httpsListeners = append(httpsListeners, listener)
 				}
 			}
