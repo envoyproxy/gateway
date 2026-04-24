@@ -9,6 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func Test_hasTag(t *testing.T) {
@@ -104,4 +107,92 @@ func TestValidateDynamicModuleRemoteURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAppendFallbackRoutes(t *testing.T) {
+	listener := &ir.HTTPListener{
+		Routes: []*ir.HTTPRoute{
+			{Name: "route-1"},
+			{Name: "route-2"},
+		},
+	}
+
+	appendFallbackRoutes(listener, []*ir.HTTPRoute{
+		{Name: "route-1/fallback"},
+	})
+
+	assert.Equal(t, []string{"route-1", "route-1/fallback", "route-2"}, []string{
+		listener.Routes[0].Name,
+		listener.Routes[1].Name,
+		listener.Routes[2].Name,
+	})
+}
+
+func TestExtensionsUsePercentage(t *testing.T) {
+	percentage := &gwapiv1.Fraction{Numerator: 50}
+
+	tests := []struct {
+		name string
+		exts *ir.EnvoyExtensionFeatures
+		want bool
+	}{
+		{
+			name: "nil extensions",
+		},
+		{
+			name: "empty extensions",
+			exts: &ir.EnvoyExtensionFeatures{},
+		},
+		{
+			name: "extproc percentage",
+			exts: &ir.EnvoyExtensionFeatures{ExtProcs: []ir.ExtProc{{Percentage: percentage}}},
+			want: true,
+		},
+		{
+			name: "wasm percentage",
+			exts: &ir.EnvoyExtensionFeatures{Wasms: []ir.Wasm{{Percentage: percentage}}},
+			want: true,
+		},
+		{
+			name: "lua percentage",
+			exts: &ir.EnvoyExtensionFeatures{Luas: []ir.Lua{{Percentage: percentage}}},
+			want: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, extensionsUsePercentage(tt.exts))
+		})
+	}
+}
+
+// TestFallbackExtensionsKeepsAlwaysOnExtensions covers the mixed-policy case:
+// when one extension is sampling-gated (Percentage set) and another is not,
+// the fallback route used by unsampled traffic must retain the always-on
+// extension so it still executes on every request.
+func TestFallbackExtensionsKeepsAlwaysOnExtensions(t *testing.T) {
+	percentage := &gwapiv1.Fraction{Numerator: 20}
+
+	exts := &ir.EnvoyExtensionFeatures{
+		ExtProcs: []ir.ExtProc{
+			{Name: "ep-always"},
+			{Name: "ep-sampled", Percentage: percentage},
+		},
+		Wasms: []ir.Wasm{
+			{Name: "wasm-sampled", Percentage: percentage},
+		},
+		Luas: []ir.Lua{
+			{Name: "lua-always"},
+			{Name: "lua-sampled", Percentage: percentage},
+		},
+		DynamicModules: []ir.DynamicModule{{Name: "dm"}},
+	}
+
+	got := fallbackExtensions(exts)
+
+	assert.Equal(t, []ir.ExtProc{{Name: "ep-always"}}, got.ExtProcs)
+	assert.Empty(t, got.Wasms)
+	assert.Equal(t, []ir.Lua{{Name: "lua-always"}}, got.Luas)
+	assert.Equal(t, []ir.DynamicModule{{Name: "dm"}}, got.DynamicModules)
 }

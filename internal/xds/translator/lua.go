@@ -164,6 +164,9 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 			return fmt.Errorf("route already has Lua per-route config for %s", filterName)
 		}
 		route.TypedPerFilterConfig[filterName] = luaPerRouteAny
+		if ep.Percentage != nil {
+			applyRuntimeFractionToRouteMatch(route, ep.Percentage)
+		}
 	}
 	return nil
 }
