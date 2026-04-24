@@ -12,12 +12,10 @@ import (
 	"maps"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -28,7 +26,6 @@ import (
 
 func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unstructured,
 	gateways []*GatewayContext,
-	referenceGrants []*gwapiv1b1.ReferenceGrant,
 	xdsIR resource.XdsIRMap,
 ) ([]unstructured.Unstructured, error) {
 	res := []unstructured.Unstructured{}
@@ -50,8 +47,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 		policy := policyCopies[i]
 		var policyStatus gwapiv1.PolicyStatus
 		accepted := false
-
-		targetRefs, err := extractTargetRefs(&policy, gateways, referenceGrants, t.GetNamespace)
+		targetRefs, err := extractTargetRefs(&policy, gateways)
 		if err != nil {
 			errs = errors.Join(errs, fmt.Errorf("error finding targetRefs for policy %s: %w", policy.GetName(), err))
 			continue
@@ -63,7 +59,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 			}
 
 			// Negative statuses have already been assigned so its safe to skip
-			gateway := resolveExtServerPolicyGatewayTargetRef(currTarget, gatewayMap)
+			gateway := resolveExtServerPolicyGatewayTargetRef(&policy, currTarget, gatewayMap)
 			if gateway == nil {
 				// unable to find a matching Gateway for policy
 				continue
@@ -96,12 +92,7 @@ func (t *Translator) ProcessExtensionServerPolicies(policies []unstructured.Unst
 	return res, errs
 }
 
-func extractTargetRefs(
-	policy *unstructured.Unstructured,
-	gateways []*GatewayContext,
-	referenceGrants []*gwapiv1b1.ReferenceGrant,
-	namespaceLookup func(string) *corev1.Namespace,
-) ([]policyTargetReferenceWithSectionName, error) {
+func extractTargetRefs(policy *unstructured.Unstructured, gateways []*GatewayContext) ([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, error) {
 	spec, found := policy.Object["spec"].(map[string]any)
 	if !found {
 		return nil, fmt.Errorf("no targets found for the policy")
@@ -114,26 +105,18 @@ func extractTargetRefs(
 	if err := json.Unmarshal(specAsJSON, &targetRefs); err != nil {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
-	ret := resolvePolicyTargets(
-		targetRefs,
-		gateways,
-		referenceGrants,
-		policy.GroupVersionKind().Group,
-		policy.GetKind(),
-		policy.GetNamespace(),
-		namespaceLookup,
-	)
+	ret := getPolicyTargetRefs(targetRefs, gateways, policy.GetNamespace())
 	if len(ret) == 0 {
 		return nil, fmt.Errorf("no targets found for the policy")
 	}
 	return ret, nil
 }
 
-func resolveExtServerPolicyGatewayTargetRef(target policyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
+func resolveExtServerPolicyGatewayTargetRef(policy *unstructured.Unstructured, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, gateways map[types.NamespacedName]*policyGatewayTargetContext) *GatewayContext {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: string(target.Namespace),
+		Namespace: policy.GetNamespace(),
 	}
 	gateway, ok := gateways[key]
 
@@ -171,7 +154,7 @@ func ExtServerPolicyStatusAsPolicyStatus(policy *unstructured.Unstructured) gwap
 func (t *Translator) translateExtServerPolicyForGateway(
 	policy *unstructured.Unstructured,
 	gateway *GatewayContext,
-	target policyTargetReferenceWithSectionName,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 ) bool {
 	irKey := t.getIRKey(gateway.Gateway)

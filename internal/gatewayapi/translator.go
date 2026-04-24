@@ -345,7 +345,7 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 		resources.EnvoyExtensionPolicies, acceptedGateways, routes, resources, xdsIR)
 
 	extServerPolicies, err := t.ProcessExtensionServerPolicies(
-		resources.ExtensionServerPolicies, acceptedGateways, resources.ReferenceGrants, xdsIR)
+		resources.ExtensionServerPolicies, acceptedGateways, xdsIR)
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}

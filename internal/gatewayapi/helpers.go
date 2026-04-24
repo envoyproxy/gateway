@@ -1042,8 +1042,8 @@ func composePolicyTargetRefs[T client.Object](
 	return ret
 }
 
-// resolvePolicyTargets returns a list of policy target refs that are allowed by the policy's
-// TargetSelectors. The list includes both target refs derived from the selectors and plain target refs specified in the policy.
+// resolvePolicyTargets returns a list of policy target refs that are allowed by the policy's TargetSelectors.
+// The list includes both target refs derived from the selectors and plain target refs specified in the policy.
 func resolvePolicyTargets[T client.Object](
 	targetRefs egv1a1.PolicyTargetReferences,
 	potentialTargets []T,
@@ -1109,6 +1109,70 @@ func setPolicyTargetRefNotPermittedStatus[T client.Object](
 			})
 		}
 	}
+}
+
+// leagcy function to get policy target refs without considering cross-namespace policy attachment.
+// This is only used for extension server policies.
+// TODO: add cross-namesapce policy attachment to extension server if needed, and remove this function.
+func getPolicyTargetRefs[T client.Object](policy egv1a1.PolicyTargetReferences, potentialTargets []T, policyNamespace string) []gwapiv1.LocalPolicyTargetReferenceWithSectionName {
+	dedup := sets.New[targetRefWithTimestamp]()
+	for _, currSelector := range policy.TargetSelectors {
+		labelSelector := selectorFromTargetSelector(currSelector)
+		for _, obj := range potentialTargets {
+			gvk := obj.GetObjectKind().GroupVersionKind()
+			if gvk.Kind != string(currSelector.Kind) ||
+				gvk.Group != string(ptr.Deref(currSelector.Group, gwapiv1.GroupName)) {
+				continue
+			}
+
+			// Skip objects not in the same namespace as the policy
+			if obj.GetNamespace() != policyNamespace {
+				continue
+			}
+
+			if labelSelector.Matches(labels.Set(obj.GetLabels())) {
+				dedup.Insert(targetRefWithTimestamp{
+					CreationTimestamp: obj.GetCreationTimestamp(),
+					policyTargetReferenceWithSectionName: policyTargetReferenceWithSectionName{
+						Group: gwapiv1.Group(gvk.Group),
+						Kind:  gwapiv1.Kind(gvk.Kind),
+						Name:  gwapiv1.ObjectName(obj.GetName()),
+					},
+				})
+			}
+		}
+	}
+	selectorsList := dedup.UnsortedList()
+	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
+		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
+	})
+	ret := make([]gwapiv1.LocalPolicyTargetReferenceWithSectionName, len(selectorsList))
+	for i, v := range selectorsList {
+		ret[i] = gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+				Group: v.Group,
+				Kind:  v.Kind,
+				Name:  v.Name,
+			},
+			SectionName: v.SectionName,
+		}
+	}
+	// Plain targetRefs in the policy don't have an associated creation timestamp, but can still refer
+	// to targets that were already found via the selectors. Only add them to the returned list if
+	// they are not yet there. Always add them at the end.
+	fastLookup := sets.New(ret...)
+	var emptyTargetRef gwapiv1.LocalPolicyTargetReferenceWithSectionName
+	for _, v := range policy.GetTargetRefs() {
+		if v == emptyTargetRef {
+			// This can happen when the targetRef structure is read from extension server policies
+			continue
+		}
+		if !fastLookup.Has(v) {
+			ret = append(ret, v)
+		}
+	}
+
+	return ret
 }
 
 // Sets *target to value if and only if *target is nil
