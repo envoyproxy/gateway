@@ -105,6 +105,7 @@ type PerRetryPolicy struct {
 	BackOff *BackOffPolicy `json:"backOff,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!(has(self.baseInterval) && has(self.maxInterval)) || duration(self.maxInterval) >= duration(self.baseInterval)",message="maxInterval must be greater than or equal to baseInterval"
 type BackOffPolicy struct {
 	// BaseInterval is the base interval between retries.
 	//
