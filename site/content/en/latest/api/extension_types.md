@@ -2372,6 +2372,7 @@ _Appears in:_
 | `disableLua` | _boolean_ |  false  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled.<br />This field is mutually exclusive with EnableLua.<br />Deprecated: Use EnableLua instead. This field will be removed in a future release. |
 | `enableLua` | _boolean_ |  false  |  | EnableLua enables the Lua EnvoyExtensionPolicy feature.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be enabled.<br />By default, Lua policies are disabled.<br />This field is mutually exclusive with DisableLua. |
 | `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
+| `enableBackendTargetsInBackendTrafficPolicy` | _boolean_ |  true  |  | EnableBackendTargetsInBackendTrafficPolicy enables BackendTrafficPolicy to<br />target backend resources (Service, ServiceImport, Backend) in addition to<br />Gateway and Route resources. When enabled, Service Owners can create a single<br />Backend-targeted BTP to specify CDS configuration (health checks, circuit breakers,<br />etc.) for their service. |
 
 
 #### ExtensionHooks

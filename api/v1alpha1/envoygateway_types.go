@@ -341,6 +341,12 @@ type ExtensionAPISettings struct {
 	EnableLua bool `json:"enableLua,omitempty"`
 	// EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds).
 	EnableSDSSecretRef bool `json:"enableSDSSecretRef"`
+	// EnableBackendTargetsInBackendTrafficPolicy enables BackendTrafficPolicy to
+	// target backend resources (Service, ServiceImport, Backend) in addition to
+	// Gateway and Route resources. When enabled, Service Owners can create a single
+	// Backend-targeted BTP to specify CDS configuration (health checks, circuit breakers,
+	// etc.) for their service.
+	EnableBackendTargetsInBackendTrafficPolicy bool `json:"enableBackendTargetsInBackendTrafficPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

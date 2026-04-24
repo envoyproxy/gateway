@@ -102,6 +102,10 @@ type Translator struct {
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
+	// BackendTargetsInBTPEnabled when BackendTrafficPolicy can target backend
+	// resources (Service, ServiceImport, Backend).
+	BackendTargetsInBTPEnabled bool
+
 	// SDSSecretRefEnabled is true if EnvoyProxy can reference SDS secrets using the sds-ref type Secret.
 	// This could be enabled by Envoy Gateway configuration.
 	SDSSecretRefEnabled bool
