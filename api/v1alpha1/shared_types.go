@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	// SDSSecretType is the type for secrets that reference SDS configuration
+	SDSSecretType = "gateway.envoyproxy.io/sds"
+
 	// DefaultDeploymentReplicas is the default number of deployment replicas.
 	DefaultDeploymentReplicas = 1
 	// DefaultDeploymentCPUResourceRequests for deployment cpu resource

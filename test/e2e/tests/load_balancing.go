@@ -47,6 +47,7 @@ func init() {
 		MultiHeaderConsistentHashHeaderLoadBalancing,
 		QueryParamsBasedConsistentHashLoadBalancing,
 		BackendUtilizationLoadBalancingTest,
+		BackendUtilizationWeightedZonesLoadBalancingTest,
 	)
 }
 
@@ -104,7 +105,8 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 			}
 		})
 
-		time.Sleep(time.Second)
+		// Pause to allow envoy to compute weights. Should be longer than WeightUpdatePeriod duration.
+		time.Sleep(200 * time.Millisecond)
 
 		t.Run("traffic should skew toward low-utilization backend", func(t *testing.T) {
 			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
@@ -127,6 +129,120 @@ var BackendUtilizationLoadBalancingTest = suite.ConformanceTest{
 				}), nil
 			}); err != nil {
 				tlog.Errorf(t, "failed to run backend utilization load balancing test: %v", err)
+			}
+		})
+	},
+}
+
+var BackendUtilizationWeightedZonesLoadBalancingTest = suite.ConformanceTest{
+	ShortName:   "BackendUtilizationWeightedZones",
+	Description: "Test that weighted zones take precedence over backend utilization across localities",
+	Manifests: []string{
+		"testdata/load_balancing_backend_utilization_weighted_zones.yaml",
+	},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		const (
+			maxWarmupRequests = 200
+			warmupTimeout     = 20 * time.Second
+			sampleRequests    = 100
+			zone1MinPct       = 80 // WeightedZones split is 90:10 but this gives a buffer of ~10%
+		)
+
+		ns := "gateway-conformance-infra"
+		routeNN := types.NamespacedName{Name: "backend-utilization-weighted-zones-route", Namespace: ns}
+		gwNN := types.NamespacedName{Name: SameNamespaceGateway.Name, Namespace: ns}
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "backend-utilization-weighted-zones-policy", Namespace: ns}, suite.ControllerName, ancestorRef)
+		WaitForPods(t, suite.Client, ns, map[string]string{"app": "lb-backend-utilization-weighted-zones"}, corev1.PodRunning, &PodReady)
+
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
+
+		expectedResponse := http.ExpectedResponse{
+			Request: http.Request{
+				Path: "/backend-utilization-weighted-zones",
+			},
+			Response: http.Response{
+				StatusCodes: []int{200},
+			},
+			Namespace: ns,
+		}
+		req := http.MakeRequest(t, &expectedResponse, gwAddr, "HTTP", "http")
+
+		isZone1 := func(podName string) bool {
+			return strings.Contains(podName, "zone1")
+		}
+		isZone2 := func(podName string) bool {
+			return strings.Contains(podName, "zone2")
+		}
+
+		t.Run("warmup until both zones are hit", func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), warmupTimeout)
+			defer cancel()
+
+			hitZone1, hitZone2 := false, false
+			sent := 0
+			for sent < maxWarmupRequests {
+				if ctx.Err() != nil {
+					break
+				}
+				request := req
+				cReq, cResp, err := suite.RoundTripper.CaptureRoundTrip(request)
+				sent++
+				if err != nil {
+					tlog.Logf(t, "warmup request failed: %v", err)
+					continue
+				}
+				if err := http.CompareRoundTrip(t, &request, cReq, cResp, expectedResponse); err != nil {
+					tlog.Logf(t, "warmup unexpected response: %v", err)
+					continue
+				}
+				if isZone1(cReq.Pod) {
+					hitZone1 = true
+				}
+				if isZone2(cReq.Pod) {
+					hitZone2 = true
+				}
+				if hitZone1 && hitZone2 {
+					tlog.Logf(t, "both zones hit after %d warmup requests", sent)
+					return
+				}
+			}
+			tlog.Errorf(t, "failed to hit both zones during warmup after %d requests: zone1=%v zone2=%v", sent, hitZone1, hitZone2)
+		})
+
+		// Pause to allow envoy to compute weights. Should be longer than WeightUpdatePeriod duration.
+		time.Sleep(200 * time.Millisecond)
+
+		t.Run("traffic should favor the higher weighted zone", func(t *testing.T) {
+			if err := wait.PollUntilContextTimeout(t.Context(), time.Second, 60*time.Second, true, func(_ context.Context) (bool, error) {
+				return runTrafficTest(t, suite, &req, &expectedResponse, sampleRequests, func(trafficMap map[string]int) bool {
+					zone1Count := 0
+					zone2Count := 0
+					total := 0
+					for podName, count := range trafficMap {
+						total += count
+						if isZone1(podName) {
+							zone1Count += count
+						}
+						if isZone2(podName) {
+							zone2Count += count
+						}
+					}
+					if total == 0 {
+						return false
+					}
+					zone1Pct := (zone1Count * 100) / total
+					tlog.Logf(t, "traffic distribution: zone1=%d/%d (%d%%), zone2=%d/%d", zone1Count, total, zone1Pct, zone2Count, total)
+					return zone1Pct >= zone1MinPct && zone2Count > 0
+				}), nil
+			}); err != nil {
+				tlog.Errorf(t, "failed to run backend utilization weighted zones test: %v", err)
 			}
 		})
 	},
