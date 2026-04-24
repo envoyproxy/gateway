@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"time"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	adaptiveconcurrencyv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/adaptive_concurrency/v3"
@@ -21,6 +22,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
+
+const defaultAdaptiveConcurrencyUpdateInterval = 100 * time.Millisecond
 
 func init() {
 	registerHTTPFilter(&adaptiveConcurrency{})
@@ -101,9 +104,11 @@ func buildAdaptiveConcurrencyProto(ac *ir.AdaptiveConcurrency) *adaptiveconcurre
 	if ac.MaxConcurrencyLimit != nil {
 		concurrencyLimitParams.MaxConcurrencyLimit = wrapperspb.UInt32(*ac.MaxConcurrencyLimit)
 	}
-	if ac.ConcurrencyUpdateInterval != nil {
-		concurrencyLimitParams.ConcurrencyUpdateInterval = durationpb.New(ac.ConcurrencyUpdateInterval.Duration)
+	concurrencyUpdateInterval := defaultAdaptiveConcurrencyUpdateInterval
+	if ac.ConcurrencyUpdateInterval != nil && ac.ConcurrencyUpdateInterval.Duration > 0 {
+		concurrencyUpdateInterval = ac.ConcurrencyUpdateInterval.Duration
 	}
+	concurrencyLimitParams.ConcurrencyUpdateInterval = durationpb.New(concurrencyUpdateInterval)
 	gradientConfig.ConcurrencyLimitParams = concurrencyLimitParams
 
 	// MinRTT calculation params
