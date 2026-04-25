@@ -723,7 +723,19 @@ type ResponseOverrideRule struct {
 // +k8s:deepcopy-gen=true
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// RequestHeaders to match on. All listed headers must match for the rule to apply.
+	RequestHeaders []ResponseOverrideHeaderMatch `json:"requestHeaders,omitempty"`
+}
+
+// ResponseOverrideHeaderMatch defines the configuration for matching a request header.
+// +k8s:deepcopy-gen=true
+type ResponseOverrideHeaderMatch struct {
+	// Name of the HTTP header to match on.
+	Name string `json:"name"`
+	// Value specifies how to match against the value of the header.
+	Value StringMatch `json:"value"`
 }
 
 // StatusCodeMatch defines the configuration for matching a status code.

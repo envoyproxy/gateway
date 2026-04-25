@@ -34,7 +34,7 @@ var DirectResponseTest = suite.ConformanceTest{
 			kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, routeNN, gwNN)
 
 			// Test inline response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "GET Oops! Your request is not found.", 200, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/inline", "text/plain", "GET Oops! Your request is not found.", 200, map[string]string{
 				"X-Add-Header":    "added-value",
 				"X-Set-Header":    "set-value",
 				"X-Response-Type": "direct",
@@ -42,13 +42,13 @@ var DirectResponseTest = suite.ConformanceTest{
 			})
 
 			// Test value-ref response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/value-ref", "application/json", `{"error": "Internal Server Error"}`, 200, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/value-ref", "application/json", `{"error": "Internal Server Error"}`, 200, map[string]string{
 				"X-Add-Header": "added-json",
 				"X-Set-Header": "set-json",
 			})
 
 			// Test status-only response with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/401", "", ``, 401, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/401", "", ``, 401, map[string]string{
 				"X-Add-Header": "added-401",
 				"X-Set-Header": "set-401",
 			})

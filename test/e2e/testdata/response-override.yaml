@@ -103,3 +103,26 @@ spec:
         path:
           type: ReplaceFullPath
           replaceFullPath: /status/301
+    - match:
+        statusCodes:
+          - type: Value
+            value: 418
+        requestHeaders:
+          - name: Accept
+            value:
+              type: Exact
+              value: application/json
+      response:
+        contentType: application/json
+        body:
+          type: Inline
+          inline: '{"error":"I am a teapot"}'
+    - match:
+        statusCodes:
+          - type: Value
+            value: 418
+      response:
+        contentType: text/html
+        body:
+          type: Inline
+          inline: "<html><body><h1>I'm a teapot</h1></body></html>"
