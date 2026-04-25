@@ -226,6 +226,85 @@
       expectedStatuses:
       - end: "201"
         start: "200"
+      host: example.com
+      method: GET
+      path: /healthz
+    initialJitter: 15s
+    interval: 30s
+    timeout: 10s
+    unhealthyThreshold: 2
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: httproute/default/httproute-6/rule/1
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: example2.com
+              portValue: 3001
+          hostname: example2.com
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: httproute/default/httproute-6/rule/1/backend/0
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: Backend
+              name: backend-2
+              namespace: default
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: example3.com
+              portValue: 3001
+          hostname: example3.com
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: httproute/default/httproute-6/rule/1/backend/1
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: Backend
+              name: backend-3
+              namespace: default
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-6
+          namespace: default
+  name: httproute/default/httproute-6/rule/1
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  healthChecks:
+  - healthyThreshold: 2
+    httpHealthCheck:
+      expectedStatuses:
+      - end: "201"
+        start: "200"
       host: gateway.envoyproxy.io
       method: GET
       path: /healthz

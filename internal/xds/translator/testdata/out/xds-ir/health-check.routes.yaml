@@ -41,6 +41,30 @@
         upgradeConfigs:
         - upgradeType: websocket
   - domains:
+    - example.com
+    name: first-listener/example_com
+    routes:
+    - match:
+        pathSeparatedPrefix: /v6-rewrite
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            policies:
+            - kind: BackendTrafficPolicy
+              name: policy-for-route-6
+              namespace: default
+            resources:
+            - kind: HTTPRoute
+              name: httproute-6
+              namespace: default
+      name: httproute/default/httproute-6/rule/1/match/0/example_com
+      route:
+        appendXForwardedHost: true
+        cluster: httproute/default/httproute-6/rule/1
+        hostRewriteLiteral: example2.com
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
     - gateway.envoyproxy.io
     name: first-listener/gateway_envoyproxy_io
     routes:

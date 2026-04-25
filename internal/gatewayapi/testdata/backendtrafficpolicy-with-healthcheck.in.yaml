@@ -182,21 +182,36 @@ httpRoutes:
       name: gateway-2
       sectionName: http
     rules:
-      - matches:
-        - path:
-            value: "/v6"
-        backendRefs:
-        - group: gateway.envoyproxy.io
-          kind: Backend
-          name: backend-2
-          # Hostname rewrite filter applied, should use example2.com when doing health check.
-          filters:
-          - type: URLRewrite
-            urlRewrite:
-              hostname: example2.com
-        - group: gateway.envoyproxy.io
-          kind: Backend
-          name: backend-3
+    - matches:
+      - path:
+          value: "/v6"
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+        # Hostname rewrite filter applied, should use example2.com when doing health check.
+        filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: example2.com
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-3
+    - matches:
+      - path:
+          value: "/v6-rewrite"
+      # Hostname rewrite filter applied, should use example2.com when doing health check.
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          hostname: example2.com
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-3
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -228,10 +243,10 @@ backends:
     namespace: default
   spec:
     endpoints:
-      - hostname: "example3.com"
-        fqdn:
-          hostname: "example3.com"
-          port: 3001
+    - hostname: "example3.com"
+      fqdn:
+        hostname: "example3.com"
+        port: 3001
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -433,7 +448,7 @@ backendTrafficPolicies:
           method: GET
           path: /healthz
           expectedStatuses:
-            - 200
+          - 200
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
