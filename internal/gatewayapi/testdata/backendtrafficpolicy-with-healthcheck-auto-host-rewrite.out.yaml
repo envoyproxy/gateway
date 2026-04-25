@@ -2,7 +2,7 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-route
+    name: policy-for-route-1
     namespace: default
   spec:
     healthCheck:
@@ -19,6 +19,47 @@ backendTrafficPolicies:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-route-2
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        http:
+          hostname: custom-healthcheck.example.com
+          path: /healthz
+        interval: 10s
+        timeout: 5s
+        type: HTTP
+        unhealthyThreshold: 1
+      panicThreshold: 0
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
   status:
     ancestors:
     - ancestorRef:
@@ -75,7 +116,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -127,6 +168,52 @@ httpRoutes:
       matches:
       - path:
           value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-2
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-fqdn
+        namespace: default
+        port: 443
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: auto-host-rewrite
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /v2
   status:
     parents:
     - conditions:
@@ -209,6 +296,56 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-2
+            namespace: default
+          name: httproute/default/httproute-2/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: backend.example.com
+              hostname: backend.example.com
+              port: 443
+            metadata:
+              kind: Backend
+              name: backend-fqdn
+              namespace: default
+            name: httproute/default/httproute-2/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-2
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-2
+            namespace: default
+        name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v2
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 1
+              http:
+                expectedStatuses:
+                - 200
+                host: custom-healthcheck.example.com
+                path: /healthz
+              interval: 10s
+              timeout: 5s
+              unhealthyThreshold: 1
+            panicThreshold: 0
+        urlRewrite:
+          host:
+            backend: true
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-1
             namespace: default
           name: httproute/default/httproute-1/rule/0
@@ -233,7 +370,7 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-route
+            name: policy-for-route-1
             namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:

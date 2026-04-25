@@ -25,7 +25,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
-    name: policy-for-route
+    name: policy-for-route-1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -41,7 +41,30 @@ backendTrafficPolicies:
         healthyThreshold: 1
         unhealthyThreshold: 1
       panicThreshold: 0
+# Route with auto-host-rewrite + explicit hostname — explicit should win, no HostFrom
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    healthCheck:
+      active:
+        type: HTTP
+        http:
+          path: /healthz
+          hostname: custom-healthcheck.example.com
+        interval: 10s
+        timeout: 5s
+        healthyThreshold: 1
+        unhealthyThreshold: 1
+      panicThreshold: 0
 httpRoutes:
+# Route 1: auto-host-rewrite, no explicit hostname → HostFrom=Endpoint
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -58,6 +81,35 @@ httpRoutes:
     - matches:
       - path:
           value: "/"
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: auto-host-rewrite
+      backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-fqdn
+        namespace: default
+        port: 443
+# Route 2: auto-host-rewrite + explicit hostname → explicit wins, no HostFrom
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/v2"
       filters:
       - type: ExtensionRef
         extensionRef:
