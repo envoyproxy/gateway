@@ -1749,3 +1749,106 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestIsBackendTargetKind(t *testing.T) {
+	tests := []struct {
+		kind gwapiv1.Kind
+		want bool
+	}{
+		{kind: "Service", want: true},
+		{kind: "ServiceImport", want: true},
+		{kind: "Backend", want: true},
+		{kind: "Gateway", want: false},
+		{kind: "HTTPRoute", want: false},
+		{kind: "GRPCRoute", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.kind), func(t *testing.T) {
+			require.Equal(t, tt.want, isBackendTargetKind(tt.kind))
+		})
+	}
+}
+
+func TestRouteDestinationMatchesBackend(t *testing.T) {
+	tests := []struct {
+		name       string
+		dest       *ir.RouteDestination
+		kind       gwapiv1.Kind
+		targetName gwapiv1.ObjectName
+		namespace  string
+		want       bool
+	}{
+		{
+			name: "matching service",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: &ir.ResourceMetadata{Kind: "Service", Name: "my-svc", Namespace: "default"}},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: true,
+		},
+		{
+			name: "different service name",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: &ir.ResourceMetadata{Kind: "Service", Name: "other-svc", Namespace: "default"}},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: false,
+		},
+		{
+			name: "different namespace",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: &ir.ResourceMetadata{Kind: "Service", Name: "my-svc", Namespace: "other-ns"}},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: false,
+		},
+		{
+			name: "different kind",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: &ir.ResourceMetadata{Kind: "Backend", Name: "my-svc", Namespace: "default"}},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: false,
+		},
+		{
+			name: "nil destination",
+			dest: nil,
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: false,
+		},
+		{
+			name: "nil metadata in setting",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: nil},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: false,
+		},
+		{
+			name: "matches second setting",
+			dest: &ir.RouteDestination{
+				Settings: []*ir.DestinationSetting{
+					{Metadata: &ir.ResourceMetadata{Kind: "Service", Name: "other-svc", Namespace: "default"}},
+					{Metadata: &ir.ResourceMetadata{Kind: "Service", Name: "my-svc", Namespace: "default"}},
+				},
+			},
+			kind: "Service", targetName: "my-svc", namespace: "default",
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, routeDestinationMatchesBackend(tt.dest, tt.kind, tt.targetName, tt.namespace))
+		})
+	}
+}

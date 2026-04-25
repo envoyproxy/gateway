@@ -44,6 +44,31 @@ type btpRoutingKey struct {
 	Kind, Namespace, Name, SectionName string
 }
 
+func isBackendTargetKind(kind gwapiv1.Kind) bool {
+	return kind == resource.KindService ||
+		kind == resource.KindServiceImport ||
+		kind == resource.KindBackend
+}
+
+func routeDestinationMatchesBackend(
+	dest *ir.RouteDestination,
+	targetKind gwapiv1.Kind, targetName gwapiv1.ObjectName,
+	policyNamespace string,
+) bool {
+	if dest == nil {
+		return false
+	}
+	for _, ds := range dest.Settings {
+		if ds.Metadata != nil &&
+			ds.Metadata.Kind == string(targetKind) &&
+			ds.Metadata.Name == string(targetName) &&
+			ds.Metadata.Namespace == policyNamespace {
+			return true
+		}
+	}
+	return false
+}
+
 // BTPRoutingTypeIndex holds RoutingType values from BackendTrafficPolicies
 // This avoids an O(BTPs) lookup for every iteration of processDestination.
 type BTPRoutingTypeIndex struct {
@@ -314,6 +339,22 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
 					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, policy, currTarget)
+			}
+		}
+	}
+
+	// Process the policies targeting Backends (Service, ServiceImport, Backend)
+	for i, currPolicy := range backendTrafficPolicies {
+		policyName := utils.NamespacedName(currPolicy)
+		for _, currTarget := range currPolicy.Spec.GetTargetRefs() {
+			if isBackendTargetKind(currTarget.Kind) {
+				policy, found := handledPolicies[policyName]
+				if !found {
+					policy = policyCopies[i]
+					handledPolicies[policyName] = policy
+					res = append(res, policy)
+				}
+				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, policy, currTarget)
 			}
 		}
 	}
@@ -1346,6 +1387,143 @@ func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.Backend
 		Name:      policy.Name,
 		Namespace: policy.Namespace,
 	})
+}
+
+func (t *Translator) processBackendTrafficPolicyForBackend(
+	xdsIR resource.XdsIRMap,
+	gateways []*GatewayContext,
+	policy *egv1a1.BackendTrafficPolicy,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+) {
+	if !t.BackendTargetsInBTPEnabled {
+		policy.Status.Ancestors = nil
+		return
+	}
+
+	// Build reverse map: irKey → gateway NamespacedNames.
+	// With MergeGateways all gateways share one irKey; without it each maps to one.
+	irKeyToGateways := make(map[string][]types.NamespacedName, len(gateways))
+	for _, gw := range gateways {
+		irKey := t.getIRKey(gw.Gateway)
+		gwNN := utils.NamespacedName(gw)
+		irKeyToGateways[irKey] = append(irKeyToGateways[irKey], gwNN)
+	}
+
+	tf, errs := t.buildTrafficFeatures(policy)
+	if tf == nil {
+		return
+	}
+
+	// Single pass: apply traffic features and collect ancestor gateways.
+	ancestorGWs := sets.New[types.NamespacedName]()
+	for irKey, x := range xdsIR {
+		matched := t.applyTrafficFeaturesToBackend(x, tf, errs, policy, target)
+		if matched {
+			for _, gwNN := range irKeyToGateways[irKey] {
+				ancestorGWs.Insert(gwNN)
+			}
+		}
+	}
+
+	ancestorRefs := make([]*gwapiv1.ParentReference, 0, ancestorGWs.Len())
+	for _, gwNN := range ancestorGWs.UnsortedList() {
+		ref := getAncestorRefForPolicy(gwNN, nil)
+		ancestorRefs = append(ancestorRefs, &ref)
+	}
+
+	if errs != nil {
+		status.SetTranslationErrorForPolicyAncestors(&policy.Status,
+			ancestorRefs,
+			t.GatewayControllerName,
+			policy.Generation,
+			status.Error2ConditionMsg(errs),
+		)
+		return
+	}
+
+	status.SetAcceptedForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation)
+
+	if deprecatedFields := deprecatedFieldsUsedInBackendTrafficPolicy(policy); len(deprecatedFields) > 0 {
+		status.SetDeprecatedFieldsWarningForPolicyAncestors(&policy.Status, ancestorRefs, t.GatewayControllerName, policy.Generation, deprecatedFields)
+	}
+}
+
+// applyTrafficFeaturesToBackend applies CDS fields from the traffic features to all routes
+// whose destination matches the backend target. Returns true if any route matched.
+func (t *Translator) applyTrafficFeaturesToBackend(
+	x *ir.Xds,
+	tf *ir.TrafficFeatures,
+	errs error,
+	policy *egv1a1.BackendTrafficPolicy,
+	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+) bool {
+	// When there are translation errors, we still walk the IR to discover
+	// ancestors for error status reporting but skip applying features.
+	applyFeatures := errs == nil
+	matched := false
+
+	for _, tcp := range x.TCP {
+		for _, r := range tcp.Routes {
+			if routeDestinationMatchesBackend(r.Destination, target.Kind, target.Name, policy.Namespace) {
+				matched = true
+				if applyFeatures {
+					setIfNil(&r.LoadBalancer, tf.LoadBalancer)
+					setIfNil(&r.ProxyProtocol, tf.ProxyProtocol)
+					setIfNil(&r.HealthCheck, tf.HealthCheck)
+					setIfNil(&r.CircuitBreaker, tf.CircuitBreaker)
+					setIfNil(&r.TCPKeepalive, tf.TCPKeepalive)
+					setIfNil(&r.Timeout, tf.Timeout)
+					setIfNil(&r.BackendConnection, tf.BackendConnection)
+					setIfNil(&r.DNS, tf.DNS)
+					appendTrafficPolicyMetadata(r.Metadata, policy)
+				}
+			}
+		}
+	}
+
+	for _, udp := range x.UDP {
+		if udp.Route != nil {
+			r := udp.Route
+			if routeDestinationMatchesBackend(r.Destination, target.Kind, target.Name, policy.Namespace) {
+				matched = true
+				if applyFeatures {
+					setIfNil(&r.LoadBalancer, tf.LoadBalancer)
+					setIfNil(&r.DNS, tf.DNS)
+				}
+			}
+		}
+	}
+
+	for _, http := range x.HTTP {
+		for _, r := range http.Routes {
+			if r.Destination == nil || !routeDestinationMatchesBackend(r.Destination, target.Kind, target.Name, policy.Namespace) {
+				continue
+			}
+			matched = true
+			if !applyFeatures {
+				continue
+			}
+
+			if r.Traffic == nil {
+				r.Traffic = &ir.TrafficFeatures{}
+			}
+
+			setIfNil(&r.Traffic.LoadBalancer, tf.LoadBalancer)
+			setIfNil(&r.Traffic.ProxyProtocol, tf.ProxyProtocol)
+			setIfNil(&r.Traffic.HealthCheck, tf.HealthCheck)
+			setIfNil(&r.Traffic.CircuitBreaker, tf.CircuitBreaker)
+			setIfNil(&r.Traffic.TCPKeepalive, tf.TCPKeepalive)
+			setIfNil(&r.Traffic.Timeout, tf.Timeout)
+			setIfNil(&r.Traffic.BackendConnection, tf.BackendConnection)
+			setIfNil(&r.Traffic.HTTP2, tf.HTTP2)
+			setIfNil(&r.Traffic.DNS, tf.DNS)
+
+			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
+			appendTrafficPolicyMetadata(r.Metadata, policy)
+		}
+	}
+
+	return matched
 }
 
 func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) (*ir.RateLimit, error) {
