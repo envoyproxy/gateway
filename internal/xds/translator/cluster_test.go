@@ -61,7 +61,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 		Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}},
 	}
 	settings := []*ir.DestinationSetting{ds}
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, settings, nil, nil, nil, nil)
 
 	requireCmpNoDiff(t, bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0])
 }
@@ -113,7 +113,7 @@ func TestBuildXdsClusterLoadAssignmentWithHealthCheckConfig(t *testing.T) {
 				Endpoints: []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: 8080}},
 			}}
 
-			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, tc.healthCheck, nil, nil)
+			clusterLoadAssignment := buildXdsClusterLoadAssignment("test-cluster", settings, nil, tc.healthCheck, nil, nil)
 
 			require.Len(t, clusterLoadAssignment.GetEndpoints(), 1)
 			require.Len(t, clusterLoadAssignment.GetEndpoints()[0].GetLbEndpoints(), 1)
@@ -401,9 +401,76 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 	tests := []struct {
 		name        string
 		healthCheck *ir.HealthCheck
+		rewrite     *ir.URLRewrite
 		endpoint    *ir.DestinationEndpoint
 		expected    string
 	}{
+		{
+			name: "URL rewrite with name takes precedence",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "health.example.com",
+						Path: "/health",
+					},
+				},
+			},
+			rewrite: &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					Name: new("rewrite.example.com"),
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "rewrite.example.com",
+		},
+		{
+			name: "URL rewrite with backend uses endpoint hostname",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			rewrite: &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					Backend: new(true),
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: new("backend.example.com"),
+			},
+			expected: "backend.example.com",
+		},
+		{
+			name: "URL rewrite with backend but nil endpoint hostname returns empty",
+			healthCheck: &ir.HealthCheck{
+				Active: &ir.ActiveHealthCheck{
+					HTTP: &ir.HTTPHealthChecker{
+						Host: "",
+						Path: "/health",
+					},
+				},
+			},
+			rewrite: &ir.URLRewrite{
+				Host: &ir.HTTPHostModifier{
+					Backend: new(true),
+				},
+			},
+			endpoint: &ir.DestinationEndpoint{
+				Host:     "example.com",
+				Port:     8080,
+				Hostname: nil,
+			},
+			expected: "",
+		},
 		{
 			name: "nil HTTP health checker",
 			healthCheck: &ir.HealthCheck{
@@ -411,6 +478,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					HealthyThreshold: new(uint32(3)),
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -428,6 +496,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -445,6 +514,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -462,6 +532,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -479,6 +550,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite:  nil,
 			endpoint: nil,
 			expected: "",
 		},
@@ -492,6 +564,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -509,6 +582,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite:  nil,
 			endpoint: nil,
 			expected: "",
 		},
@@ -522,6 +596,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -536,6 +611,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					TCP: &ir.TCPHealthChecker{},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -550,6 +626,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 					GRPC: &ir.GRPCHealthChecker{},
 				},
 			},
+			rewrite: nil,
 			endpoint: &ir.DestinationEndpoint{
 				Host:     "example.com",
 				Port:     8080,
@@ -561,7 +638,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := getHealthCheckOverridesHostname(tc.healthCheck, tc.endpoint)
+			result := getHealthCheckOverridesHostname(tc.healthCheck, tc.rewrite, tc.endpoint)
 			require.Equal(t, tc.expected, result)
 		})
 	}

@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
+  Fixed an issue where Health Check did not respect auto host rewrite configuration.
 
 # Enhancements that improve performance.
 performance improvements: |
