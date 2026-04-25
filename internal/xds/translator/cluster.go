@@ -83,6 +83,7 @@ type xdsClusterArgs struct {
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
+	urlRewrite        *ir.URLRewrite
 }
 
 type EndpointType int
@@ -792,12 +793,11 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 	return trb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, routeURLWrite *ir.URLRewrite, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
 		var metadata *corev3.Metadata
-
 		if ds.TLS != nil {
 			metadata = &corev3.Metadata{
 				FilterMetadata: map[string]*structpb.Struct{
@@ -818,17 +818,18 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		switch {
 		case len(weightedZones) > 0:
-			localities = append(localities, buildWeightedZonalLocalities(metadata, ds, hc, weightedZones)...)
+			localities = append(localities, buildWeightedZonalLocalities(metadata, routeURLWrite, ds, hc, weightedZones)...)
 		case ds.PreferLocal != nil || preferLocal != nil:
-			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
+			localities = append(localities, buildZonalLocalities(metadata, routeURLWrite, ds, hc)...)
 		default:
-			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
+			localities = append(localities, buildWeightedLocalities(metadata, routeURLWrite, ds, hc))
 		}
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
+func buildZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
+	rewrite := getURLRewrite(routeURLWrite, ds)
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
@@ -841,7 +842,7 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, 
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
+					HealthCheckConfig: buildHealthCheckConfig(hc, rewrite, irEp),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -872,7 +873,20 @@ func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, 
 	return localities
 }
 
-func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck, weightedZones []ir.WeightedZoneConfig) []*endpointv3.LocalityLbEndpoints {
+// getURLRewrite determines the URL rewrite configuration for an endpoint,
+// giving precedence to the most specific configuration (DestinationSetting level over route level).
+func getURLRewrite(routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting) *ir.URLRewrite {
+	if ds.Filters != nil && ds.Filters.URLRewrite != nil {
+		return ds.Filters.URLRewrite
+	}
+	if routeURLWrite != nil {
+		return routeURLWrite
+	}
+	return nil
+}
+
+func buildWeightedZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck, weightedZones []ir.WeightedZoneConfig) []*endpointv3.LocalityLbEndpoints {
+	rewrite := getURLRewrite(routeURLWrite, ds)
 	// Build zone->weight lookup map
 	zoneWeights := make(map[string]uint32, len(weightedZones))
 	for _, wz := range weightedZones {
@@ -892,7 +906,7 @@ func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationS
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
+					HealthCheckConfig: buildHealthCheckConfig(hc, rewrite, irEp),
 				},
 			},
 			LoadBalancingWeight: wrapperspb.UInt32(1),
@@ -929,9 +943,9 @@ func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationS
 	return localities
 }
 
-func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) *endpointv3.LocalityLbEndpoints {
+func buildWeightedLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck) *endpointv3.LocalityLbEndpoints {
 	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-
+	rewrite := getURLRewrite(routeURLWrite, ds)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
 		if irEp.Draining {
@@ -943,7 +957,7 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 				Endpoint: &endpointv3.Endpoint{
 					Hostname:          ptr.Deref(irEp.Hostname, ""),
 					Address:           buildAddress(irEp),
-					HealthCheckConfig: buildHealthCheckConfig(hc, irEp),
+					HealthCheckConfig: buildHealthCheckConfig(hc, rewrite, irEp),
 				},
 			},
 			HealthStatus: healthStatus,
@@ -973,11 +987,11 @@ func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSettin
 	return locality
 }
 
-func buildHealthCheckConfig(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) *endpointv3.Endpoint_HealthCheckConfig {
+func buildHealthCheckConfig(hc *ir.HealthCheck, rewrite *ir.URLRewrite, ep *ir.DestinationEndpoint) *endpointv3.Endpoint_HealthCheckConfig {
 	if hc == nil || hc.Active == nil {
 		return nil
 	}
-	hostname := getHealthCheckOverridesHostname(hc, ep)
+	hostname := getHealthCheckOverridesHostname(hc, rewrite, ep)
 	port := getHealthCheckOverridesPort(hc)
 
 	if hostname == "" && port == nil {
@@ -1003,7 +1017,24 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 	return new(hc.Active.Overrides.Port)
 }
 
-func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
+func getHealthCheckOverridesHostname(hc *ir.HealthCheck, rewrite *ir.URLRewrite, ep *ir.DestinationEndpoint) string {
+	// The precedence for hostname overrides is:
+	// 1. URL Rewrite Host
+	// 2. Active Health Check Host (if set, and is not the "*" wildcard)
+	// 3. Endpoint Hostname (if set)
+	if rewrite != nil && rewrite.Host != nil {
+		rewriteHost := rewrite.Host
+		switch {
+		case rewriteHost.Name != nil:
+			return *rewriteHost.Name
+		case ptr.Deref(rewriteHost.Backend, false):
+			if ep != nil && ep.Hostname != nil {
+				return *ep.Hostname
+			}
+			// If the rewrite host is from a header, we cannot set it on the EndpointHealthCheckConfig since it is dynamic and evaluated at request time.
+			// case rewriteHost.Header != nil:
+		}
+	}
 	// If Active Health Check has an explicit hostname override, it will be used on Cluster.
 	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
 	// so that Envoy can use it for health checking.
@@ -1419,6 +1450,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
+		urlRewrite:        httpRoute.URLRewrite,
 	}
 
 	// Populate traffic features.

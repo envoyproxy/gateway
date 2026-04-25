@@ -243,6 +243,8 @@
             socketAddress:
               address: example2.com
               portValue: 3001
+          healthCheckConfig:
+            hostname: example2.com
           hostname: example2.com
         loadBalancingWeight: 1
       loadBalancingWeight: 1
@@ -261,6 +263,8 @@
             socketAddress:
               address: example3.com
               portValue: 3001
+          healthCheckConfig:
+            hostname: example2.com
           hostname: example3.com
         loadBalancingWeight: 1
       loadBalancingWeight: 1
@@ -322,6 +326,8 @@
             socketAddress:
               address: example2.com
               portValue: 3001
+          healthCheckConfig:
+            hostname: example2.com
           hostname: example2.com
         loadBalancingWeight: 1
       loadBalancingWeight: 1
