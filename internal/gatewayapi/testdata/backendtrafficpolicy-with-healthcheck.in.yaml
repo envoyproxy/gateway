@@ -169,6 +169,34 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-1
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-6
+  spec:
+    hostnames:
+    - example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-2
+      sectionName: http
+    rules:
+      - matches:
+        - path:
+            value: "/v6"
+        backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-2
+          # Hostname rewrite filter applied, should use example2.com when doing health check.
+          filters:
+          - type: URLRewrite
+            urlRewrite:
+              hostname: example2.com
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: backend-3
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -182,6 +210,28 @@ backends:
         address: 1.1.1.1
         port: 3001
       zone: zone1
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-2
+    namespace: default
+  spec:
+    endpoints:
+    - hostname: "example2.com"
+      fqdn:
+        hostname: "example2.com"
+        port: 3001
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-3
+    namespace: default
+  spec:
+    endpoints:
+      - hostname: "example3.com"
+        fqdn:
+          hostname: "example3.com"
+          port: 3001
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -361,6 +411,29 @@ backendTrafficPolicies:
         healthyThreshold: 2
         type: TCP
         tcp: {}
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-6
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-6
+    healthCheck:
+      active:
+        timeout: "10s"
+        interval: "30s"
+        initialJitter: "15s"
+        unhealthyThreshold: 2
+        healthyThreshold: 2
+        type: HTTP
+        http:
+          method: GET
+          path: /healthz
+          expectedStatuses:
+            - 200
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:

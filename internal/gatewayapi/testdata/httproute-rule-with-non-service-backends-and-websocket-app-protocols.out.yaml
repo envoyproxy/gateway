@@ -273,7 +273,6 @@ xdsIR:
           - addressType: FQDN
             endpoints:
             - host: websocket.example.com
-              hostname: websocket.example.com
               port: 443
             forceHTTP1Upstream: true
             metadata:
@@ -310,7 +309,6 @@ xdsIR:
           - addressType: FQDN
             endpoints:
             - host: primary.foo.com
-              hostname: primary.foo.com
               port: 3000
             metadata:
               kind: Backend

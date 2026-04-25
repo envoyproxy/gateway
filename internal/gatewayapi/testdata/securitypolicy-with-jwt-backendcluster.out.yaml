@@ -353,7 +353,6 @@ xdsIR:
                   - addressType: FQDN
                     endpoints:
                     - host: foo.bar.com
-                      hostname: foo.bar.com
                       port: 443
                     metadata:
                       kind: Backend

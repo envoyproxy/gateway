@@ -1,3 +1,44 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-route
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 1
+        http:
+          path: /healthz
+        interval: 10s
+        timeout: 5s
+        type: HTTP
+        unhealthyThreshold: 1
+      panicThreshold: 0
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
@@ -7,8 +48,9 @@ backends:
   spec:
     endpoints:
     - fqdn:
-        hostname: primary.foo.com
-        port: 3000
+        hostname: backend.example.com
+        port: 443
+      hostname: backend.example.com
   status:
     conditions:
     - lastTransitionTime: null
@@ -63,22 +105,28 @@ httpRoutes:
     name: httproute-1
     namespace: default
   spec:
+    hostnames:
+    - gateway.envoyproxy.io
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - kind: Service
-        name: service-1
-        port: 8080
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-fqdn
-        port: 3000
+        namespace: default
+        port: 443
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: auto-host-rewrite
+        type: ExtensionRef
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /
   status:
     parents:
     - conditions:
@@ -96,6 +144,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -164,40 +213,50 @@ xdsIR:
             namespace: default
           name: httproute/default/httproute-1/rule/0
           settings:
-          - addressType: IP
-            endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            metadata:
-              kind: Service
-              name: service-1
-              namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-1/rule/0/backend/0
-            protocol: HTTP
-            weight: 1
           - addressType: FQDN
             endpoints:
-            - host: primary.foo.com
-              port: 3000
+            - host: backend.example.com
+              hostname: backend.example.com
+              port: 443
             metadata:
               kind: Backend
               name: backend-fqdn
               namespace: default
-            name: httproute/default/httproute-1/rule/0/backend/1
+            name: httproute/default/httproute-1/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: '*'
+        hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-        name: httproute/default/httproute-1/rule/0/match/0/*
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route
+            namespace: default
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 1
+              hostFrom: Endpoint
+              http:
+                expectedStatuses:
+                - 200
+                host: gateway.envoyproxy.io
+                path: /healthz
+              interval: 10s
+              timeout: 5s
+              unhealthyThreshold: 1
+            panicThreshold: 0
+        urlRewrite:
+          host:
+            backend: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
