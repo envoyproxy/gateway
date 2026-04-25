@@ -1046,7 +1046,7 @@ func resolvePolicyTargets[T client.Object](
 	targetRefs egv1a1.PolicyTargetReferences,
 	potentialTargets []T,
 	referenceGrants []*gwapiv1b1.ReferenceGrant,
-	policGroup string,
+	policyGroup string,
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
@@ -1055,7 +1055,7 @@ func resolvePolicyTargets[T client.Object](
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
-		policGroup,
+		policyGroup,
 		policyKind,
 		policyNamespace,
 		namespaceLookup)
