@@ -1208,7 +1208,7 @@ xdsIR:
               http:
                 expectedStatuses:
                 - 200
-                host: example.com
+                host: example2.com
                 method: GET
                 path: /healthz
               initialJitter: 15s
