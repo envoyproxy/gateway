@@ -1894,10 +1894,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -3292,10 +3297,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -4976,10 +4986,17 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: PreferLocal zone-aware routing is not
+                                      currently supported for BackendUtilization load
+                                      balancers. Only WeightedZones can be used with
+                                      BackendUtilization.
+                                    rule: 'self.type == ''BackendUtilization'' &&
+                                      has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                      : true'
                                   - message: ZoneAware routing is not supported for
-                                      BackendUtilization and DynamicModule load balancers.
-                                    rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                      ? !has(self.zoneAware) : true'
+                                      DynamicModule load balancers.
+                                    rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                      : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -6665,10 +6682,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)

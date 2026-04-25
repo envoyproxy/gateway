@@ -64,17 +64,9 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 		sub := r.InfraIR.Subscribe(ctx)
 		go r.updateProxyInfraFromSubscription(ctx, sub)
 
-		// Enable global ratelimit if it has been configured.
-		if r.EnvoyGateway.RateLimit != nil {
-			go r.enableRateLimitInfra(ctx)
-		} else {
-			// Delete the ratelimit infra if it exists.
-			go func() {
-				if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
-					r.Logger.Error(err, "failed to delete ratelimit infra")
-				}
-			}()
-		}
+		// Create the shared ratelimit infra during startup.
+		go r.initializeRateLimitInfra(ctx)
+
 		r.Logger.Info("started")
 		<-ctx.Done()
 		r.InfraIR.Close()
@@ -163,8 +155,32 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 	}
 }
 
-func (r *Runner) enableRateLimitInfra(ctx context.Context) {
-	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
-		r.Logger.Error(err, "failed to create ratelimit infra")
+func (r *Runner) initializeRateLimitInfra(ctx context.Context) {
+	if !r.waitForProviderReady(ctx) {
+		return
+	}
+
+	if r.EnvoyGateway.RateLimit != nil {
+		if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
+			r.Logger.Error(err, "failed to create ratelimit infra")
+		}
+		return
+	}
+
+	if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+		r.Logger.Error(err, "failed to delete ratelimit infra")
+	}
+}
+
+func (r *Runner) waitForProviderReady(ctx context.Context) bool {
+	if r.EnvoyGateway.Provider.Type != egv1a1.ProviderTypeKubernetes {
+		return true
+	}
+
+	select {
+	case <-ctx.Done():
+		return false
+	case <-r.ProviderReady:
+		return true
 	}
 }
