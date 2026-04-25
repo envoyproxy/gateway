@@ -455,8 +455,9 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns   = r.Name(), r.Namespace()
-		deployment = &appsv1.Deployment{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		deployment         = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -470,25 +471,22 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	)
 
-	// Check if any Deployments exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	deployList := &appsv1.DeploymentList{}
-	if err = i.Client.List(ctx, deployList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, deployList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(deployList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(deployList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -504,8 +502,9 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns  = r.Name(), r.Namespace()
-		daemonSet = &appsv1.DaemonSet{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		daemonSet          = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -519,25 +518,22 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		}
 	)
 
-	// Check if any DaemonSets exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	dsList := &appsv1.DaemonSetList{}
-	if err = i.Client.List(ctx, dsList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, dsList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(dsList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(dsList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -623,8 +619,9 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		hpa                = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -638,25 +635,22 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	// Check if any HPAs exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
-	if err = i.Client.List(ctx, hpaList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, hpaList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(hpaList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(hpaList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -672,8 +666,9 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		pdb      = &policyv1.PodDisruptionBudget{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		pdb                = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -687,25 +682,22 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
-	// Check if any PDBs exist before attempting deletion to avoid
-	// incrementing delete metrics on no-op reconciles.
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
 	pdbList := &policyv1.PodDisruptionBudgetList{}
-	if err = i.Client.List(ctx, pdbList, &client.ListOptions{
+	if listErr := i.Client.List(ctx, pdbList, &client.ListOptions{
 		Namespace:     ns,
 		LabelSelector: r.LabelSelector(),
-	}); err != nil {
-		resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		return err
-	}
-	if len(pdbList.Items) == 0 {
-		return nil
+	}); listErr == nil && len(pdbList.Items) == 0 {
+		recordDeleteMetric = false
 	}
 
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
