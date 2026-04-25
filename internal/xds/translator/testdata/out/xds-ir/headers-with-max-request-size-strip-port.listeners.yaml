@@ -28,6 +28,7 @@
         serverHeaderTransformation: PASS_THROUGH
         statPrefix: http-8081
         stripAnyHostPort: true
+        stripTrailingHostDot: true
         useRemoteAddress: true
     name: first-listener
   maxConnectionsToAcceptPerSocketEvent: 1
