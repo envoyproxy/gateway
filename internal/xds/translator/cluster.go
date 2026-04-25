@@ -28,6 +28,7 @@ import (
 	override_hostv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/override_host/v3"
 	randomv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/random/v3"
 	round_robinv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/round_robin/v3"
+	wrr_localityv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/load_balancing_policies/wrr_locality/v3"
 	proxyprotocolv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/proxy_protocol/v3"
 	rawbufferv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/raw_buffer/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -445,40 +446,11 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 			}},
 		}
 	case args.loadBalancer.BackendUtilization != nil:
-		cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
-		v := args.loadBalancer.BackendUtilization
-		if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
-			cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
-		}
-		if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
-			cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
-		}
-		if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
-			cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
-		}
-		if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
-			cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
-				SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
-			}
-		}
-		if v.ErrorUtilizationPenaltyPercent != nil {
-			cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
-		}
-		if len(v.MetricNamesForComputingUtilization) > 0 {
-			cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
-		}
-		typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
+		backendUtilizationPolicy, err := buildBackendUtilizationLoadBalancingPolicy(args.loadBalancer)
 		if err != nil {
 			return nil, err
 		}
-		cluster.LoadBalancingPolicy = &clusterv3.LoadBalancingPolicy{
-			Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
-				TypedExtensionConfig: &corev3.TypedExtensionConfig{
-					Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
-					TypedConfig: typedCSWRR,
-				},
-			}},
-		}
+		cluster.LoadBalancingPolicy = backendUtilizationPolicy
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
@@ -1559,8 +1531,14 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 		fallbackType = ir.LeastRequestLoadBalancer
 	}
 
-	// Build fallback policy
-	fallbackPolicy, err := buildFallbackLoadBalancingPolicy(fallbackType)
+	// Build fallback policy.
+	var fallbackPolicy *clusterv3.LoadBalancingPolicy
+	var err error
+	if fallbackType == ir.BackendUtilizationLoadBalancer {
+		fallbackPolicy, err = buildBackendUtilizationLoadBalancingPolicy(loadBalancer)
+	} else {
+		fallbackPolicy, err = buildFallbackLoadBalancingPolicy(fallbackType)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to build fallback policy: %w", err)
 	}
@@ -1581,6 +1559,68 @@ func buildEndpointOverrideLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*c
 			TypedExtensionConfig: &corev3.TypedExtensionConfig{
 				Name:        "envoy.load_balancing_policies.override_host",
 				TypedConfig: typedOverrideHostPolicy,
+			},
+		}},
+	}, nil
+}
+
+func buildBackendUtilizationLoadBalancingPolicy(loadBalancer *ir.LoadBalancer) (*clusterv3.LoadBalancingPolicy, error) {
+	if loadBalancer == nil || loadBalancer.BackendUtilization == nil {
+		return nil, fmt.Errorf("backend utilization load balancer config is required")
+	}
+
+	cswrr := &cswrrv3.ClientSideWeightedRoundRobin{}
+	v := loadBalancer.BackendUtilization
+	if v.BlackoutPeriod != nil && v.BlackoutPeriod.Duration > 0 {
+		cswrr.BlackoutPeriod = durationpb.New(v.BlackoutPeriod.Duration)
+	}
+	if v.WeightExpirationPeriod != nil && v.WeightExpirationPeriod.Duration > 0 {
+		cswrr.WeightExpirationPeriod = durationpb.New(v.WeightExpirationPeriod.Duration)
+	}
+	if v.WeightUpdatePeriod != nil && v.WeightUpdatePeriod.Duration > 0 {
+		cswrr.WeightUpdatePeriod = durationpb.New(v.WeightUpdatePeriod.Duration)
+	}
+	if v.SlowStart != nil && v.SlowStart.Window != nil && v.SlowStart.Window.Duration > 0 {
+		cswrr.SlowStartConfig = &commonv3.SlowStartConfig{
+			SlowStartWindow: durationpb.New(v.SlowStart.Window.Duration),
+		}
+	}
+	if v.ErrorUtilizationPenaltyPercent != nil {
+		cswrr.ErrorUtilizationPenalty = wrapperspb.Float(float32(*v.ErrorUtilizationPenaltyPercent) / 100.0)
+	}
+	if len(v.MetricNamesForComputingUtilization) > 0 {
+		cswrr.MetricNamesForComputingUtilization = append([]string(nil), v.MetricNamesForComputingUtilization...)
+	}
+	typedCSWRR, err := proto.ToAnyWithValidation(cswrr)
+	if err != nil {
+		return nil, err
+	}
+	cswrrPolicy := &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.client_side_weighted_round_robin",
+				TypedConfig: typedCSWRR,
+			},
+		}},
+	}
+	if len(loadBalancer.WeightedZones) == 0 {
+		return cswrrPolicy, nil
+	}
+
+	// CSWRR has no LocalityLbConfig field, so wrap it in wrr_locality to honor
+	// per-zone weights from the EDS ClusterLoadAssignment.
+	wrrLocality := &wrr_localityv3.WrrLocality{
+		EndpointPickingPolicy: cswrrPolicy,
+	}
+	typedWrrLocality, err := proto.ToAnyWithValidation(wrrLocality)
+	if err != nil {
+		return nil, err
+	}
+	return &clusterv3.LoadBalancingPolicy{
+		Policies: []*clusterv3.LoadBalancingPolicy_Policy{{
+			TypedExtensionConfig: &corev3.TypedExtensionConfig{
+				Name:        "envoy.load_balancing_policies.wrr_locality",
+				TypedConfig: typedWrrLocality,
 			},
 		}},
 	}, nil

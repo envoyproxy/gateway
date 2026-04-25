@@ -35,10 +35,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -307,10 +307,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -3729,7 +3729,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3746,8 +3746,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "sum by(kind) (rate(status_update_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(status_update_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3811,7 +3811,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3828,8 +3828,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(status_update_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3840,7 +3840,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Duration",
+            "title": "p99 Duration",
             "type": "bargauge"
           },
           {
@@ -3893,7 +3893,7 @@ data:
               "orientation": "vertical",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -3910,8 +3910,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "status_update_duration_seconds_sum{namespace=\"$Namespace\"}",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(status_update_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "format": "time_series",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
@@ -3922,7 +3922,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Duration",
+            "title": "p50 Duration",
             "type": "bargauge"
           },
           {
@@ -4782,7 +4782,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4799,8 +4799,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "sum by(kind) (rate(resource_apply_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(resource_apply_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4861,7 +4861,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4878,8 +4878,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(resource_apply_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4889,7 +4889,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Apply Duration",
+            "title": "p99 Apply Duration",
             "type": "bargauge"
           },
           {
@@ -4940,7 +4940,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -4957,8 +4957,8 @@ data:
                   "uid": "$datasource"
                 },
                 "disableTextWrap": false,
-                "editorMode": "builder",
-                "expr": "sum by(kind) (resource_apply_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "editorMode": "code",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(resource_apply_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -4968,7 +4968,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Apply Duration",
+            "title": "p50 Apply Duration",
             "type": "bargauge"
           },
           {
@@ -5394,7 +5394,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "mean"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5412,7 +5412,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "sum by(kind) (rate(resource_delete_duration_seconds_sum{namespace=\"$Namespace\"}[5m])) / sum by(kind) (rate(resource_delete_duration_seconds_count{namespace=\"$Namespace\"}[5m]))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5473,7 +5473,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "max"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5491,7 +5491,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "histogram_quantile(0.99, sum by(le, kind) (rate(resource_delete_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5501,7 +5501,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Max Delete Duration",
+            "title": "p99 Delete Duration",
             "type": "bargauge"
           },
           {
@@ -5552,7 +5552,7 @@ data:
               "orientation": "auto",
               "reduceOptions": {
                 "calcs": [
-                  "logmin"
+                  "lastNotNull"
                 ],
                 "fields": "",
                 "values": false
@@ -5570,7 +5570,7 @@ data:
                 },
                 "disableTextWrap": false,
                 "editorMode": "code",
-                "expr": "sum by(kind) (resource_delete_duration_seconds_sum{namespace=\"$Namespace\"})",
+                "expr": "histogram_quantile(0.50, sum by(le, kind) (rate(resource_delete_duration_seconds_bucket{namespace=\"$Namespace\"}[5m])))",
                 "fullMetaSearch": false,
                 "includeNullMetadata": true,
                 "instant": false,
@@ -5580,7 +5580,7 @@ data:
                 "useBackend": false
               }
             ],
-            "title": "Min Delete Duration",
+            "title": "p50 Delete Duration",
             "type": "bargauge"
           },
           {
@@ -10249,10 +10249,10 @@ kind: ClusterRole
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10363,10 +10363,10 @@ kind: ClusterRoleBinding
 metadata:
   name: otel-collector
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10510,10 +10510,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10738,10 +10738,10 @@ metadata:
   name: otel-collector
   namespace: monitoring
   labels:
-    helm.sh/chart: opentelemetry-collector-0.150.1
+    helm.sh/chart: opentelemetry-collector-0.152.0
     app.kubernetes.io/name: opentelemetry-collector
     app.kubernetes.io/instance: gateway-addons-helm
-    app.kubernetes.io/version: "0.149.0"
+    app.kubernetes.io/version: "0.150.1"
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/part-of: opentelemetry-collector
     app.kubernetes.io/component: standalone-collector
@@ -10758,7 +10758,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: 832cf0b3720268f03a6c812d26c71bed5c7b87d5ed77904081e49ccaefc21d08
+        checksum/config: 030a2b2ac89f1d31bdcd2ff51bb5dddc4b711f8864ca7c1207732a1e54953aef
         
       labels:
         app.kubernetes.io/name: opentelemetry-collector
@@ -10845,6 +10845,7 @@ spec:
           volumeMounts:
             - mountPath: /conf
               name: opentelemetry-collector-configmap
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: opentelemetry-collector-configmap
           configMap:
