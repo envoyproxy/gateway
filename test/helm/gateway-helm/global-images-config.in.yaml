@@ -12,3 +12,9 @@ global:
       pullSecrets:
         - name: "secret3"
         - name: "secret4"
+    envoyProxy:
+      image: "private-hub/envoyproxy/envoy:dev"
+      pullPolicy: Always
+      pullSecrets:
+        - name: "secret5"
+        - name: "secret6"

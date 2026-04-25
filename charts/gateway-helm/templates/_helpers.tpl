@@ -158,11 +158,61 @@ imagePullSecrets: {{ toYaml list }}
 {{- end }}
 {{- end }}
 
+{{/*
+Resolve the Envoy Proxy image.
+*/}}
+{{- define "eg.envoyProxy.image" -}}
+{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyProxy.image -}}
+{{/*    if global.imageRegistry is defined, it takes precedence always */}}
+{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
+{{-   $repositoryTag := $imageParts._1 -}}
+{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
+{{-   $repositoryName := $repositoryParts._0 -}}
+{{-   $imageTag := default "distroless-dev" $repositoryParts._1 -}}
+{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{- end -}}
+
+{{/*
+Resolve the Envoy Proxy image pull secrets.
+*/}}
+{{- define "eg.envoyProxy.image.pullSecrets" -}}
+{{- if .Values.global.imagePullSecrets }}
+imagePullSecrets:
+{{ toYaml .Values.global.imagePullSecrets }}
+{{- else if .Values.global.images.envoyProxy.pullSecrets -}}
+imagePullSecrets:
+{{ toYaml .Values.global.images.envoyProxy.pullSecrets }}
+{{- else }}
+imagePullSecrets: {{ toYaml list }}
+{{- end }}
+{{- end }}
 
 {{/*
 The default Envoy Gateway configuration.
 */}}
 {{- define "eg.default-envoy-gateway-config" -}}
+{{- if or .Values.global.images.envoyProxy.image .Values.config.envoyGateway.envoyProxy }}
+{{- $envoyProxyBase := .Values.config.envoyGateway.envoyProxy | default dict }}
+{{- $imageOverride := dict }}
+{{- if .Values.global.images.envoyProxy.image }}
+  {{- $container := dict "image" (include "eg.envoyProxy.image" .) }}
+  {{- if .Values.global.images.envoyProxy.pullPolicy }}
+    {{- $_ := set $container "imagePullPolicy" .Values.global.images.envoyProxy.pullPolicy }}
+  {{- end }}
+  {{- $deployment := dict "container" $container }}
+  {{- if or .Values.global.imagePullSecrets .Values.global.images.envoyProxy.pullSecrets }}
+    {{- $pullSecretsYaml := include "eg.envoyProxy.image.pullSecrets" . }}
+    {{- $pullSecrets := dict "imagePullSecrets" ($pullSecretsYaml | fromYaml).imagePullSecrets }}
+    {{- $_ := set $deployment "pod" $pullSecrets }}
+  {{- end }}
+  {{- $kubernetes := dict "envoyDeployment" $deployment }}
+  {{- $provider := dict "type" "Kubernetes" "kubernetes" $kubernetes }}
+  {{- $imageOverride = dict "provider" $provider }}
+{{- end }}
+{{- $merged := mustMergeOverwrite (dict) $envoyProxyBase $imageOverride }}
+envoyProxy:
+{{ toYaml $merged | indent 2 }}
+{{- end }}
 provider:
   type: Kubernetes
   kubernetes:
