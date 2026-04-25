@@ -10,7 +10,8 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // Origin is defined by the scheme (protocol), hostname (domain), and port of
 // the URL used to access it. The hostname can be "precise" which is just the
 // domain name or "wildcard" which is a domain name prefixed with a single
-// wildcard label such as "*.example.com".
+// wildcard label such as "*.example.com". The optional port can be a wildcard
+// as well to allow all ports.
 // In addition to that a single wildcard (with or without scheme) can be
 // configured to match any origin.
 //
@@ -19,11 +20,12 @@ import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 // - https://*.example.com
 // - http://foo.example.com:8080
 // - http://*.example.com:8080
+// - https://localhost:*
 // - https://*
 //
 // +kubebuilder:validation:MinLength=1
 // +kubebuilder:validation:MaxLength=253
-// +kubebuilder:validation:Pattern=`^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:\d{1,5})?)$`
+// +kubebuilder:validation:Pattern=`^(\*|https?:\/\/(\*|(\*\.)?(([\w-]+\.?)+)?[\w-]+)(:(\*|\d{1,5}))?)$`
 type Origin string
 
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
