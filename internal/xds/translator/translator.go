@@ -1116,7 +1116,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	}
 	xdsCluster := result.cluster
 	lb := ptr.Deref(args.loadBalancer, ir.LoadBalancer{})
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings, args.urlRewrite, args.healthCheck, lb.PreferLocal, lb.WeightedZones)
 	for _, ds := range args.settings {
 		shouldValidateTLS := ds.TLS != nil && !ds.TLS.InsecureSkipVerify
 		if shouldValidateTLS {

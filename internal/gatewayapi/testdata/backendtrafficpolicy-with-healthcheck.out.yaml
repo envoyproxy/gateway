@@ -246,6 +246,44 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
+    name: policy-for-route-6
+    namespace: default
+  spec:
+    healthCheck:
+      active:
+        healthyThreshold: 2
+        http:
+          expectedStatuses:
+          - 200
+          method: GET
+          path: /healthz
+        initialJitter: 15s
+        interval: 30s
+        timeout: 10s
+        type: HTTP
+        unhealthyThreshold: 2
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-6
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
     name: policy-for-grpc-route
     namespace: default
   spec:
@@ -398,6 +436,42 @@ backends:
       reason: Accepted
       status: "True"
       type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-2
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: example2.com
+        port: 3001
+      hostname: example2.com
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-3
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: example3.com
+        port: 3001
+      hostname: example3.com
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -454,7 +528,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 5
+    - attachedRoutes: 6
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -763,6 +837,65 @@ httpRoutes:
         name: gateway-2
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-6
+    namespace: default
+  spec:
+    hostnames:
+    - example.com
+    parentRefs:
+    - name: gateway-2
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: example2.com
+        group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-3
+      matches:
+      - path:
+          value: /v6
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-2
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-3
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          hostname: example2.com
+      matches:
+      - path:
+          value: /v6-rewrite
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-2
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -1025,6 +1158,69 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
+            name: httproute-6
+            namespace: default
+          name: httproute/default/httproute-6/rule/1
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: example2.com
+              hostname: example2.com
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-2
+              namespace: default
+            name: httproute/default/httproute-6/rule/1/backend/0
+            protocol: HTTP
+            weight: 1
+          - addressType: FQDN
+            endpoints:
+            - host: example3.com
+              hostname: example3.com
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-3
+              namespace: default
+            name: httproute/default/httproute-6/rule/1/backend/1
+            protocol: HTTP
+            weight: 1
+        hostname: example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-6
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-6
+            namespace: default
+        name: httproute/default/httproute-6/rule/1/match/0/example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v6-rewrite
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 2
+              http:
+                expectedStatuses:
+                - 200
+                host: example2.com
+                method: GET
+                path: /healthz
+              initialJitter: 15s
+              interval: 30s
+              timeout: 10s
+              unhealthyThreshold: 2
+        urlRewrite:
+          host:
+            name: example2.com
+      - destination:
+          metadata:
+            kind: HTTPRoute
             name: httproute-2
             namespace: default
           name: httproute/default/httproute-2/rule/0
@@ -1233,6 +1429,70 @@ xdsIR:
               initialJitter: 15s
               interval: 30s
               tcp: {}
+              timeout: 10s
+              unhealthyThreshold: 2
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-6
+            namespace: default
+          name: httproute/default/httproute-6/rule/0
+          settings:
+          - addressType: FQDN
+            endpoints:
+            - host: example2.com
+              hostname: example2.com
+              port: 3001
+            filters:
+              urlRewrite:
+                host:
+                  name: example2.com
+            metadata:
+              kind: Backend
+              name: backend-2
+              namespace: default
+            name: httproute/default/httproute-6/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+          - addressType: FQDN
+            endpoints:
+            - host: example3.com
+              hostname: example3.com
+              port: 3001
+            metadata:
+              kind: Backend
+              name: backend-3
+              namespace: default
+            name: httproute/default/httproute-6/rule/0/backend/1
+            protocol: HTTP
+            weight: 1
+        hostname: example.com
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-6
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-for-route-6
+            namespace: default
+        name: httproute/default/httproute-6/rule/0/match/0/example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v6
+        traffic:
+          healthCheck:
+            active:
+              healthyThreshold: 2
+              http:
+                expectedStatuses:
+                - 200
+                host: example.com
+                method: GET
+                path: /healthz
+              initialJitter: 15s
+              interval: 30s
               timeout: 10s
               unhealthyThreshold: 2
       - destination:
