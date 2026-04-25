@@ -1,4 +1,4 @@
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:
@@ -11,7 +11,7 @@ rateLimits:
         header_name: x-user-id
 routeName: first-route
 ---
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:

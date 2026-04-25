@@ -47,9 +47,15 @@ func TestConfigLoader(t *testing.T) {
 	}()
 
 	changed := 0
-	loader := New(cfgPath, s, func(_ context.Context, _ *config.Server) error {
+	loader := New(cfgPath, s, func(hookCtx context.Context, _ *config.Server) error {
 		changed++
-		t.Logf("config changed %d times", changed)
+		// Only log if the hook context is still active to avoid panic
+		select {
+		case <-hookCtx.Done():
+			return nil
+		default:
+			t.Logf("config changed %d times", changed)
+		}
 		if changed > 1 {
 			cancel()
 		}
@@ -88,7 +94,13 @@ func TestConfigLoaderStandaloneExtensionServerAndCustomResource(t *testing.T) {
 	resultChannel := make(chan testResult, 1)
 
 	var changed int32
-	loader := New(cfgPath, s, func(_ context.Context, cfg *config.Server) error {
+	loader := New(cfgPath, s, func(hookCtx context.Context, cfg *config.Server) error {
+		// Check if the hook context is canceled before incrementing
+		select {
+		case <-hookCtx.Done():
+			return nil
+		default:
+		}
 		c := atomic.AddInt32(&changed, 1)
 		t.Logf("config changed %d times", c)
 		if c > 1 {

@@ -1,0 +1,34 @@
+# mixed websocket and h2c backends should be split into separate clusters with correct protocol options.
+# This may not happen in real world, but we want to make sure the translator can handle this case correctly.
+http:
+  - name: "weighted-protocol-listener"
+    address: "0.0.0.0"
+    port: 10080
+    hostnames:
+      - "*"
+    path:
+      mergeSlashes: true
+      escapedSlashesAction: UnescapeAndRedirect
+    routes:
+      - name: "weighted-protocol-route"
+        hostname: "*"
+        pathMatch:
+          prefix: /
+        destination:
+          name: "weighted-protocol-route-dest"
+          settings:
+            - name: "weighted-protocol-route-dest/backend/0"
+              addressType: IP
+              endpoints:
+                - host: "10.0.0.1"
+                  port: 8080
+              protocol: HTTP
+              forceHTTP1Upstream: true
+              weight: 1
+            - name: "weighted-protocol-route-dest/backend/1"
+              addressType: IP
+              endpoints:
+                - host: "10.0.0.2"
+                  port: 8080
+              protocol: HTTP2
+              weight: 1
