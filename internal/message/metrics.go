@@ -39,8 +39,8 @@ var (
 		"Total number of runner events.",
 	)
 
-	runnerLabel     = metrics.NewLabel("runner")
-	messageLabel    = metrics.NewLabel("message")
-	runnerTypeLabel = metrics.NewLabel("type")
-	runnerNameLabel = metrics.NewLabel("name")
+	runnerLabel          = metrics.NewLabel("runner")
+	messageLabel         = metrics.NewLabel("message")
+	runnerEventTypeLabel = metrics.NewLabel("event_type")
+	runnerNameLabel      = metrics.NewLabel("name")
 )
