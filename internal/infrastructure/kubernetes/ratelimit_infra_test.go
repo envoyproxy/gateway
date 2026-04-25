@@ -16,26 +16,23 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
 func createRateLimitTLSSecret(t *testing.T, client client.Client) {
-	_, secretErr := kubernetes.CreateOrUpdateSecrets(context.Background(), client, []corev1.Secret{
-		{
-			Type: corev1.SecretTypeTLS,
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ratelimit-cert",
-				Namespace: "envoy-gateway-system",
-				Labels: map[string]string{
-					"control-plane": "envoy-gateway",
-				},
+	secretErr := client.Create(context.Background(), &corev1.Secret{
+		Type: corev1.SecretTypeTLS,
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ratelimit-cert",
+			Namespace: "envoy-gateway-system",
+			Labels: map[string]string{
+				"control-plane": "envoy-gateway",
 			},
 		},
-	}, false)
+	})
 	require.NoError(t, secretErr)
 }
 

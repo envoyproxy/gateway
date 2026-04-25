@@ -600,6 +600,97 @@ _Appears in:_
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
 
 
+#### BandwidthLimitRequestConfig
+
+
+
+BandwidthLimitRequestConfig defines the bandwidth limit configuration for the request direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+
+
+#### BandwidthLimitResponseConfig
+
+
+
+BandwidthLimitResponseConfig defines the bandwidth limit configuration for the response direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers configures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+
+
+#### BandwidthLimitResponseTrailers
+
+
+
+BandwidthLimitResponseTrailers defines the trailer headers appended to responses.
+
+_Appears in:_
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name.<br />If not set, no prefix is added and the trailers are named as-is.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms",<br />while leaving it unset produces "bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
+
+
+#### BandwidthLimitSpec
+
+
+
+BandwidthLimitSpec defines the desired state of BandwidthLimit.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures bandwidth limits for traffic sent to the backend. |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures bandwidth limits for traffic sent from the backend. |
+
+
+#### BandwidthLimitUnit
+
+_Underlying type:_ _string_
+
+BandwidthLimitUnit specifies the intervals for setting bandwidth limits.
+Valid BandwidthLimitUnit values are "Second", "Minute", "Hour".
+
+_Appears in:_
+- [BandwidthLimitValue](#bandwidthlimitvalue)
+
+| Value | Description |
+| ----- | ----------- |
+| `Second` | BandwidthLimitUnitSecond specifies the bandwidth limit interval to be 1 second.<br /> | 
+| `Minute` | BandwidthLimitUnitMinute specifies the bandwidth limit interval to be 1 minute.<br /> | 
+| `Hour` | BandwidthLimitUnitHour specifies the bandwidth limit interval to be 1 hour.<br /> | 
+
+
+#### BandwidthLimitValue
+
+
+
+BandwidthLimitValue defines the bandwidth limit value and its time unit.
+
+_Appears in:_
+- [BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Value specifies the bandwidth limit. |
+| `unit` | _[BandwidthLimitUnit](#bandwidthlimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
+
+
 #### BasicAuth
 
 
@@ -2232,6 +2323,7 @@ _Appears in:_
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources.<br />Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.<br />Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 | `disableLua` | _boolean_ |  true  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled. |
+| `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
 
 
 #### ExtensionHooks
