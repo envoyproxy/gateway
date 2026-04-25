@@ -52,6 +52,7 @@ func TestTranslate(t *testing.T) {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
 		BackendEnabled                  bool
+		BackendTargetsInBTPEnabled      bool
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
@@ -93,6 +94,22 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:                      "backendtrafficpolicy-backend-target",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                      "backendtrafficpolicy-backend-target-disabled",
+			BackendTargetsInBTPEnabled: false,
+		},
+		{
+			name:                      "backendtrafficpolicy-backend-target-route-override",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                      "backendtrafficpolicy-backend-target-gateway-override",
+			BackendTargetsInBTPEnabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -114,6 +131,7 @@ func TestTranslate(t *testing.T) {
 			resources.Secrets = append(resources.Secrets, baseResources.Secrets...)
 			envoyPatchPolicyEnabled := true
 			backendEnabled := true
+			backendTargetsInBTPEnabled := false
 			gatewayNamespaceMode := false
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
@@ -123,6 +141,7 @@ func TestTranslate(t *testing.T) {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
+					backendTargetsInBTPEnabled = config.BackendTargetsInBTPEnabled
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
@@ -136,6 +155,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				BackendTargetsInBTPEnabled:      backendTargetsInBTPEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
