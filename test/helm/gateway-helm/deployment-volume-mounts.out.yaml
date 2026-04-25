@@ -226,6 +226,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -234,9 +235,11 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -250,6 +253,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
