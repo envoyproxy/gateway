@@ -717,6 +717,8 @@ type ResponseOverrideRule struct {
 	Response *CustomResponse `json:"response,omitempty"`
 	// Redirect configuration
 	Redirect *Redirect `json:"redirect,omitempty"`
+	// Source specifies the origin of the response this rule applies to.
+	Source egv1a1.ResponseOverrideSource `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.

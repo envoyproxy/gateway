@@ -2537,6 +2537,17 @@ spec:
                             If unset, does not override the status of response.
                           type: integer
                       type: object
+                    source:
+                      description: |-
+                        Source specifies which responses this rule applies to.
+                        Local overrides only Envoy-generated responses (e.g. auth failures).
+                        Backend overrides only upstream responses.
+                        All (default) overrides both.
+                      enum:
+                      - All
+                      - Local
+                      - Backend
+                      type: string
                   required:
                   - match
                   type: object

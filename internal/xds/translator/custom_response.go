@@ -123,15 +123,6 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 			if predicate, err = c.buildSinglePredicate(r.Match.StatusCodes[0]); err != nil {
 				return nil, err
 			}
-
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: predicate,
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
-			}
-
-			matchers = append(matchers, matcher)
 		case len(r.Match.StatusCodes) > 1:
 			var predicates []*matcherv3.Matcher_MatcherList_Predicate
 
@@ -143,24 +134,38 @@ func (c *customResponse) customResponseConfig(ro *ir.ResponseOverride) (*respv3.
 				predicates = append(predicates, predicate)
 			}
 
-			// Create a single matcher that ORs all the predicates together.
-			// The rule will match if any of the codes match.
-			matcher := &matcherv3.Matcher_MatcherList_FieldMatcher{
-				Predicate: &matcherv3.Matcher_MatcherList_Predicate{
-					MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
-						OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
-							Predicate: predicates,
-						},
+			// Create a single predicate that ORs all the status code predicates together.
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+					OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: predicates,
 					},
 				},
-				OnMatch: &matcherv3.Matcher_OnMatch{
-					OnMatch: action,
-				},
 			}
-
-			matchers = append(matchers, matcher)
 		}
 
+		// For Local or Backend sources, AND the status code predicate with a
+		// local_reply predicate so the rule only fires for the correct response origin.
+		if r.Source == egv1a1.ResponseOverrideSourceLocal || r.Source == egv1a1.ResponseOverrideSourceBackend {
+			localReplyPredicate, err := c.buildLocalReplyPredicate(r.Source == egv1a1.ResponseOverrideSourceLocal)
+			if err != nil {
+				return nil, err
+			}
+			predicate = &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_AndMatcher{
+					AndMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+						Predicate: []*matcherv3.Matcher_MatcherList_Predicate{predicate, localReplyPredicate},
+					},
+				},
+			}
+		}
+
+		matchers = append(matchers, &matcherv3.Matcher_MatcherList_FieldMatcher{
+			Predicate: predicate,
+			OnMatch: &matcherv3.Matcher_OnMatch{
+				OnMatch: action,
+			},
+		})
 	}
 
 	// Create a MatcherList.
@@ -258,6 +263,42 @@ func (c *customResponse) buildStatusCodeInput() (*cncfv3.TypedExtensionConfig, e
 	return &cncfv3.TypedExtensionConfig{
 		Name:        "http-response-status-code-match-input",
 		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildLocalReplyInput() (*cncfv3.TypedExtensionConfig, error) {
+	pb, err := proto.ToAnyWithValidation(&envoymatcherv3.HttpResponseLocalReplyMatchInput{})
+	if err != nil {
+		return nil, err
+	}
+	return &cncfv3.TypedExtensionConfig{
+		Name:        "http-response-local-reply-match-input",
+		TypedConfig: pb,
+	}, nil
+}
+
+func (c *customResponse) buildLocalReplyPredicate(isLocal bool) (*matcherv3.Matcher_MatcherList_Predicate, error) {
+	input, err := c.buildLocalReplyInput()
+	if err != nil {
+		return nil, err
+	}
+	value := "false"
+	if isLocal {
+		value = "true"
+	}
+	return &matcherv3.Matcher_MatcherList_Predicate{
+		MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+			SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+				Input: input,
+				Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+					ValueMatch: &matcherv3.StringMatcher{
+						MatchPattern: &matcherv3.StringMatcher_Exact{
+							Exact: value,
+						},
+					},
+				},
+			},
+		},
 	}, nil
 }
 

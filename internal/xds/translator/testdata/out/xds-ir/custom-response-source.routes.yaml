@@ -1,0 +1,69 @@
+- ignorePortInHostMatching: true
+  name: default/gateway-1/http
+  virtualHosts:
+  - domains:
+    - '*'
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: default
+            sectionName: http
+    name: default/gateway-1/http/*
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-local
+              namespace: default
+      name: httproute/default/httproute-local/rule/0/match/-1/*
+      route:
+        cluster: httproute/default/httproute-local/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-local:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-backend
+              namespace: default
+      name: httproute/default/httproute-backend/rule/0/match/-1/*
+      route:
+        cluster: httproute/default/httproute-backend/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-backend:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-all
+              namespace: default
+      name: httproute/default/httproute-all/rule/0/match/-1/*
+      route:
+        cluster: httproute/default/httproute-all/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-all:
+          '@type': type.googleapis.com/envoy.config.route.v3.FilterConfig
+          config: {}

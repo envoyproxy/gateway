@@ -1,0 +1,127 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: response-override-source-local
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /local
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: response-override-source-backend
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /backend
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: infra-backend-v1
+          port: 8080
+---
+# JWT auth on both routes so we can trigger Envoy-generated 401s by omitting the token.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: response-override-source-local
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: response-override-source-local
+  jwt:
+    providers:
+      - name: example
+        issuer: https://foo.bar.com
+        remoteJWKS:
+          uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: response-override-source-backend
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: response-override-source-backend
+  jwt:
+    providers:
+      - name: example
+        issuer: https://foo.bar.com
+        remoteJWKS:
+          uri: http://static-file-server.gateway-conformance-infra/jwt/jwks.json
+---
+# source: Local — only fires for Envoy-generated responses (e.g. JWT auth failure)
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-source-local
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: response-override-source-local
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      source: Local
+      response:
+        contentType: application/json
+        body:
+          type: Inline
+          inline: '{"error": "Unauthorized"}'
+---
+# source: Backend — only fires for upstream responses
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: response-override-source-backend
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: response-override-source-backend
+  responseOverride:
+    - match:
+        statusCodes:
+          - type: Value
+            value: 401
+      source: Backend
+      response:
+        contentType: application/json
+        body:
+          type: Inline
+          inline: '{"error": "Upstream Error"}'
