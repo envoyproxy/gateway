@@ -991,6 +991,14 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					r.Traffic.Timeout = localTo
 				}
 
+				// If there's URL rewrite and the rewrite host is set,
+				// use it for health check host as well, since that's the host the backend will see.
+				if r.URLRewrite != nil && r.URLRewrite.Host != nil {
+					rewriteHostname := ptr.Deref(r.URLRewrite.Host.Name, "")
+					if rewriteHostname != "" {
+						r.Traffic.HealthCheck.SetHTTPHostIfAbsent(rewriteHostname)
+					}
+				}
 				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
 				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
