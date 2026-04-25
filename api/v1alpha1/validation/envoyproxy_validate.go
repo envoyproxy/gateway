@@ -180,6 +180,14 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
 			}
 		}
+		if serviceType, serviceHealthCheckNodePort := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.HealthCheckNodePort; serviceType != nil && serviceHealthCheckNodePort != nil {
+			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("healthCheckNodePort can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+			if etp := spec.Provider.Kubernetes.EnvoyService.ExternalTrafficPolicy; etp != nil && *etp != egv1a1.ServiceExternalTrafficPolicyLocal {
+				errs = append(errs, fmt.Errorf("healthCheckNodePort can only be set when externalTrafficPolicy is %v", egv1a1.ServiceExternalTrafficPolicyLocal))
+			}
+		}
 		if patch := spec.Provider.Kubernetes.EnvoyService.Patch; patch != nil {
 			if patch.Value.Raw == nil {
 				errs = append(errs, fmt.Errorf("envoy service patch object cannot be empty"))

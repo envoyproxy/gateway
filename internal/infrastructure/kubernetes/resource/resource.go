@@ -42,6 +42,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if service.LoadBalancerIP != nil {
 			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
 		}
+		if service.HealthCheckNodePort != nil {
+			serviceSpec.HealthCheckNodePort = *service.HealthCheckNodePort
+		}
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
 	case egv1a1.ServiceTypeNodePort:
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicy(*service.ExternalTrafficPolicy)
