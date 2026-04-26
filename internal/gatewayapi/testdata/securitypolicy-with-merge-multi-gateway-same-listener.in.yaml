@@ -108,20 +108,6 @@ services:
     - port: 9001
       name: http
       protocol: TCP
-referenceGrants:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: ReferenceGrant
-  metadata:
-    namespace: envoy-gateway
-    name: allow-securitypolicy-to-auth-service
-  spec:
-    from:
-    - group: gateway.envoyproxy.io
-      kind: SecurityPolicy
-      namespace: default
-    to:
-    - group: ""
-      kind: Service
 endpointSlices:
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
@@ -145,14 +131,6 @@ secrets:
   kind: Secret
   metadata:
     namespace: envoy-gateway
-    name: users-secret
-  type: Opaque
-  data:
-    .htpasswd: dXNlcjE6e1NIQX15LzJzWUFqNXlyUUlONFRMMFlkUGRtR05LcGM9
-- apiVersion: v1
-  kind: Secret
-  metadata:
-    namespace: default
     name: users-secret
   type: Opaque
   data:

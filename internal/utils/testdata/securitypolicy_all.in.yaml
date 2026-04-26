@@ -1,0 +1,49 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: original
+spec:
+  basicAuth:
+    users:
+      name: users-parent
+  apiKeyAuth:
+    credentialRefs:
+    - name: api-keys-parent
+  authorization:
+    rules:
+    - name: parent-rule
+      action: Allow
+      principal:
+        headers:
+        - name: x-role
+          values:
+          - parent
+  extAuth:
+    http:
+      backendRefs:
+      - name: ext-auth-parent
+        port: 9001
+    contextExtensions:
+    - name: shared
+      type: Value
+      value: parent
+    - name: parent-only
+      type: Value
+      value: parent-only
+  oidc:
+    provider:
+      issuer: https://oidc.parent.example.com
+      backendRefs:
+      - name: oidc-parent
+        port: 443
+    clientIDRef:
+      name: oidc-client-id-parent
+    clientSecret:
+      name: oidc-client-secret-parent
+  jwt:
+    providers:
+    - name: jwt-parent
+      issuer: https://issuer.parent.example.com
+      localJWKS:
+        type: Inline
+        inline: "{}"
