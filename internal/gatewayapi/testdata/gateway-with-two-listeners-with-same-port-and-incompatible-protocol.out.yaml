@@ -21,6 +21,10 @@ gateways:
       name: http-2
       port: 80
       protocol: HTTPS
+      tls:
+        certificateRefs:
+        - name: tls-secret-1
+        mode: Terminate
   status:
     listeners:
     - attachedRoutes: 1
@@ -54,7 +58,7 @@ gateways:
         status: "True"
         type: Conflicted
       - lastTransitionTime: null
-        message: Listener must have TLS set when protocol is HTTPS.
+        message: Listener is invalid, see other Conditions for details.
         reason: Invalid
         status: "False"
         type: Programmed
@@ -106,13 +110,6 @@ httpRoutes:
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
-      listeners:
-      - name: envoy-gateway/gateway-1/http-1
-        ports:
-        - containerPort: 10080
-          name: http-80
-          protocol: HTTP
-          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
@@ -148,35 +145,6 @@ xdsIR:
             sectionName: "8080"
           name: envoy-gateway/gateway-1
           protocol: TCP
-    http:
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - foo.com
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http-1
-      name: envoy-gateway/gateway-1/http-1
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
-    - address: 0.0.0.0
-      externalPort: 80
-      hostnames:
-      - bar.com
-      metadata:
-        kind: Gateway
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http-2
-      name: envoy-gateway/gateway-1/http-2
-      path:
-        escapedSlashesAction: UnescapeAndRedirect
-        mergeSlashes: true
-      port: 10080
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

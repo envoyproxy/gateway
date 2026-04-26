@@ -1,0 +1,64 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        # This listener has an invalid certificate reference (secret does not exist)
+        # It should have ResolvedRefs=False with InvalidCertificateRef
+        # and should be skipped during conflict resolution
+        - name: invalid-https
+          protocol: HTTPS
+          port: 443
+          hostname: "*.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: non-existent-secret
+        # This listener has valid configuration and should be accepted
+        # even though it's on the same port/hostname as the invalid listener
+        - name: valid-https
+          protocol: HTTPS
+          port: 443
+          hostname: "*.example.com"
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: tls-secret-1
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-secret-1
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR3RENDQXFpZ0F3SUJBZ0lVVDRyelIreStHd1VzMm9ydExIZ0k1MzBKeG9Fd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0xURVZNQk1HQTFVRUNnd01aWGhoYlhCc1pTQkpibU11TVJRd0VnWURWUVFEREF0bGVHRnRjR3hsTG1OdgpiVEFlRncweU5UQTBNakl3TWpVNU1UQmFGdzB6TlRBME1qQXdNalU1TVRCYU1EVXhGREFTQmdOVkJBTU1DMlp2CmJ5NWlZWEl1WTI5dE1SMHdHd1lEVlFRS0RCUmxlR0Z0Y0d4bElHOXlaMkZ1YVhwaGRHbHZiakNDQVNJd0RRWUoKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTE4wbnJNR1NZNjBPT0JuTFVaSGpCRFkxazhqWHA2RwppeG1RaFNOK3lZUi9VQWVqSmhCOVI3S2RuT3d0eGljTnozdUFtL0p0UTFKRUU0dW5xQnhVTU8ydWpvVXl4ZisrCjRnb2tFYmVpTlhNN0ptaklPOGxEWlJjcEhFTlE3eUNJL3d1cEZBcHgwNnVrNUtBSlpRMUlmVXhZWS9RRkJsc3cKdUx0TWozVlB6eDBJYjRIV1lHdGhXcDIzUWduMUdGUWVTOGMwZHdqWWNBTGtrTFdwWWdUZTZGT0VhR3hvUzdwTQpGbitvZnRFUjlxZCtDcnRDSXM5TzFtOW5MUU9UWGJDNU5nSzR1ZFdhMFBuYjJ6TEk4WjZsVHFRSTNSODE2NkxKCkVDQi9ZSlYzVmtMb2cxUmx0d0FrM3hrWHFnbVhTZUxILzY3MHh6MEx5OGZHQVpmejFMQVpkSXNDQXdFQUFhT0IKenpDQnpEQWRCZ05WSFE0RUZnUVUzbVFodVB2dVl1K0lmN0ZaM010eU9jMWdjQ1V3YUFZRFZSMGpCR0V3WDRBVQpXWmxKWFQ1bXlEVnlsUjlSS2JQQTAxTkVlcytoTWFRdk1DMHhGVEFUQmdOVkJBb01ER1Y0WVcxd2JHVWdTVzVqCkxqRVVNQklHQTFVRUF3d0xaWGhoYlhCc1pTNWpiMjJDRkJuNktuTlBhbm1Db1daVStNYmtwKzJScmN4dU1Bc0cKQTFVZER3UUVBd0lDL0RBcEJnTlZIUkVFSWpBZ2dnOW1iMjh1WlhoaGJYQnNaUzVqYjIyQ0RTb3VaWGhoYlhCcwpaUzVqYjIwd0NRWURWUjBTQkFJd0FEQU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFIa2xEbzkvNnRLcDNFd3JSCnJjVStKOUtmUkFGajc5YU1DREpVb0NyM2J6RFIycXQ4ZzlsbDdFSzZaeEtFa0xzWkFlYzBxU0Z1QjBvbzVqZFEKM3VvT2hNK1JKTkZoTldFd3dHWmpMb0FlK2oxaXByN1A5ajdmdFNzck8ra3M3TVNMeTE2RW9IV2Q0eG00Rk5QZQpmUVpRYWhpTTdMYVFCdW5wdXlhZWtLdG5tU241RzlkSHpGeTVNelRSbFJyVWxhVzdVbDRUeExlOEROZ2ZpR2ZCCnpjcmpVK2l3RUJXeS94b3B2aDEzNmlybmV3NTg3RWt3dzQ3QXFhc3gvZStMK2NhSlYySGVMd0dSaE5xR2pIcjkKQ2dSVHpud3F5QjdtTVNXYStWaXBNSHlUVmRCNjRvYjZxbkdqTldvWXdRbUUraU0vL0VrTURzd2JVcTc2R1pKMApsWlRkTlE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ3pkSjZ6QmttT3REamcKWnkxR1I0d1EyTlpQSTE2ZWhvc1prSVVqZnNtRWYxQUhveVlRZlVleW5aenNMY1luRGM5N2dKdnliVU5TUkJPTApwNmdjVkREdHJvNkZNc1gvdnVJS0pCRzNvalZ6T3lab3lEdkpRMlVYS1J4RFVPOGdpUDhMcVJRS2NkT3JwT1NnCkNXVU5TSDFNV0dQMEJRWmJNTGk3VEk5MVQ4OGRDRytCMW1CcllWcWR0MElKOVJoVUhrdkhOSGNJMkhBQzVKQzEKcVdJRTN1aFRoR2hzYUV1NlRCWi9xSDdSRWZhbmZncTdRaUxQVHRadlp5MERrMTJ3dVRZQ3VMblZtdEQ1MjlzeQp5UEdlcFU2a0NOMGZOZXVpeVJBZ2YyQ1ZkMVpDNklOVVpiY0FKTjhaRjZvSmwwbml4Lyt1OU1jOUM4dkh4Z0dYCjg5U3dHWFNMQWdNQkFBRUNnZ0VBSmYrYW53UEV6WS9CdjFwNWpya1ZvbmVYb1hnMno5QmpZYzFsTTZma0djY3YKZGY2SXo5TUhQSDM5UFZGUDlQTUtyUGNGam1hdWE1djRtNGlyb3h2OHBFZGk3RGRkRDVNbW44a1ZhMUhRaVk3TAp5a0lqenJFVGxiemh2Q3RHQnhpYkVLZ0RrMWFZNEc1dzdxWXVuSXB0NVoyTnhKelB4TDFqVUYyY3Z0VmdZS0FPCjN2TWY1dENWbS9kL2JBT2xvWnVVc3ArSnc1ZTYvSFN3c3lEdjV2Y2dDQkRXRjFkTFFiYUxCelZDZGJBY0Fma1AKbFUzeGhZMVYyMGU2NmhBbU0veE53MzArSUhvTUlTUTFiQW9MOXVzN3NsTlYxT2ZNZk5hWC83WVdKWFVab1MzNwpyY1IvVXYwZlRtQkhPR3pwK25oaWpLRUlYU1ZESjNxK040amM4Ni9IeVFLQmdRRFhWbzNKSmlia0cvY1JBZ2pICkVqdWROMHJMSGJvVldPanN5ekZmaXg1MHJKTTYwMDJKZURicGdQeEt4ZUtFdGl4ZkVWQmU0eHdqNG9oK1ZubEIKT0dMU3BWcHRRVFRnRVprWXFvVU1iUDIyNHQ2cUZuSXZsTkkwZFJGWDUyS3I2L1FCS0EwWEk3K0I1bTV3Z2hLcgo4ZEQrMGRWNkZzMmxFT0NMWUJKck1weFNIUUtCZ1FEVlY0REVaUlFvVUo5UGRkb3IyK2IweFV2Y3JHeUJ1NlM2CjJZOFJuMzdWUVlBSThHUnlYRkcxTGxZaHpMOWNwd0tUR21SMVhPRTVkMC9mMStaU3h5TVc1d2FSaXU1b0dFK2cKUlNsMXBBdTNUdlEzM1BVNUJzNFhhcHBLOC9BZVk3cG1pd1JhYnRPSFlQa0FHMXNzL3k1d1NjVGUxQXZiWlpsTAo1TmgwdHZvZ3h3S0JnUUNtRkFJOFhlbG15czZ0Vm1WUXE1WkF0YkZBb0VleFNTWXo0cTdNb200MXpCZXRLZVRHCkhtb3pneUNSeHJiaVplSW8zQ0NoWGdXSkE2RUQxMHVqYW9xRkxiUmxTUUl2d2tMU1RFbGJBUUJZdWZiRE5aYVIKYmZVRk1qalRGQWo4MFhrYUh6cWhXeGZMWnQ1TWRYVlRHYWgzcjN3MnNqbWVranFzSThkdzE5TEtYUUtCZ0NoMQp3T0QrUG5WcTNOdklBUWxpV2dtL3hTUmp1dXhidHVFTTA1cEhBbG5WWXovT3YyNEUzaVliVkpCeWNUUlVKQ1BiCjFJT0JpdUZJSkdqU1hFY0VwejMzc0lJM3RBRWY0eklGQzlqWXRMUWVFQ2pzQ2NHMzdhdjVOcXZTV1k2WjRVY0QKUkY4V041MnNJVzBJd3lEa2dGMGhVR25tRXgyWHhodmptYjJBMmkwUEFvR0FUV1kzbXZRVWtZcmU5R0J0alVqYgpDWUx5Mm1VVElKbjVDcmhjTHMvMlh5MkNoVSt5MnhsT3pIcm1vanRIaHFFcnVCK0xyZkpBd3B3cGVRNmxyWnFQCjFGazVKT2c2bmV2U3lDcWF4SDZaenZRMXJ6VzAycm1IMUJrV1BiY0NwKy9VRTIrS3JselZtNHkvZ0ZoRGVGZlcKRUc5UzIzYndKME1JUmF0WVpFQm0wcWs9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: valid-https
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
