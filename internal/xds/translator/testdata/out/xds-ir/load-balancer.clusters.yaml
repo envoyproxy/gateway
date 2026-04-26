@@ -407,3 +407,62 @@
   name: seventeenth-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: eighteenth-route-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.dynamic_modules
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.dynamic_modules.v3.DynamicModulesLoadBalancerConfig
+          dynamicModuleConfig:
+            module:
+              local:
+                filename: /usr/local/lib/custom_lb.so
+            name: custom-lb-module
+          lbPolicyName: first-host
+  name: eighteenth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: nineteenth-route-dest
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.dynamic_modules
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.dynamic_modules.v3.DynamicModulesLoadBalancerConfig
+          dynamicModuleConfig:
+            doNotClose: true
+            loadGlobally: true
+            module:
+              local:
+                filename: /usr/local/lib/custom_lb.so
+            name: custom-lb-module-with-config
+          lbPolicyConfig:
+            '@type': type.googleapis.com/google.protobuf.StringValue
+            value: '{"key":"value"}'
+          lbPolicyName: weighted-random
+  name: nineteenth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

@@ -120,10 +120,10 @@ type DynamicModule struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
 	Name string `json:"name"`
 
-	// FilterName identifies a specific filter implementation within the dynamic
-	// module. A single shared library can contain multiple filter implementations.
-	// This value is passed to the module's HTTP filter config init function to
-	// select the appropriate implementation.
+	// FilterName identifies a specific HTTP filter implementation within the
+	// dynamic module. A single shared library can contain multiple filter
+	// implementations; this value is passed to the module's initialization
+	// function to select one.
 	// If not specified, defaults to an empty string.
 	//
 	// +optional

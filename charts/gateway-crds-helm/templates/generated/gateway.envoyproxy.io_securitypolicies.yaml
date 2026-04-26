@@ -1709,19 +1709,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is optional configuration for the module's load balancer
-                                      implementation. This is serialized and passed to the module's
-                                      initialization function.
+                                      Config is the configuration for the dynamic module load balancer policy.
+                                      This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  lbPolicyName:
-                                    description: |-
-                                      LBPolicyName identifies a specific load balancer implementation within
-                                      the dynamic module. A single shared library can contain multiple LB
-                                      policy implementations. This value is passed to the module's
-                                      initialization function to select the appropriate implementation.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -1731,8 +1721,16 @@ spec:
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                                     type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
+                                    type: string
                                 required:
-                                - lbPolicyName
                                 - name
                                 type: object
                               endpointOverride:
@@ -3112,19 +3110,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is optional configuration for the module's load balancer
-                                      implementation. This is serialized and passed to the module's
-                                      initialization function.
+                                      Config is the configuration for the dynamic module load balancer policy.
+                                      This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  lbPolicyName:
-                                    description: |-
-                                      LBPolicyName identifies a specific load balancer implementation within
-                                      the dynamic module. A single shared library can contain multiple LB
-                                      policy implementations. This value is passed to the module's
-                                      initialization function to select the appropriate implementation.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -3134,8 +3122,16 @@ spec:
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                                     type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
+                                    type: string
                                 required:
-                                - lbPolicyName
                                 - name
                                 type: object
                               endpointOverride:
@@ -4797,19 +4793,9 @@ spec:
                                       properties:
                                         config:
                                           description: |-
-                                            Config is optional configuration for the module's load balancer
-                                            implementation. This is serialized and passed to the module's
-                                            initialization function.
+                                            Config is the configuration for the dynamic module load balancer policy.
+                                            This is serialized as JSON and passed to the module's initialization function.
                                           x-kubernetes-preserve-unknown-fields: true
-                                        lbPolicyName:
-                                          description: |-
-                                            LBPolicyName identifies a specific load balancer implementation within
-                                            the dynamic module. A single shared library can contain multiple LB
-                                            policy implementations. This value is passed to the module's
-                                            initialization function to select the appropriate implementation.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
                                         name:
                                           description: |-
                                             Name references a dynamic module registered in the EnvoyProxy resource's
@@ -4819,8 +4805,16 @@ spec:
                                           minLength: 1
                                           pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                                           type: string
+                                        policyName:
+                                          description: |-
+                                            PolicyName identifies a specific load balancing policy implementation
+                                            within the dynamic module. A single shared library can contain multiple
+                                            policy implementations; this value is passed to the module's
+                                            initialization function to select one.
+                                            If not specified, defaults to an empty string.
+                                          maxLength: 253
+                                          type: string
                                       required:
-                                      - lbPolicyName
                                       - name
                                       type: object
                                     endpointOverride:
@@ -6497,19 +6491,9 @@ spec:
                                 properties:
                                   config:
                                     description: |-
-                                      Config is optional configuration for the module's load balancer
-                                      implementation. This is serialized and passed to the module's
-                                      initialization function.
+                                      Config is the configuration for the dynamic module load balancer policy.
+                                      This is serialized as JSON and passed to the module's initialization function.
                                     x-kubernetes-preserve-unknown-fields: true
-                                  lbPolicyName:
-                                    description: |-
-                                      LBPolicyName identifies a specific load balancer implementation within
-                                      the dynamic module. A single shared library can contain multiple LB
-                                      policy implementations. This value is passed to the module's
-                                      initialization function to select the appropriate implementation.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
                                   name:
                                     description: |-
                                       Name references a dynamic module registered in the EnvoyProxy resource's
@@ -6519,8 +6503,16 @@ spec:
                                     minLength: 1
                                     pattern: ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$
                                     type: string
+                                  policyName:
+                                    description: |-
+                                      PolicyName identifies a specific load balancing policy implementation
+                                      within the dynamic module. A single shared library can contain multiple
+                                      policy implementations; this value is passed to the module's
+                                      initialization function to select one.
+                                      If not specified, defaults to an empty string.
+                                    maxLength: 253
+                                    type: string
                                 required:
-                                - lbPolicyName
                                 - name
                                 type: object
                               endpointOverride:

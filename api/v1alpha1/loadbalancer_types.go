@@ -51,7 +51,6 @@ type LoadBalancer struct {
 	// EnvoyProxy resource's dynamicModules allowlist.
 	//
 	// +optional
-	// +notImplementedHide
 	DynamicModule *DynamicModuleLBPolicy `json:"dynamicModule,omitempty"`
 
 	// EndpointOverride defines the configuration for endpoint override.
@@ -91,7 +90,6 @@ const (
 	// BackendUtilizationLoadBalancerType load balancer policy.
 	BackendUtilizationLoadBalancerType LoadBalancerType = "BackendUtilization"
 	// DynamicModuleLoadBalancerType load balancer policy.
-	// +notImplementedHide
 	DynamicModuleLoadBalancerType LoadBalancerType = "DynamicModule"
 )
 
@@ -236,8 +234,6 @@ type BackendUtilization struct {
 // The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
 //
 // See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
-//
-// +notImplementedHide
 type DynamicModuleLBPolicy struct {
 	// Name references a dynamic module registered in the EnvoyProxy resource's
 	// dynamicModules list. The referenced module must exist in the registry;
@@ -248,18 +244,18 @@ type DynamicModuleLBPolicy struct {
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$`
 	Name string `json:"name"`
 
-	// LBPolicyName identifies a specific load balancer implementation within
-	// the dynamic module. A single shared library can contain multiple LB
-	// policy implementations. This value is passed to the module's
-	// initialization function to select the appropriate implementation.
+	// PolicyName identifies a specific load balancing policy implementation
+	// within the dynamic module. A single shared library can contain multiple
+	// policy implementations; this value is passed to the module's
+	// initialization function to select one.
+	// If not specified, defaults to an empty string.
 	//
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	LBPolicyName string `json:"lbPolicyName"`
+	PolicyName *string `json:"policyName,omitempty"`
 
-	// Config is optional configuration for the module's load balancer
-	// implementation. This is serialized and passed to the module's
-	// initialization function.
+	// Config is the configuration for the dynamic module load balancer policy.
+	// This is serialized as JSON and passed to the module's initialization function.
 	//
 	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty"`
