@@ -2249,6 +2249,7 @@ func (t *Translator) buildExtAuth(
 			Destination:      *rd,
 			Authority:        authority,
 			Path:             ptr.Deref(http.Path, ""),
+			PathOverride:     ptr.Deref(http.PathOverride, ""),
 			HeadersToBackend: http.HeadersToBackend,
 		}
 	} else {
