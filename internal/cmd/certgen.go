@@ -12,10 +12,14 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"time"
 
 	"github.com/spf13/cobra"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -25,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/host"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 )
@@ -90,6 +95,11 @@ func certGen(ctx context.Context, logOut io.Writer, local bool, configHome strin
 		if err = patchTopologyInjectorWebhook(ctx, cli, cfg); err != nil {
 			return fmt.Errorf("failed to patch webhook: %w", err)
 		}
+		if overwriteControlPlaneCerts {
+			if err = rolloutRestartRateLimitDeployment(ctx, cli, cfg); err != nil {
+				return fmt.Errorf("failed to restart rate limit deployment: %w", err)
+			}
+		}
 	} else {
 		// Use provided configHome or default
 		hostCfg := &egv1a1.EnvoyGatewayHostInfrastructureProvider{}
@@ -133,6 +143,53 @@ func outputCertsForKubernetes(ctx context.Context, cli client.Client, cfg *confi
 		log.Info("created secret", "namespace", s.Namespace, "name", s.Name)
 	}
 
+	return nil
+}
+
+// rolloutRestartRateLimitDeployment triggers a rolling restart of the Rate Limit
+// deployment by patching its pod-template annotation. This is necessary because
+// the Rate Limit process loads its CA certificate once at startup and does not
+// watch the mounted secret for changes. After a cert rotation the kubelet will
+// update the secret volume on disk, but the running process continues to verify
+// client certs against the old CA in memory, causing mTLS failures for any Envoy
+// pod that has already reloaded its new leaf cert via SDS.
+//
+// A rolling restart ensures every Rate Limit pod starts fresh with the updated
+// CA bundle. The restart respects any PodDisruptionBudget the operator has
+// configured and uses the deployment's existing RollingUpdate strategy, so no
+// replica is terminated until a replacement is healthy.
+//
+// If the Rate Limit deployment does not exist (Rate Limit is not enabled) the
+// function returns nil without error.
+func rolloutRestartRateLimitDeployment(ctx context.Context, cli client.Client, cfg *config.Server) error {
+	log := cfg.Logger
+
+	deployment := &appsv1.Deployment{}
+	key := types.NamespacedName{
+		Namespace: cfg.ControllerNamespace,
+		Name:      ratelimit.InfraName,
+	}
+	if err := cli.Get(ctx, key, deployment); err != nil {
+		if kerrors.IsNotFound(err) {
+			// Rate Limit is not deployed; nothing to restart.
+			log.Info("rate limit deployment not found, skipping restart")
+			return nil
+		}
+		return fmt.Errorf("failed to get rate limit deployment %s/%s: %w", key.Namespace, key.Name, err)
+	}
+
+	patched := deployment.DeepCopy()
+	if patched.Spec.Template.Annotations == nil {
+		patched.Spec.Template.Annotations = make(map[string]string)
+	}
+	patched.Spec.Template.Annotations["kubectl.kubernetes.io/restartedAt"] = metav1.Now().UTC().Format(time.RFC3339)
+
+	if err := cli.Patch(ctx, patched, client.MergeFrom(deployment)); err != nil {
+		return fmt.Errorf("failed to patch rate limit deployment %s/%s: %w", key.Namespace, key.Name, err)
+	}
+
+	log.Info("triggered rolling restart of rate limit deployment",
+		"namespace", key.Namespace, "name", key.Name)
 	return nil
 }
 
