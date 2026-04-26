@@ -28,11 +28,22 @@ import (
 
 type typedName struct {
 	Type string
-	Name string
+	Name ir.StringMatch
 }
 
 func (t typedName) String() string {
-	return fmt.Sprintf("%s/%s", t.Type, t.Name)
+	name := ""
+	switch {
+	case t.Name.Exact != nil:
+		name = *t.Name.Exact
+	case t.Name.Prefix != nil:
+		name = *t.Name.Prefix + "*"
+	case t.Name.Suffix != nil:
+		name = "*" + *t.Name.Suffix
+	case t.Name.SafeRegex != nil:
+		name = *t.Name.SafeRegex
+	}
+	return fmt.Sprintf("%s/%s", t.Type, name)
 }
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
@@ -48,9 +59,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 
 		for _, p := range e.JSONPatches {
 			var (
-				resourceJSON []byte
-				dest         cachetypes.Resource
-				err          error
+				dests []cachetypes.Resource
+				err   error
 			)
 
 			if err := p.Operation.Validate(); err != nil {
@@ -96,61 +106,74 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				continue
 			}
 
-			// find the resource to patch and convert it to JSON
-			dest, err = findXdsResource(tCtx, p)
+			// find the resources to patch and convert them to JSON
+			dests, err = findXdsResources(tCtx, p)
 			if err != nil {
-				if errors.Is(err, errResourceNotFound) {
-					tn := typedName{p.Type, p.Name}
-					notFoundResources = append(notFoundResources, tn.String())
+				tErrs = errors.Join(tErrs, err)
+				continue
+			}
+
+			if len(dests) == 0 {
+				tn := typedName{p.Type, p.Name}
+				notFoundResources = append(notFoundResources, tn.String())
+				continue
+			}
+
+			var patchErrors error
+			for _, dest := range dests {
+				var (
+					resourceJSON []byte
+					modifiedJSON []byte
+				)
+
+				resourceJSON, err = jsonMarshalOpts.Marshal(dest)
+				if err != nil {
+					tErr := fmt.Errorf("unable to marshal xds resource %s, err: %w", p.Type, err)
+					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
 
-				tErrs = errors.Join(tErrs, err)
-				continue
-			}
+				modifiedJSON, err = jsonpatch.ApplyJSONPatches(resourceJSON, p.Operation)
+				if err != nil {
+					patchErrors = errors.Join(patchErrors, err)
+					continue
+				}
 
-			resourceJSON, err = jsonMarshalOpts.Marshal(dest)
-			if err != nil {
-				tErr := fmt.Errorf("unable to marshal xds resource %s, err: %w", p.Type, err)
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
+				// Unmarshal back to typed resource
+				// Use a temp staging variable that can be marshalled
+				// into and validated before saving it into the xds output resource
+				temp, err := getXdsResourceType(p.Type)
+				if err != nil {
+					patchErrors = errors.Join(patchErrors, err)
+					continue
+				}
 
-			modifiedJSON, err := jsonpatch.ApplyJSONPatches(resourceJSON, p.Operation)
-			if err != nil {
-				tErrs = errors.Join(tErrs, err)
-				continue
-			}
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
+					patchErrors = errors.Join(patchErrors, tErr)
+					continue
+				}
 
-			// Unmarshal back to typed resource
-			// Use a temp staging variable that can be marshalled
-			// into and validated before saving it into the xds output resource
-			temp, err := getXdsResourceType(p.Type)
-			if err != nil {
-				tErrs = errors.Join(tErrs, err)
-				continue
-			}
+				// Validate the patched resource
+				validator, ok := temp.(interface{ Validate() error })
+				if ok {
+					if err = validator.Validate(); err != nil {
+						tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", p.Type, err.Error())
+						patchErrors = errors.Join(patchErrors, tErr)
+						continue
+					}
+				}
 
-			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-				tErr := errors.New(unmarshalErrorMessage(err, string(modifiedJSON)))
-				tErrs = errors.Join(tErrs, tErr)
-				continue
-			}
-
-			// Validate the patched resource
-			validator, ok := temp.(interface{ Validate() error })
-			if ok {
-				if err = validator.Validate(); err != nil {
-					tErr := fmt.Errorf("validation failed for xds resource %s, err:%s", p.Type, err.Error())
-					tErrs = errors.Join(tErrs, tErr)
+				if err = deepCopyPtr(temp, dest); err != nil {
+					tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", p.Type, err)
+					patchErrors = errors.Join(patchErrors, tErr)
 					continue
 				}
 			}
 
-			if err = deepCopyPtr(temp, dest); err != nil {
-				tErr := fmt.Errorf("unable to copy xds resource %s, err: %w", p.Type, err)
-				tErrs = errors.Join(tErrs, tErr)
-				continue
+			// Report all patch errors, including partial failures
+			if patchErrors != nil {
+				tErrs = errors.Join(tErrs, patchErrors)
 			}
 		}
 
@@ -192,42 +215,29 @@ func getXdsResourceType(resourceType string) (cachetypes.Resource, error) {
 	}
 }
 
-var (
-	errResourceNotFound = errors.New("resource not found")
-	jsonMarshalOpts     = protojson.MarshalOptions{
-		UseProtoNames: true,
-	}
-)
+var jsonMarshalOpts = protojson.MarshalOptions{
+	UseProtoNames: true,
+}
 
-// findXdsResource return the XDS resource to patch
-// TODO: return multiple resources
-func findXdsResource(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) (cachetypes.Resource, error) {
+// findXdsResources returns XDS resources to patch based on the patch configuration.
+func findXdsResources(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) ([]cachetypes.Resource, error) {
+	var resources []cachetypes.Resource
 	switch p.Type {
 	case resourcev3.ListenerType:
-		if r := findXdsListener(tCtx, p.Name); r != nil {
-			return r, nil
-		}
+		resources = findXdsListeners(tCtx, &p.Name)
 	case resourcev3.RouteType:
-		if r := findXdsRouteConfig(tCtx, p.Name); r != nil {
-			return r, nil
-		}
+		resources = findXdsRouteConfigs(tCtx, &p.Name)
 	case resourcev3.ClusterType:
-		if r := findXdsCluster(tCtx, p.Name); r != nil {
-			return r, nil
-		}
+		resources = findXdsClusters(tCtx, &p.Name)
 	case resourcev3.EndpointType:
-		if r := findXdsEndpoint(tCtx, p.Name); r != nil {
-			return r, nil
-		}
+		resources = findXdsEndpoints(tCtx, &p.Name)
 	case resourcev3.SecretType:
-		if r := findXdsSecret(tCtx, p.Name); r != nil {
-			return r, nil
-		}
+		resources = findXdsSecrets(tCtx, &p.Name)
 	default:
 		return nil, fmt.Errorf("unsupported patch type %s", p.Type)
 	}
 
-	return nil, errResourceNotFound
+	return resources, nil
 }
 
 var unescaper = strings.NewReplacer(" ", " ")

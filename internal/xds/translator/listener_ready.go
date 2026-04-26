@@ -21,6 +21,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
+const (
+	readyListenerPrefix = "envoy-gateway-proxy-ready"
+	readyRouteName      = "ready_route"
+)
+
 func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 	ipv4Compact := ready.IPFamily == egv1a1.IPv6 || ready.IPFamily == egv1a1.DualStack
 
@@ -41,10 +46,10 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 		StatPrefix: "eg-ready-http",
 		RouteSpecifier: &hcmv3.HttpConnectionManager_RouteConfig{
 			RouteConfig: &routev3.RouteConfiguration{
-				Name: "ready_route",
+				Name: readyRouteName,
 				VirtualHosts: []*routev3.VirtualHost{
 					{
-						Name:    "ready_route",
+						Name:    readyRouteName,
 						Domains: []string{"*"},
 						Routes: []*routev3.Route{
 							{
@@ -73,7 +78,7 @@ func buildReadyListener(ready *ir.ReadyListener) (*listenerv3.Listener, error) {
 	}
 
 	return &listenerv3.Listener{
-		Name: fmt.Sprintf("envoy-gateway-proxy-ready-%s-%d", ready.Address, ready.Port),
+		Name: fmt.Sprintf("%s-%s-%d", readyListenerPrefix, ready.Address, ready.Port),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

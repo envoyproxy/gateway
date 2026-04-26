@@ -7,8 +7,10 @@ package gatewayapi
 
 import (
 	"fmt"
+	"regexp"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -127,10 +129,36 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		}
 
 		// Save the patch
+		policyRejected := false
 		for _, patch := range policy.Spec.JSONPatches {
 			irPatch := ir.JSONPatchConfig{}
 			irPatch.Type = string(patch.Type)
-			irPatch.Name = patch.Name
+			irPatch.Name = ir.StringMatch{
+				Exact: patch.Name,
+			}
+			if patch.NameSelector != nil {
+				irPatch.Name = *toIRStringMatch(patch.NameSelector)
+			}
+			// Validate that regex is valid if it's a regex match
+			if r := irPatch.Name.SafeRegex; r != nil {
+				_, err := regexp.Compile(*r)
+				if err != nil {
+					message := fmt.Sprintf("invalid regex in NameSelector: %v", err)
+					resolveErr = &status.PolicyResolveError{
+						Reason:  egv1a1.PolicyReasonInvalid,
+						Message: message,
+					}
+					status.SetResolveErrorForPolicyAncestor(&policy.Status,
+						&ancestorRef,
+						t.GatewayControllerName,
+						policy.Generation,
+						resolveErr,
+					)
+
+					policyRejected = true
+					break
+				}
+			}
 			irPatch.Operation.Op = ir.JSONPatchOp(patch.Operation.Op)
 			irPatch.Operation.Path = patch.Operation.Path
 			irPatch.Operation.JSONPath = patch.Operation.JSONPath
@@ -140,8 +168,14 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
 		}
 
-		// Set Accepted=True
-		status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+		// Only set Accepted=True if policy was not rejected due to validation errors
+		if !policyRejected {
+			// Set Accepted=True
+			status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+		} else {
+			// Clear any partial patches that were added before validation failed
+			policyIR.JSONPatches = nil
+		}
 	}
 
 	return res
@@ -157,4 +191,31 @@ func envoyPatchPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.EnvoyPatchPolic
 		copies[i] = &out
 	}
 	return copies
+}
+
+func toIRStringMatch(sm *egv1a1.StringMatch) *ir.StringMatch {
+	if sm == nil {
+		return nil
+	}
+
+	switch ptr.Deref(sm.Type, egv1a1.StringMatchExact) {
+	case egv1a1.StringMatchExact:
+		return &ir.StringMatch{
+			Exact: &sm.Value,
+		}
+	case egv1a1.StringMatchPrefix:
+		return &ir.StringMatch{
+			Prefix: &sm.Value,
+		}
+	case egv1a1.StringMatchSuffix:
+		return &ir.StringMatch{
+			Suffix: &sm.Value,
+		}
+	case egv1a1.StringMatchRegularExpression:
+		return &ir.StringMatch{
+			SafeRegex: &sm.Value,
+		}
+	default:
+		return nil
+	}
 }

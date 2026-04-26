@@ -23,7 +23,7 @@ var EnvoyPatchPolicyXDSNameSchemeV2Test = suite.ConformanceTest{
 	Manifests:   []string{"testdata/envoy-patch-policy-xds-name-scheme-v2.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("envoy patch policy", func(t *testing.T) {
-			testEnvoyPatchPolicy(t, suite)
+			testEnvoyPatchPolicy(t, suite, "same-namespace", "http-envoy-patch-policy", "infra-backend-v1")
 		})
 	},
 }
