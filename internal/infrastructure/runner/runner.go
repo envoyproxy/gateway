@@ -108,6 +108,7 @@ func (r *Runner) updateProxyInfraFromSubscription(ctx context.Context, sub <-cha
 			default:
 			}
 			r.Logger.Info("received an update", "key", update.Key, "delete", update.Delete)
+			message.PublishRunnerEventMetric(r.Name(), update.Delete)
 			val := update.Value
 
 			if update.Delete {
