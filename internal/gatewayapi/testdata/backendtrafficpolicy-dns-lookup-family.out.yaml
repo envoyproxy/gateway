@@ -425,7 +425,7 @@ xdsIR:
             weight: 1
         envoyExtensions:
           extProcs:
-          - authority: backend-fqdn2.default:9090
+          - authority: backend-v2.gateway-conformance-infra.svc.cluster.local:9090
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy

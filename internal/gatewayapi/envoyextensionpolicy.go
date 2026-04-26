@@ -846,17 +846,45 @@ func (t *Translator) buildExtProc(
 		return nil, err
 	}
 
-	if extProc.BackendRefs[0].Port != nil {
-		authority = fmt.Sprintf(
-			"%s.%s:%d",
-			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace),
-			*extProc.BackendRefs[0].Port)
-	} else {
-		authority = fmt.Sprintf(
-			"%s.%s",
-			extProc.BackendRefs[0].Name,
-			NamespaceDerefOr(extProc.BackendRefs[0].Namespace, policy.Namespace))
+	// When the backendRef is a Backend CRD with an FQDN endpoint, use
+	// the endpoint hostname as the gRPC :authority. The Kubernetes-style
+	// <name>.<namespace> form is correct for in-cluster Service refs,
+	// but FQDN backends commonly sit behind an ingress/gateway that
+	// routes on :authority (Istio, nginx, etc.); sending the CR name
+	// instead of the FQDN hostname breaks virtual-host matching on the
+	// upstream (#8791).
+	backendRef := extProc.BackendRefs[0]
+	backendNamespace := NamespaceDerefOr(backendRef.Namespace, policy.Namespace)
+	// validateExtServiceBackendReference / ext_service.go already
+	// accept Kind: Backend with the group field omitted (defaulted to
+	// egv1a1.GroupName), so match the same relaxed shape here. Using
+	// strict non-nil pointer checks would skip a valid config and fall
+	// through to the misrouted <name>.<namespace>[:port] authority.
+	backendKind := KindDerefOr(backendRef.Kind, "")
+	backendGroup := GroupDerefOr(backendRef.Group, egv1a1.GroupName)
+	if backendKind == egv1a1.KindBackend && backendGroup == egv1a1.GroupName {
+		if backend := t.GetBackend(backendNamespace, string(backendRef.Name)); backend != nil {
+			for _, bep := range backend.Spec.Endpoints {
+				if bep.FQDN != nil {
+					authority = fmt.Sprintf("%s:%d", bep.FQDN.Hostname, bep.FQDN.Port)
+					break
+				}
+			}
+		}
+	}
+	if authority == "" {
+		if backendRef.Port != nil {
+			authority = fmt.Sprintf(
+				"%s.%s:%d",
+				backendRef.Name,
+				backendNamespace,
+				*backendRef.Port)
+		} else {
+			authority = fmt.Sprintf(
+				"%s.%s",
+				backendRef.Name,
+				backendNamespace)
+		}
 	}
 
 	traffic, err := translateTrafficFeatures(extProc.BackendSettings)
