@@ -1,3 +1,25 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: test
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    routingType: Endpoint
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -89,7 +111,19 @@ infraIR:
         spec:
           logging: {}
           routingType: Endpoint
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:

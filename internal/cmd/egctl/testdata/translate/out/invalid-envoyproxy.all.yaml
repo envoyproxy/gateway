@@ -21,7 +21,18 @@ envoyProxyForGatewayClass:
     logging:
       level:
         default: warn
-  status: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: eg
+      conditions:
+      - lastTransitionTime: null
+        message: dynamic_resources cannot be modified
+        reason: InvalidParameters
+        status: "False"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass

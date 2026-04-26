@@ -21,6 +21,9 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
@@ -62,6 +65,16 @@ var EnvoyProxyInvalidUpdateTest = suite.ConformanceTest{
 			Type:   string(gwapiv1.GatewayConditionAccepted),
 			Status: metav1.ConditionFalse,
 			Reason: string(gwapiv1.GatewayReasonInvalidParameters),
+		})
+
+		EnvoyProxyMustNotAccepted(t, suite.Client, types.NamespacedName{
+			Name:      "eg-invalid",
+			Namespace: ns,
+		}, gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Name:      gwapiv1.ObjectName("eg-invalid"),
+			Namespace: gatewayapi.NamespacePtr(ns),
 		})
 
 		podShouldBeSame, err := getPodNameForGateway(t, suite, expectedNs, gwNN)

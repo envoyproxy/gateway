@@ -26,13 +26,16 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, EnvoyProxyCustomNameTest)
+	ConformanceTests = append(ConformanceTests, EnvoyProxyCustomName)
 }
 
-var EnvoyProxyCustomNameTest = suite.ConformanceTest{
+var EnvoyProxyCustomName = suite.ConformanceTest{
 	ShortName:   "EnvoyProxyCustomName",
 	Description: "Test running Envoy with custom name",
 	Manifests:   []string{"testdata/envoyproxy-custom-name.yaml"},
@@ -68,6 +71,16 @@ var EnvoyProxyCustomNameTest = suite.ConformanceTest{
 					Kind:  "EnvoyProxy",
 					Group: "gateway.envoyproxy.io",
 				},
+			})
+
+			EnvoyProxyMustBeAccepted(t, suite.Client, types.NamespacedName{
+				Name:      "deploy-custom-name",
+				Namespace: ns,
+			}, gwapiv1.ParentReference{
+				Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+				Kind:      gatewayapi.KindPtr(resource.KindGateway),
+				Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+				Name:      gwapiv1.ObjectName(gwNN.Name),
 			})
 
 			err = checkDeployment(t, suite, gwNN, gatewayNS, "custom-", 1, 1)

@@ -1,3 +1,50 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: override-disable
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    telemetry:
+      metrics:
+        enableGRPCStats: false
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: enable
+    namespace: envoy-gateway
+  spec:
+    logging: {}
+    telemetry:
+      metrics:
+        enableGRPCStats: true
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-2
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -134,7 +181,19 @@ infraIR:
           telemetry:
             metrics:
               enableGRPCStats: false
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-1
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -164,7 +223,19 @@ infraIR:
           telemetry:
             metrics:
               enableGRPCStats: true
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: Gateway
+              name: gateway-2
+              namespace: envoy-gateway
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-2/http
         ports:

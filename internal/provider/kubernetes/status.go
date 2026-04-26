@@ -645,6 +645,46 @@ func (r *gatewayAPIReconciler) updateStatusFromSubscriptions(ctx context.Context
 			r.log.Info("extensionServerPolicies status subscriber shutting down")
 		}()
 	}
+
+	// EnvoyProxy status updater
+	go func() {
+		message.HandleSubscription(r.log,
+			message.Metadata{Runner: string(egv1a1.LogComponentProviderRunner), Message: message.EnvoyProxyStatusMessageName},
+			r.subscriptions.envoyProxyStatuses,
+			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyProxyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.EnvoyProxy),
+					Mutator: MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.EnvoyProxy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						valCopy := val.DeepCopy()
+						setLastTransitionTimeInConditionsForEnvoyProxyStatus(valCopy, metav1.Now())
+						tCopy := &egv1a1.EnvoyProxy{
+							TypeMeta:   t.TypeMeta,
+							ObjectMeta: t.ObjectMeta,
+							Spec:       t.Spec,
+							Status: egv1a1.EnvoyProxyStatus{
+								Ancestors: valCopy.Ancestors,
+							},
+						}
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("envoyProxy status subscriber shutting down")
+	}()
 }
 
 // mergeRouteParentStatus merges the old and new RouteParentStatus.
@@ -759,6 +799,12 @@ func setLastTransitionTimeInConditions(conditions []metav1.Condition, now metav1
 
 // setLastTransitionTimeInConditionsForPolicyStatus sets LastTransitionTime for Policy status conditions
 func setLastTransitionTimeInConditionsForPolicyStatus(status *gwapiv1.PolicyStatus, now metav1.Time) {
+	for i := range status.Ancestors {
+		setLastTransitionTimeInConditions(status.Ancestors[i].Conditions, now)
+	}
+}
+
+func setLastTransitionTimeInConditionsForEnvoyProxyStatus(status *egv1a1.EnvoyProxyStatus, now metav1.Time) {
 	for i := range status.Ancestors {
 		setLastTransitionTimeInConditions(status.Ancestors[i].Conditions, now)
 	}

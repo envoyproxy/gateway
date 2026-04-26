@@ -304,6 +304,94 @@ func TestMergePolicyStatus(t *testing.T) {
 		entry = mergePolicyStatus(entry, &gwapiv1.PolicyStatus{}, 4)
 		require.Equal(t, int64(9), entry.generation)
 	})
+
+	t.Run("self-merge prevention", func(t *testing.T) {
+		status := &gwapiv1.PolicyStatus{
+			Ancestors: []gwapiv1.PolicyAncestorStatus{
+				{
+					AncestorRef:    gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-a")},
+					ControllerName: gwapiv1a2.GatewayController(controllerName),
+				},
+			},
+		}
+
+		// First merge - status becomes both aggregated and incoming
+		entry := mergePolicyStatus(aggregatedPolicyStatus{}, status, 1)
+		// Second merge with same status - should not duplicate
+		entry = mergePolicyStatus(entry, status, 2)
+
+		// Should still have only one ancestor, not duplicated
+		require.Len(t, entry.status.Ancestors, 1)
+		require.Equal(t, gwapiv1.ObjectName("gw-a"), entry.status.Ancestors[0].AncestorRef.Name)
+	})
+}
+
+func TestMergeEnvoyProxyStatus(t *testing.T) {
+	t.Run("nil incoming keeps existing entry", func(t *testing.T) {
+		existing := &egv1a1.EnvoyProxyStatus{
+			Ancestors: []egv1a1.EnvoyProxyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gc-a")},
+				},
+			},
+		}
+
+		got := mergeEnvoyProxyStatus(existing, nil)
+		require.Same(t, existing, got)
+	})
+
+	t.Run("nil existing takes incoming", func(t *testing.T) {
+		incoming := &egv1a1.EnvoyProxyStatus{
+			Ancestors: []egv1a1.EnvoyProxyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gc-a")},
+				},
+			},
+		}
+
+		got := mergeEnvoyProxyStatus(nil, incoming)
+		require.Same(t, incoming, got)
+	})
+
+	t.Run("appends ancestors", func(t *testing.T) {
+		first := &egv1a1.EnvoyProxyStatus{
+			Ancestors: []egv1a1.EnvoyProxyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gc-a")},
+				},
+			},
+		}
+		second := &egv1a1.EnvoyProxyStatus{
+			Ancestors: []egv1a1.EnvoyProxyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gw-b")},
+				},
+			},
+		}
+
+		got := mergeEnvoyProxyStatus(first, second)
+
+		require.Len(t, got.Ancestors, 2)
+		require.Equal(t, gwapiv1.ObjectName("gc-a"), got.Ancestors[0].AncestorRef.Name)
+		require.Equal(t, gwapiv1.ObjectName("gw-b"), got.Ancestors[1].AncestorRef.Name)
+	})
+
+	t.Run("self-merge prevention", func(t *testing.T) {
+		status := &egv1a1.EnvoyProxyStatus{
+			Ancestors: []egv1a1.EnvoyProxyAncestorStatus{
+				{
+					AncestorRef: gwapiv1.ParentReference{Name: gwapiv1.ObjectName("gc-a")},
+				},
+			},
+		}
+
+		// Merge status with itself - should not duplicate
+		got := mergeEnvoyProxyStatus(status, status)
+
+		// Should still have only one ancestor, not duplicated
+		require.Len(t, got.Ancestors, 1)
+		require.Equal(t, gwapiv1.ObjectName("gc-a"), got.Ancestors[0].AncestorRef.Name)
+	})
 }
 
 func TestMergeRouteStatus(t *testing.T) {
