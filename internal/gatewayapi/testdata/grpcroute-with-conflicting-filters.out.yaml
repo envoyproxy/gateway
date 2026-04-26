@@ -80,7 +80,7 @@ grpcRoutes:
         message: |-
           Dropped Rule(s) [0]: Invalid filter ExtensionRef: unknown kind gateway.envoyproxy.io/HTTPRouteFilter.
           RequestMirror filter cannot be used when the rule also configures a DirectResponse filter.
-        reason: IncompatibleFilters, UnsupportedValue
+        reason: IncompatibleFilters,UnsupportedValue
         status: "True"
         type: PartiallyInvalid
       - lastTransitionTime: null
