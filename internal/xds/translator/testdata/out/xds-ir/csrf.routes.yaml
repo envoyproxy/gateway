@@ -1,0 +1,23 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.csrf:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
+          additionalOrigins:
+          - suffix: example.com
+          - exact: https://trusted.partner.com
+          filterEnabled:
+            defaultValue:
+              numerator: 100

@@ -13,6 +13,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added `csrf` field to `SecurityPolicy` for native CSRF origin validation using Envoy's `envoy.filters.http.csrf` filter, supporting Exact, Prefix, Suffix, and RegularExpression origin matching.
   Added support for configuring optional health check configuration.
   Added support for shadow mode in local rate limiting.
   Added support for MergeType in SecurityPolicy to enable route-level policies to merge with parent Gateway/Listener policies, similar to BackendTrafficPolicy.
