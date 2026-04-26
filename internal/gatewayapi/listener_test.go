@@ -1510,3 +1510,113 @@ func TestProcessBackendRefsBackendTLSPolicy(t *testing.T) {
 		})
 	}
 }
+
+func TestProcessHealthCheckLog(t *testing.T) {
+	fileSink := egv1a1.ProxyHealthCheckLogSink{
+		Type: egv1a1.ProxyHealthCheckLogSinkTypeFile,
+		File: &egv1a1.FileEnvoyProxyHealthCheckLog{Path: "/dev/stdout"},
+	}
+	proxy := func(hcLog *egv1a1.ProxyHealthCheckLog) *egv1a1.EnvoyProxy {
+		return &egv1a1.EnvoyProxy{
+			Spec: egv1a1.EnvoyProxySpec{
+				Telemetry: &egv1a1.ProxyTelemetry{HealthCheckLog: hcLog},
+			},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		envoyProxy *egv1a1.EnvoyProxy
+		expected   *ir.ProxyHealthCheckLog
+	}{
+		{
+			name:       "nil EnvoyProxy",
+			envoyProxy: nil,
+			expected:   nil,
+		},
+		{
+			name:       "no sinks defaults to /dev/stdout",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name:       "no matches logs everything",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{Sinks: []egv1a1.ProxyHealthCheckLogSink{fileSink}}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Failure and Success",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "FailureTransition and SuccessTransition",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks: []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				// Transition-only: AlwaysLog flags stay false (Envoy logs transitions by default).
+			},
+		},
+		{
+			name: "Failure OR FailureTransition ORed to Failure",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeFailureTransition, egv1a1.ProxyHealthCheckLogEventTypeSuccess},
+			}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Success OR SuccessTransition ORed to Success",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccess, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				AlwaysLogHealthCheckSuccess:  true,
+			},
+		},
+		{
+			name: "Failure and SuccessTransition",
+			envoyProxy: proxy(&egv1a1.ProxyHealthCheckLog{
+				Sinks:   []egv1a1.ProxyHealthCheckLogSink{fileSink},
+				Matches: []egv1a1.ProxyHealthCheckLogEventType{egv1a1.ProxyHealthCheckLogEventTypeFailure, egv1a1.ProxyHealthCheckLogEventTypeSuccessTransition},
+			}),
+			expected: &ir.ProxyHealthCheckLog{
+				FileSinks:                    []*ir.FileEnvoyProxyHealthCheckLog{{Path: "/dev/stdout"}},
+				AlwaysLogHealthCheckFailures: true,
+				// SuccessTransition alone: AlwaysLogHealthCheckSuccess stays false.
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := processHealthCheckLog(tc.envoyProxy)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}

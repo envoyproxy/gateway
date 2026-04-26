@@ -678,6 +678,51 @@ func (t *Translator) processProxyObservability(gwCtx *GatewayContext, xdsIR *ir.
 		return
 	}
 	proxyInfra.ResolvedMetricSinks = resolvedSinks
+
+	xdsIR.HealthCheckLog = processHealthCheckLog(envoyProxy)
+}
+
+func processHealthCheckLog(envoyProxy *egv1a1.EnvoyProxy) *ir.ProxyHealthCheckLog {
+	if envoyProxy == nil ||
+		envoyProxy.Spec.Telemetry == nil ||
+		envoyProxy.Spec.Telemetry.HealthCheckLog == nil {
+		return nil
+	}
+	hcLogging := envoyProxy.Spec.Telemetry.HealthCheckLog
+	irHCLogging := &ir.ProxyHealthCheckLog{}
+
+	// Translate Matches to the two Envoy booleans.
+	// Empty/omitted Matches means log everything (both always-log flags true).
+	// Failure sets AlwaysLogHealthCheckFailures; FailureTransition leaves it false
+	// (Envoy logs transitions by default). Same for Success/SuccessTransition.
+	// Both variants may coexist: Failure OR FailureTransition resolves to Failure.
+	if len(hcLogging.Matches) == 0 {
+		irHCLogging.AlwaysLogHealthCheckFailures = true
+		irHCLogging.AlwaysLogHealthCheckSuccess = true
+	} else {
+		for _, et := range hcLogging.Matches {
+			switch et {
+			case egv1a1.ProxyHealthCheckLogEventTypeFailure:
+				irHCLogging.AlwaysLogHealthCheckFailures = true
+			case egv1a1.ProxyHealthCheckLogEventTypeSuccess:
+				irHCLogging.AlwaysLogHealthCheckSuccess = true
+			}
+		}
+	}
+
+	if len(hcLogging.Sinks) == 0 {
+		irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+			Path: "/dev/stdout",
+		})
+	} else {
+		sink := hcLogging.Sinks[0]
+		if sink.Type == egv1a1.ProxyHealthCheckLogSinkTypeFile && sink.File != nil {
+			irHCLogging.FileSinks = append(irHCLogging.FileSinks, &ir.FileEnvoyProxyHealthCheckLog{
+				Path: sink.File.Path,
+			})
+		}
+	}
+	return irHCLogging
 }
 
 func (t *Translator) processInfraIRListener(listener *ListenerContext, infraIR resource.InfraIRMap, irKey string, servicePort *protocolPort, containerPort int32) {

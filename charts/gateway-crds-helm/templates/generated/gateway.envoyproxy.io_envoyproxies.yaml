@@ -14476,6 +14476,76 @@ spec:
                         minItems: 1
                         type: array
                     type: object
+                  healthCheckLog:
+                    description: |-
+                      HealthCheckLog configures health check event logging for all clusters
+                      that have active health checks configured.
+                      Health check events are written as JSON to the specified file path.
+                    properties:
+                      matches:
+                        description: |-
+                          Matches defines which health check probe outcomes produce a log entry.
+                          When omitted or empty, all events are logged.
+
+                          Each value must be unique. Multiple values are ORed. If any failure type is
+                          specified then a success type must also be specified, and vice versa.
+                        items:
+                          description: ProxyHealthCheckLogEventType specifies which
+                            health check probe outcomes produce a log entry.
+                          enum:
+                          - Failure
+                          - FailureTransition
+                          - Success
+                          - SuccessTransition
+                          type: string
+                        maxItems: 4
+                        type: array
+                        x-kubernetes-list-type: set
+                        x-kubernetes-validations:
+                        - message: a failure type and a success type must both be
+                            specified together
+                          rule: self.exists(e, e == 'Failure' || e == 'FailureTransition')
+                            == self.exists(e, e == 'Success' || e == 'SuccessTransition')
+                      sinks:
+                        description: |-
+                          Sinks defines where health check events are written.
+                          When omitted, events are written to /dev/stdout.
+                        items:
+                          description: ProxyHealthCheckLogSink defines a destination
+                            for health check event logs.
+                          properties:
+                            file:
+                              description: |-
+                                File defines the file sink configuration.
+                                Required when type is File.
+                              properties:
+                                path:
+                                  description: |-
+                                    Path specifies the file path for health check event output.
+                                    Use /dev/stdout to write to standard output.
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - path
+                              type: object
+                            type:
+                              allOf:
+                              - enum:
+                                - File
+                              - enum:
+                                - File
+                              description: Type defines the type of sink.
+                              type: string
+                          required:
+                          - type
+                          type: object
+                          x-kubernetes-validations:
+                          - message: If ProxyHealthCheckLogSink type is File, file
+                              field needs to be set.
+                            rule: 'self.type == ''File'' ? has(self.file) : !has(self.file)'
+                        maxItems: 1
+                        type: array
+                    type: object
                   metrics:
                     description: Metrics defines metrics configuration for managed
                       proxies.

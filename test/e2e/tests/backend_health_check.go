@@ -31,6 +31,7 @@ func init() {
 	ConformanceTests = append(ConformanceTests,
 		BackendHealthCheckActiveHTTPTest,
 		BackendHealthCheckWithOverrideTest,
+		BackendHealthCheckEventLogTest,
 	)
 }
 
@@ -258,6 +259,88 @@ var BackendHealthCheckWithOverrideTest = suite.ConformanceTest{
 
 				http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 			})
+		})
+	},
+}
+
+var BackendHealthCheckEventLogTest = suite.ConformanceTest{
+	ShortName:   "BackendHealthCheckEventLog",
+	Description: "Health check events are logged to stdout when healthCheckLog is configured",
+	Manifests:   []string{"testdata/backend-health-check-event-log.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		ns := "gateway-conformance-infra"
+		noHCRouteNN := types.NamespacedName{Name: "http-without-hc-event-log", Namespace: ns}
+		gwNN := types.NamespacedName{Name: "hc-event-log-gtw", Namespace: ns}
+
+		gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(
+			t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), noHCRouteNN,
+		)
+
+		gatewayNS := GetGatewayResourceNamespace()
+		lokiLabels := map[string]string{
+			"job":       fmt.Sprintf("%s/envoy", gatewayNS),
+			"namespace": gatewayNS,
+			"container": "envoy",
+		}
+
+		// Phase 1: only the no-HC route is live — no BTP means no health check
+		// probes are running, so Loki must have zero HC events.
+		t.Run("no health check events before HC route is active", func(t *testing.T) {
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+				Request:   http.Request{Path: "/no-hc-event-log"},
+				Response:  http.Response{StatusCodes: []int{200}},
+				Namespace: ns,
+			})
+
+			// Scope to HC events from this test's route only.
+			count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, `health_checker_type.*http-with-hc-event-log`)
+			require.NoError(t, err, "loki query failed")
+			require.Equal(t, 0, count, "expected no HC events before HC-enabled route is active")
+		})
+
+		// Phase 2: apply the HC-enabled route and BTP, then wait for events.
+		hcRouteNN := types.NamespacedName{Name: "http-with-hc-event-log", Namespace: ns}
+		suite.Applier.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/backend-health-check-event-log-hc.yaml", true)
+
+		kubernetes.GatewayAndHTTPRoutesMustBeAccepted(
+			t, suite.Client, suite.TimeoutConfig, suite.ControllerName,
+			kubernetes.NewGatewayRef(gwNN), hcRouteNN,
+		)
+
+		ancestorRef := gwapiv1.ParentReference{
+			Group:     gatewayapi.GroupPtr(gwapiv1.GroupName),
+			Kind:      gatewayapi.KindPtr(resource.KindGateway),
+			Namespace: gatewayapi.NamespacePtr(gwNN.Namespace),
+			Name:      gwapiv1.ObjectName(gwNN.Name),
+		}
+		BackendTrafficPolicyMustBeAccepted(
+			t, suite.Client,
+			types.NamespacedName{Name: "hc-event-log-btp", Namespace: ns},
+			suite.ControllerName, ancestorRef,
+		)
+
+		// The HC event JSON Envoy emits contains both "health_checker_type" and
+		// "cluster_name" (which includes the route name) on the same line.
+		// Matching both ensures we only count HC events from this test's cluster,
+		// not access logs or other lines that might mention the route name.
+		const hcLogMatch = `health_checker_type.*http-with-hc-event-log`
+
+		t.Run("health check events appear in logs", func(t *testing.T) {
+			http.AwaitConvergence(
+				t,
+				suite.TimeoutConfig.RequiredConsecutiveSuccesses,
+				suite.TimeoutConfig.MaxTimeToConsistency,
+				func(_ time.Duration) bool {
+					count, err := QueryLogCountFromLoki(t, suite.Client, lokiLabels, hcLogMatch)
+					if err != nil {
+						tlog.Logf(t, "loki query error: %v", err)
+						return false
+					}
+					tlog.Logf(t, "loki match %q count=%d", hcLogMatch, count)
+					return count > 0
+				},
+			)
 		})
 	},
 }
