@@ -7,6 +7,8 @@ package translator
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strings"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -84,7 +86,49 @@ func init() {
 	}
 }
 
-func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([]*accesslog.AccessLog, error) {
+// egExtFilterStateRe matches %EG_EXT_FILTER_STATE(name:attribute[:<format_args>])% operators.
+// Optional trailing :<format_args> mirrors %FILTER_STATE% args and is passed through verbatim.
+var egExtFilterStateRe = regexp.MustCompile(`%EG_EXT_FILTER_STATE\(([^:]+):([^):]+)((?::[^)]*)*)\)%`)
+
+// resolveEGExtFilterStateOperators rewrites %EG_EXT_FILTER_STATE(name:attr)% to the
+// canonical %FILTER_STATE(<filter-name>:attr)% operator. Unresolved names become "-".
+func resolveEGExtFilterStateOperators(format string, extensions []ir.ExtProc) string {
+	if !strings.Contains(format, "%EG_EXT_FILTER_STATE(") {
+		return format
+	}
+	return egExtFilterStateRe.ReplaceAllStringFunc(format, func(match string) string {
+		parts := egExtFilterStateRe.FindStringSubmatch(match)
+		name, attr, suffix := parts[1], parts[2], parts[3]
+		for _, ep := range extensions {
+			if ep.CustomName == name {
+				filterStateName := fmt.Sprintf("%s/%s", string(egv1a1.EnvoyFilterExtProc), ep.Name)
+				return fmt.Sprintf("%%FILTER_STATE(%s:%s%s)%%", filterStateName, attr, suffix)
+			}
+		}
+		return "-"
+	})
+}
+
+// collectHCMExtensionsForLogExpansion returns deduplicated ext-proc instances across all
+// routes on the listener, for use in %EG_EXT_FILTER_STATE(...)% operator resolution.
+func collectHCMExtensionsForLogExpansion(irListener *ir.HTTPListener) []ir.ExtProc {
+	seen := map[string]struct{}{}
+	var result []ir.ExtProc
+	for _, route := range irListener.Routes {
+		if route.EnvoyExtensions == nil {
+			continue
+		}
+		for _, ep := range route.EnvoyExtensions.ExtProcs {
+			if _, ok := seen[ep.Name]; !ok {
+				seen[ep.Name] = struct{}{}
+				result = append(result, ep)
+			}
+		}
+	}
+	return result
+}
+
+func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType, extensions []ir.ExtProc) ([]*accesslog.AccessLog, error) {
 	if al == nil {
 		return nil, nil
 	}
@@ -111,6 +155,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		}
 
 		format := *text.Format
+		format = resolveEGExtFilterStateOperators(format, extensions)
 
 		filelog.AccessLogFormat = &fileaccesslog.FileAccessLog_LogFormat{
 			LogFormat: &cfgcore.SubstitutionFormatString{
@@ -169,7 +214,7 @@ func buildXdsAccessLog(al *ir.AccessLog, accessLogType ir.ProxyAccessLogType) ([
 		for _, entry := range jsonLogFields {
 			jsonFormat.Fields[entry.Key] = &structpb.Value{
 				Kind: &structpb.Value_StringValue{
-					StringValue: entry.Value,
+					StringValue: resolveEGExtFilterStateOperators(entry.Value, extensions),
 				},
 			}
 		}

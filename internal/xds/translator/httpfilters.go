@@ -302,7 +302,7 @@ func (t *Translator) patchHCMWithFilters(mgr *hcmv3.HttpConnectionManager, irLis
 	if !hasRouter {
 		headerSettings := ptr.Deref(irListener.Headers, ir.HeaderSettings{})
 
-		upstreamAccessLogs, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeUpstream)
+		upstreamAccessLogs, err := buildXdsAccessLog(accesslog, ir.ProxyAccessLogTypeUpstream, collectHCMExtensionsForLogExpansion(irListener))
 		if err != nil {
 			return err
 		}

@@ -1,0 +1,65 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% req_proc=%EG_EXT_FILTER_STATE(req-processor:latency_ns)% resp_proc=%EG_EXT_FILTER_STATE(resp-processor:latency_ns)%
+  json:
+  - path: "/dev/stdout"
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: req_processor_latency_ns
+      value: "%EG_EXT_FILTER_STATE(req-processor:latency_ns)%"
+    - key: resp_processor_latency_ns
+      value: "%EG_EXT_FILTER_STATE(resp-processor:latency_ns)%"
+http:
+- name: "envoy-gateway/gateway-1/http"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    hostname: gateway.envoyproxy.io
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /foo
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+        - addressType: IP
+          endpoints:
+            - host: 7.7.7.7
+              port: 8080
+          protocol: HTTP
+          weight: 1
+          name: httproute/default/httproute-1/rule/0/backend/0
+    envoyExtensions:
+      extProcs:
+        - name: envoyextensionpolicy/default/my-eep/extproc/0
+          customName: req-processor
+          requestHeaderProcessing: true
+          requestBodyProcessingMode: Buffered
+          authority: req-proc.default:9000
+          destination:
+            name: envoyextensionpolicy/default/my-eep/0/req-proc
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/default/my-eep/0/req-proc/backend/0
+        - name: envoyextensionpolicy/default/my-eep/extproc/1
+          customName: resp-processor
+          responseHeaderProcessing: true
+          responseBodyProcessingMode: Streamed
+          authority: resp-proc.default:9001
+          destination:
+            name: envoyextensionpolicy/default/my-eep/1/resp-proc
+            settings:
+              - protocol: GRPC
+                weight: 1
+                name: envoyextensionpolicy/default/my-eep/1/resp-proc/backend/0
