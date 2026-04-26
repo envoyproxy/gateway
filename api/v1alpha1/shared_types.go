@@ -792,11 +792,37 @@ type ResponseOverride struct {
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+// At least one of statusCodes or requestHeaders must be specified.
+// When multiple criteria are specified, all of them must match (logical AND) for the rule to apply.
+// +kubebuilder:validation:XValidation:rule="has(self.statusCodes) || has(self.requestHeaders)",message="at least one of statusCodes or requestHeaders must be specified"
 type CustomResponseMatch struct {
 	// Status code to match on. The match evaluates to true if any of the matches are successful.
+	//
+	// +optional
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=50
-	StatusCodes []StatusCodeMatch `json:"statusCodes"`
+	StatusCodes []StatusCodeMatch `json:"statusCodes,omitempty"`
+
+	// RequestHeaders to match on. All of the specified headers must match (logical AND)
+	// for the rule to apply. Matching is performed against request headers observed on
+	// the response path of the stream.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	RequestHeaders []ResponseOverrideHeaderMatch `json:"requestHeaders,omitempty"`
+}
+
+// ResponseOverrideHeaderMatch defines the configuration for matching an HTTP header.
+type ResponseOverrideHeaderMatch struct {
+	// Name of the HTTP header to match against. The header name is case-insensitive.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Name string `json:"name"`
+
+	// Value specifies how to match against the value of the header.
+	Value StringMatch `json:"value"`
 }
 
 // StatusCodeValueType defines the types of values for the status code match supported by Envoy Gateway.

@@ -1305,13 +1305,16 @@ _Appears in:_
 
 
 CustomResponseMatch defines the configuration for matching a user response to return a custom one.
+At least one of statusCodes or requestHeaders must be specified.
+When multiple criteria are specified, all of them must match (logical AND) for the rule to apply.
 
 _Appears in:_
 - [ResponseOverride](#responseoverride)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  true  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `statusCodes` | _[StatusCodeMatch](#statuscodematch) array_ |  false  |  | Status code to match on. The match evaluates to true if any of the matches are successful. |
+| `requestHeaders` | _[ResponseOverrideHeaderMatch](#responseoverrideheadermatch) array_ |  false  |  | RequestHeaders to match on. All of the specified headers must match (logical AND)<br />for the rule to apply. Matching is performed against request headers observed on<br />the response path of the stream. |
 
 
 #### CustomTag
@@ -5428,6 +5431,21 @@ _Appears in:_
 | `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
 
 
+#### ResponseOverrideHeaderMatch
+
+
+
+ResponseOverrideHeaderMatch defines the configuration for matching an HTTP header.
+
+_Appears in:_
+- [CustomResponseMatch](#customresponsematch)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name of the HTTP header to match against. The header name is case-insensitive. |
+| `value` | _[StringMatch](#stringmatch)_ |  true  |  | Value specifies how to match against the value of the header. |
+
+
 #### ResponseValueType
 
 _Underlying type:_ _string_
@@ -5874,6 +5892,7 @@ _Appears in:_
 - [OIDCDenyRedirectHeader](#oidcdenyredirectheader)
 - [OtherSANMatch](#othersanmatch)
 - [ProxyMetrics](#proxymetrics)
+- [ResponseOverrideHeaderMatch](#responseoverrideheadermatch)
 - [SubjectAltNames](#subjectaltnames)
 
 | Field | Type | Required | Default | Description |

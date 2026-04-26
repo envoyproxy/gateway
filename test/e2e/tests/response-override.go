@@ -50,7 +50,7 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			BackendTrafficPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "response-override", Namespace: ns}, suite.ControllerName, ancestorRef)
 
 			// Test 404 response override with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/status/404", "text/plain", "404 Oops! Your request is not found.", 404, map[string]string{
 				"X-Add-Header":  "added-404",
 				"X-Set-Header":  "set-404",
 				"X-Error-Type":  "not-found",
@@ -58,22 +58,31 @@ var ResponseOverrideTest = suite.ConformanceTest{
 			})
 
 			// Test 500 response override with add and set headers
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/status/500", "application/json", `{"error": "Internal Server Error"}`, 500, map[string]string{
 				"X-Add-Header": "added-500",
 				"X-Set-Header": "set-500",
 			})
 
 			// Test 403 response override with add and set headers (status override to 404)
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404, map[string]string{
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/status/403", "", "", 404, map[string]string{
 				"X-Add-Header": "added-403",
 				"X-Set-Header": "set-403",
 			})
-			verifyCustomResponse(t, &suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
+			verifyCustomResponse(t, nil, &suite.TimeoutConfig, gwAddr, "/status/401", "", "", 301)
+
+			// Test 418 response override with request header match.
+			// Clients sending Accept: application/json get a JSON body; others get HTML.
+			verifyCustomResponse(t, map[string]string{"Accept": "application/json"},
+				&suite.TimeoutConfig, gwAddr, "/status/418",
+				"application/json", `{"error":"I am a teapot"}`, 418)
+			verifyCustomResponse(t, map[string]string{"Accept": "text/html"},
+				&suite.TimeoutConfig, gwAddr, "/status/418",
+				"text/html", "<html><body><h1>I'm a teapot</h1></body></html>", 418)
 		})
 	},
 }
 
-func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwAddr,
+func verifyCustomResponse(t *testing.T, withHeaders map[string]string, timeoutConfig *config.TimeoutConfig, gwAddr,
 	path, expectedContentType, expectedBody string, expectedStatusCode int, expectedHeaders ...map[string]string,
 ) {
 	if timeoutConfig == nil {
@@ -87,7 +96,16 @@ func verifyCustomResponse(t *testing.T, timeoutConfig *config.TimeoutConfig, gwA
 	}
 
 	httputils.AwaitConvergence(t, timeoutConfig.RequiredConsecutiveSuccesses, timeoutConfig.MaxTimeToConsistency, func(_ time.Duration) bool {
-		rsp, err := http.Get(reqURL.String())
+		req, err := http.NewRequest(http.MethodGet, reqURL.String(), nil)
+		if err != nil {
+			tlog.Logf(t, "failed to build request: %v", err)
+			return false
+		}
+		for k, v := range withHeaders {
+			req.Header.Set(k, v)
+		}
+
+		rsp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			tlog.Logf(t, "failed to get response: %v", err)
 			return false

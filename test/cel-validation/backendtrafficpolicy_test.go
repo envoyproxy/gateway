@@ -2568,6 +2568,73 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 		},
 		{
+			desc: "response override match with neither statusCodes nor requestHeaders",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{},
+							Response: &egv1a1.CustomResponse{
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("foo"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"at least one of statusCodes or requestHeaders must be specified",
+			},
+		},
+		{
+			desc: "response override match with only requestHeaders is valid",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ResponseOverride: []*egv1a1.ResponseOverride{
+						{
+							Match: egv1a1.CustomResponseMatch{
+								RequestHeaders: []egv1a1.ResponseOverrideHeaderMatch{
+									{
+										Name: "Accept",
+										Value: egv1a1.StringMatch{
+											Value: "application/json",
+										},
+									},
+								},
+							},
+							Response: &egv1a1.CustomResponse{
+								Body: &egv1a1.CustomResponseBody{
+									Type:   new(egv1a1.ResponseValueTypeInline),
+									Inline: new("foo"),
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
 			desc: "valid Global rate limit rules with request and response hit addends",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				rules := []egv1a1.RateLimitRule{
