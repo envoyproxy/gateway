@@ -541,7 +541,7 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 		}
 		if caRefNs != meta.Namespace && resources != nil {
 			// check reference grant
-			if !t.validateCrossNamespaceRef(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     meta.Group,
 					kind:      meta.Kind,

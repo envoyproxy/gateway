@@ -267,6 +267,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
 			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
 		)
 	}
 

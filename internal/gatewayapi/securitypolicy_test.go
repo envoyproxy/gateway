@@ -948,12 +948,11 @@ func Test_SecurityPolicy_TCP_Invalid_setsStatus_and_returns(t *testing.T) {
 	SetRouteParentContext(tcpRoute, tcpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
-	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
-			Kind:  resource.KindTCPRoute,
-			Name:  "tcp-route",
-		},
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindTCPRoute,
+		Name:      "tcp-route",
+		Namespace: "default",
 	}
 
 	// Create route map
@@ -1034,12 +1033,11 @@ func Test_SecurityPolicy_HTTP_Invalid_setsStatus_and_returns(t *testing.T) {
 	SetRouteParentContext(httpRoute, httpRoute.Spec.ParentRefs[0])
 
 	// Create the target reference
-	target := gwapiv1.LocalPolicyTargetReferenceWithSectionName{
-		LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-			Group: gwapiv1.Group(gwapiv1.GroupVersion.Group),
-			Kind:  resource.KindHTTPRoute,
-			Name:  "http-route",
-		},
+	target := policyTargetReferenceWithSectionName{
+		Group:     gwapiv1.Group(gwapiv1.GroupVersion.Group),
+		Kind:      resource.KindHTTPRoute,
+		Name:      "http-route",
+		Namespace: "default",
 	}
 
 	// Create route map

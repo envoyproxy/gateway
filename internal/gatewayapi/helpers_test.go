@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -200,12 +201,14 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 	}
 }
 
-func TestGetPolicyTargetRefs(t *testing.T) {
+func TestResolvePolicyTargets(t *testing.T) {
 	testCases := []struct {
-		name    string
-		policy  egv1a1.PolicyTargetReferences
-		targets []*unstructured.Unstructured
-		results []gwapiv1.LocalPolicyTargetReferenceWithSectionName
+		name       string
+		policy     egv1a1.PolicyTargetReferences
+		targets    []*unstructured.Unstructured
+		namespaces []*corev1.Namespace
+		grants     []*gwapiv1b1.ReferenceGrant
+		results    []policyTargetReferenceWithSectionName
 	}{
 		{
 			name: "simple",
@@ -261,13 +264,12 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			results: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "Gateway",
-						Name:  "second",
-					},
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "second",
+					Namespace: "default",
 				},
 			},
 		},
@@ -330,20 +332,18 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			results: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "TLSRoute",
-						Name:  "third",
-					},
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "TLSRoute",
+					Name:      "third",
+					Namespace: "default",
 				},
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "Gateway",
-						Name:  "second",
-					},
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "second",
+					Namespace: "default",
 				},
 			},
 		},
@@ -409,13 +409,12 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			results: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "TLSRoute",
-						Name:  "third",
-					},
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "TLSRoute",
+					Name:      "third",
+					Namespace: "default",
 				},
 			},
 		},
@@ -473,7 +472,7 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
+			results: []policyTargetReferenceWithSectionName{},
 		},
 		{
 			name: "match expression",
@@ -519,13 +518,12 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+			results: []policyTargetReferenceWithSectionName{
 				{
-					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
-						Group: "gateway.networking.k8s.io",
-						Kind:  "Gateway",
-						Name:  "first",
-					},
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "first",
+					Namespace: "default",
 				},
 			},
 		},
@@ -573,14 +571,431 @@ func TestGetPolicyTargetRefs(t *testing.T) {
 					},
 				},
 			},
-			results: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{},
+			results: []policyTargetReferenceWithSectionName{},
+		},
+		{
+			name: "namespaces from same",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						Namespaces: &egv1a1.TargetSelectorNamespaces{
+							From: egv1a1.TargetNamespaceFromSame,
+						},
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "same-ns",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "other-ns",
+							"namespace": "other",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "same-ns",
+					Namespace: "default",
+				},
+			},
+		},
+		{
+			name: "namespaces from all",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						Namespaces: &egv1a1.TargetSelectorNamespaces{
+							From: egv1a1.TargetNamespaceFromAll,
+						},
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "same-ns",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "other-ns",
+							"namespace": "other",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			grants: []*gwapiv1b1.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-default-btp",
+						Namespace: "other",
+					},
+					Spec: gwapiv1b1.ReferenceGrantSpec{
+						From: []gwapiv1b1.ReferenceGrantFrom{
+							{
+								Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+								Kind:      gwapiv1b1.Kind("BackendTrafficPolicy"),
+								Namespace: gwapiv1b1.Namespace("default"),
+							},
+						},
+						To: []gwapiv1b1.ReferenceGrantTo{
+							{
+								Group: gwapiv1b1.Group(gwapiv1.GroupName),
+								Kind:  gwapiv1b1.Kind("Gateway"),
+							},
+						},
+					},
+				},
+			},
+			results: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "same-ns",
+					Namespace: "default",
+				},
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "other-ns",
+					Namespace: "other",
+				},
+			},
+		},
+		{
+			name: "namespaces from selector",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						Namespaces: &egv1a1.TargetSelectorNamespaces{
+							From: egv1a1.TargetNamespaceFromSelector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"team": "blue",
+								},
+							},
+						},
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "selected-ns",
+							"namespace": "selected",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "unselected-ns",
+							"namespace": "unselected",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			namespaces: []*corev1.Namespace{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "selected",
+						Labels: map[string]string{"team": "blue"},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   "unselected",
+						Labels: map[string]string{"team": "green"},
+					},
+				},
+			},
+			grants: []*gwapiv1b1.ReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-default-btp",
+						Namespace: "selected",
+					},
+					Spec: gwapiv1b1.ReferenceGrantSpec{
+						From: []gwapiv1b1.ReferenceGrantFrom{
+							{
+								Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+								Kind:      gwapiv1b1.Kind("BackendTrafficPolicy"),
+								Namespace: gwapiv1b1.Namespace("default"),
+							},
+						},
+						To: []gwapiv1b1.ReferenceGrantTo{
+							{
+								Group: gwapiv1b1.Group(gwapiv1.GroupName),
+								Kind:  gwapiv1b1.Kind("Gateway"),
+							},
+						},
+					},
+				},
+			},
+			results: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "selected-ns",
+					Namespace: "selected",
+				},
+			},
+		},
+		{
+			name: "namespaces from selector requires known namespace labels",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						Namespaces: &egv1a1.TargetSelectorNamespaces{
+							From: egv1a1.TargetNamespaceFromSelector,
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"team": "blue",
+								},
+							},
+						},
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "unknown-ns",
+							"namespace": "unknown",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []policyTargetReferenceWithSectionName{},
+		},
+		{
+			name: "namespaces from all cross-namespace requires reference grant",
+			policy: egv1a1.PolicyTargetReferences{
+				TargetSelectors: []egv1a1.TargetSelector{
+					{
+						Kind: "Gateway",
+						Namespaces: &egv1a1.TargetSelectorNamespaces{
+							From: egv1a1.TargetNamespaceFromAll,
+						},
+						MatchLabels: map[string]string{
+							"pick": "me",
+						},
+					},
+				},
+			},
+			targets: []*unstructured.Unstructured{
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "same-ns",
+							"namespace": "default",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]any{
+						"apiVersion": "gateway.networking.k8s.io/v1",
+						"kind":       "Gateway",
+						"metadata": map[string]any{
+							"name":      "other-ns",
+							"namespace": "other",
+							"labels": map[string]any{
+								"pick": "me",
+							},
+						},
+					},
+				},
+			},
+			results: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "same-ns",
+					Namespace: "default",
+				},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			results := getPolicyTargetRefs(tc.policy, tc.targets, "default")
+			namespaceMap := map[string]*corev1.Namespace{}
+			for _, ns := range tc.namespaces {
+				namespaceMap[ns.Name] = ns
+			}
+
+			results := resolvePolicyTargets(
+				tc.policy,
+				tc.targets,
+				tc.grants,
+				egv1a1.GroupName,
+				egv1a1.KindBackendTrafficPolicy,
+				"default",
+				func(name string) *corev1.Namespace {
+					return namespaceMap[name]
+				},
+			)
 			require.ElementsMatch(t, results, tc.results)
+		})
+	}
+}
+
+func TestResolvePolicyTargetsFromReferences(t *testing.T) {
+	testCases := []struct {
+		name            string
+		targetRefs      egv1a1.PolicyTargetReferences
+		policyNamespace string
+		expected        []policyTargetReferenceWithSectionName
+	}{
+		{
+			name: "target ref",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+						Group: "gateway.networking.k8s.io",
+						Kind:  "Gateway",
+						Name:  "eg",
+					},
+					SectionName: SectionNamePtr("http"),
+				},
+			},
+			policyNamespace: "default",
+			expected: []policyTargetReferenceWithSectionName{
+				{
+					Group:       "gateway.networking.k8s.io",
+					Kind:        "Gateway",
+					Name:        "eg",
+					Namespace:   "default",
+					SectionName: SectionNamePtr("http"),
+				},
+			},
+		},
+		{
+			name: "target refs",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "first",
+						},
+					},
+					{
+						LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+							Name:  "second",
+						},
+					},
+				},
+			},
+			policyNamespace: "default",
+			expected: []policyTargetReferenceWithSectionName{
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "first",
+					Namespace: "default",
+				},
+				{
+					Group:     "gateway.networking.k8s.io",
+					Kind:      "Gateway",
+					Name:      "second",
+					Namespace: "default",
+				},
+			},
+		},
+		{
+			name: "empty target ref is ignored",
+			targetRefs: egv1a1.PolicyTargetReferences{
+				TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+					{},
+				},
+			},
+			policyNamespace: "default",
+			expected:        []policyTargetReferenceWithSectionName{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := resolvePolicyTargetsFromReferences(tc.targetRefs, tc.policyNamespace)
+			require.Equal(t, tc.expected, actual)
 		})
 	}
 }

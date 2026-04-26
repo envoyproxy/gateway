@@ -1,0 +1,120 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: gateway-ns
+    name: test-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              team: blue
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: route-ns
+    name: test-route
+    labels:
+      team: blue
+  spec:
+    parentRefs:
+    - name: test-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: backend
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: policy-ns
+    name: cross-ns-selector-policy
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            team: blue
+      matchLabels:
+        team: blue
+    cors:
+      allowOrigins:
+      - https://example.com
+      allowMethods:
+      - GET
+      allowHeaders:
+      - x-example
+      exposeHeaders:
+      - x-exposed
+      maxAge: 1000s
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: route-ns
+    labels:
+      team: blue
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: gateway-ns
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
+  metadata:
+    namespace: route-ns
+    name: allow-selector-sp
+  spec:
+    from:
+    - group: gateway.envoyproxy.io
+      kind: SecurityPolicy
+      namespace: policy-ns
+    to:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: test-route
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: route-ns
+    name: backend
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-backend
+    namespace: route-ns
+    labels:
+      kubernetes.io/service-name: backend
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.4.4
+    conditions:
+      ready: true
