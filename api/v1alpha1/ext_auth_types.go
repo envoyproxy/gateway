@@ -171,6 +171,7 @@ type GRPCExtAuthService struct {
 // +kubebuilder:validation:XValidation:message="backendRef or backendRefs needs to be set",rule="has(self.backendRef) || self.backendRefs.size() > 0"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
+// +kubebuilder:validation:XValidation:message="only one of path or pathOverride can be specified",rule="!(has(self.path) && has(self.pathOverride))"
 type HTTPExtAuthService struct {
 	// Only Service kind is supported for now.
 	BackendCluster `json:",inline"`
@@ -183,8 +184,18 @@ type HTTPExtAuthService struct {
 	// For example, if the original request path is "/hello", and the path specified here is "/auth",
 	// then the path of the authorization request will be "/auth/hello". If the path is not specified,
 	// the path of the authorization request will be "/hello".
+	// Only one of Path or PathOverride can be set.
 	// +optional
 	Path *string `json:"path,omitempty"`
+
+	// PathOverride replaces the original request path in the authorization request.
+	// If set, the path will be overridden to this value during authorization.
+	// For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+	// then the path of the authorization request will be "/auth".
+	// Only one of Path or PathOverride can be set.
+	//
+	// +optional
+	PathOverride *string `json:"pathOverride,omitempty"`
 
 	// HeadersToBackend are the authorization response headers that will be added
 	// to the original client request before sending it to the backend server.
