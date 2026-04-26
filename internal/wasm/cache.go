@@ -309,6 +309,7 @@ func (c *localFileCache) getOrFetch(key *cacheKey, opts *GetOptions) (*cacheEntr
 	}
 
 	wasmRemoteFetchTotal.WithSuccess().Increment()
+	c.logger.Sugar().Debug("fetched Wasm binary successfully", "url", key.downloadURL, "checksum", key.checksum, "size", len(b))
 
 	return c.addEntry(key, b, isPrivate)
 }
