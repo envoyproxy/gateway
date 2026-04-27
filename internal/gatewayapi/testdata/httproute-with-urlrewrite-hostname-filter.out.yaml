@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 5
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -222,6 +222,62 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
         sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-5
+    namespace: default
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - filters:
+        - extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: not-found-filter
+          type: ExtensionRef
+        name: service-1
+        port: 8080
+      filters:
+      - type: URLRewrite
+        urlRewrite:
+          path:
+            replacePrefixMatch: /rewrite
+            type: ReplacePrefixMatch
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: not-found-filter
+        type: ExtensionRef
+      matches:
+      - path:
+          value: /not-found-filter
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: |-
+          Unable to translate HTTPRouteFilter: default/not-found-filter.
+          Failed to process route rule 0 backendRef 0: Unable to translate HTTPRouteFilter: default/not-found-filter.
+        reason: InvalidBackendFilters,UnsupportedValue
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -352,6 +408,23 @@ xdsIR:
         urlRewrite:
           host:
             header: my-host
+          path:
+            fullReplace: null
+            prefixMatchReplace: /rewrite
+      - directResponse:
+          statusCode: 500
+        hostname: gateway.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-5
+          namespace: default
+        name: httproute/default/httproute-5/rule/0/match/0/gateway_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /not-found-filter
+        urlRewrite:
           path:
             fullReplace: null
             prefixMatchReplace: /rewrite

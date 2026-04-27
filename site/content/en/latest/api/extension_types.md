@@ -600,6 +600,97 @@ _Appears in:_
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
 
 
+#### BandwidthLimitRequestConfig
+
+
+
+BandwidthLimitRequestConfig defines the bandwidth limit configuration for the request direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+
+
+#### BandwidthLimitResponseConfig
+
+
+
+BandwidthLimitResponseConfig defines the bandwidth limit configuration for the response direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers configures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+
+
+#### BandwidthLimitResponseTrailers
+
+
+
+BandwidthLimitResponseTrailers defines the trailer headers appended to responses.
+
+_Appears in:_
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name.<br />If not set, no prefix is added and the trailers are named as-is.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms",<br />while leaving it unset produces "bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
+
+
+#### BandwidthLimitSpec
+
+
+
+BandwidthLimitSpec defines the desired state of BandwidthLimit.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures bandwidth limits for traffic sent to the backend. |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures bandwidth limits for traffic sent from the backend. |
+
+
+#### BandwidthLimitUnit
+
+_Underlying type:_ _string_
+
+BandwidthLimitUnit specifies the intervals for setting bandwidth limits.
+Valid BandwidthLimitUnit values are "Second", "Minute", "Hour".
+
+_Appears in:_
+- [BandwidthLimitValue](#bandwidthlimitvalue)
+
+| Value | Description |
+| ----- | ----------- |
+| `Second` | BandwidthLimitUnitSecond specifies the bandwidth limit interval to be 1 second.<br /> | 
+| `Minute` | BandwidthLimitUnitMinute specifies the bandwidth limit interval to be 1 minute.<br /> | 
+| `Hour` | BandwidthLimitUnitHour specifies the bandwidth limit interval to be 1 hour.<br /> | 
+
+
+#### BandwidthLimitValue
+
+
+
+BandwidthLimitValue defines the bandwidth limit value and its time unit.
+
+_Appears in:_
+- [BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Value specifies the bandwidth limit. |
+| `unit` | _[BandwidthLimitUnit](#bandwidthlimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
+
+
 #### BasicAuth
 
 
@@ -2865,7 +2956,8 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
-| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello". |
+| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello".<br />Only one of Path or PathOverride can be set. |
+| `pathOverride` | _string_ |  false  |  | PathOverride replaces the original request path in the authorization request.<br />If set, the path will be overridden to this value during authorization.<br />For example, if the original request path is "/hello", and PathOverride is set to "/auth",<br />then the path of the authorization request will be "/auth".<br />Only one of Path or PathOverride can be set. |
 | `headersToBackend` | _string array_ |  false  |  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
