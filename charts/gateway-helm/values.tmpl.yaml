@@ -1,6 +1,6 @@
 # Global settings
 global:
-  # If set, these take highest precedence and change both envoyGateway and ratelimit's container registry and pull secrets.
+  # If set, these take highest precedence and change envoyGateway, envoyProxy, and ratelimit's container registry and pull secrets.
   # -- Global override for image registry
   imageRegistry: ""
   # -- Global override for image pull secrets
