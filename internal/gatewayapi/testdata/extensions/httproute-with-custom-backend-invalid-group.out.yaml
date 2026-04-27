@@ -76,7 +76,7 @@ httpRoutes:
       - lastTransitionTime: null
         message: 'Unable to translate APIVersion for Extension Filter: kind: Foo,
           default/test.'
-        reason: BackendNotFound
+        reason: UnsupportedValue
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
