@@ -167,8 +167,11 @@ func parseCertsFromTLSSecretsData(secrets []*corev1.Secret) ([]*corev1.Secret, [
 				secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey))
 			continue
 		}
+		normalizedSecret := secret.DeepCopy()
+		normalizedSecret.Data[corev1.TLSCertKey] = validData
+		normalizedSecret.Data[corev1.TLSPrivateKeyKey] = pem.EncodeToMemory(keyBlock)
 
-		validSecrets = append(validSecrets, secret)
+		validSecrets = append(validSecrets, normalizedSecret)
 		certs = append(certs, cert)
 	}
 
