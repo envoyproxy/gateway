@@ -92,7 +92,7 @@ helm uninstall eg -n envoy-gateway-system
 |-----|------|---------|-------------|
 | certgen | object | `{"job":{"affinity":{},"annotations":{},"args":[],"nodeSelector":{},"pod":{"annotations":{},"labels":{},"securityContext":{"fsGroup":65532,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}}},"resources":{},"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]},"privileged":false,"readOnlyRootFilesystem":true,"runAsGroup":65532,"runAsNonRoot":true,"runAsUser":65532,"seccompProfile":{"type":"RuntimeDefault"}},"tolerations":[],"ttlSecondsAfterFinished":30},"rbac":{"annotations":{},"labels":{}}}` | Certgen is used to generate the certificates required by EnvoyGateway. If you want to construct a custom certificate, you can generate a custom certificate through Cert-Manager before installing EnvoyGateway. Certgen will not overwrite the custom certificate. Please do not manually modify `values.yaml` to disable certgen, it may cause EnvoyGateway OIDC,OAuth2,etc. to not work as expected. |
 | commonLabels | object | `{}` | Labels to apply to all resources |
-| config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
+| config.envoyGateway | object | `{"extensionApis":{},"gateway":{"controllerName":"gateway.envoyproxy.io/gatewayclass-controller"},"logging":{"level":{"default":"info"}},"provider":{"kubernetes":{},"type":"Kubernetes"}}` | EnvoyGateway configuration. Visit https://gateway.envoyproxy.io/docs/api/extension_types/#envoygateway to view all options. |
 | crds.enabled | bool | `true` | Install Envoy Gateway CRDs, Gateway API CRDs, and Gateway API safe upgrade policy resources. Set to false when these resources are managed separately. |
 | createNamespace | bool | `false` |  |
 | deployment.annotations | object | `{}` |  |
@@ -101,6 +101,16 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.image.tag | string | `""` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `""` |  |
 | deployment.envoyGateway.imagePullSecrets | list | `[]` |  |
+| deployment.envoyGateway.livenessProbe.httpGet.path | string | `"/healthz"` |  |
+| deployment.envoyGateway.livenessProbe.httpGet.port | int | `8081` |  |
+| deployment.envoyGateway.livenessProbe.periodSeconds | int | `20` |  |
+| deployment.envoyGateway.livenessProbe.successThreshold | int | `1` |  |
+| deployment.envoyGateway.livenessProbe.timeoutSeconds | int | `1` |  |
+| deployment.envoyGateway.readinessProbe.httpGet.path | string | `"/readyz"` |  |
+| deployment.envoyGateway.readinessProbe.httpGet.port | int | `8081` |  |
+| deployment.envoyGateway.readinessProbe.periodSeconds | int | `10` |  |
+| deployment.envoyGateway.readinessProbe.successThreshold | int | `1` |  |
+| deployment.envoyGateway.readinessProbe.timeoutSeconds | int | `1` |  |
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
@@ -112,6 +122,12 @@ helm uninstall eg -n envoy-gateway-system
 | deployment.envoyGateway.securityContext.runAsNonRoot | bool | `true` |  |
 | deployment.envoyGateway.securityContext.runAsUser | int | `65532` |  |
 | deployment.envoyGateway.securityContext.seccompProfile.type | string | `"RuntimeDefault"` |  |
+| deployment.envoyGateway.startupProbe.failureThreshold | int | `30` |  |
+| deployment.envoyGateway.startupProbe.httpGet.path | string | `"/healthz"` |  |
+| deployment.envoyGateway.startupProbe.httpGet.port | int | `8081` |  |
+| deployment.envoyGateway.startupProbe.periodSeconds | int | `1` |  |
+| deployment.envoyGateway.startupProbe.successThreshold | int | `1` |  |
+| deployment.envoyGateway.startupProbe.timeoutSeconds | int | `1` |  |
 | deployment.envoyGateway.strategy | object | `{}` | Volume source for the Wasm module cache mounted at /var/lib/eg/wasm. Defaults to an emptyDir when left empty. Example: persist the Wasm module cache across controller restarts by backing it with a PersistentVolumeClaim:   wasmCacheVolume:     persistentVolumeClaim:       claimName: envoy-gateway-wasm-cache |
 | deployment.envoyGateway.wasmCacheVolume | object | `{}` |  |
 | deployment.pod.affinity | object | `{}` |  |
