@@ -32,7 +32,7 @@ func PublishRunnerEventMetric(runnerName string, isDelete bool) {
 	if isDelete {
 		eventType = "delete"
 	}
-	runnerEventTotal.With(
+	watchableEventTotal.With(
 		runnerEventTypeLabel.Value(eventType),
 		runnerNameLabel.Value(runnerName),
 	).Add(1)

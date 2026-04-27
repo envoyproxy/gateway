@@ -34,8 +34,8 @@ var (
 		"Total number of published updates to watchable queue.",
 	)
 
-	runnerEventTotal = metrics.NewCounter(
-		"runner_event_total",
+	watchableEventTotal = metrics.NewCounter(
+		"watchable_event_total",
 		"Total number of runner events.",
 	)
 
