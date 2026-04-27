@@ -8,11 +8,14 @@
 package tests
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
@@ -35,8 +38,43 @@ var MultipleExtManagers = suite.ResilienceTest{
 			ControllerName: "gateway.envoyproxy.io/gatewayclass-controller",
 		}
 
-		// Apply the multi-manager ConfigMap and restart the control plane to pick it up.
-		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/config_multiple_ext_managers.yaml", true)
+		// Install the extension CRDs before the control plane restarts so its provider
+		// can establish watches on ext-a/ext-b resources; otherwise controller-runtime
+		// times out on cache sync and the pod enters CrashLoopBackOff.
+		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/extension_crds.yaml", true)
+
+		// Capture the original envoy-gateway-config data so we can restore it on cleanup.
+		// The conformance Applier's cleanup deletes resources it Updated, which would
+		// remove the helm-owned ConfigMap and wedge the cluster for subsequent test runs.
+		cmKey := client.ObjectKey{Name: "envoy-gateway-config", Namespace: namespace}
+		originalCM := &corev1.ConfigMap{}
+		require.NoError(t, suite.Client.Get(ctx, cmKey, originalCM), "Failed to read original envoy-gateway-config")
+		originalData := originalCM.Data
+		t.Cleanup(func() {
+			restoreCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			cm := &corev1.ConfigMap{}
+			if err := suite.Client.Get(restoreCtx, cmKey, cm); err != nil {
+				t.Logf("could not fetch envoy-gateway-config for restore: %v", err)
+				return
+			}
+			cm.Data = originalData
+			if err := suite.Client.Update(restoreCtx, cm); err != nil {
+				t.Logf("failed to restore envoy-gateway-config: %v", err)
+				return
+			}
+			if err := suite.Kube().ScaleDeploymentAndWait(restoreCtx, envoygateway, namespace, 0, time.Minute, false); err != nil {
+				t.Logf("failed to scale down envoy-gateway during restore: %v", err)
+			}
+			if err := suite.Kube().ScaleDeploymentAndWait(restoreCtx, envoygateway, namespace, 1, time.Minute, false); err != nil {
+				t.Logf("failed to scale up envoy-gateway during restore: %v", err)
+			}
+		})
+
+		// Apply the multi-manager ConfigMap (cleanup=false so the Applier does not Delete
+		// the pre-existing helm-owned resource; the restore Cleanup above handles teardown)
+		// and restart the control plane to pick it up.
+		ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/config_multiple_ext_managers.yaml", false)
 		err := suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 0, time.Minute, false)
 		require.NoError(t, err, "Failed to scale down envoy-gateway")
 		err = suite.Kube().ScaleDeploymentAndWait(ctx, envoygateway, namespace, 1, time.Minute, false)
@@ -48,7 +86,7 @@ var MultipleExtManagers = suite.ResilienceTest{
 		localTimeout.RequiredConsecutiveSuccesses = 2
 		localTimeout.MaxTimeToConsistency = time.Minute
 
-		t.Run("chaining applies both VirtualHost mutations in order", func(t *testing.T) {
+		t.Run("Chaining applies both VirtualHost mutations in order", func(t *testing.T) {
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "chaining-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
@@ -81,12 +119,11 @@ var MultipleExtManagers = suite.ResilienceTest{
 			})
 		})
 
-		t.Run("resource isolation: only owning extension receives resources", func(t *testing.T) {
+		t.Run("Resource isolation: only owning extension receives resources", func(t *testing.T) {
 			ns := "gateway-resilience"
 			routeNN := types.NamespacedName{Name: "isolation-route", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "all-namespaces", Namespace: ns}
 
-			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/extension_crds.yaml", true)
 			ap.MustApplyWithCleanup(t, suite.Client, suite.TimeoutConfig, "testdata/route_for_resource_isolation.yaml", true)
 			gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, routeNN)
 

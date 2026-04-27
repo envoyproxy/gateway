@@ -152,7 +152,13 @@ func (s *Server) PostVirtualHostModify(_ context.Context, req *pb.PostVirtualHos
 
 	s.log.Info("PostVirtualHostModify sending response")
 	if len(req.VirtualHost.Domains) > 0 {
-		req.VirtualHost.Domains = append(req.VirtualHost.Domains, fmt.Sprintf("%s.%s", req.VirtualHost.Domains[0], s.suffix))
+		lastDomain := len(req.VirtualHost.Domains) - 1
+		newDomain := fmt.Sprintf("%s.%s", req.VirtualHost.Domains[lastDomain], s.suffix)
+		s.log.Info("PostVirtualHostModify appending suffix to last domain",
+			slog.String("originalDomain", req.VirtualHost.Domains[lastDomain]),
+			slog.String("newDomain", newDomain))
+
+		req.VirtualHost.Domains = append(req.VirtualHost.Domains, newDomain)
 	}
 	return &pb.PostVirtualHostModifyResponse{
 		VirtualHost: req.VirtualHost,

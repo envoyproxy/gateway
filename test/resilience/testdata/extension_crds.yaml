@@ -47,3 +47,32 @@ spec:
               properties:
                 value:
                   type: string
+---
+# Grant envoy-gateway permission to list/watch the extension CRDs it declares
+# under extensionManagers[].resources. Without this, controller-runtime's
+# informers fail with "forbidden: cannot list resource ..." and the provider
+# never finishes cache sync.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: envoy-gateway-resilience-ext-resources
+rules:
+  - apiGroups: ["ext-a.example.io"]
+    resources: ["foofilters"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ext-b.example.io"]
+    resources: ["barfilters"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: envoy-gateway-resilience-ext-resources
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: envoy-gateway-resilience-ext-resources
+subjects:
+  - kind: ServiceAccount
+    name: envoy-gateway
+    namespace: envoy-gateway-system
