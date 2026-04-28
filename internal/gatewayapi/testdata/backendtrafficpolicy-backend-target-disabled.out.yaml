@@ -12,7 +12,20 @@ backendTrafficPolicies:
       kind: Service
       name: service-1
   status:
-    ancestors: null
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+      conditions:
+      - lastTransitionTime: null
+        message: Backend targeting in BackendTrafficPolicy is disabled; set enableBackendTargetsInBackendTrafficPolicy
+          in the EnvoyGateway configuration
+        reason: Disabled
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
