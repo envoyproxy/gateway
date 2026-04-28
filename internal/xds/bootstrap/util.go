@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -24,7 +23,7 @@ func ApplyBootstrapConfig(boostrapConfig *egv1a1.ProxyBootstrap, defaultBootstra
 	bootstrapType := boostrapConfig.Type
 	if bootstrapType == nil {
 		// The documentation defines that a nil bootstrapType defaults to the "Replace" operation
-		bootstrapType = ptr.To(egv1a1.BootstrapTypeReplace)
+		bootstrapType = new(egv1a1.BootstrapTypeReplace)
 	}
 	switch *bootstrapType {
 	case egv1a1.BootstrapTypeMerge:

@@ -292,29 +292,6 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 		}
 	)
 
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-
-		if pdb != nil {
-			deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
-				Namespace: pdb.Namespace,
-				Name:      pdb.Name,
-			}, &client.ListOptions{
-				Namespace:     pdb.Namespace,
-				LabelSelector: r.LabelSelector(),
-			})
-			if deleteErr != nil {
-				i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
-					"name", r.Name(), "namespace", r.Namespace())
-			}
-		}
-	}()
-
 	if pdb, err = r.PodDisruptionBudget(); err != nil {
 		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
@@ -325,6 +302,27 @@ func (i *Infra) createOrUpdatePodDisruptionBudget(ctx context.Context, r Resourc
 	if pdb == nil {
 		return i.deletePDB(ctx, r)
 	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		deleteErr := i.Client.DeleteAllExcept(ctx, &policyv1.PodDisruptionBudgetList{}, client.ObjectKey{
+			Namespace: pdb.Namespace,
+			Name:      pdb.Name,
+		}, &client.ListOptions{
+			Namespace:     pdb.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except PodDisruptionBudget",
+				"name", r.Name(), "namespace", r.Namespace())
+		}
+	}()
 
 	return i.Client.ServerSideApply(ctx, pdb)
 }
@@ -343,30 +341,8 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 		}
 	)
 
-	defer func() {
-		if err == nil {
-			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
-			resourceApplyTotal.WithSuccess(labels...).Increment()
-		} else {
-			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
-		}
-
-		if hpa != nil {
-			deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
-				Namespace: hpa.Namespace,
-				Name:      hpa.Name,
-			}, &client.ListOptions{
-				Namespace:     hpa.Namespace,
-				LabelSelector: r.LabelSelector(),
-			})
-			if deleteErr != nil {
-				i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
-					"name", r.Name(), "namespace", r.Namespace())
-			}
-		}
-	}()
-
 	if hpa, err = r.HorizontalPodAutoscaler(); err != nil {
+		resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		return err
 	}
 
@@ -375,6 +351,27 @@ func (i *Infra) createOrUpdateHPA(ctx context.Context, r ResourceRender) (err er
 	if hpa == nil {
 		return i.deleteHPA(ctx, r)
 	}
+
+	defer func() {
+		if err == nil {
+			resourceApplyDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
+			resourceApplyTotal.WithSuccess(labels...).Increment()
+		} else {
+			resourceApplyTotal.WithFailure(metrics.ReasonError, labels...).Increment()
+		}
+
+		deleteErr := i.Client.DeleteAllExcept(ctx, &autoscalingv2.HorizontalPodAutoscalerList{}, client.ObjectKey{
+			Namespace: hpa.Namespace,
+			Name:      hpa.Name,
+		}, &client.ListOptions{
+			Namespace:     hpa.Namespace,
+			LabelSelector: r.LabelSelector(),
+		})
+		if deleteErr != nil {
+			i.logger.Error(deleteErr, "failed to delete all except HorizontalPodAutoscaler",
+				"name", r.Name(), "namespace", r.Namespace())
+		}
+	}()
 
 	return i.Client.ServerSideApply(ctx, hpa)
 }
@@ -458,8 +455,9 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) (err
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
 func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns   = r.Name(), r.Namespace()
-		deployment = &appsv1.Deployment{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		deployment         = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -473,11 +471,22 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 		}
 	)
 
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
+	deployList := &appsv1.DeploymentList{}
+	if listErr := i.Client.List(ctx, deployList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); listErr == nil && len(deployList.Items) == 0 {
+		recordDeleteMetric = false
+	}
+
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -493,8 +502,9 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) (err err
 // deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
 func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns  = r.Name(), r.Namespace()
-		daemonSet = &appsv1.DaemonSet{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		daemonSet          = &appsv1.DaemonSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -508,11 +518,22 @@ func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) (err erro
 		}
 	)
 
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
+	dsList := &appsv1.DaemonSetList{}
+	if listErr := i.Client.List(ctx, dsList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); listErr == nil && len(dsList.Items) == 0 {
+		recordDeleteMetric = false
+	}
+
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -598,8 +619,9 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) (err error)
 // deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
 func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		hpa      = &autoscalingv2.HorizontalPodAutoscaler{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		hpa                = &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -613,11 +635,22 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
+	hpaList := &autoscalingv2.HorizontalPodAutoscalerList{}
+	if listErr := i.Client.List(ctx, hpaList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); listErr == nil && len(hpaList.Items) == 0 {
+		recordDeleteMetric = false
+	}
+
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()
@@ -633,8 +666,9 @@ func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) (err error) {
 // deletePDB deletes the PodDistribution budget associated to its renderer, if it exists.
 func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 	var (
-		name, ns = r.Name(), r.Namespace()
-		pdb      = &policyv1.PodDisruptionBudget{
+		name, ns           = r.Name(), r.Namespace()
+		recordDeleteMetric = true
+		pdb                = &policyv1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: ns,
 				Name:      name,
@@ -648,11 +682,22 @@ func (i *Infra) deletePDB(ctx context.Context, r ResourceRender) (err error) {
 		}
 	)
 
+	// DeleteAllOf always runs because this cached read may miss live objects and
+	// must not decide whether deletion is skipped. It only suppresses success
+	// metrics for likely no-op reconciles.
+	pdbList := &policyv1.PodDisruptionBudgetList{}
+	if listErr := i.Client.List(ctx, pdbList, &client.ListOptions{
+		Namespace:     ns,
+		LabelSelector: r.LabelSelector(),
+	}); listErr == nil && len(pdbList.Items) == 0 {
+		recordDeleteMetric = false
+	}
+
 	defer func() {
-		if err == nil {
+		if err == nil && recordDeleteMetric {
 			resourceDeleteDurationSeconds.With(labels...).Record(time.Since(startTime).Seconds())
 			resourceDeleteTotal.WithSuccess(labels...).Increment()
-		} else {
+		} else if err != nil {
 			resourceDeleteTotal.WithFailure(metrics.ReasonError, labels...).Increment()
 		}
 	}()

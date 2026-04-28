@@ -167,7 +167,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 			Kind:       "ServiceAccount",
 			APIVersion: "v1",
 		},
-		AutomountServiceAccountToken: ptr.To(false),
+		AutomountServiceAccountToken: new(false),
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:       r.Namespace(),
 			Name:            r.serviceAccountName(),
@@ -275,10 +275,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		switch *ipFamily {
 		case egv1a1.IPv6:
 			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv6Protocol}
-			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicySingleStack)
+			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicySingleStack)
 		case egv1a1.DualStack:
 			serviceSpec.IPFamilies = []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol}
-			serviceSpec.IPFamilyPolicy = ptr.To(corev1.IPFamilyPolicyRequireDualStack)
+			serviceSpec.IPFamilyPolicy = new(corev1.IPFamilyPolicyRequireDualStack)
 		}
 	}
 
@@ -415,7 +415,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Annotations: podAnnotations,
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken:  ptr.To(false),
+					AutomountServiceAccountToken:  new(false),
 					Containers:                    containers,
 					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            r.serviceAccountName(),
@@ -433,8 +433,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					PriorityClassName:             ptr.Deref(deploymentConfig.Pod.PriorityClassName, ""),
 				},
 			},
-			RevisionHistoryLimit:    ptr.To[int32](10),
-			ProgressDeadlineSeconds: ptr.To[int32](600),
+			RevisionHistoryLimit:    new(int32(10)),
+			ProgressDeadlineSeconds: new(int32(600)),
 		},
 	}
 
@@ -620,7 +620,7 @@ func expectedTerminationGracePeriodSeconds(cfg *egv1a1.ShutdownConfig) *int64 {
 		}
 		s = int(d.Seconds() + 300) // 5 minutes longer than drain timeout
 	}
-	return ptr.To(int64(s))
+	return new(int64(s))
 }
 
 func (r *ResourceRender) getPodSpec(
@@ -629,7 +629,7 @@ func (r *ResourceRender) getPodSpec(
 	proxyConfig *egv1a1.EnvoyProxy,
 ) corev1.PodSpec {
 	return corev1.PodSpec{
-		AutomountServiceAccountToken:  ptr.To(false),
+		AutomountServiceAccountToken:  new(false),
 		Containers:                    containers,
 		InitContainers:                initContainers,
 		ServiceAccountName:            r.Name(),

@@ -9,10 +9,10 @@ export interface TestConfiguration {
 }
 
 export interface LatencyMetrics {
-  min: number; // microseconds
-  mean: number; // microseconds
-  max: number; // microseconds
-  pstdev: number; // microseconds
+  min: number; // milliseconds
+  mean: number; // milliseconds
+  max: number; // milliseconds
+  pstdev: number; // milliseconds
   percentiles: {
     p50: number;
     p75: number;
@@ -85,10 +85,10 @@ export const testResultTemplate: TestResult = {
 
   // FILL: Extract from latency section of benchmark output
   latency: {
-    min: 0,    // minimum latency in microseconds
-    mean: 0,   // mean latency in microseconds
-    max: 0,    // maximum latency in microseconds
-    pstdev: 0, // standard deviation in microseconds
+    min: 0,    // minimum latency in milliseconds
+    mean: 0,   // mean latency in milliseconds
+    max: 0,    // maximum latency in milliseconds
+    pstdev: 0, // standard deviation in milliseconds
     percentiles: {
       p50: 0,   // 50th percentile (median)
       p75: 0,   // 75th percentile
@@ -139,27 +139,27 @@ export function parseLatencyData(
   p999: string           // "0s 058ms 220us"
 ): LatencyMetrics {
 
-  // Helper to convert time string to microseconds
-  const parseTimeToMicroseconds = (timeStr: string): number => {
+  // Helper to convert time string to milliseconds
+  const parseTimeToMilliseconds = (timeStr: string): number => {
     const match = timeStr.match(/(\d+)s (\d+)ms (\d+)us/);
     if (!match) return 0;
     const [, seconds, milliseconds, microseconds] = match;
-    return parseInt(seconds) * 1000000 + parseInt(milliseconds) * 1000 + parseInt(microseconds);
+    return parseInt(seconds) * 1000 + parseInt(milliseconds) + parseInt(microseconds) / 1000;
   };
 
   return {
-    min: parseTimeToMicroseconds(min),
-    mean: parseTimeToMicroseconds(mean),
-    max: parseTimeToMicroseconds(max),
-    pstdev: parseTimeToMicroseconds(pstdev),
+    min: parseTimeToMilliseconds(min),
+    mean: parseTimeToMilliseconds(mean),
+    max: parseTimeToMilliseconds(max),
+    pstdev: parseTimeToMilliseconds(pstdev),
     percentiles: {
-      p50: parseTimeToMicroseconds(p50),
-      p75: parseTimeToMicroseconds(p75),
-      p80: parseTimeToMicroseconds(p80),
-      p90: parseTimeToMicroseconds(p90),
-      p95: parseTimeToMicroseconds(p95),
-      p99: parseTimeToMicroseconds(p99),
-      p999: parseTimeToMicroseconds(p999)
+      p50: parseTimeToMilliseconds(p50),
+      p75: parseTimeToMilliseconds(p75),
+      p80: parseTimeToMilliseconds(p80),
+      p90: parseTimeToMilliseconds(p90),
+      p95: parseTimeToMilliseconds(p95),
+      p99: parseTimeToMilliseconds(p99),
+      p999: parseTimeToMilliseconds(p999)
     }
   };
 }
@@ -266,12 +266,12 @@ export function generateLatencyPercentileComparison(results: TestResult[]) {
   return results.map(result => ({
     routes: result.routes,
     phase: result.phase,
-    p50: result.latency.percentiles.p50 / 1000, // convert to ms
-    p75: result.latency.percentiles.p75 / 1000,
-    p90: result.latency.percentiles.p90 / 1000,
-    p95: result.latency.percentiles.p95 / 1000,
-    p99: result.latency.percentiles.p99 / 1000,
-    p999: result.latency.percentiles.p999 / 1000
+    p50: result.latency.percentiles.p50,
+    p75: result.latency.percentiles.p75,
+    p90: result.latency.percentiles.p90,
+    p95: result.latency.percentiles.p95,
+    p99: result.latency.percentiles.p99,
+    p999: result.latency.percentiles.p999
   }));
 }
 
@@ -292,8 +292,8 @@ export function generatePerformanceMatrix(results: TestResult[]) {
     routes: result.routes,
     phase: result.phase,
     throughput: result.throughput,
-    meanLatency: result.latency.mean / 1000, // convert to ms
-    p95Latency: result.latency.percentiles.p95 / 1000, // convert to ms
+    meanLatency: result.latency.mean,
+    p95Latency: result.latency.percentiles.p95,
     totalMemory: result.resources.envoyGateway.memory.mean + result.resources.envoyProxy.memory.mean,
     totalCpu: result.resources.envoyGateway.cpu.mean + result.resources.envoyProxy.cpu.mean
   }));

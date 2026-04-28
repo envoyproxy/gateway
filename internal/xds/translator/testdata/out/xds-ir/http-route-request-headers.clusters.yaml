@@ -10,7 +10,6 @@
       resourceApiVersion: V3
     serviceName: request-header-route-dest
   ignoreHealthOnHostRemoval: true
-  lbPolicy: LEAST_REQUEST
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:

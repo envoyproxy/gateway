@@ -14,6 +14,7 @@ import (
 	dmfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/dynamic_modules/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -91,18 +92,15 @@ func dynamicModuleFilterName(dm *ir.DynamicModule) string {
 }
 
 func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter, error) {
+	moduleSource, err := dynamicModuleSource(dm)
+	if err != nil {
+		return nil, err
+	}
+
 	dmConfig := &dmconfigv3.DynamicModuleConfig{
 		DoNotClose:   dm.DoNotClose,
 		LoadGlobally: dm.LoadGlobally,
-		Module: &corev3.AsyncDataSource{
-			Specifier: &corev3.AsyncDataSource_Local{
-				Local: &corev3.DataSource{
-					Specifier: &corev3.DataSource_Filename{
-						Filename: dm.Path,
-					},
-				},
-			},
-		},
+		Module:       moduleSource,
 	}
 
 	filterConfig := &dmfilterv3.DynamicModuleFilter{
@@ -122,6 +120,40 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 	return filterConfig, nil
 }
 
+func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
+	if dm.Remote != nil {
+		uc, err := url2Cluster(dm.Remote.URL)
+		if err != nil {
+			return nil, err
+		}
+
+		return &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Remote{
+				Remote: &corev3.RemoteDataSource{
+					HttpUri: &corev3.HttpUri{
+						Uri: dm.Remote.URL,
+						HttpUpstreamType: &corev3.HttpUri_Cluster{
+							Cluster: uc.name,
+						},
+						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
+					},
+					Sha256: dm.Remote.SHA256,
+				},
+			},
+		}, nil
+	}
+
+	return &corev3.AsyncDataSource{
+		Specifier: &corev3.AsyncDataSource_Local{
+			Local: &corev3.DataSource{
+				Specifier: &corev3.DataSource_Filename{
+					Filename: dm.Path,
+				},
+			},
+		},
+	}, nil
+}
+
 // routeContainsDynamicModule returns true if DynamicModules exist for the provided route.
 func routeContainsDynamicModule(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil {
@@ -130,9 +162,30 @@ func routeContainsDynamicModule(irRoute *ir.HTTPRoute) bool {
 	return irRoute.EnvoyExtensions != nil && len(irRoute.EnvoyExtensions.DynamicModules) > 0
 }
 
-// patchResources is a no-op for dynamic modules: they are loaded from the local filesystem.
-func (*dynamicModule) patchResources(_ *types.ResourceVersionTable, _ []*ir.HTTPRoute) error {
-	return nil
+// patchResources creates clusters for remote dynamic module sources.
+func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+	if tCtx == nil || tCtx.XdsResources == nil {
+		return errors.New("xds resource table is nil")
+	}
+
+	var errs error
+	for _, route := range routes {
+		if !routeContainsDynamicModule(route) {
+			continue
+		}
+
+		for _, dm := range route.EnvoyExtensions.DynamicModules {
+			if dm.Remote == nil {
+				continue
+			}
+
+			if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
+				errs = errors.Join(errs, err)
+			}
+		}
+	}
+
+	return errs
 }
 
 // patchRoute enables the corresponding dynamic module filter for the provided route.

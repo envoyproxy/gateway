@@ -1,0 +1,32 @@
+- clusterName: websocket-wss-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: websocket.example.com
+            portValue: 443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: websocket-wss-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: websocket-wss-route-dest/backend/0
+- clusterName: ordinary-tls-http-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: ordinary.example.com
+            portValue: 443
+      loadBalancingWeight: 1
+      metadata:
+        filterMetadata:
+          envoy.transport_socket_match:
+            name: ordinary-tls-http-route-dest/tls/0
+    loadBalancingWeight: 1
+    locality:
+      region: ordinary-tls-http-route-dest/backend/0

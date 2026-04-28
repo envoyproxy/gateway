@@ -1,3 +1,37 @@
+envoyPatchPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyPatchPolicy
+  metadata:
+    name: edit-conn-buffer-bytes
+    namespace: envoy-gateway
+  spec:
+    jsonPatches:
+    - name: envoy-gateway-gateway-1-http
+      operation:
+        op: replace
+        path: /per_connection_buffer_limit_bytes
+        value: "1024"
+      type: type.googleapis.com/envoy.config.listener.v3.Listener
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    type: JSONPatch
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: gateway-1
+      conditions:
+      - lastTransitionTime: null
+        message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:Gateway
+          TargetRef.Namespace:envoy-gateway TargetRef.Name:gateway-1 not found or
+          not accepted (MergeGateways=true).
+        reason: Invalid
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

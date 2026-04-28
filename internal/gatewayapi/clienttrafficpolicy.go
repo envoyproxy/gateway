@@ -48,6 +48,12 @@ func deprecatedFieldsUsedInClientTrafficPolicy(policy *egv1a1.ClientTrafficPolic
 	if policy.Spec.TargetRef != nil {
 		deprecatedFields["spec.targetRef"] = "spec.targetRefs"
 	}
+	// Optional is a non-pointer bool, so deprecated usage is only observable when it changes behavior.
+	if policy.Spec.TLS != nil &&
+		policy.Spec.TLS.ClientValidation != nil &&
+		policy.Spec.TLS.ClientValidation.Optional {
+		deprecatedFields["spec.tls.clientValidation.optional"] = "spec.tls.clientValidation.mode"
+	}
 	return deprecatedFields
 }
 
@@ -71,13 +77,15 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
 	// 2. Then loop again and translate the policies without a sectionName
 	// TODO: Import sort order to ensure policy with same section always appear
 	// before policy with no section so below loops can be flattened into 1.
-	for _, currPolicy := range clientTrafficPolicies {
+	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		// This loop only handles policies that target a specific section. When
 		// targeting a policy with a selector, it's not possible to specify a SectionName
@@ -87,7 +95,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -142,7 +150,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				policyMap[key].Insert(section)
 
 				// Translate for listener matching section name
-				var err error
+				var (
+					err                 error
+					http3WarningMessage string
+				)
 				for _, l := range gateway.listeners {
 					// Find IR
 					irKey := t.getIRKey(l.gateway.Gateway)
@@ -151,6 +162,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					if string(l.Name) == section {
 						err = validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, false)
 						if err == nil {
+							httpIR := gwXdsIR.GetHTTPListener(irListenerName(l))
+							if shouldDisableHTTP3ForClientValidation(policy, httpIR) {
+								http3WarningMessage = disabledHTTP3WarningMessage([]string{string(l.Name)})
+							}
 							err = t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources)
 						}
 						break
@@ -169,12 +184,18 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+				// Set Warning condition if HTTP/3 was disabled for the listener
+				if http3WarningMessage != "" {
+					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+						status.PolicyReasonUnsupportedHTTP3ClientValidation, http3WarningMessage, policy.Generation)
+				}
 			}
 		}
 	}
 
 	// Policy with no section set (targeting all sections)
-	for _, currPolicy := range clientTrafficPolicies {
+	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -182,7 +203,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -255,7 +276,10 @@ func (t *Translator) ProcessClientTrafficPolicies(
 				policyMap[key].Insert(AllSections)
 
 				// Translate sections that have not yet been targeted
-				var errs error
+				var (
+					errs                   error
+					http3DisabledListeners []string
+				)
 				for _, l := range gateway.listeners {
 					// Skip if section has already been targeted
 					if s != nil && s.Has(string(l.Name)) {
@@ -268,8 +292,13 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					gwXdsIR := xdsIR[irKey]
 					if err := validatePortOverlapForClientTrafficPolicy(l, gwXdsIR, true); err != nil {
 						errs = errors.Join(errs, err)
-					} else if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
-						errs = errors.Join(errs, err)
+					} else {
+						if shouldDisableHTTP3ForClientValidation(policy, gwXdsIR.GetHTTPListener(irListenerName(l))) {
+							http3DisabledListeners = append(http3DisabledListeners, string(l.Name))
+						}
+						if err := t.translateClientTrafficPolicyForListener(policy, l, xdsIR, infraIR, resources); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 
@@ -285,6 +314,12 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				// Set Accepted condition if it is unset
 				status.SetAcceptedForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation)
+
+				// Set Warning condition if HTTP/3 was disabled for the listener
+				if len(http3DisabledListeners) > 0 {
+					status.SetWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName,
+						status.PolicyReasonUnsupportedHTTP3ClientValidation, disabledHTTP3WarningMessage(http3DisabledListeners), policy.Generation)
+				}
 
 				// Check for deprecated fields and set warning if any are found
 				if deprecatedFields := deprecatedFieldsUsedInClientTrafficPolicy(policy); len(deprecatedFields) > 0 {
@@ -373,6 +408,40 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 		}
 	}
 	return nil
+}
+
+// shouldDisableHTTP3ForClientValidation checks if HTTP/3 should be disabled for a listener
+// because envoy does not support downstream client TLS validation over QUIC yet.
+// https://github.com/envoyproxy/envoy/blob/11299f21b37743680a715819ef7e16d12a4d8b8d/source/common/quic/quic_server_transport_socket_factory.cc#L27-L29
+func shouldDisableHTTP3ForClientValidation(policy *egv1a1.ClientTrafficPolicy, httpIR *ir.HTTPListener) bool {
+	if httpIR == nil || httpIR.TLS == nil {
+		return false
+	}
+	if policy.Spec.HTTP3 == nil {
+		return false
+	}
+	if policy.Spec.TLS == nil || policy.Spec.TLS.ClientValidation == nil {
+		return false
+	}
+	return true
+}
+
+func disabledHTTP3WarningMessage(listenerNames []string) string {
+	if len(listenerNames) == 0 {
+		return ""
+	}
+
+	target := fmt.Sprintf("listener %q", listenerNames[0])
+
+	if len(listenerNames) > 1 {
+		sort.Strings(listenerNames)
+		target = fmt.Sprintf("listeners %v", listenerNames)
+	}
+
+	return fmt.Sprintf(
+		"HTTP/3 was disabled for %s because Envoy does not support downstream client TLS validation over QUIC",
+		target,
+	)
 }
 
 func (t *Translator) translateClientTrafficPolicyForListener(
@@ -478,7 +547,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		}
 
 		// enable http3 if set and TLS is enabled
-		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil {
+		if httpIR.TLS != nil && policy.Spec.HTTP3 != nil && !shouldDisableHTTP3ForClientValidation(policy, httpIR) {
 			http3 := &ir.HTTP3Settings{}
 			httpIR.HTTP3 = http3
 			var proxyListenerIR *ir.ProxyListener
@@ -515,7 +584,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 			for _, route := range httpIR.Routes {
 				// Return a 500 direct response
 				route.DirectResponse = &ir.CustomResponse{
-					StatusCode: ptr.To(uint32(500)),
+					StatusCode: new(uint32(500)),
 				}
 				routesWithDirectResponse.Insert(route.Name)
 			}
@@ -579,7 +648,7 @@ func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid IdleTime value %s", *tcpKeepAlive.IdleTime)
 		}
-		irTCPKeepalive.IdleTime = ptr.To(uint32(d.Seconds()))
+		irTCPKeepalive.IdleTime = new(uint32(d.Seconds()))
 	}
 
 	if tcpKeepAlive.Interval != nil {
@@ -587,7 +656,7 @@ func buildKeepAlive(tcpKeepAlive *egv1a1.TCPKeepalive) (*ir.TCPKeepalive, error)
 		if err != nil {
 			return nil, fmt.Errorf("invalid Interval value %s", *tcpKeepAlive.Interval)
 		}
-		irTCPKeepalive.Interval = ptr.To(uint32(d.Seconds()))
+		irTCPKeepalive.Interval = new(uint32(d.Seconds()))
 	}
 
 	return irTCPKeepalive, nil
@@ -677,7 +746,7 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	if headerSettings.RequestID != nil {
 		httpIR.Headers.RequestID = (*ir.RequestIDAction)(headerSettings.RequestID)
 	} else if headerSettings.PreserveXRequestID != nil && *headerSettings.PreserveXRequestID {
-		httpIR.Headers.RequestID = ptr.To(ir.RequestIDActionPreserveOrGenerate)
+		httpIR.Headers.RequestID = new(ir.RequestIDActionPreserveOrGenerate)
 	}
 
 	if headerSettings.XForwardedClientCert != nil {
@@ -720,9 +789,14 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 	if http1Settings == nil {
 		return nil
 	}
+	ignoreUpgrade := make([]*ir.StringMatch, 0, len(http1Settings.IgnoredUpgradeTypes))
+	for _, match := range http1Settings.IgnoredUpgradeTypes {
+		ignoreUpgrade = append(ignoreUpgrade, irStringMatch("", match))
+	}
 	httpIR.HTTP1 = &ir.HTTP1Settings{
-		EnableTrailers:     ptr.Deref(http1Settings.EnableTrailers, false),
-		PreserveHeaderCase: ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		EnableTrailers:      ptr.Deref(http1Settings.EnableTrailers, false),
+		PreserveHeaderCase:  ptr.Deref(http1Settings.PreserveHeaderCase, false),
+		IgnoredUpgradeTypes: ignoreUpgrade,
 	}
 	if connection != nil {
 		if connection.ConnectionLimit != nil {
@@ -754,7 +828,7 @@ func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.
 						numMatchingRoutes++
 						// make the linter happy
 						theHost := route.Hostname
-						defaultHost = ptr.To(theHost)
+						defaultHost = new(theHost)
 					}
 					if numMatchingRoutes > 1 {
 						break
@@ -823,8 +897,8 @@ func (t *Translator) buildListenerTLSParameters(
 
 	// Make sure that the negotiated TLS protocol version is as expected if TLS is used,
 	// regardless of if TLS parameters were used in the ClientTrafficPolicy or not
-	irTLSConfig.MinVersion = ptr.To(ir.TLSv12)
-	irTLSConfig.MaxVersion = ptr.To(ir.TLSv13)
+	irTLSConfig.MinVersion = new(ir.TLSv12)
+	irTLSConfig.MaxVersion = new(ir.TLSv13)
 
 	// Return early if not set
 	if tlsParams == nil {
@@ -839,10 +913,10 @@ func (t *Translator) buildListenerTLSParameters(
 	}
 
 	if tlsParams.MinVersion != nil {
-		irTLSConfig.MinVersion = ptr.To(ir.TLSVersion(*tlsParams.MinVersion))
+		irTLSConfig.MinVersion = new(ir.TLSVersion(*tlsParams.MinVersion))
 	}
 	if tlsParams.MaxVersion != nil {
-		irTLSConfig.MaxVersion = ptr.To(ir.TLSVersion(*tlsParams.MaxVersion))
+		irTLSConfig.MaxVersion = new(ir.TLSVersion(*tlsParams.MaxVersion))
 	}
 	if len(tlsParams.Ciphers) > 0 {
 		if err := validateCipherSuites(tlsParams.Ciphers); err != nil {
@@ -881,23 +955,7 @@ func (t *Translator) buildListenerTLSParameters(
 		}
 
 		irTLSConfig.ClientValidationEnabled = true
-		switch mode {
-		case egv1a1.ClientValidationRequest:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationRequireAny:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = true
-		case egv1a1.ClientValidationVerifyIfGiven:
-			irTLSConfig.RequireClientCertificate = false
-			irTLSConfig.AcceptUntrusted = false
-		case egv1a1.ClientValidationRequireAndVerify:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		default:
-			irTLSConfig.RequireClientCertificate = true
-			irTLSConfig.AcceptUntrusted = false
-		}
+		convertClientValidationModeType(mode, irTLSConfig)
 
 		irCACert := &ir.TLSCACertificate{
 			Name: irTLSCACertName(policy.Namespace, policy.Name),
@@ -1052,7 +1110,7 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 		irConnectionLimit := &ir.ConnectionLimit{}
 
 		if connection.ConnectionLimit.Value != nil {
-			irConnectionLimit.Value = ptr.To(uint64(*connection.ConnectionLimit.Value))
+			irConnectionLimit.Value = new(uint64(*connection.ConnectionLimit.Value))
 		}
 
 		if connection.ConnectionLimit.CloseDelay != nil {
@@ -1095,11 +1153,11 @@ func buildConnection(connection *egv1a1.ClientConnection) (*ir.ClientConnection,
 			return nil, fmt.Errorf("BufferLimit value %s is out of range, must be between 0 and %d",
 				connection.BufferLimit.String(), math.MaxUint32)
 		}
-		irConnection.BufferLimitBytes = ptr.To(uint32(bufferLimit))
+		irConnection.BufferLimitBytes = new(uint32(bufferLimit))
 	}
 
 	if connection.MaxAcceptPerSocketEvent != nil {
-		irConnection.MaxAcceptPerSocketEvent = ptr.To(*connection.MaxAcceptPerSocketEvent)
+		irConnection.MaxAcceptPerSocketEvent = new(*connection.MaxAcceptPerSocketEvent)
 	}
 
 	return irConnection, nil
@@ -1282,4 +1340,16 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
+}
+
+// clientTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func clientTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.ClientTrafficPolicy) []*egv1a1.ClientTrafficPolicy {
+	copies := make([]*egv1a1.ClientTrafficPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

@@ -70,6 +70,12 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
+### ETag Handling
+
+When a response is compressed, Envoy strips strong `ETag` headers by default (weak `ETag`s, prefixed with `W/`, are preserved). This is because compression changes the response body, so the original entity tag no longer identifies the representation that reaches the client.
+
+See the upstream [Envoy compressor filter documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/compressor_filter) for full details of the ETag handling options (`disable_on_etag_header`, `weaken_etag_on_compress`).
+
 ### Configuring Minimum Content Length
 
 You can configure the minimum response size for compression using the `minContentLength` field. Responses smaller than this threshold will not be compressed. This can reduce CPU overhead for small responses.

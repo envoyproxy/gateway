@@ -517,35 +517,71 @@ func irRuleName(policyNamespace, policyName string, ruleIndex int) string {
 }
 
 // irTLSConfigs produces a defaulted IR TLSConfig
-func irTLSConfigs(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	if len(tlsSecrets) == 0 {
+func irTLSConfigs(config *ListenerTLSConfig) *ir.TLSConfig {
+	if len(config.secrets) == 0 && config.frontendTLSValidation == nil {
 		return nil
 	}
 
 	tlsListenerConfigs := &ir.TLSConfig{
-		Certificates: make([]ir.TLSCertificate, len(tlsSecrets)),
+		Certificates: make([]ir.TLSCertificate, len(config.secrets)),
 	}
-	for i, tlsSecret := range tlsSecrets {
-		cert := ir.TLSCertificate{
-			Name:        irTLSListenerConfigName(tlsSecret),
-			Certificate: tlsSecret.Data[corev1.TLSCertKey],
-			PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
-		}
-
-		ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
-		if ok && len(ocspStaple) > 0 {
-			cert.OCSPStaple = ocspStaple
-		}
+	for i, tlsSecret := range config.secrets {
+		cert := getTLSCertificateFromSecret(tlsSecret)
 		tlsListenerConfigs.Certificates[i] = cert
+	}
+
+	if config.frontendTLSValidation != nil && config.frontendTLSValidation.ValidateError == nil {
+		tlsListenerConfigs.CACertificate = config.frontendTLSValidation.TLSCACertificate
+		tlsListenerConfigs.ClientValidationEnabled = true
+		convertClientValidationModeType(config.frontendTLSValidation.Mode, tlsListenerConfigs)
+		// TODO: setTLSClientValidationContext when Gateway API support.
 	}
 
 	return tlsListenerConfigs
 }
 
+func convertClientValidationModeType(mode egv1a1.ClientValidationModeType, irTLSConfig *ir.TLSConfig) {
+	switch mode {
+	case egv1a1.ClientValidationRequest:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationRequireAny:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = true
+	case egv1a1.ClientValidationVerifyIfGiven:
+		irTLSConfig.RequireClientCertificate = false
+		irTLSConfig.AcceptUntrusted = false
+	case egv1a1.ClientValidationRequireAndVerify:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	default:
+		irTLSConfig.RequireClientCertificate = true
+		irTLSConfig.AcceptUntrusted = false
+	}
+}
+
+func isValidClientCertificateRef(tlsSecret *corev1.Secret) bool {
+	return tlsSecret.Data[corev1.TLSCertKey] != nil && tlsSecret.Data[corev1.TLSPrivateKeyKey] != nil
+}
+
+func getTLSCertificateFromSecret(tlsSecret *corev1.Secret) ir.TLSCertificate {
+	cert := ir.TLSCertificate{
+		Name:        irTLSListenerConfigName(tlsSecret),
+		Certificate: tlsSecret.Data[corev1.TLSCertKey],
+		PrivateKey:  tlsSecret.Data[corev1.TLSPrivateKeyKey],
+	}
+
+	ocspStaple, ok := tlsSecret.Data[egv1a1.TLSOCSPKey]
+	if ok && len(ocspStaple) > 0 {
+		cert.OCSPStaple = ocspStaple
+	}
+	return cert
+}
+
 // irTLSConfigsForTCPListener creates an IR TLSConfig with defaults appropriate
 // for TCP/TLS routes, e.g. disabling ALPN
-func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
-	tlsListenerConfigs := irTLSConfigs(tlsSecrets...)
+func irTLSConfigsForTCPListener(config *ListenerTLSConfig) *ir.TLSConfig {
+	tlsListenerConfigs := irTLSConfigs(config)
 
 	// Envoy Gateway disables ALPN by default for non-HTTPS listeners
 	// by setting an empty slice instead of a nil slice
@@ -558,6 +594,21 @@ func irTLSConfigsForTCPListener(tlsSecrets ...*corev1.Secret) *ir.TLSConfig {
 
 func irTLSListenerConfigName(secret *corev1.Secret) string {
 	return fmt.Sprintf("%s/%s", secret.Namespace, secret.Name)
+}
+
+func irGatewayTLSCACertName(gtw *gwapiv1.Gateway, suffix string) string {
+	return fmt.Sprintf("gateway/%s/%s/%s/%s", gtw.Namespace, gtw.Name, suffix, CACertKey)
+}
+
+func frontendValidationMode(mode gwapiv1.FrontendValidationModeType) egv1a1.ClientValidationModeType {
+	switch mode {
+	case gwapiv1.AllowValidOnly:
+		return egv1a1.ClientValidationRequireAndVerify
+	case gwapiv1.AllowInsecureFallback:
+		return egv1a1.ClientValidationRequest
+	default:
+		return egv1a1.ClientValidationRequireAndVerify
+	}
 }
 
 func irTLSCACertName(namespace, name string) string {
@@ -663,7 +714,6 @@ func parseCIDR(cidr string) (*ir.CIDRMatch, error) {
 	mask, _ := ipn.Mask.Size()
 	return &ir.CIDRMatch{
 		CIDR:    ipn.String(),
-		IP:      ip.String(),
 		MaskLen: uint32(mask),
 		IsIPv6:  ip.To4() == nil,
 	}, nil
@@ -781,19 +831,19 @@ func getServiceIPFamily(service *corev1.Service) *egv1a1.IPFamily {
 	// If ipFamilyPolicy is RequireDualStack, return DualStack
 	if service.Spec.IPFamilyPolicy != nil &&
 		*service.Spec.IPFamilyPolicy == corev1.IPFamilyPolicyRequireDualStack {
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	}
 
 	// Check ipFamilies array
 	if len(service.Spec.IPFamilies) > 0 {
 		if len(service.Spec.IPFamilies) > 1 {
-			return ptr.To(egv1a1.DualStack)
+			return new(egv1a1.DualStack)
 		}
 		switch service.Spec.IPFamilies[0] {
 		case corev1.IPv4Protocol:
-			return ptr.To(egv1a1.IPv4)
+			return new(egv1a1.IPv4)
 		case corev1.IPv6Protocol:
-			return ptr.To(egv1a1.IPv6)
+			return new(egv1a1.IPv6)
 		}
 	}
 
@@ -808,11 +858,11 @@ func getEnvoyIPFamily(envoyProxy *egv1a1.EnvoyProxy) *egv1a1.IPFamily {
 
 	switch *envoyProxy.Spec.IPFamily {
 	case egv1a1.IPv4:
-		return ptr.To(egv1a1.IPv4)
+		return new(egv1a1.IPv4)
 	case egv1a1.IPv6:
-		return ptr.To(egv1a1.IPv6)
+		return new(egv1a1.IPv6)
 	case egv1a1.DualStack:
-		return ptr.To(egv1a1.DualStack)
+		return new(egv1a1.DualStack)
 	default:
 		return nil
 	}

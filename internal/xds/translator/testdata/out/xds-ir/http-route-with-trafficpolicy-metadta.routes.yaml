@@ -25,36 +25,40 @@
       name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
       route:
         cluster: grpcroute/default/grpcroute-1/rule/0
-        rateLimits:
-        - actions:
-          - genericKey:
-              descriptorKey: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-              descriptorValue: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-          - headerValueMatch:
-              descriptorKey: rule-0-match-0
-              descriptorValue: rule-0-match-0
-              expectMatch: true
-              headers:
-              - name: x-user-id
-                stringMatch:
-                  exact: one
-          - requestHeaders:
-              descriptorKey: rule-0-match-1
-              headerName: x-org-id
-          - headerValueMatch:
-              descriptorKey: rule-0-match-2
-              descriptorValue: rule-0-match-2
-              expectMatch: false
-              headers:
-              - name: x-org-id
-                stringMatch:
-                  exact: admin
-          - headerValueMatch:
-              descriptorKey: rule-0-path
-              descriptorValue: rule-0-path
-              expectMatch: true
-              headers:
-              - name: :path
-                stringMatch:
-                  safeRegex:
-                    regex: ^/user(/.*|\?.*|#.*|;.*|$)
+      typedPerFilterConfig:
+        envoy.filters.http.ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimitPerRoute
+          domain: envoy-gateway/gateway-1/http
+          rateLimits:
+          - actions:
+            - genericKey:
+                descriptorKey: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+                descriptorValue: grpcroute/default/grpcroute-1/rule/0/match/-1/*
+            - headerValueMatch:
+                descriptorKey: rule-0-match-0
+                descriptorValue: rule-0-match-0
+                expectMatch: true
+                headers:
+                - name: x-user-id
+                  stringMatch:
+                    exact: one
+            - requestHeaders:
+                descriptorKey: rule-0-match-1
+                headerName: x-org-id
+            - headerValueMatch:
+                descriptorKey: rule-0-match-2
+                descriptorValue: rule-0-match-2
+                expectMatch: false
+                headers:
+                - name: x-org-id
+                  stringMatch:
+                    exact: admin
+            - headerValueMatch:
+                descriptorKey: rule-0-path
+                descriptorValue: rule-0-path
+                expectMatch: true
+                headers:
+                - name: :path
+                  stringMatch:
+                    safeRegex:
+                      regex: ^/user(/.*|\?.*|#.*|;.*|$)

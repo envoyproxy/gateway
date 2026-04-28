@@ -47,6 +47,10 @@ envoyExtensionPolicies:
         authEndpoint: https://auth.example.com
       filterName: auth-check
       name: my-auth-module
+    - config:
+        authEndpoint: https://remote-auth.example.com
+      filterName: remote-auth-check
+      name: remote-auth-module
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -212,6 +216,12 @@ infraIR:
               local:
                 path: /usr/lib/envoy/modules/my_auth.so
               type: Local
+          - name: remote-auth-module
+            source:
+              remote:
+                sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+                url: https://modules.example.com/libremote_auth.so
+              type: Remote
           - doNotClose: true
             loadGlobally: true
             name: ai-gateway-filter
@@ -357,6 +367,16 @@ xdsIR:
             loadGlobally: false
             name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/0
             path: /usr/lib/envoy/modules/my_auth.so
+            terminalFilter: false
+          - config:
+              authEndpoint: https://remote-auth.example.com
+            doNotClose: false
+            filterName: remote-auth-check
+            loadGlobally: false
+            name: envoyextensionpolicy/envoy-gateway/policy-for-gateway/dynamic-module/1
+            remote:
+              sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+              url: https://modules.example.com/libremote_auth.so
             terminalFilter: false
         hostname: www.example.com
         isHTTP2: false

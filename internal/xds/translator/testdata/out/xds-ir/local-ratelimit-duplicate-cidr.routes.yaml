@@ -1,0 +1,78 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: route-duplicate-cidr-ratelimit
+      route:
+        cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.local_ratelimit:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+          alwaysConsumeDefaultTokenBucket: false
+          descriptors:
+          - entries:
+            - key: rule-0-masked-remote-address
+              value: 0.0.0.0/0
+            - key: rule-0-remote-address
+            tokenBucket:
+              fillInterval: 1s
+              maxTokens: 50
+              tokensPerFill: 50
+          - entries:
+            - key: rule-1-masked-remote-address
+              value: 0.0.0.0/0
+            - key: rule-1-remote-address
+            tokenBucket:
+              fillInterval: 60s
+              maxTokens: 1000
+              tokensPerFill: 1000
+          enableXRatelimitHeaders: DRAFT_VERSION_03
+          filterEnabled:
+            defaultValue:
+              numerator: 100
+          filterEnforced:
+            defaultValue:
+              numerator: 100
+          rateLimits:
+          - actions:
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                descriptorKey: rule-0-masked-remote-address
+                descriptorValue: 0.0.0.0/0
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                descriptorKey: rule-0-remote-address
+                descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+          - actions:
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                descriptorKey: rule-1-masked-remote-address
+                descriptorValue: 0.0.0.0/0
+            - remoteAddressMatch:
+                addressMatcher:
+                  ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                descriptorKey: rule-1-remote-address
+                descriptorValue: '%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            fillInterval: 60s
+            maxTokens: 100
+            tokensPerFill: 100

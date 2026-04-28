@@ -137,6 +137,10 @@ func (t *Translator) Translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, erro
 		errs = errors.Join(errs, err)
 	}
 
+	if err := processSDSClusters(tCtx, xdsIR); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if err := processClusterForTracing(tCtx, xdsIR.Tracing, xdsIR.Metrics); err != nil {
 		errs = errors.Join(errs, err)
 	}
@@ -312,7 +316,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		tcpXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		quicXDSListener = findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_UDP)
 
-		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil
+		xdsListenerOnSameAddressPortExists = tcpXDSListener != nil //nolint:govet // nilness false positive: tcpXDSListener is reassigned each iteration by findXdsListenerByHostPort
 		tlsEnabled = httpListener.TLS != nil
 
 		switch {
@@ -409,32 +413,28 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		if httpListener.TLS != nil {
 			for c := range httpListener.TLS.Certificates {
 				secret := buildXdsTLSCertSecret(&httpListener.TLS.Certificates[c])
-				if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					errs = errors.Join(errs, err)
+				if secret != nil {
+					if err = tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
 
 			if httpListener.TLS.CACertificate != nil {
 				caSecret := buildXdsTLSCaCertSecret(httpListener.TLS.CACertificate, httpListener.TLS.Crl)
-				if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-					errs = errors.Join(errs, err)
+				if caSecret != nil {
+					if err = tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+						errs = errors.Join(errs, err)
+					}
 				}
 			}
-
 		}
 
 		// add http route client certs
 		for _, route := range httpListener.Routes {
 			if route.Destination != nil {
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, cert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&cert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 		}
@@ -806,35 +806,34 @@ func (t *Translator) processTCPListenerXdsTranslation(
 				// add tls route client certs
 				for _, cert := range route.TLS.Terminate.ClientCertificates {
 					secret := buildXdsTLSCertSecret(&cert)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						errs = errors.Join(errs, err)
+					if secret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 
 				for _, s := range route.TLS.Terminate.Certificates {
 					secret := buildXdsTLSCertSecret(&s)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						errs = errors.Join(errs, err)
+					if secret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 				if route.TLS.Terminate.CACertificate != nil {
 					caSecret := buildXdsTLSCaCertSecret(route.TLS.Terminate.CACertificate, route.TLS.Terminate.Crl)
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
-						errs = errors.Join(errs, err)
+					if caSecret != nil {
+						if err := tCtx.AddXdsResource(resourcev3.SecretType, caSecret); err != nil {
+							errs = errors.Join(errs, err)
+						}
 					}
 				}
 			} else if route.Destination != nil {
 				// TCPRoute with BackendTLSPolicy
 				// add tcp route client certs
-				for _, st := range route.Destination.Settings {
-					if st.TLS != nil {
-						for _, clientCert := range st.TLS.ClientCertificates {
-							secret := buildXdsTLSCertSecret(&clientCert)
-							if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-								errs = errors.Join(errs, err)
-							}
-						}
-					}
+				if err = processClientCertificates(tCtx, route.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
 				}
 			}
 			if err := t.addXdsTCPFilterChain(
@@ -964,7 +963,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 			loadBalancer: &ir.LoadBalancer{
 				LeastRequest: &ir.LeastRequest{},
 				PreferLocal: &ir.PreferLocalZone{
-					MinEndpointsThreshold: ptr.To[uint64](1),
+					MinEndpointsThreshold: new(uint64(1)),
 				},
 			},
 			metadata: svcCluster.Metadata,
@@ -1123,8 +1122,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		if shouldValidateTLS {
 			// Create an SDS secret for the CA certificate - either with inline bytes or with a filesystem ref
 			secret := buildXdsUpstreamTLSCASecret(ds.TLS)
-			if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-				return err
+			if secret != nil {
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -1193,6 +1194,12 @@ func buildXdsUpstreamTLSCASecret(tlsConfig *ir.TLSUpstreamConfig) *tlsv3.Secret 
 			},
 		}
 	}
+
+	// For SDS based CA certificate, the secret will be generated by SDS server, so we can skip adding the secret here
+	if tlsConfig.CACertificate.SDS != nil {
+		return nil
+	}
+
 	return &tlsv3.Secret{
 		Name: tlsConfig.CACertificate.Name,
 		Type: &tlsv3.Secret_ValidationContext{
@@ -1212,6 +1219,12 @@ func buildValidationContext(tlsConfig *ir.TLSUpstreamConfig) (*tlsv3.CommonTlsCo
 			SdsConfig: makeConfigSource(),
 		},
 		DefaultValidationContext: &tlsv3.CertificateValidationContext{},
+	}
+	if tlsConfig.CACertificate.SDS != nil {
+		// get secret from SDS
+		sds := tlsConfig.CACertificate.SDS
+		clusterName := sdsClusterNameFromURL(sds.URL)
+		validationContext.ValidationContextSdsSecretConfig = sdsSecretConfig(sds.SecretName, clusterName)
 	}
 	hasSANValidations := false
 
@@ -1299,15 +1312,18 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 		tlsCtx.CommonTlsContext.AlpnProtocols = tlsConfig.ALPNProtocols
 	}
 
-	if len(tlsConfig.ClientCertificates) > 0 {
-		for _, cert := range tlsConfig.ClientCertificates {
-			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
-				tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
-				&tlsv3.SdsSecretConfig{
-					Name:      cert.Name,
-					SdsConfig: makeConfigSource(),
-				})
+	for _, clientCert := range tlsConfig.ClientCertificates {
+		if sds := clientCert.SDS; sds != nil {
+			clusterName := sdsClusterNameFromURL(sds.URL)
+			sds := sdsSecretConfig(sds.SecretName, clusterName)
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs, sds)
+			continue
 		}
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      clientCert.Name,
+				SdsConfig: makeConfigSource(),
+			})
 	}
 
 	tlsCtxAny, err := proto.ToAnyWithValidation(tlsCtx)
@@ -1321,4 +1337,21 @@ func buildXdsUpstreamTLSSocketWthCert(tlsConfig *ir.TLSUpstreamConfig, requiresA
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
+}
+
+func processClientCertificates(tCtx *types.ResourceVersionTable, settings []*ir.DestinationSetting) error {
+	var errs error
+	for _, st := range settings {
+		if st.TLS != nil {
+			for _, c := range st.TLS.ClientCertificates {
+				secret := buildXdsTLSCertSecret(&c)
+				if secret != nil {
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						errs = errors.Join(errs, err)
+					}
+				}
+			}
+		}
+	}
+	return errs
 }

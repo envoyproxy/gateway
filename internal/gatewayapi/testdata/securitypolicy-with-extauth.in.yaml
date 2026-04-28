@@ -148,6 +148,7 @@ securityPolicies:
           backendRefs:
             - name: grpc-backend
               port: 9000
+        includeRouteMetadata: true
   - apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: SecurityPolicy
     metadata:

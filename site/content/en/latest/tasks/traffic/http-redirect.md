@@ -69,8 +69,6 @@ spec:
 {{% /tab %}}
 {{< /tabpane >}}
 
-__Note:__ `301` (default) and `302` are the only supported statusCodes.
-
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
 
 ```shell

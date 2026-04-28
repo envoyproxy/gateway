@@ -1,4 +1,4 @@
-costSpecified: false
+hasSharedRule: false
 rateLimits:
 - actions:
   - ActionSpecifier:

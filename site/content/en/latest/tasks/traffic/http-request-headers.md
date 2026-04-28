@@ -13,6 +13,8 @@ request is sent from Envoy to the upstream service and will not affect response 
 client. Header values support Envoy [format strings][envoy-format-strings], enabling dynamic values sourced from the
 request and connection metadata.
 
+According to [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#section-5.1) and [RFC 7230](https://www.rfc-editor.org/rfc/rfc7230.html#section-3.2), header names are case-insensitive, so each header only needs to be listed once (for example, `x-forwarded-for` also matches `X-Forwarded-For`).
+
 ## Prerequisites
 
 {{< boilerplate prerequisites >}}

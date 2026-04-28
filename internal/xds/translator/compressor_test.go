@@ -14,7 +14,6 @@ import (
 	compressorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/compressor/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -82,7 +81,7 @@ func TestBuildCompressorFilter(t *testing.T) {
 			name: "with min content length",
 			compression: &ir.Compression{
 				Type:             egv1a1.GzipCompressorType,
-				MinContentLength: ptr.To(uint32(1024)),
+				MinContentLength: new(uint32(1024)),
 			},
 			expectedName:    "envoy.filters.http.compressor.gzip",
 			expectedExtName: "envoy.compression.gzip.compressor",
@@ -98,7 +97,7 @@ func TestBuildCompressorFilter(t *testing.T) {
 			compression: &ir.Compression{
 				Type:             egv1a1.BrotliCompressorType,
 				ChooseFirst:      true,
-				MinContentLength: ptr.To(uint32(2048)),
+				MinContentLength: new(uint32(2048)),
 			},
 			expectedName:    "envoy.filters.http.compressor.brotli",
 			expectedExtName: "envoy.compression.brotli.compressor",

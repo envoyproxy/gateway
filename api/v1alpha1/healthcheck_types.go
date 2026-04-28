@@ -70,6 +70,8 @@ type PassiveHealthCheck struct {
 	// MaxEjectionPercent sets the maximum percentage of hosts in a cluster that can be ejected.
 	//
 	// +kubebuilder:default=10
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
 	// +optional
 	MaxEjectionPercent *int32 `json:"maxEjectionPercent,omitempty"`
 

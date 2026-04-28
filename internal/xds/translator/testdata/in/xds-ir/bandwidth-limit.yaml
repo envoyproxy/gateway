@@ -1,0 +1,35 @@
+http:
+- address: 0.0.0.0
+  hostnames:
+  - '*'
+  name: envoy-gateway/gateway-1/http
+  path:
+    escapedSlashesAction: UnescapeAndRedirect
+    mergeSlashes: true
+  port: 10080
+  routes:
+  - name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
+    hostname: gateway.envoyproxy.io
+    isHTTP2: false
+    pathMatch:
+      distinct: false
+      name: ""
+      prefix: /
+    destination:
+      name: httproute/default/httproute-1/rule/0
+      settings:
+      - addressType: IP
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        name: httproute/default/httproute-1/rule/0/backend/0
+        protocol: HTTP
+        weight: 1
+    traffic:
+      bandwidthLimit:
+        request:
+          limitKibps: 10240
+        response:
+          limitKibps: 1706
+          responseTrailers:
+            prefix: x-eg
