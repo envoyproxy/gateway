@@ -61,6 +61,3 @@ Both features are opt-in and independent of each other.
 **Other extension types** (WASM, Dynamic Modules, Lua) could use the same mechanism if they wrote filter state under their Envoy filter instance name, but are deferred until there's a concrete use case.
 
 **MergeGateways conflict detection** is a known limitation; the `nameRegistry` is scoped to individual IR listeners. Long-term, the IR itself should express which listeners share a FilterChain, removing the need to re-derive grouping at xDS translation time.
-
-[Gateway API]: https://gateway-api.sigs.k8s.io/
-[Policy Attachment]: https://gateway-api.sigs.k8s.io/reference/policy-attachment/
