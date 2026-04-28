@@ -64,6 +64,11 @@ type BackendTrafficPolicySpec struct {
 	// +optional
 	RateLimit *RateLimitSpec `json:"rateLimit,omitempty"`
 
+	// BandwidthLimit allows the user to limit the bandwidth of traffic
+	// sent to and received from the backend.
+	// +optional
+	BandwidthLimit *BandwidthLimitSpec `json:"bandwidthLimit,omitempty"`
+
 	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
 	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 	// +optional

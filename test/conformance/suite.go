@@ -49,7 +49,6 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 		// TODO: fix following conformance tests
 		tests.ListenerSetHostnameConflict,
 		tests.ListenerSetProtocolConflict,
-		tests.HTTPRouteHTTPSListenerDetectMisdirectedRequests,
 	)
 
 	if gatewayNamespaceMode {
@@ -64,10 +63,13 @@ func SkipTests(gatewayNamespaceMode bool) []suite.ConformanceTest {
 // SkipFeatures is a list of features that are skipped in the conformance report.
 func SkipFeatures(gatewayNamespaceMode bool) sets.Set[features.FeatureName] {
 	if gatewayNamespaceMode {
-		return sets.New[features.FeatureName]()
+		return sets.New[features.FeatureName](
+			features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
+		)
 	}
 
 	return sets.New(
+		features.GatewayHTTPSListenerDetectMisdirectedRequestsFeature.Name,
 		features.GatewayInfrastructurePropagationFeature.Name,
 	)
 }

@@ -1437,6 +1437,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -1891,10 +1893,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -2833,6 +2840,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -3287,10 +3296,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -3508,6 +3522,15 @@ spec:
                           For example, if the original request path is "/hello", and the path specified here is "/auth",
                           then the path of the authorization request will be "/auth/hello". If the path is not specified,
                           the path of the authorization request will be "/hello".
+                          Only one of Path or PathOverride can be set.
+                        type: string
+                      pathOverride:
+                        description: |-
+                          PathOverride replaces the original request path in the authorization request.
+                          If set, the path will be overridden to this value during authorization.
+                          For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+                          then the path of the authorization request will be "/auth".
+                          Only one of Path or PathOverride can be set.
                         type: string
                     type: object
                     x-kubernetes-validations:
@@ -3523,6 +3546,8 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: only one of path or pathOverride can be specified
+                      rule: '!(has(self.path) && has(self.pathOverride))'
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the
@@ -4506,6 +4531,8 @@ spec:
                                             maximum percentage of hosts in a cluster
                                             that can be ejected.
                                           format: int32
+                                          maximum: 100
+                                          minimum: 0
                                           type: integer
                                         splitExternalLocalOriginErrors:
                                           default: false
@@ -4969,10 +4996,17 @@ spec:
                                       Use weightedZones instead.
                                     rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                       ? !has(self.zoneAware.preferLocal) : true'
+                                  - message: PreferLocal zone-aware routing is not
+                                      currently supported for BackendUtilization load
+                                      balancers. Only WeightedZones can be used with
+                                      BackendUtilization.
+                                    rule: 'self.type == ''BackendUtilization'' &&
+                                      has(self.zoneAware) ? !has(self.zoneAware.preferLocal)
+                                      : true'
                                   - message: ZoneAware routing is not supported for
-                                      BackendUtilization and DynamicModule load balancers.
-                                    rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                      ? !has(self.zoneAware) : true'
+                                      DynamicModule load balancers.
+                                    rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                      : true'
                                   - message: ZoneAware PreferLocal and WeightedZones
                                       cannot be specified together.
                                     rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)
@@ -6202,6 +6236,8 @@ spec:
                                       percentage of hosts in a cluster that can be
                                       ejected.
                                     format: int32
+                                    maximum: 100
+                                    minimum: 0
                                     type: integer
                                   splitExternalLocalOriginErrors:
                                     default: false
@@ -6656,10 +6692,15 @@ spec:
                                 instead.
                               rule: 'self.type == ''ConsistentHash'' && has(self.zoneAware)
                                 ? !has(self.zoneAware.preferLocal) : true'
-                            - message: ZoneAware routing is not supported for BackendUtilization
-                                and DynamicModule load balancers.
-                              rule: 'self.type in [''BackendUtilization'', ''DynamicModule'']
-                                ? !has(self.zoneAware) : true'
+                            - message: PreferLocal zone-aware routing is not currently
+                                supported for BackendUtilization load balancers. Only
+                                WeightedZones can be used with BackendUtilization.
+                              rule: 'self.type == ''BackendUtilization'' && has(self.zoneAware)
+                                ? !has(self.zoneAware.preferLocal) : true'
+                            - message: ZoneAware routing is not supported for DynamicModule
+                                load balancers.
+                              rule: 'self.type == ''DynamicModule'' ? !has(self.zoneAware)
+                                : true'
                             - message: ZoneAware PreferLocal and WeightedZones cannot
                                 be specified together.
                               rule: 'has(self.zoneAware) ? !(has(self.zoneAware.preferLocal)

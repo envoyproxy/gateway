@@ -55,6 +55,7 @@ func TestTranslate(t *testing.T) {
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
+		SDSEnabled                      bool
 	}{
 		{
 			name:                    "envoypatchpolicy-invalid-feature-disabled",
@@ -82,6 +83,16 @@ func TestTranslate(t *testing.T) {
 			name:                            "envoyextensionpolicy-lua-feature-disabled",
 			LuaEnvoyExtensionPolicyDisabled: true,
 		},
+		{
+			name:           "sds",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
+		{
+			name:           "sds-invalid",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
@@ -106,6 +117,7 @@ func TestTranslate(t *testing.T) {
 			gatewayNamespaceMode := false
 			runningOnHost := false
 			luaEnvoyExtensionPolicyDisabled := false
+			sdsEnabled := false
 
 			for _, config := range testCasesConfig {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
@@ -114,6 +126,7 @@ func TestTranslate(t *testing.T) {
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
+					sdsEnabled = config.SDSEnabled
 				}
 			}
 
@@ -123,6 +136,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
+				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),
 				GatewayNamespaceMode:            gatewayNamespaceMode,

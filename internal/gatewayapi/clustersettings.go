@@ -540,9 +540,12 @@ func buildPassiveHealthCheck(policy egv1a1.HealthCheck) *ir.OutlierDetection {
 		ConsecutiveLocalOriginFailures: hc.ConsecutiveLocalOriginFailures,
 		ConsecutiveGatewayErrors:       hc.ConsecutiveGatewayErrors,
 		Consecutive5xxErrors:           hc.Consecutive5xxErrors,
-		MaxEjectionPercent:             hc.MaxEjectionPercent,
 		FailurePercentageThreshold:     hc.FailurePercentageThreshold,
 		AlwaysEjectOneEndpoint:         hc.AlwaysEjectOneEndpoint,
+	}
+
+	if hc.MaxEjectionPercent != nil {
+		irOD.MaxEjectionPercent = new(uint32(*hc.MaxEjectionPercent))
 	}
 
 	if hc.Interval != nil {

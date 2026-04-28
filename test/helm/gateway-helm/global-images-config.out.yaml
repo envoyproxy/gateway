@@ -28,6 +28,18 @@ data:
   envoy-gateway.yaml: |
     apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
+    envoyProxy:
+      provider:
+        kubernetes:
+          envoyDeployment:
+            container:
+              image: private-hub/envoyproxy/envoy:dev
+              imagePullPolicy: Always
+            pod:
+              imagePullSecrets:
+              - name: secret5
+              - name: secret6
+        type: Kubernetes
     extensionApis: {}
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
@@ -230,6 +242,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -238,9 +251,11 @@ rules:
   verbs:
   - create
   - get
+  - list
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - autoscaling
   - policy
@@ -254,6 +269,7 @@ rules:
   - delete
   - deletecollection
   - patch
+  - watch
 - apiGroups:
   - certificates.k8s.io
   resources:
