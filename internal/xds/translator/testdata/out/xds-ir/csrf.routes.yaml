@@ -16,8 +16,11 @@
         envoy.filters.http.csrf:
           '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
           additionalOrigins:
-          - suffix: example.com
-          - exact: https://trusted.partner.com
+          - exact: https://www.example.com
+          - prefix: https://app.example
+          - suffix: .trusted.com
+          - safeRegex:
+              regex: https://.*\.partner\.com
           filterEnabled:
             defaultValue:
               numerator: 100

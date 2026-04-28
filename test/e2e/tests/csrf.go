@@ -73,13 +73,47 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
 
-		t.Run("should allow POST with matching regex Origin", func(t *testing.T) {
+		t.Run("should allow POST with matching prefix Origin", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/csrf",
+					Method: "POST",
+					Headers: map[string]string{
+						"Origin": "https://app.example.org",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("should allow POST with matching suffix Origin", func(t *testing.T) {
 			expectedResponse := http.ExpectedResponse{
 				Request: http.Request{
 					Path:   "/csrf",
 					Method: "POST",
 					Headers: map[string]string{
 						"Origin": "https://app.trusted.com",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+		})
+
+		t.Run("should allow POST with matching regex Origin", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/csrf",
+					Method: "POST",
+					Headers: map[string]string{
+						"Origin": "https://api.partner.com",
 					},
 				},
 				Response: http.Response{

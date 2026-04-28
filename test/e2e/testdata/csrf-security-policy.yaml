@@ -29,5 +29,9 @@ spec:
     additionalOrigins:
     - type: Exact
       value: "https://www.example.com"
+    - type: Prefix
+      value: "https://app.example"
+    - type: Suffix
+      value: ".trusted.com"
     - type: RegularExpression
-      value: "https://.*\\.trusted\\.com"
+      value: "https://.*\\.partner\\.com"

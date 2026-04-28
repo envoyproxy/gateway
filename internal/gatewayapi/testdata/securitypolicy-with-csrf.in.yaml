@@ -11,10 +11,14 @@ securityPolicies:
       name: httproute-1
     csrf:
       additionalOrigins:
-        - type: Suffix
-          value: example.com
         - type: Exact
-          value: https://example.com
+          value: https://www.example.com
+        - type: Prefix
+          value: https://app.example
+        - type: Suffix
+          value: .trusted.com
+        - type: RegularExpression
+          value: "https://.*\\.partner\\.com"
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
