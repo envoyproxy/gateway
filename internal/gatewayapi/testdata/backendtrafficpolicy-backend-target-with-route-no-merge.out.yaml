@@ -6,13 +6,13 @@ backendTrafficPolicies:
     namespace: default
   spec:
     circuitBreaker:
-      maxConnections: 500
-      maxParallelRequests: 500
-      maxPendingRequests: 500
+      maxConnections: 100
     targetRefs:
     - group: ""
       kind: Service
       name: service-1
+    tcpKeepalive:
+      probes: 3
   status:
     ancestors:
     - ancestorRef:
@@ -30,18 +30,43 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
+    name: policy-for-route-1
+    namespace: default
+  spec:
+    loadBalancer:
+      type: RoundRobin
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    circuitBreaker:
-      maxConnections: 10
-      maxPendingRequests: 10
+    dns:
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
-    tcpKeepalive:
-      probes: 1
   status:
     ancestors:
     - ancestorRef:
@@ -55,6 +80,12 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/httproute-1]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -148,7 +179,7 @@ httpRoutes:
       sectionName: http
     rules:
     - backendRefs:
-      - name: service-2
+      - name: service-1
         port: 8080
       matches:
       - path:
@@ -245,7 +276,7 @@ xdsIR:
               port: 8080
             metadata:
               kind: Service
-              name: service-2
+              name: service-1
               namespace: default
               sectionName: "8080"
             name: httproute/default/httproute-2/rule/0/backend/0
@@ -259,8 +290,8 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-gateway
-            namespace: envoy-gateway
+            name: policy-for-service-1
+            namespace: default
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
@@ -268,10 +299,9 @@ xdsIR:
           prefix: /v2
         traffic:
           circuitBreaker:
-            maxConnections: 10
-            maxPendingRequests: 10
+            maxConnections: 100
           tcpKeepalive:
-            probes: 1
+            probes: 3
       - destination:
           metadata:
             kind: HTTPRoute
@@ -299,7 +329,7 @@ xdsIR:
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-service-1
+            name: policy-for-route-1
             namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
@@ -307,10 +337,8 @@ xdsIR:
           name: ""
           prefix: /
         traffic:
-          circuitBreaker:
-            maxConnections: 500
-            maxParallelRequests: 500
-            maxPendingRequests: 500
+          loadBalancer:
+            roundRobin: {}
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

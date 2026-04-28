@@ -78,6 +78,7 @@ backendTrafficPolicies:
     namespace: default
     name: policy-for-service-1
   spec:
+    mergeType: StrategicMerge
     targetRefs:
     - group: ""
       kind: Service

@@ -95,19 +95,71 @@ func TestTranslate(t *testing.T) {
 			SDSEnabled:     true,
 		},
 		{
-			name:                      "backendtrafficpolicy-backend-target",
+			name:                       "backendtrafficpolicy-backend-target-basic",
 			BackendTargetsInBTPEnabled: true,
 		},
 		{
-			name:                      "backendtrafficpolicy-backend-target-disabled",
+			name:                       "backendtrafficpolicy-backend-target-feature-disabled",
 			BackendTargetsInBTPEnabled: false,
 		},
 		{
-			name:                      "backendtrafficpolicy-backend-target-route-override",
+			name:                       "backendtrafficpolicy-backend-target-with-gateway-no-merge",
 			BackendTargetsInBTPEnabled: true,
 		},
 		{
-			name:                      "backendtrafficpolicy-backend-target-gateway-override",
+			name:                       "backendtrafficpolicy-backend-target-with-gateway-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-with-route-no-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-with-route-merge-no-gateway",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-no-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-multi-backend-different-btps",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-multi-backend-partial-coverage",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-multi-backend-same-btp",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-tcp-basic",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-udp-basic",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-tcp-with-route-merge-backend-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-tcp-multi-backend-partial-coverage",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-udp-with-route-merge-backend-merge",
+			BackendTargetsInBTPEnabled: true,
+		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
 			BackendTargetsInBTPEnabled: true,
 		},
 	}

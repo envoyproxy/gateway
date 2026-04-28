@@ -1,0 +1,200 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-for-service-1
+    namespace: default
+  spec:
+    circuitBreaker:
+      maxConnections: 100
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: TCPRoute
+      name: tcp
+      port: 8163
+      protocol: TCP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+infraIR:
+  default/gateway-1:
+    proxy:
+      listeners:
+      - name: default/gateway-1/tcp
+        ports:
+        - containerPort: 8163
+          name: tcp-8163
+          protocol: TCP
+          servicePort: 8163
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-1
+      namespace: envoy-gateway-system
+tcpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TCPRoute
+  metadata:
+    name: tcproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8163
+        weight: 50
+      - name: service-2
+        port: 8163
+        weight: 50
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route has multiple backends with non-uniform BackendTrafficPolicies;
+          all backends must either have no backend-targeted BTP or share the same
+          one
+        reason: ConflictingBackendTrafficPolicies
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        sectionName: tcp
+xdsIR:
+  default/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003
+    tcp:
+    - address: 0.0.0.0
+      externalPort: 8163
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: tcp
+      name: default/gateway-1/tcp
+      port: 8163
+      routes:
+      - destination:
+          metadata:
+            kind: TCPRoute
+            name: tcproute-1
+            namespace: default
+          name: tcproute/default/tcproute-1/rule/-1
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcproute-1/rule/-1/backend/0
+            protocol: TCP
+            weight: 50
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8163
+            metadata:
+              kind: Service
+              name: service-2
+              namespace: default
+              sectionName: "8163"
+            name: tcproute/default/tcproute-1/rule/-1/backend/1
+            protocol: TCP
+            weight: 50
+        metadata:
+          kind: TCPRoute
+          name: tcproute-1
+          namespace: default
+        name: tcproute/default/tcproute-1

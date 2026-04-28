@@ -1,0 +1,74 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: udp
+      protocol: UDP
+      port: 8162
+      allowedRoutes:
+        kinds:
+        - kind: UDPRoute
+          group: gateway.networking.k8s.io
+udpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    namespace: default
+    name: udproute-1
+  spec:
+    parentRefs:
+    - name: gateway-1
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8162
+backendTrafficPolicies:
+# Gateway BTP: sets dns
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    dns:
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
+# Backend BTP with mergeType: sets loadBalancer, merges with gateway
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-service-1
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+    loadBalancer:
+      type: RoundRobin
+# Route BTP with mergeType: sets different loadBalancer, merges with merge(gateway, backend)
+# Route's loadBalancer should win over backend's
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route-1
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: UDPRoute
+      name: udproute-1
+    loadBalancer:
+      type: Random

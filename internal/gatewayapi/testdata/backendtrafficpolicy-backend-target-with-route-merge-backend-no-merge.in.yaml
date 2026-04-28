@@ -14,6 +14,9 @@ gateways:
         namespaces:
           from: All
 httpRoutes:
+# httproute-1 has route BTP with StrategicMerge, backend BTP has no mergeType
+# → route merges with backend (chain stops there), gateway fields excluded
+# Expected: loadBalancer from route + circuitBreaker from backend, no gateway fields
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
@@ -33,27 +36,24 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-- apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-2
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/v2"
-      backendRefs:
-      - name: service-1
-        port: 8080
 backendTrafficPolicies:
-# Backend-targeted BTP: sets circuitBreaker for service-1
+# Gateway BTP: sets tcpKeepalive and dns
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway
+  spec:
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    tcpKeepalive:
+      probes: 1
+    dns:
+      dnsRefreshRate: 30s
+      respectDnsTtl: true
+# Backend BTP without mergeType: sets circuitBreaker only, does NOT inherit from gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
@@ -66,21 +66,18 @@ backendTrafficPolicies:
       name: service-1
     circuitBreaker:
       maxConnections: 100
-      maxPendingRequests: 100
-    tcpKeepalive:
-      probes: 3
-# Route-targeted BTP: overrides circuitBreaker for httproute-1 only
+# Route BTP with StrategicMerge: sets loadBalancer, merges with backend BTP
+# Since backend BTP has no mergeType, merge chain stops at backend — gateway excluded
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
     namespace: default
     name: policy-for-route-1
   spec:
+    mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-    circuitBreaker:
-      maxConnections: 999
-      maxPendingRequests: 999
-      maxParallelRequests: 999
+    loadBalancer:
+      type: RoundRobin
