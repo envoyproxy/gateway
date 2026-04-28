@@ -138,9 +138,10 @@ type EnvoyGatewaySpec struct {
 	// 2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)
 	// 3. This EnvoyProxy default spec
 	//
-	// Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).
-	// A future release will introduce merge semantics to allow combining configurations
-	// across multiple levels.
+	// The merge strategy for a more specific EnvoyProxy is controlled by its
+	// spec.mergeType field. If mergeType is unset, the more specific EnvoyProxy
+	// completely replaces less specific settings.
+	// Note: mergeType has no effect in this default EnvoyProxySpec.
 	//
 	// +optional
 	EnvoyProxy *EnvoyProxySpec `json:"envoyProxy,omitempty"`
