@@ -289,7 +289,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 		return
 	}
 
-	var onlyResolvedRefFailure = len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs)
+	onlyResolvedRefFailure := len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs)
 	if onlyResolvedRefFailure {
 		switch lConditions[0].Reason {
 		case string(status.ListenerReasonPartiallyInvalidCertificateRef):

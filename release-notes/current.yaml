@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
+  Fixed ListenerSet and its listeners incorrectly setting `Accepted: False` for InvalidCertificateRef and RefNotPermitted, inconsistent with Gateway behavior and the Gateway API spec.
 
 # Enhancements that improve performance.
 performance improvements: |
