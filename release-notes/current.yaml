@@ -44,6 +44,7 @@ new features: |
   Added support for invert match in CIDR match RateLimit API.
   Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
+  Added support for multiple ExtensionManagers with sequential chaining via a new `extensionManagers` field in `EnvoyGateway` configuration.
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
   Added support for path override in ExtAuth HTTP service.

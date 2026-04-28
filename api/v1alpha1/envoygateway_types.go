@@ -41,6 +41,7 @@ type EnvoyGateway struct {
 }
 
 // EnvoyGatewaySpec defines the desired state of Envoy Gateway.
+// +kubebuilder:validation:XValidation:rule="!(has(self.extensionManager) && has(self.extensionManagers))",message="extensionManager and extensionManagers are mutually exclusive"
 type EnvoyGatewaySpec struct {
 	// Gateway defines desired Gateway API specific configuration. If unset,
 	// default configuration parameters will apply.
@@ -97,6 +98,19 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
+
+	// ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.
+	// Each extension's output becomes the next extension's input, enabling sequential chaining.
+	// Each entry must have a unique Name field for identification.
+	// This field is mutually exclusive with ExtensionManager.
+	//
+	// Warning: Enabling Extension Servers may lead to complete security compromise of your system.
+	// Users that control Extension Servers can inject arbitrary configuration to proxies,
+	// leading to high Confidentiality, Integrity and Availability risks.
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	ExtensionManagers []ExtensionManager `json:"extensionManagers,omitempty"`
 
 	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
 	// implemented by Envoy Gateway
@@ -659,6 +673,12 @@ type RateLimitRedisSettings struct {
 // ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
 type ExtensionManager struct {
+	// Name is a unique identifier for this extension manager. Required when using
+	// the plural ExtensionManagers field. Used for logging, metrics, and error identification.
+	//
+	// +optional
+	Name string `json:"name,omitempty"`
+
 	// Resources defines the set of K8s resources the extension will handle as route
 	// filter resources
 	//
