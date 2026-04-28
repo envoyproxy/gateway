@@ -77,7 +77,7 @@ envoyExtensionPolicies:
     - backendRefs:
       - Name: grpc-backend
         Port: 9000
-      observabilityMode: true
+      shadowMode: true
       processingMode:
         request:
           body: Streamed

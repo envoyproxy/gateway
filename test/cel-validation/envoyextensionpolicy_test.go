@@ -1357,7 +1357,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 									Body: ptr.To(egv1a1.ExtProcBodyProcessingMode("FullDuplexStreamed")),
 								},
 							},
-							ObservabilityMode: ptr.To(true),
+							ShadowMode: ptr.To(true),
 						},
 					},
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -1373,7 +1373,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.extProc[0]: Invalid value:",
-				": If observabilityMode is enabled, body processing mode must be Streamed or unset.",
+				": If shadowMode is enabled, body processing mode must be Streamed or unset.",
 			},
 		}
 	}

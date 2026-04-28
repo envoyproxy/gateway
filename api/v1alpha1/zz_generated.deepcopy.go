@@ -3130,8 +3130,8 @@ func (in *ExtProc) DeepCopyInto(out *ExtProc) {
 		*out = new(ExtProcProcessingMode)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.ObservabilityMode != nil {
-		in, out := &in.ObservabilityMode, &out.ObservabilityMode
+	if in.ShadowMode != nil {
+		in, out := &in.ShadowMode, &out.ShadowMode
 		*out = new(bool)
 		**out = **in
 	}

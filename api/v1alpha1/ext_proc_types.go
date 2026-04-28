@@ -69,7 +69,7 @@ type ExtProcProcessingMode struct {
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Service, ServiceImport, and Backend kind.",rule="has(self.backendRefs) ? self.backendRefs.all(f, f.kind == 'Service' || f.kind == 'ServiceImport' || f.kind == 'Backend') : true"
 // +kubebuilder:validation:XValidation:message="BackendRefs only supports Core, multicluster.x-k8s.io, and gateway.envoyproxy.io groups.",rule="has(self.backendRefs) ? (self.backendRefs.all(f, f.group == \"\" || f.group == 'multicluster.x-k8s.io' || f.group == 'gateway.envoyproxy.io')) : true"
 // +kubebuilder:validation:XValidation:message="If FullDuplexStreamed body processing mode is used, FailOpen must be false.",rule="!(has(self.failOpen) && self.failOpen == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body == 'FullDuplexStreamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body == 'FullDuplexStreamed')))"
-// +kubebuilder:validation:XValidation:message="If observabilityMode is enabled, body processing mode must be Streamed or unset.",rule="!(has(self.observabilityMode) && self.observabilityMode == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body != 'Streamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body != 'Streamed')))"
+// +kubebuilder:validation:XValidation:message="If shadowMode is enabled, body processing mode must be Streamed or unset.",rule="!(has(self.shadowMode) && self.shadowMode == true && has(self.processingMode) && ((has(self.processingMode.request) && has(self.processingMode.request.body) && self.processingMode.request.body != 'Streamed') || (has(self.processingMode.response) && has(self.processingMode.response.body) && self.processingMode.response.body != 'Streamed')))"
 type ExtProc struct {
 	BackendCluster `json:",inline"`
 
@@ -98,10 +98,14 @@ type ExtProc struct {
 	// +optional
 	ProcessingMode *ExtProcProcessingMode `json:"processingMode,omitempty"`
 
-	// ObservabilityMode sets if envoy gateway should treat this external processor as "send and go"
+	// ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+	// When enabled, Envoy forwards request/response data to the external processor but does
+	// not wait for or apply any response from it. This maps to Envoy's `observability_mode`
+	// on the ext_proc filter.
+	// Defaults to false.
 	//
 	// +optional
-	ObservabilityMode *bool `json:"observabilityMode,omitempty"`
+	ShadowMode *bool `json:"shadowMode,omitempty"`
 
 	// Metadata defines options related to the sending and receiving of dynamic metadata.
 	// These options define which metadata namespaces would be sent to the processor and which dynamic metadata

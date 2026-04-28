@@ -3462,8 +3462,9 @@ type ExtProc struct {
 	// MessageTimeout is the timeout for a response to be returned from the external processor
 	MessageTimeout *metav1.Duration `json:"messageTimeout,omitempty" yaml:"messageTimeout,omitempty"`
 
-	// ObservabilityMode sets if envoy gateway should treat this external processor as "send and go".
-	ObservabilityMode *bool `json:"observabilityMode,omitempty" yaml:"observabilityMode,omitempty"`
+	// ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+	// Maps to Envoy's `observability_mode` on the ext_proc filter.
+	ShadowMode *bool `json:"shadowMode,omitempty" yaml:"shadowMode,omitempty"`
 
 	// FailOpen defines if requests or responses that cannot be processed due to connectivity to the
 	// external processor are terminated or passed-through.

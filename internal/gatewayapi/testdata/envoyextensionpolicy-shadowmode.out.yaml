@@ -9,7 +9,7 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend
         port: 9000
-      observabilityMode: true
+      shadowMode: true
       processingMode:
         request:
           body: Streamed
@@ -220,7 +220,7 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
-            observabilityMode: true
+            shadowMode: true
             requestBodyProcessingMode: Streamed
             requestHeaderProcessing: true
             responseBodyProcessingMode: Streamed
