@@ -116,6 +116,15 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := httpRoute.GetGeneration()
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+			observedGeneration = gw.GetGeneration()
+		}
+
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -186,7 +195,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				httpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
@@ -205,7 +214,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				httpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
@@ -846,6 +855,15 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := grpcRoute.GetGeneration()
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+			observedGeneration = gw.GetGeneration()
+		}
+
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -920,7 +938,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				grpcRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
@@ -934,7 +952,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				grpcRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
@@ -1395,6 +1413,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			destName     = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		)
 
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := tlsRoute.GetGeneration()
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+			observedGeneration = gw.GetGeneration()
+		}
+
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for i := range rule.BackendRefs {
@@ -1495,7 +1521,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			routeStatus := GetRouteStatus(tlsRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				tlsRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
@@ -1514,7 +1540,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			routeStatus := GetRouteStatus(tlsRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				tlsRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
@@ -1577,6 +1603,14 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			resolveErrs  = &status.MultiStatusError{}
 			destName     = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 		)
+
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := udpRoute.GetGeneration()
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+			observedGeneration = gw.GetGeneration()
+		}
 
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -1655,7 +1689,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeStatus := GetRouteStatus(udpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				udpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
@@ -1667,7 +1701,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeStatus := GetRouteStatus(udpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				udpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
@@ -1730,6 +1764,14 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			resolveErrs  = &status.MultiStatusError{}
 			destName     = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 		)
+
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := tcpRoute.GetGeneration()
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+			observedGeneration = gw.GetGeneration()
+		}
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -1817,7 +1859,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			routeStatus := GetRouteStatus(tcpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				tcpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
@@ -1828,7 +1870,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			routeStatus := GetRouteStatus(tcpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				tcpRoute.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
@@ -2268,7 +2310,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
-		isRelevantParentRef, selectedListeners := GetReferencedListeners(ns, parentRef, gateways)
+		isRelevantParentRef, matchedGateway, selectedListeners := GetReferencedListeners(ns, parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
 		if !isRelevantParentRef {
@@ -2280,11 +2322,19 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
+		// observedGeneration is the max of the route's own generation and the matched
+		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// from the stale stored one, unblocking the watchable DeepEqual gate.
+		observedGeneration := routeContext.GetGeneration()
+		if matchedGateway != nil && matchedGateway.GetGeneration() > observedGeneration {
+			observedGeneration = matchedGateway.GetGeneration()
+		}
+
 		if len(selectedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingParent,
@@ -2306,7 +2356,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
-				routeContext.GetGeneration(),
+				observedGeneration,
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNotAllowedByListeners,
@@ -2319,7 +2369,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRefCtx.routeParentStatusIdx,
-			routeContext.GetGeneration(),
+			observedGeneration,
 			gwapiv1.RouteConditionAccepted,
 			metav1.ConditionTrue,
 			gwapiv1.RouteReasonAccepted,

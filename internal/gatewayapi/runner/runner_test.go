@@ -15,7 +15,11 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -23,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/registry"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	pb "github.com/envoyproxy/gateway/proto/extension"
@@ -521,4 +526,424 @@ func TestLoadTLSConfig_HostMode(t *testing.T) {
 	require.NotNil(t, tlsConfig.GetConfigForClient)
 	require.Equal(t, tls.RequireAndVerifyClientCert, tlsConfig.ClientAuth)
 	require.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
+}
+
+func TestHTTPRouteStatusStaleAfterListenerHostnameChange(t *testing.T) {
+	pResources := new(message.ProviderResources)
+	xdsIR := new(message.XdsIR)
+	infraIR := new(message.InfraIR)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
+		XdsIR:             xdsIR,
+		InfraIR:           infraIR,
+		ExtensionManager:  extMgr,
+	})
+	err = r.Start(t.Context())
+	require.NoError(t, err)
+
+	routeKey := types.NamespacedName{Namespace: "default", Name: "httproute-1"}
+
+	// buildResources constructs a minimal ControllerResources snapshot.
+	// The HTTPRoute's generation is fixed at 1 throughout, only the Gateway changes.
+	buildResources := func(listenerHostname string, gatewayGeneration int64) *resource.ControllerResources {
+		listenerHostnameTyped := gwapiv1.Hostname(listenerHostname)
+		res := resource.NewResources()
+		res.GatewayClass = &gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway-class"},
+			Spec: gwapiv1.GatewayClassSpec{
+				ControllerName: egv1a1.GatewayControllerName,
+			},
+		}
+		res.Gateways = []*gwapiv1.Gateway{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "envoy-gateway",
+					Name:       "gateway-1",
+					Generation: gatewayGeneration,
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "envoy-gateway-class",
+					Listeners: []gwapiv1.Listener{
+						{
+							Name:     "http",
+							Protocol: gwapiv1.HTTPProtocolType,
+							Port:     80,
+							Hostname: &listenerHostnameTyped,
+							AllowedRoutes: &gwapiv1.AllowedRoutes{
+								Namespaces: &gwapiv1.RouteNamespaces{
+									From: func() *gwapiv1.FromNamespaces {
+										f := gwapiv1.NamespacesFromAll
+										return &f
+									}(),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		routeHostname := gwapiv1.Hostname("app.example.com")
+		res.HTTPRoutes = []*gwapiv1.HTTPRoute{
+			{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "HTTPRoute",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "httproute-1",
+					Generation: 1, // intentionally fixed — route is never edited
+				},
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
+							{
+								Namespace: func() *gwapiv1.Namespace {
+									ns := gwapiv1.Namespace("envoy-gateway")
+									return &ns
+								}(),
+								Name: "gateway-1",
+							},
+						},
+					},
+					Hostnames: []gwapiv1.Hostname{routeHostname},
+					Rules: []gwapiv1.HTTPRouteRule{
+						{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "service-1",
+											Port: func() *gwapiv1.PortNumber {
+												p := gwapiv1.PortNumber(8080)
+												return &p
+											}(),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		res.Namespaces = []*corev1.Namespace{
+			{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		}
+		res.Services = []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "service-1"},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{Name: "http", Port: 8080, TargetPort: intstr.FromInt32(8080), Protocol: corev1.ProtocolTCP},
+					},
+				},
+			},
+		}
+		res.EndpointSlices = []*discoveryv1.EndpointSlice{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "endpointslice-1",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "service-1"},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{Name: func() *string { s := "http"; return &s }(), Port: func() *int32 { p := int32(8080); return &p }(), Protocol: func() *corev1.Protocol { p := corev1.ProtocolTCP; return &p }()},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{Addresses: []string{"7.7.7.7"}, Conditions: discoveryv1.EndpointConditions{Ready: func() *bool { b := true; return &b }()}},
+				},
+			},
+		}
+		cr := resource.ControllerResources{res}
+		return &cr
+	}
+
+	// Cycle 1: Gateway gen=1, listener hostname does NOT match the route hostname
+	// Route: "app.example.com", Listener: "other.example.com", Accepted=False/NoMatchingListenerHostname
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources("other.example.com", 1),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				return cond.Status == metav1.ConditionFalse &&
+					cond.Reason == string(gwapiv1.RouteReasonNoMatchingListenerHostname) &&
+					cond.ObservedGeneration == 1
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 1: expected Accepted=False/NoMatchingListenerHostname with ObservedGeneration=1")
+
+	// Cycle 2: Gateway gen=2, still mismatching hostname
+	// If the route did not change, gen still 1. And neither did the condition outcome, still Accepted=False/NoMatchingListenerHostname.
+	// The new status value is byte-for-byte identical to cycle 1's value. So the subscriber goroutine never fires and Kubernetes status is never patched.
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources("other.example.com", 2),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				// must have bumped ObservedGeneration to 2 even though
+				// the condition outcome (False/NoMatchingListenerHostname) is unchanged.
+				return cond.Status == metav1.ConditionFalse &&
+					cond.Reason == string(gwapiv1.RouteReasonNoMatchingListenerHostname) &&
+					cond.ObservedGeneration == 2
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 2: expected ObservedGeneration to be bumped to 2 when Gateway generation increased, "+
+			"even though the condition outcome (Accepted=False/NoMatchingListenerHostname) is unchanged. "+
+			"Without the fix, ObservedGeneration stays at 1 and the watchable DeepEqual gate suppresses the update.")
+
+	// Cycle 3: Gateway gen=3, hostname is fixed to match the route
+	// Now both hostnames agree, Accepted=True, ObservedGeneration=3
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources("app.example.com", 3),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				return cond.Status == metav1.ConditionTrue
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 3: expected Accepted=True after Gateway listener hostname was fixed to match the route")
+}
+
+func TestHTTPRouteStatusStaleAfterAllowedRoutesChange(t *testing.T) {
+	pResources := new(message.ProviderResources)
+	xdsIR := new(message.XdsIR)
+	infraIR := new(message.InfraIR)
+	cfg, err := config.New(os.Stdout, os.Stderr)
+	require.NoError(t, err)
+	extMgr, closeFunc, err := registry.NewInMemoryManager(&egv1a1.ExtensionManager{}, &pb.UnimplementedEnvoyGatewayExtensionServer{})
+	require.NoError(t, err)
+	defer closeFunc()
+
+	r := New(&Config{
+		Server:            *cfg,
+		ProviderResources: pResources,
+		RunnerErrors:      new(message.RunnerErrors),
+		XdsIR:             xdsIR,
+		InfraIR:           infraIR,
+		ExtensionManager:  extMgr,
+	})
+	err = r.Start(t.Context())
+	require.NoError(t, err)
+
+	routeKey := types.NamespacedName{Namespace: "default", Name: "httproute-2"}
+
+	// buildResources constructs a snapshot where the listener's AllowedRoutes is controlled
+	// The HTTPRoute's generation is fixed at 1 throughout.
+	buildResources := func(allowAll bool, gatewayGeneration int64) *resource.ControllerResources {
+		from := gwapiv1.NamespacesFromSame
+		if allowAll {
+			from = gwapiv1.NamespacesFromAll
+		}
+		res := resource.NewResources()
+		res.GatewayClass = &gwapiv1.GatewayClass{
+			ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway-class"},
+			Spec: gwapiv1.GatewayClassSpec{
+				ControllerName: egv1a1.GatewayControllerName,
+			},
+		}
+		hostname := gwapiv1.Hostname("app.example.com")
+		res.Gateways = []*gwapiv1.Gateway{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "envoy-gateway",
+					Name:       "gateway-2",
+					Generation: gatewayGeneration,
+				},
+				Spec: gwapiv1.GatewaySpec{
+					GatewayClassName: "envoy-gateway-class",
+					Listeners: []gwapiv1.Listener{
+						{
+							Name:     "http",
+							Protocol: gwapiv1.HTTPProtocolType,
+							Port:     80,
+							Hostname: &hostname,
+							AllowedRoutes: &gwapiv1.AllowedRoutes{
+								Namespaces: &gwapiv1.RouteNamespaces{
+									From: &from,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		routeHostname := gwapiv1.Hostname("app.example.com")
+		res.HTTPRoutes = []*gwapiv1.HTTPRoute{
+			{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "HTTPRoute",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "default",
+					Name:       "httproute-2",
+					Generation: 1,
+				},
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
+							{
+								Namespace: func() *gwapiv1.Namespace {
+									ns := gwapiv1.Namespace("envoy-gateway")
+									return &ns
+								}(),
+								Name: "gateway-2",
+							},
+						},
+					},
+					Hostnames: []gwapiv1.Hostname{routeHostname},
+					Rules: []gwapiv1.HTTPRouteRule{
+						{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
+											Name: "service-2",
+											Port: func() *gwapiv1.PortNumber {
+												p := gwapiv1.PortNumber(8080)
+												return &p
+											}(),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		res.Namespaces = []*corev1.Namespace{
+			{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}},
+			{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		}
+		res.Services = []*corev1.Service{
+			{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "service-2"},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "2.2.2.2",
+					Ports: []corev1.ServicePort{
+						{Name: "http", Port: 8080, TargetPort: intstr.FromInt32(8080), Protocol: corev1.ProtocolTCP},
+					},
+				},
+			},
+		}
+		res.EndpointSlices = []*discoveryv1.EndpointSlice{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "endpointslice-2",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "service-2"},
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Ports: []discoveryv1.EndpointPort{
+					{Name: func() *string { s := "http"; return &s }(), Port: func() *int32 { p := int32(8080); return &p }(), Protocol: func() *corev1.Protocol { p := corev1.ProtocolTCP; return &p }()},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{Addresses: []string{"8.8.8.8"}, Conditions: discoveryv1.EndpointConditions{Ready: func() *bool { b := true; return &b }()}},
+				},
+			},
+		}
+		cr := resource.ControllerResources{res}
+		return &cr
+	}
+
+	// Cycle 1: Gateway gen=1, AllowedRoutes.From=Same, route in "default" is not allowed
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources(false, 1),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				return cond.Status == metav1.ConditionFalse &&
+					cond.Reason == string(gwapiv1.RouteReasonNotAllowedByListeners) &&
+					cond.ObservedGeneration == 1
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 1: expected Accepted=False/NotAllowedByListeners with ObservedGeneration=1")
+
+	// Cycle 2: Gateway gen=2, still From=Same restriction, unrelated Gateway change
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources(false, 2),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				return cond.Status == metav1.ConditionFalse &&
+					cond.Reason == string(gwapiv1.RouteReasonNotAllowedByListeners) &&
+					cond.ObservedGeneration == 2
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 2: expected ObservedGeneration to be bumped to 2 when Gateway generation increased, "+
+			"even though the condition outcome (Accepted=False/NotAllowedByListeners) is unchanged. "+
+			"Without the fix in processAllowedListenersForParentRefs, ObservedGeneration stays at 1 "+
+			"and the watchable DeepEqual gate suppresses the update.")
+
+	// Cycle 3: Gateway gen=3, AllowedRoutes.From=All, route is now allowed
+	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
+		Resources: buildResources(true, 3),
+	})
+
+	require.Eventually(t, func() bool {
+		status, ok := pResources.HTTPRouteStatuses.Load(routeKey)
+		if !ok || status == nil || len(status.Parents) == 0 {
+			return false
+		}
+		for _, cond := range status.Parents[0].Conditions {
+			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
+				return cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == 3
+			}
+		}
+		return false
+	}, 5*time.Second, 50*time.Millisecond,
+		"cycle 3: expected Accepted=True after Gateway AllowedRoutes was updated to allow all namespaces")
 }
