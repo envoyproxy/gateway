@@ -117,11 +117,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processHTTPRouteRules(httpRoute, parentRef, resources)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := httpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
 			observedGeneration = gw.GetGeneration()
 		}
 
@@ -856,11 +856,11 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := grpcRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
 			observedGeneration = gw.GetGeneration()
 		}
 
@@ -1413,11 +1413,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			destName     = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := tlsRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
 			observedGeneration = gw.GetGeneration()
 		}
 
@@ -1604,11 +1604,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			destName     = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 		)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := udpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
 			observedGeneration = gw.GetGeneration()
 		}
 
@@ -1765,11 +1765,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			destName     = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 		)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := tcpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > observedGeneration {
+		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
 			observedGeneration = gw.GetGeneration()
 		}
 
@@ -2322,11 +2322,11 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
-		// observedGeneration is the max of the route's own generation and the matched
-		// Gateway's generation. Gateway-only edit produces a condition value that differs
+		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
+		// Gateway-only edit produces a condition value that differs
 		// from the stale stored one, unblocking the watchable DeepEqual gate.
 		observedGeneration := routeContext.GetGeneration()
-		if matchedGateway != nil && matchedGateway.GetGeneration() > observedGeneration {
+		if matchedGateway != nil && matchedGateway.GetGeneration() > 0 {
 			observedGeneration = matchedGateway.GetGeneration()
 		}
 
