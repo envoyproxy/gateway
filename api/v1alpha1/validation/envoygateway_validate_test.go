@@ -1363,6 +1363,7 @@ func TestGetExtensionManagers(t *testing.T) {
 		assert.Equal(t, "plural2", result[1].Name)
 	})
 }
+<<<<<<< HEAD
 
 func TestWarnEnvoyGateway(t *testing.T) {
 	eg := egv1a1.DefaultEnvoyGateway()
@@ -1462,3 +1463,5 @@ func TestLuaDisabled(t *testing.T) {
 		})
 	}
 }
+=======
+>>>>>>> c68d38ca0 (feat(extensionManager): add support for multiple ExtensionManagers with sequential chaining (#8458))
