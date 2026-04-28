@@ -45,6 +45,22 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
+              textFormatSource:
+                inlineString: |
+                  [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              jsonFormat:
+                ep_latency: '[EG_UNRESOLVED:nonexistent]'
+                method: '%REQ(:METHOD)%'
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
               jsonFormat:
                 ep_latency: '[EG_UNRESOLVED:nonexistent]'
                 method: '%REQ(:METHOD)%'
@@ -60,6 +76,25 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+            upstreamLog:
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
+                path: /dev/stdout
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  jsonFormat:
+                    ep_latency: '[EG_UNRESOLVED:nonexistent]'
+                    method: '%REQ(:METHOD)%'
+                path: /dev/stdout
+            upstreamLogOptions:
+              flushUpstreamLogOnUpstreamStream: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
@@ -125,6 +160,22 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             logFormat:
+              textFormatSource:
+                inlineString: |
+                  [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
+              jsonFormat:
+                ep_latency: '[EG_UNRESOLVED:nonexistent]'
+                method: '%REQ(:METHOD)%'
+            path: /dev/stdout
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            logFormat:
               jsonFormat:
                 ep_latency: '[EG_UNRESOLVED:nonexistent]'
                 method: '%REQ(:METHOD)%'
@@ -140,6 +191,25 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             suppressEnvoyHeaders: true
+            upstreamLog:
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] %REQ(:METHOD)% ep=[EG_UNRESOLVED:nonexistent]
+                path: /dev/stdout
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  jsonFormat:
+                    ep_latency: '[EG_UNRESOLVED:nonexistent]'
+                    method: '%REQ(:METHOD)%'
+                path: /dev/stdout
+            upstreamLogOptions:
+              flushUpstreamLogOnUpstreamStream: true
         mergeSlashes: true
         normalizePath: true
         pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT

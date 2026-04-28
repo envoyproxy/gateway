@@ -4,7 +4,7 @@ title: "Ext-Proc Observability: Named Instances"
 
 ## Overview
 
-Envoy's [ext-proc filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_proc_filter) emits per-stream statistics (latency, gRPC status, bytes transferred, etc.) and writes per-stream data into [filter state](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/filter_state), both keyed by the filter's instance name. Envoy Gateway generates those instance names from policy identity (e.g. `envoy.filters.http.ext_proc/namespace/extproc/my-policy/0`), following a convention that is opaque to users.
+Envoy's [ext-proc filter](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_proc_filter) emits per-stream statistics (latency, gRPC status, bytes transferred, etc.) and writes per-stream data into [filter state](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/data_sharing_between_filters), both keyed by the filter's instance name. Envoy Gateway generates those instance names from policy identity (e.g. `envoy.filters.http.ext_proc/namespace/extproc/my-policy/0`), following a convention that is opaque to users.
 
 This creates two related observability problems:
 
@@ -42,7 +42,7 @@ Both features are opt-in and independent of each other.
 | 3 | **Duplicate `statPrefix` values are allowed** and aggregate intentionally, mirroring `clusterStatName` semantics; no warning issued. | Treating duplicates as an error like `name` (rejected: aggregation across deployments is a valid pattern). |
 | 4 | **`args` are passed verbatim** to `%FILTER_STATE(key:args)%`; EG does not inject or validate them. | EG-managed attribute selection (rejected: EG can't know which filter state fields are meaningful per service). |
 | 5 | **Unresolved operators become `[EG_UNRESOLVED:name]`** rather than passing through or being dropped. | Pass-through (rejected: causes xDS NACK); silent drop (rejected: hides misconfiguration; the sentinel is distinct from Envoy's runtime `-`). |
-| 6 | **First-claimant-wins per IR listener** using a `nameRegistry` in creation-timestamp order; losers get `CustomName` cleared and an `AmbiguousDefinition` warning. Under `MergeGateways`, cross-listener collisions are undetected (replicating FilterChain-sharing knowledge in the GW-API layer would leak xDS concerns upward). | Rejecting all duplicates (rejected: breaks the oldest, authoritative policy). |
+| 6 | **Specificity-then-age wins per IR listener** using a `nameRegistry`; policies are processed in target-scope order (route-rule → route → listener → gateway), so more-specific policies claim names first. Within the same specificity level the oldest (lowest creation-timestamp) policy wins. Losers get `CustomName` cleared and an `AmbiguousDefinition` warning. The **winner's filter identity applies to the entire listener**: on routes where a losing policy's ext-proc is active, the operator expands to the winner's filter-state key, which is absent and produces an empty value. Under `MergeGateways`, cross-listener collisions are undetected (replicating FilterChain-sharing knowledge in the GW-API layer would leak xDS concerns upward). | Rejecting all duplicates (rejected: breaks the oldest, authoritative policy). |
 | 7 | **Operator requires explicit attribute selection**; no automatic inclusion of all ext-proc filter state fields. | Auto-include all fields (rejected: EG can't know which are meaningful; would pollute logs). |
 | 8 | **Operator named `EG_EXT_PROC_FILTER_STATE`**, scoped to the extension type. | Generic `EG_FILTER_STATE` (rejected: only ext-proc writes filter state keyed by its instance name; WASM, Lua, and Dynamic Modules use user-chosen keys, so a generic name would mislead). |
 
@@ -57,6 +57,8 @@ Both features are opt-in and independent of each other.
 ## Scope and Future Work
 
 **Header mutation** (`AddRequestHeaders`, `AddResponseHeaders`) is a natural next target; implementation requires threading the extension list through `buildXdsAddedHeaders` and applying the same resolver.
+
+**Upstream access logs** are not yet supported. The `%EG_EXT_PROC_FILTER_STATE(...)%` operator is currently resolved only for downstream (listener/route) access logs. Once upstream ext-proc filters are implemented (tracked in [#5881](https://github.com/envoyproxy/gateway/issues/5881)), this operator may be extended to resolve against upstream ext-proc instances as well.
 
 **Other extension types** (WASM, Dynamic Modules, Lua) could use the same mechanism if they wrote filter state under their Envoy filter instance name, but are deferred until there's a concrete use case.
 

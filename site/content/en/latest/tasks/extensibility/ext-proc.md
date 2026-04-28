@@ -307,7 +307,9 @@ A single format string can reference ext-proc instances from multiple EEPs — e
 
 #### Name conflicts and shared names
 
-Names are not validated for uniqueness across policies. When multiple `EnvoyExtensionPolicy` resources targeting routes on the same listener claim the same name, **oldest policy wins**: the EEP with the earliest creation timestamp retains the name; newer ones receive a `Warning` condition with reason `AmbiguousDefinition` and their operator resolves to `[EG_UNRESOLVED:name]`. The routes themselves still execute their own ext-proc filters normally.
+Names are not validated for uniqueness across policies. When multiple `EnvoyExtensionPolicy` resources on the same listener claim the same name, the **most-specific target scope wins**: route-rule policies before route policies, route policies before listener policies, listener policies before gateway policies. Within the same scope, the **oldest policy** (earliest creation timestamp) wins. Losers receive a `Warning` condition with reason `AmbiguousDefinition` and their operator resolves to `[EG_UNRESOLVED:name]`. The routes themselves still execute their own ext-proc filters normally.
+
+The winner's filter identity becomes the resolution target for `%EG_EXT_PROC_FILTER_STATE(name:...)%` **across the entire listener** — not just for routes where the winning policy's ext-proc is active. On routes served by a losing policy's ext-proc, the operator will expand to the winner's filter-state key, which will be absent and produce an empty value.
 
 For the grouping pattern to work correctly, routes must reside on **separate listeners** — each listener gets its own HCM and isolated ext-proc filter chain. When routes share a listener/port, they share the same HCM and operator resolution is not per-route.
 

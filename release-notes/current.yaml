@@ -50,7 +50,7 @@ new features: |
   Added support for path override in ExtAuth HTTP service.
   Added support for bandwidth limit.
   Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart.  Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
-  Added support for `name` field on ext-proc entries in `EnvoyExtensionPolicy`, enabling the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` access log operator that resolves ext-proc filter state by a user-defined name at xDS translation time, without requiring knowledge of EG's internal filter naming conventions.
+  Added support for `name` field on ext-proc entries in `EnvoyExtensionPolicy`, enabling the `%EG_EXT_PROC_FILTER_STATE(name:attribute)%` access log operator that resolves ext-proc filter state by a user-defined name at xDS translation time, without requiring knowledge of EG's internal filter naming conventions. The operator applies to downstream (listener/route) access logs only; upstream access log support is deferred pending upstream ext-proc filter support.
   Added support for `statPrefix` field on ext-proc entries in `EnvoyExtensionPolicy`, allowing users to control the Envoy stat prefix for ext-proc filter instances to get readable metric names and intentionally aggregate or isolate stats across deployments.
 
 bug fixes: |

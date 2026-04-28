@@ -3,8 +3,30 @@ accesslog:
   - path: "/dev/stdout"
     format: |
       [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
+  - path: "/dev/stdout"
+    logType: Route
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
+  - path: "/dev/stdout"
+    logType: Upstream
+    format: |
+      [%START_TIME%] %REQ(:METHOD)% ep=%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%
   json:
   - path: "/dev/stdout"
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ep_latency
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
+  - path: "/dev/stdout"
+    logType: Route
+    json:
+    - key: method
+      value: "%REQ(:METHOD)%"
+    - key: ep_latency
+      value: "%EG_EXT_PROC_FILTER_STATE(nonexistent:FIELD:bytes_sent)%"
+  - path: "/dev/stdout"
+    logType: Upstream
     json:
     - key: method
       value: "%REQ(:METHOD)%"

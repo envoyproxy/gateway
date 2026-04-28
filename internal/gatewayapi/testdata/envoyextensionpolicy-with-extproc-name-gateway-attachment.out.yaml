@@ -2,36 +2,6 @@ envoyExtensionPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: EnvoyExtensionPolicy
   metadata:
-    name: policy-for-httproute-1
-    namespace: default
-  spec:
-    extProc:
-    - backendRefs:
-      - name: grpc-backend-1
-        port: 9000
-      name: auth
-    targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-1
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway-1
-        namespace: default
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: EnvoyExtensionPolicy
-  metadata:
     name: policy-for-httproute-2
     namespace: default
   spec:
@@ -54,6 +24,35 @@ envoyExtensionPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    name: policy-for-gateway-1
+    namespace: default
+  spec:
+    extProc:
+    - backendRefs:
+      - name: grpc-backend-1
+        port: 9000
+      name: auth
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
         message: ext-proc name(s) [auth] already claimed on listener default/gateway-1/http
           by a more-specific or older policy; %EG_EXT_PROC_FILTER_STATE% access log
           operator will not resolve for this policy
@@ -65,6 +64,12 @@ envoyExtensionPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other envoyExtensionPolicies
+          for these routes: [default/httproute-2]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
@@ -264,13 +269,12 @@ xdsIR:
         envoyExtensions:
           extProcs:
           - authority: grpc-backend-1.default:9000
-            customName: auth
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy
-                name: policy-for-httproute-1
+                name: policy-for-gateway-1
                 namespace: default
-              name: envoyextensionpolicy/default/policy-for-httproute-1/extproc/0
+              name: envoyextensionpolicy/default/policy-for-gateway-1/extproc/0
               settings:
               - addressType: IP
                 endpoints:
@@ -281,10 +285,10 @@ xdsIR:
                   name: grpc-backend-1
                   namespace: default
                   sectionName: "9000"
-                name: envoyextensionpolicy/default/policy-for-httproute-1/extproc/0/backend/0
+                name: envoyextensionpolicy/default/policy-for-gateway-1/extproc/0/backend/0
                 protocol: GRPC
                 weight: 1
-            name: envoyextensionpolicy/default/policy-for-httproute-1/extproc/0
+            name: envoyextensionpolicy/default/policy-for-gateway-1/extproc/0
             statPrefix: auth
         hostname: www.foo.com
         isHTTP2: false
@@ -319,6 +323,7 @@ xdsIR:
         envoyExtensions:
           extProcs:
           - authority: grpc-backend-2.default:9000
+            customName: auth
             destination:
               metadata:
                 kind: EnvoyExtensionPolicy

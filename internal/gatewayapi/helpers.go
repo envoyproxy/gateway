@@ -1086,16 +1086,16 @@ func newNameRegistry() *nameRegistry {
 }
 
 // claim attempts to register name under ownerID within scope.
-// Returns (winnerID, true) if ownerID is the first claimant (new registration).
-// Returns (winnerID, false) if the name was already claimed by a different owner.
-// A second claim by the same ownerID is a no-op and returns (ownerID, true).
-func (r *nameRegistry) claim(scope, name, ownerID string) (winner string, isNew bool) {
+// Returns true if ownerID is the first claimant (new registration).
+// Returns false if the name was already claimed by a different owner.
+// A second claim by the same ownerID is a no-op and returns true.
+func (r *nameRegistry) claim(scope, name, ownerID string) bool {
 	if r.scopes[scope] == nil {
 		r.scopes[scope] = make(map[string]string)
 	}
 	if existing, ok := r.scopes[scope][name]; ok {
-		return existing, existing == ownerID
+		return existing == ownerID
 	}
 	r.scopes[scope][name] = ownerID
-	return ownerID, true
+	return true
 }

@@ -73,7 +73,8 @@ type ExtProc struct {
 	BackendCluster `json:",inline"`
 
 	// Name is an optional identifier for this ext-proc instance.
-	// Enables the %EG_EXT_PROC_FILTER_STATE(name:attribute)% access log operator.
+	// Enables the %EG_EXT_PROC_FILTER_STATE(name:attribute)% access log operator for
+	// downstream (listener/route) access logs. Upstream access logs are not currently supported.
 	// When StatPrefix is not set, also used as the Envoy stat prefix for this filter.
 	//
 	// +optional
