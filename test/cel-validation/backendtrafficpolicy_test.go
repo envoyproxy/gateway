@@ -3265,6 +3265,99 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{},
 		},
 		{
+			desc: "invalid bandwidthLimit prefix with carriage return",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\r"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
+			desc: "invalid bandwidthLimit prefix with newline",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\n"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
+			desc: "invalid bandwidthLimit prefix with null byte",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: "gateway.networking.k8s.io",
+								Kind:  "Gateway",
+								Name:  "eg",
+							},
+						},
+					},
+					BandwidthLimit: &egv1a1.BandwidthLimitSpec{
+						Response: &egv1a1.BandwidthLimitResponseConfig{
+							Limit: egv1a1.BandwidthLimitValue{
+								Value: resource.MustParse("10M"),
+								Unit:  egv1a1.BandwidthLimitUnitSecond,
+							},
+							ResponseTrailers: &egv1a1.BandwidthLimitResponseTrailers{
+								Prefix: new("x-eg\x00"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.bandwidthLimit.response.responseTrailers.prefix",
+				"in body should match",
+			},
+		},
+		{
 			desc: "invalid bandwidthLimit with neither request nor response",
 			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
 				btp.Spec = egv1a1.BackendTrafficPolicySpec{

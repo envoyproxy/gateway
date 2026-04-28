@@ -1031,6 +1031,7 @@ func (t *Translator) mergeBackendTrafficPolicy(routePolicy, gwPolicy *egv1a1.Bac
 func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (*ir.TrafficFeatures, error) {
 	var (
 		rl          *ir.RateLimit
+		bl          *ir.BandwidthLimit
 		lb          *ir.LoadBalancer
 		pp          *ir.ProxyProtocol
 		hc          *ir.HealthCheck
@@ -1052,6 +1053,12 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 	if policy.Spec.RateLimit != nil {
 		if rl, err = t.buildRateLimit(policy); err != nil {
 			err = perr.WithMessage(err, "RateLimit")
+			errs = errors.Join(errs, err)
+		}
+	}
+	if policy.Spec.BandwidthLimit != nil {
+		if bl, err = buildBandwidthLimit(policy.Spec.BandwidthLimit); err != nil {
+			err = perr.WithMessage(err, "BandwidthLimit")
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1120,6 +1127,7 @@ func (t *Translator) buildTrafficFeatures(policy *egv1a1.BackendTrafficPolicy) (
 
 	return &ir.TrafficFeatures{
 		RateLimit:         rl,
+		BandwidthLimit:    bl,
 		LoadBalancer:      lb,
 		ProxyProtocol:     pp,
 		HealthCheck:       hc,
@@ -1666,6 +1674,73 @@ func int64ToUint32(in int64) (uint32, bool) {
 		return uint32(in), true
 	}
 	return 0, false
+}
+
+func buildBandwidthLimit(bandwidth *egv1a1.BandwidthLimitSpec) (*ir.BandwidthLimit, error) {
+	if bandwidth == nil {
+		return nil, nil
+	}
+
+	bl := &ir.BandwidthLimit{}
+
+	if bandwidth.Request != nil {
+		bytes, ok := bandwidth.Request.Limit.Value.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("request limit value must be convertible to an int64")
+		}
+		if bytes < 0 {
+			return nil, fmt.Errorf("request limit value must be positive")
+		}
+		kibps, err := bandwidthToKibps(uint64(bytes), bandwidth.Request.Limit.Unit)
+		if err != nil {
+			return nil, fmt.Errorf("request: %w", err)
+		}
+		bl.Request = &ir.BandwidthLimitConfig{
+			LimitKibps: kibps,
+		}
+	}
+	if bandwidth.Response != nil {
+		bytes, ok := bandwidth.Response.Limit.Value.AsInt64()
+		if !ok {
+			return nil, fmt.Errorf("response limit value must be convertible to an int64")
+		}
+		if bytes < 0 {
+			return nil, fmt.Errorf("response limit value must be positive")
+		}
+		kibps, err := bandwidthToKibps(uint64(bytes), bandwidth.Response.Limit.Unit)
+		if err != nil {
+			return nil, fmt.Errorf("response: %w", err)
+		}
+		bl.Response = &ir.BandwidthLimitConfig{
+			LimitKibps: kibps,
+		}
+
+		if bandwidth.Response.ResponseTrailers != nil {
+			bl.Response.ResponseTrailers = &ir.BandwidthLimitResponseTrailers{
+				Prefix: bandwidth.Response.ResponseTrailers.Prefix,
+			}
+		}
+	}
+	return bl, nil
+}
+
+// bandwidthToKibps converts bytes-per-unit to kibibytes-per-second (KiB/s).
+// Returns an error if the result is below Envoy's minimum of 1 KiB/s.
+func bandwidthToKibps(limit uint64, unit egv1a1.BandwidthLimitUnit) (uint64, error) {
+	var secondsPerUnit uint64
+	switch unit {
+	case egv1a1.BandwidthLimitUnitMinute:
+		secondsPerUnit = 60
+	case egv1a1.BandwidthLimitUnitHour:
+		secondsPerUnit = 3600
+	default: // Second
+		secondsPerUnit = 1
+	}
+	kibps := limit / (secondsPerUnit * 1024)
+	if kibps == 0 {
+		return 0, fmt.Errorf("bandwidth limit of %d bytes per %s is below the minimum of 1 KiB/s", limit, unit)
+	}
+	return kibps, nil
 }
 
 func (t *Translator) buildFaultInjection(policy *egv1a1.BackendTrafficPolicy) *ir.FaultInjection {
