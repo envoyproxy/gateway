@@ -81,6 +81,7 @@ bug fixes: |
   Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
   Fixed BackendTrafficPolicy rate limit `requests` values above uint32 max (4294967295) being silently truncated modulo 2^32 by the rate limit service and Envoy token bucket. The field now rejects such values at admission time with a clear schema validation error. See envoyproxy/ai-gateway#2012.
   Fixed status conditions not being updated when a route is rejected due to multiple errors.
+  Fixed dpanic in gatewayapi translator logger.
 
 # Enhancements that improve performance.
 performance improvements: |
