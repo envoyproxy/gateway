@@ -47,6 +47,7 @@ new features: |
   Added support for multiple ExtensionManagers with sequential chaining via a new `extensionManagers` field in `EnvoyGateway` configuration.
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
+  Added `source` field to `responseOverride` rules in BackendTrafficPolicy, allowing rules to target only Envoy-generated responses (`Local`), only upstream responses (`Backend`), or both (`All`, the default). This enables overriding envoy responses (e.g. auth/rate-limit failures) without affecting legitimate upstream responses with the same status code.
   Added support for path override in ExtAuth HTTP service.
   Added support for bandwidth limit.
   Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart.  Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
