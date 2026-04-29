@@ -6,7 +6,6 @@ Envoy Gateway provides observability for the ControlPlane and the underlying Env
 This task show you how to config proxy access logs.
 
 ## Prerequisites
-git s
 {{< boilerplate o11y_prerequisites >}}
 
 By default, the Service type of `loki` is ClusterIP, you can change it to LoadBalancer type for further usage:

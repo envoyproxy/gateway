@@ -105,7 +105,7 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 
 	// extProcNameRegistry tracks CustomName ownership per IR listener using
 	// specificity-then-age order (route-rule → route → listener → gateway).
-	// Losers have their CustomName cleared so the access-log resolver never
+	// Shadowed policies have their CustomName cleared so the access-log resolver never
 	// sees a duplicate.
 	extProcNameRegistry := newNameRegistry()
 
@@ -604,27 +604,44 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 							}
 							routesWithDirectResponse.Insert(r.Name)
 						} else {
-							// Specificity-then-age: more-specific scopes process first, oldest wins
-							// within the same scope. Losers get CustomName cleared to avoid ambiguous resolution.
-							var conflictedNames []string
-							for i := range extProcs {
-								if extProcs[i].CustomName == "" {
-									continue
+							// Under non-TLS MergeGateways, multiple IR listeners share a single
+							// HCM. The order in which listeners are processed at xDS translation
+							// time depends on gateway creation timestamps, which is independent of
+							// the EEP age used for name-claiming here. The two orderings can
+							// diverge, making access-log operator resolution non-deterministic and
+							// potentially causing filter-chain drains on reconcile. Suppress
+							// CustomName for all ext-procs on such listeners.
+							if t.MergeGateways && irListener.TLS == nil {
+								if named := clearExtProcNames(extProcs); len(named) > 0 {
+									status.SetWarningForPolicyAncestors(&policy.Status,
+										ancestorRefs,
+										t.GatewayControllerName,
+										egv1a1.PolicyReasonAmbiguousDefinition,
+										fmt.Sprintf("ext-proc name(s) %v are not supported on non-TLS MergeGateways listeners; %%EG_EXT_PROC_FILTER_STATE%% will not resolve",
+											named),
+										policy.Generation,
+									)
 								}
-								if !extProcNameRegistry.claim(irListener.Name, extProcs[i].CustomName, extProcs[i].Name) {
-									conflictedNames = append(conflictedNames, extProcs[i].CustomName)
-									extProcs[i].CustomName = ""
+							} else {
+								// Specificity-then-age: more-specific scopes process first, oldest wins
+								// within the same scope. Shadowed policies get CustomName cleared to avoid ambiguous resolution.
+								var conflictedNames []string
+								for i := range extProcs {
+									name := extProcs[i].CustomName
+									if claimExtProcName(extProcNameRegistry, irListener.Name, &extProcs[i]) {
+										conflictedNames = append(conflictedNames, name)
+									}
 								}
-							}
-							if len(conflictedNames) > 0 {
-								status.SetWarningForPolicyAncestors(&policy.Status,
-									ancestorRefs,
-									t.GatewayControllerName,
-									egv1a1.PolicyReasonAmbiguousDefinition,
-									fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
-										conflictedNames, irListener.Name),
-									policy.Generation,
-								)
+								if len(conflictedNames) > 0 {
+									status.SetWarningForPolicyAncestors(&policy.Status,
+										ancestorRefs,
+										t.GatewayControllerName,
+										egv1a1.PolicyReasonAmbiguousDefinition,
+										fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
+											conflictedNames, irListener.Name),
+										policy.Generation,
+									)
+								}
 							}
 							r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
 								ExtProcs:       extProcs,
@@ -731,30 +748,49 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 				}
 				routesWithDirectResponse.Insert(r.Name)
 			} else {
-				// Claim names once per listener the first time we attach to a route.
-				// Claim names once per listener; same registry as route-targeted EEPs.
-				if !namesClaimedForListener {
-					namesClaimedForListener = true
-					var conflictedNames []string
-					for i := range extProcs {
-						if extProcs[i].CustomName == "" {
-							continue
-						}
-						if !extProcNameRegistry.claim(http.Name, extProcs[i].CustomName, extProcs[i].Name) {
-							conflictedNames = append(conflictedNames, extProcs[i].CustomName)
-							extProcs[i].CustomName = ""
+				// Under non-TLS MergeGateways, suppress CustomName for the same reason
+				// as the route path: xDS listener ordering is independent of EEP age,
+				// making operator resolution non-deterministic.
+				if t.MergeGateways && http.TLS == nil {
+					if !namesClaimedForListener {
+						namesClaimedForListener = true
+						ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(gateway.Gateway), target.SectionName)
+						if named := clearExtProcNames(extProcs); len(named) > 0 {
+							status.SetWarningForPolicyAncestors(&policy.Status,
+								[]*gwapiv1.ParentReference{&ancestorRef},
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonAmbiguousDefinition,
+								fmt.Sprintf("ext-proc name(s) %v are not supported on non-TLS MergeGateways listeners; %%EG_EXT_PROC_FILTER_STATE%% will not resolve",
+									named),
+								policy.Generation,
+							)
 						}
 					}
-					if len(conflictedNames) > 0 {
+				} else {
+					// Claim names once per listener: a gateway-targeted EEP contributes the
+					// same extProcs slice to every route, so registering on the first eligible
+					// route is sufficient. Subsequent routes on the same listener would try to
+					// claim the same names against the same registry and produce duplicate warnings.
+					if !namesClaimedForListener {
+						namesClaimedForListener = true
 						ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(gateway.Gateway), target.SectionName)
-						status.SetWarningForPolicyAncestors(&policy.Status,
-							[]*gwapiv1.ParentReference{&ancestorRef},
-							t.GatewayControllerName,
-							egv1a1.PolicyReasonAmbiguousDefinition,
-							fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
-								conflictedNames, http.Name),
-							policy.Generation,
-						)
+						var conflictedNames []string
+						for i := range extProcs {
+							name := extProcs[i].CustomName
+							if claimExtProcName(extProcNameRegistry, http.Name, &extProcs[i]) {
+								conflictedNames = append(conflictedNames, name)
+							}
+						}
+						if len(conflictedNames) > 0 {
+							status.SetWarningForPolicyAncestors(&policy.Status,
+								[]*gwapiv1.ParentReference{&ancestorRef},
+								t.GatewayControllerName,
+								egv1a1.PolicyReasonAmbiguousDefinition,
+								fmt.Sprintf("ext-proc name(s) %v already claimed on listener %s by a more-specific or older policy; %%EG_EXT_PROC_FILTER_STATE%% access log operator will not resolve for this policy",
+									conflictedNames, http.Name),
+								policy.Generation,
+							)
+						}
 					}
 				}
 				r.EnvoyExtensions = &ir.EnvoyExtensionFeatures{
@@ -1337,6 +1373,33 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// claimExtProcName attempts to register ep.CustomName in the registry for listenerName.
+// If already claimed by a different owner, clears ep.CustomName and returns true (conflicted).
+func claimExtProcName(registry *nameRegistry, listenerName string, ep *ir.ExtProc) bool {
+	if ep.CustomName == "" {
+		return false
+	}
+	if !registry.claim(listenerName, ep.CustomName, ep.Name) {
+		ep.CustomName = ""
+		return true
+	}
+	return false
+}
+
+// clearExtProcNames suppresses CustomName on all ext-procs in the slice and returns
+// the names that were cleared. Used for non-TLS MergeGateways listeners where name
+// resolution ordering is non-deterministic at the xDS layer.
+func clearExtProcNames(extProcs []ir.ExtProc) []string {
+	var cleared []string
+	for i := range extProcs {
+		if extProcs[i].CustomName != "" {
+			cleared = append(cleared, extProcs[i].CustomName)
+			extProcs[i].CustomName = ""
+		}
+	}
+	return cleared
 }
 
 // envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
