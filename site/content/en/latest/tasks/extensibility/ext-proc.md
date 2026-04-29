@@ -278,7 +278,7 @@ When multiple `EnvoyExtensionPolicy` resources on the same listener use the same
 
 The effective policy's filter identity is used for `%EG_EXT_PROC_FILTER_STATE(name:...)%` across the entire listener. On routes where only a shadowed policy's ext-proc runs, the operator expands to an absent filter-state key and produces an empty value (typically `"-"`).
 
-Each listener has its own isolated name registry, so the same name can be reused safely across separate listeners or gateways. Under [`MergeGateways`](https://gateway.envoyproxy.io/docs/api/extension_types/#mergegatewaysconfig) with TLS, each listener has its own filter chain and name registry, so names are fully isolated. Under `MergeGateways` without TLS, listeners on the same port share a single HCM whose processing order depends on gateway creation timestamps — independent of EEP age — making name resolution non-deterministic. `name` is therefore silently ignored on non-TLS merged listeners; use TLS listeners or avoid `MergeGateways` if you need named ext-proc access log operators.
+Each listener has its own isolated name registry, so the same name can be reused safely across separate listeners or gateways. Under [`MergeGateways`](https://gateway.envoyproxy.io/docs/api/extension_types/#mergegatewaysconfig), `name` is only supported on TLS listeners; it is silently ignored on non-TLS listeners.
 
 For a full explanation of the design, see the [Ext-Proc Observability design document](/community/design/ext-proc-observability).
 
