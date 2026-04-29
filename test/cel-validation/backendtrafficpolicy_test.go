@@ -150,7 +150,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					AdmissionControl: &egv1a1.AdmissionControl{
-						MinSuccessRate:       new(uint32(50)),
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
@@ -172,7 +172,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					AdmissionControl: &egv1a1.AdmissionControl{
-						MinSuccessRate:       new(uint32(50)),
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
@@ -191,7 +191,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					AdmissionControl: &egv1a1.AdmissionControl{
-						MinSuccessRate:       new(uint32(50)),
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
@@ -211,7 +211,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					AdmissionControl: &egv1a1.AdmissionControl{
-						MinSuccessRate:       new(uint32(50)),
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
@@ -231,7 +231,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					AdmissionControl: &egv1a1.AdmissionControl{
-						MinSuccessRate:       new(uint32(50)),
+						MinSuccessRate: new(uint32(50)),
 					},
 				}
 			},
