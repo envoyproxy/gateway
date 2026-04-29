@@ -538,6 +538,142 @@ func TestTranslateXdsWithExtensionErrorsWhenFailClosed(t *testing.T) {
 	}
 }
 
+// TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen routes the error-scenario
+// inputs through a 1-entry CompositeManager with FailOpen=true and asserts that
+// translation succeeds. This verifies that CompositeManager correctly swallows
+// child errors when failOpen is configured, so the translator is unaffected.
+func TestTranslateXdsWithCompositeExtensionErrorsWhenFailOpen(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			x := requireXdsIRFromInputTestData(t, inputFile)
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+			}
+			ext := buildExtensionManagerConfig(true)
+
+			extMgr, err := registry.NewInMemoryCompositeManager(
+				[]*egv1a1.ExtensionManager{&ext},
+				&testingExtensionServer{},
+			)
+			require.NoError(t, err)
+			defer extMgr.CleanupHookConns()
+			tr.ExtensionManager = &extMgr
+
+			_, err = tr.Translate(x)
+			require.NoError(t, err, "extension error should be swallowed when failOpen=true")
+		})
+	}
+}
+
+// TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed verifies that errors from
+// a child manager are wrapped with the entry's name (extension "<name>": <original>)
+// when propagated through the composite chain to the translator.
+func TestTranslateXdsWithCompositeExtensionErrorsWhenFailClosed(t *testing.T) {
+	testConfigs := map[string]testFileConfig{
+		"http-route-extension-route-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = route hook resource error`,
+		},
+		"http-route-extension-virtualhost-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = extension post xds virtual host hook error`,
+		},
+		"http-route-extension-listener-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = extension post xds listener hook error`,
+		},
+		"http-route-extension-translate-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = cluster hook resource error: fail-close-error`,
+		},
+		"multiple-listeners-same-port-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = simulate error when there is no default filter chain in the original resources`,
+		},
+		"extensionpolicy-extension-server-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = invalid extension policy : ext-server-policy-invalid-test`,
+		},
+		"http-route-custom-backend-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = inference pool target port number is 0`,
+		},
+		"http-route-custom-backend-multiple-backend-error": {
+			errMsg: `extension "ext-a": rpc error: code = Unknown desc = inference pool only support one per rule`,
+		},
+	}
+
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "in", "extension-xds-ir", "*-error.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFileName := testName(inputFile)
+		t.Run(inputFileName, func(t *testing.T) {
+			cfg, ok := testConfigs[inputFileName]
+			if !ok {
+				cfg = testFileConfig{}
+			}
+
+			x := requireXdsIRFromInputTestData(t, inputFile)
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
+				},
+			}
+			extA := buildExtensionManagerConfig(false)
+			extA.Name = "ext-a"
+			extB := buildExtensionManagerConfig(false)
+			extB.Name = "ext-b"
+
+			extMgr, err := registry.NewInMemoryCompositeManager(
+				[]*egv1a1.ExtensionManager{&extA, &extB},
+				&testingExtensionServer{},
+			)
+			require.NoError(t, err)
+			defer extMgr.CleanupHookConns()
+			tr.ExtensionManager = &extMgr
+
+			_, err = tr.Translate(x)
+			require.EqualError(t, err, cfg.errMsg)
+		})
+	}
+}
+
+// buildExtensionManagerConfig returns an ExtensionManager config that declares the
+// Resources / PolicyResources / BackendResources and hooks expected by the extension
+// test suite. Callers set FailOpen and (for composite entries) Name.
+func buildExtensionManagerConfig(failOpen bool) egv1a1.ExtensionManager {
+	return egv1a1.ExtensionManager{
+		FailOpen: failOpen,
+		Resources: []egv1a1.GroupVersionKind{
+			{Group: "foo.example.io", Version: "v1alpha1", Kind: "examplefilter"},
+		},
+		BackendResources: []egv1a1.GroupVersionKind{
+			{Group: "inference.networking.x-k8s.io", Version: "v1alpha2", Kind: "InferencePool"},
+		},
+		PolicyResources: []egv1a1.GroupVersionKind{
+			{Group: "bar.example.io", Version: "v1alpha1", Kind: "ExtensionPolicy"},
+			{Group: "foo.example.io", Version: "v1alpha1", Kind: "Bar"},
+			{Group: "security.example.io", Version: "v1alpha1", Kind: "ExampleExtPolicy"},
+		},
+		Hooks: &egv1a1.ExtensionHooks{
+			XDSTranslator: &egv1a1.XDSTranslatorHooks{
+				Post: []egv1a1.XDSTranslatorHook{
+					egv1a1.XDSCluster,
+					egv1a1.XDSRoute,
+					egv1a1.XDSVirtualHost,
+					egv1a1.XDSHTTPListener,
+					egv1a1.XDSEndpoints,
+					egv1a1.XDSTranslation,
+				},
+				Translation: &egv1a1.TranslationConfig{
+					Listener: &egv1a1.ListenerTranslationConfig{IncludeAll: new(true)},
+					Route:    &egv1a1.RouteTranslationConfig{IncludeAll: new(true)},
+				},
+			},
+		},
+	}
+}
+
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)
 	return strings.TrimSuffix(fileName, ".yaml")
