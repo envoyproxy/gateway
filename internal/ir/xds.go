@@ -717,6 +717,8 @@ type ResponseOverrideRule struct {
 	Response *CustomResponse `json:"response,omitempty"`
 	// Redirect configuration
 	Redirect *Redirect `json:"redirect,omitempty"`
+	// Source specifies the origin of the response this rule applies to.
+	Source egv1a1.ResponseOverrideSource `json:"source,omitempty" yaml:"source,omitempty"`
 }
 
 // CustomResponseMatch defines the configuration for matching a user response to return a custom one.
@@ -1032,6 +1034,8 @@ type TrafficFeatures struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
+	// BandwidthLimit defines bandwidth limiting for the backend.
+	BandwidthLimit *BandwidthLimit `json:"bandwidthLimit,omitempty" yaml:"bandwidthLimit,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// Proxy Protocol Settings
@@ -1560,6 +1564,9 @@ type HTTPExtAuthService struct {
 	// If path is not empty, the authorization request will be sent to that path,
 	// or else the authorization request will be sent to the root path.
 	Path string `json:"path"`
+
+	// PathOverride replaces the value of authorization request path with this value.
+	PathOverride string `json:"pathOverride,omitempty"`
 
 	// HeadersToBackend are the authorization response headers that will be added
 	// to the original client request before sending it to the backend server.
@@ -2663,6 +2670,33 @@ type RateLimitValue struct {
 	Requests uint32 `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
 	Unit RateLimitUnit `json:"unit" yaml:"unit"`
+}
+
+// BandwidthLimit holds bandwidth limiting configuration for request and/or response directions.
+// At least one of Request or Response must be non-nil.
+// +k8s:deepcopy-gen=true
+type BandwidthLimit struct {
+	// Request configures bandwidth limiting for the request direction.
+	Request *BandwidthLimitConfig `json:"request,omitempty" yaml:"request,omitempty"`
+	// Response configures bandwidth limiting for the response direction.
+	Response *BandwidthLimitConfig `json:"response,omitempty" yaml:"response,omitempty"`
+}
+
+// BandwidthLimitConfig holds the bandwidth limit configuration for one direction.
+// +k8s:deepcopy-gen=true
+type BandwidthLimitConfig struct {
+	// LimitKibps specifies the bandwidth in kibibytes per second (KiB/s).
+	LimitKibps uint64 `json:"limitKibps" yaml:"limitKibps"`
+	// ResponseTrailers configures trailer headers appended when bandwidth limiting introduces delays.
+	// Only applicable to the response direction.
+	ResponseTrailers *BandwidthLimitResponseTrailers `json:"responseTrailers,omitempty" yaml:"responseTrailers,omitempty"`
+}
+
+// BandwidthLimitResponseTrailers holds trailer prefix configuration for bandwidth limiting.
+// +k8s:deepcopy-gen=true
+type BandwidthLimitResponseTrailers struct {
+	// Prefix is prepended to each trailer header name.
+	Prefix *string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
 }
 
 type ProxyAccessLogType egv1a1.ProxyAccessLogType

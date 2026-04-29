@@ -635,6 +635,7 @@ spec:
                               including response body transfer time and the time added by the filter.
                               "bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.
                               "bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter.
+                            pattern: ^[^\r\n\x00]*$
                             type: string
                         type: object
                     required:
@@ -3037,6 +3038,17 @@ spec:
                             If unset, does not override the status of response.
                           type: integer
                       type: object
+                    source:
+                      description: |-
+                        Source specifies which responses this rule applies to.
+                        Local overrides only Envoy-generated responses (e.g. auth failures).
+                        Backend overrides only upstream responses.
+                        All (default) overrides both.
+                      enum:
+                      - All
+                      - Local
+                      - Backend
+                      type: string
                   required:
                   - match
                   type: object
@@ -9401,6 +9413,8 @@ spec:
 
                   - envoy.filters.http.ratelimit
 
+                  - envoy.filters.http.bandwidth_limit
+
                   - envoy.filters.http.grpc_web
 
                   - envoy.filters.http.grpc_stats
@@ -9443,6 +9457,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -9474,6 +9489,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -9503,6 +9519,7 @@ spec:
                       - envoy.filters.http.rbac
                       - envoy.filters.http.local_ratelimit
                       - envoy.filters.http.ratelimit
+                      - envoy.filters.http.bandwidth_limit
                       - envoy.filters.http.grpc_web
                       - envoy.filters.http.grpc_stats
                       - envoy.filters.http.credential_injector
@@ -31040,6 +31057,15 @@ spec:
                           For example, if the original request path is "/hello", and the path specified here is "/auth",
                           then the path of the authorization request will be "/auth/hello". If the path is not specified,
                           the path of the authorization request will be "/hello".
+                          Only one of Path or PathOverride can be set.
+                        type: string
+                      pathOverride:
+                        description: |-
+                          PathOverride replaces the original request path in the authorization request.
+                          If set, the path will be overridden to this value during authorization.
+                          For example, if the original request path is "/hello", and PathOverride is set to "/auth",
+                          then the path of the authorization request will be "/auth".
+                          Only one of Path or PathOverride can be set.
                         type: string
                     type: object
                     x-kubernetes-validations:
@@ -31055,6 +31081,8 @@ spec:
                       rule: 'has(self.backendRefs) ? (self.backendRefs.all(f, f.group
                         == "" || f.group == ''multicluster.x-k8s.io'' || f.group ==
                         ''gateway.envoyproxy.io'')) : true'
+                    - message: only one of path or pathOverride can be specified
+                      rule: '!(has(self.path) && has(self.pathOverride))'
                   includeRouteMetadata:
                     description: |-
                       IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the

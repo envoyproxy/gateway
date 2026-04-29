@@ -381,6 +381,19 @@ func (kcr *KubernetesClientRateLimit) GetQPSAndBurst() (float32, int) {
 	return float32(qps), int(burst)
 }
 
+// GetExtensionManagers normalizes the singular ExtensionManager and plural ExtensionManagers
+// fields into a single list. The plural field takes precedence. If only the singular field
+// is set, it is returned as a single-element list. Returns nil if neither is set.
+func (e *EnvoyGatewaySpec) GetExtensionManagers() []ExtensionManager {
+	if len(e.ExtensionManagers) > 0 {
+		return e.ExtensionManagers
+	}
+	if e.ExtensionManager != nil {
+		return []ExtensionManager{*e.ExtensionManager}
+	}
+	return nil
+}
+
 // ShouldIncludeClusters returns true if clusters should be included in the translation hook.
 // When TranslationConfig is nil, defaults to true for backward compatibility.
 // When TranslationConfig is explicitly set, uses the configuration.

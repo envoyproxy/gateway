@@ -24,12 +24,12 @@ An Add-ons Helm chart for Envoy Gateway
 | Repository | Name | Version |
 |------------|------|---------|
 | https://fluent.github.io/helm-charts | fluent-bit | 0.56.0 |
-| https://grafana.github.io/helm-charts | alloy | 1.7.0 |
+| https://grafana.github.io/helm-charts | alloy | 1.8.0 |
 | https://grafana.github.io/helm-charts | grafana | 10.5.15 |
-| https://grafana.github.io/helm-charts | loki | 6.55.0 |
+| https://grafana.github.io/helm-charts | loki | 7.0.0 |
 | https://grafana.github.io/helm-charts | tempo | 1.3.1 |
 | https://open-telemetry.github.io/opentelemetry-helm-charts | opentelemetry-collector | 0.152.0 |
-| https://prometheus-community.github.io/helm-charts | prometheus | 29.2.1 |
+| https://prometheus-community.github.io/helm-charts | prometheus | 29.3.0 |
 
 ## Values
 
@@ -151,7 +151,7 @@ An Add-ons Helm chart for Envoy Gateway
 | opentelemetry-collector.enabled | bool | `false` |  |
 | opentelemetry-collector.fullnameOverride | string | `"otel-collector"` |  |
 | opentelemetry-collector.image.repository | string | `"otel/opentelemetry-collector-contrib"` |  |
-| opentelemetry-collector.image.tag | string | `"0.150.1"` |  |
+| opentelemetry-collector.image.tag | string | `"0.151.0"` |  |
 | opentelemetry-collector.mode | string | `"deployment"` |  |
 | opentelemetry-collector.ports.datadog.containerPort | int | `8126` |  |
 | opentelemetry-collector.ports.datadog.enabled | bool | `true` |  |
