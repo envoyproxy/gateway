@@ -1079,6 +1079,7 @@ By default, Envoy Gateway applies the following filters in the order shown:
 * envoy.filters.http.health_check
 * envoy.filters.http.fault
 * envoy.filters.http.cors
+* envoy.filters.http.csrf
 * envoy.filters.http.ext_authz
 * envoy.filters.http.api_key_auth
 * envoy.filters.http.basic_auth
