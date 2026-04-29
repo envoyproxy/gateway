@@ -650,6 +650,11 @@ type policyTargetRouteKey struct {
 	Name      string
 }
 
+type policyTargetRouteRuleKey struct {
+	policyTargetRouteKey
+	SectionName string
+}
+
 type policyRouteTargetContext struct {
 	RouteContext
 	attached             bool

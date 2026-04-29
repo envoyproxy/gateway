@@ -162,6 +162,10 @@ func TestTranslate(t *testing.T) {
 			name:                       "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
 			BackendTargetsInBTPEnabled: true,
 		},
+		{
+			name:                       "backendtrafficpolicy-backend-target-multi-rule-route",
+			BackendTargetsInBTPEnabled: true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))

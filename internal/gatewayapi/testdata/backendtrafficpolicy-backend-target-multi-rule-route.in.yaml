@@ -1,0 +1,101 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+# Multi-rule route:
+# - rule "single-backend": single backend (service-1), has rule-specific BTP with loadBalancer
+# - rule "no-rule-btp": single backend (service-1), no rule-specific BTP, covered by whole-route BTP
+# - rule "multi-backend": multiple backends, should be rejected
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - name: single-backend
+      matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: no-rule-btp
+      matches:
+      - path:
+          value: "/v2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+    - name: multi-backend
+      matches:
+      - path:
+          value: "/split"
+      backendRefs:
+      - name: service-1
+        port: 8080
+        weight: 50
+      - name: service-2
+        port: 8080
+        weight: 50
+backendTrafficPolicies:
+# Backend BTP targeting service-1: sets circuitBreaker
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-service-1
+  spec:
+    targetRefs:
+    - group: ""
+      kind: Service
+      name: service-1
+    circuitBreaker:
+      maxConnections: 100
+# Rule-specific BTP targeting "single-backend" rule: sets loadBalancer, merges with backend BTP
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-rule-single-backend
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      sectionName: single-backend
+    loadBalancer:
+      type: RoundRobin
+# Whole-route BTP targeting httproute-1: sets tcpKeepalive, merges with backend BTP
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route
+  spec:
+    mergeType: StrategicMerge
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    tcpKeepalive:
+      probes: 5

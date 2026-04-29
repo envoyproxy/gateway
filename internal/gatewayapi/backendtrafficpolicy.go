@@ -266,7 +266,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	backendPolicyMap := make(map[backendPolicyKey]*egv1a1.BackendTrafficPolicy)
 
 	// Map of route key → backend BTP for O(1) lookup during route merge phase.
-	routeBackendPolicyMap := make(map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy)
+	routeRuleBackendPolicyMap := make(map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy)
 
 	// Map of Gateway to the routes merged to it.
 	gatewayPolicyMerged := &GatewayPolicyRouteMap{
@@ -288,7 +288,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 	// Build policy maps, which are needed when processing the policies targeting xRoutes and Backends.
 	t.buildGatewayPolicyMap(backendTrafficPolicies, gateways, gatewayMap, gatewayPolicyMap, resources.ReferenceGrants)
 	t.buildBackendPolicyMap(backendTrafficPolicies, backendPolicyMap)
-	t.buildRouteBackendPolicyMap(xdsIR, backendPolicyMap, routeBackendPolicyMap)
+	t.buildRouteRuleBackendPolicyMap(xdsIR, backendPolicyMap, routeRuleBackendPolicyMap)
 
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range backendTrafficPolicies {
@@ -305,7 +305,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, routeBackendPolicyMap, policy, currTarget)
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, routeRuleBackendPolicyMap, policy, currTarget)
 			}
 		}
 	}
@@ -331,7 +331,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 				}
 
 				t.processBackendTrafficPolicyForRoute(xdsIR,
-					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, routeBackendPolicyMap, policy, currTarget)
+					routeMap, gatewayRouteMap, gatewayPolicyMerged, gatewayPolicyMap, routeRuleBackendPolicyMap, policy, currTarget)
 			}
 		}
 	}
@@ -347,7 +347,7 @@ func (t *Translator) ProcessBackendTrafficPolicies(
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
-				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, routeMap, policy, currTarget, backendMap, routeBackendPolicyMap)
+				t.processBackendTrafficPolicyForBackend(xdsIR, gateways, gatewayPolicyMap, routeMap, policy, currTarget, backendMap, routeRuleBackendPolicyMap)
 			}
 		}
 	}
@@ -479,7 +479,7 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 	gatewayRouteMap *GatewayPolicyRouteMap,
 	gatewayPolicyMergedMap *GatewayPolicyRouteMap,
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
-	routeBackendPolicyMap map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 	policy *egv1a1.BackendTrafficPolicy,
 	currTarget policyTargetReferenceWithSectionName,
 ) {
@@ -581,21 +581,16 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 				// If a backend BTP exists for the route's backend, it becomes the
 				// parent. If the backend BTP also has mergeType, it merges with the
 				// gateway BTP first, and the merged result becomes the parent.
-				routeKey := policyTargetRouteKey{
-					Kind:      string(currTarget.Kind),
-					Name:      string(currTarget.Name),
-					Namespace: policy.Namespace,
-				}
-				backendBTP := routeBackendPolicyMap[routeKey]
+				backendPolicy := findRouteBackendPolicy(targetedRoute, currTarget, routeRuleBackendPolicyMap)
 				var parentPolicy *egv1a1.BackendTrafficPolicy
-				if backendBTP != nil {
-					if backendBTP.Spec.MergeType != nil {
+				if backendPolicy != nil {
+					if backendPolicy.Spec.MergeType != nil {
 						gwParent := gwPolicy
 						if listenerPolicy != nil {
 							gwParent = listenerPolicy
 						}
 						if gwParent != nil {
-							merged, err := t.mergeBackendTrafficPolicy(backendBTP, gwParent)
+							merged, err := t.mergeBackendTrafficPolicy(backendPolicy, gwParent)
 							if err != nil {
 								status.SetConditionForPolicyAncestor(&policy.Status,
 									&ancestorRef,
@@ -609,10 +604,10 @@ func (t *Translator) processBackendTrafficPolicyForRoute(
 							}
 							parentPolicy = merged
 						} else {
-							parentPolicy = backendBTP
+							parentPolicy = backendPolicy
 						}
 					} else {
-						parentPolicy = backendBTP
+						parentPolicy = backendPolicy
 					}
 				} else {
 					if gwPolicy == nil && listenerPolicy == nil {
@@ -1440,6 +1435,37 @@ func appendTrafficPolicyMetadata(md *ir.ResourceMetadata, policy *egv1a1.Backend
 	})
 }
 
+func routeRuleKeyFromMetadata(md *ir.ResourceMetadata) policyTargetRouteRuleKey {
+	return policyTargetRouteRuleKey{
+		policyTargetRouteKey: policyTargetRouteKey{Kind: md.Kind, Namespace: md.Namespace, Name: md.Name},
+		SectionName:          md.SectionName,
+	}
+}
+
+// findRouteBackendPolicy finds the backend policy for the route targeted by the given policy target.
+// When the target has a sectionName (route rule), looks up the specific rule.
+// When targeting the whole route, looks up the route-level entry (empty SectionName).
+func findRouteBackendPolicy(
+	route RouteContext,
+	target policyTargetReferenceWithSectionName,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
+) *egv1a1.BackendTrafficPolicy {
+	routeKey := policyTargetRouteKey{
+		Kind:      string(route.GetRouteType()),
+		Name:      route.GetName(),
+		Namespace: route.GetNamespace(),
+	}
+	var sectionName string
+	if target.SectionName != nil {
+		sectionName = string(*target.SectionName)
+	}
+	key := policyTargetRouteRuleKey{
+		policyTargetRouteKey: routeKey,
+		SectionName:          sectionName,
+	}
+	return routeRuleBackendPolicyMap[key]
+}
+
 // backendPolicyKeyFromTarget creates a backendPolicyKey from a policy target reference and namespace.
 type backendPolicyKey struct {
 	Kind, Namespace, Name string
@@ -1453,49 +1479,50 @@ func backendPolicyKeyFromMetadata(md *ir.ResourceMetadata) backendPolicyKey {
 	return backendPolicyKey{Kind: md.Kind, Namespace: md.Namespace, Name: md.Name}
 }
 
-// buildRouteBackendPolicyMap builds a map from route key → backend BTP by walking
+// buildRouteRuleBackendPolicyMap builds a map from route key → backend BTP by walking
 // the IR once. This avoids repeated IR scans when looking up backend BTPs for routes
 // during the route merge phase.
-// buildRouteBackendPolicyMap walks the IR once and, for each HTTP route, determines
-// which backend BTP (if any) applies. It also detects multi-backendRef conflicts:
-//   - Key present, value non-nil → valid: single-backend route with a matching backend BTP
-//   - Key present, value nil → unsupported: route has multiple backendRefs
-//   - Key absent → no backend BTP targets this route's backend
-func (t *Translator) buildRouteBackendPolicyMap(
+// buildRouteRuleBackendPolicyMap walks the IR once and, for each route rule, determines
+// which backend BTP (if any) applies. It also detects multi-backendRef rules:
+//   - Key present, value non-nil → valid: single-backend rule with a matching backend BTP
+//   - Key present, value nil → unsupported: rule has multiple backendRefs
+//   - Key absent → no backend BTP targets this rule's backend
+func (t *Translator) buildRouteRuleBackendPolicyMap(
 	xdsIR resource.XdsIRMap,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
-	routeBackendPolicyMap map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) {
 	if len(backendPolicyMap) == 0 {
 		return
 	}
 
-	// resolveRouteDestination checks a route's destination and records the backend BTP
-	// in routeBackendPolicyMap. Multi-backend routes are marked as unsupported (nil).
+	// resolveRouteDestination checks a route rule's destination and records the backend BTP
+	// in routeRuleBackendPolicyMap. Multi-backend rules are marked as unsupported (nil).
 	resolveRouteDestination := func(dest *ir.RouteDestination, md *ir.ResourceMetadata) {
 		if dest == nil || md == nil || len(dest.Settings) == 0 {
 			return
 		}
-		key := policyTargetRouteKey{
-			Kind:      md.Kind,
-			Name:      md.Name,
-			Namespace: md.Namespace,
-		}
-		if _, exists := routeBackendPolicyMap[key]; exists {
+		key := routeRuleKeyFromMetadata(md)
+		if _, exists := routeRuleBackendPolicyMap[key]; exists {
 			return
 		}
 
 		// Multi-backend routes are not supported with backend-targeted BTP.
 		if len(dest.Settings) > 1 {
-			routeBackendPolicyMap[key] = nil
+			routeRuleBackendPolicyMap[key] = nil
 			return
 		}
 
-		// Single-backend route: check if its backend has a BTP.
+		// Single-backend rule: check if its backend has a BTP.
 		ds := dest.Settings[0]
 		if ds.Metadata != nil {
 			if btp, ok := backendPolicyMap[backendPolicyKeyFromMetadata(ds.Metadata)]; ok {
-				routeBackendPolicyMap[key] = btp
+				routeRuleBackendPolicyMap[key] = btp
+				// Also store under route-level key (empty SectionName) for whole-route BTP lookups.
+				routeKey := policyTargetRouteRuleKey{policyTargetRouteKey: key.policyTargetRouteKey}
+				if _, exists := routeRuleBackendPolicyMap[routeKey]; !exists {
+					routeRuleBackendPolicyMap[routeKey] = btp
+				}
 			}
 		}
 	}
@@ -1527,7 +1554,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	policy *egv1a1.BackendTrafficPolicy,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	backendMap map[backendPolicyKey]*policyBackendTargetContext,
-	routeBackendPolicyMap map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) {
 	if !t.BackendTargetsInBTPEnabled {
 		ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
@@ -1592,7 +1619,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	ancestorGWs := sets.New[types.NamespacedName]()
 	for irKey, x := range xdsIR {
 		gwNNs := irKeyToGateways[irKey]
-		matched := t.applyTrafficFeaturesToBackend(x, policy, gwNNs, gatewayPolicyMap, mergedPolicyCache, routeMap, routeBackendPolicyMap)
+		matched := t.applyTrafficFeaturesToBackend(x, policy, gwNNs, gatewayPolicyMap, mergedPolicyCache, routeMap, routeRuleBackendPolicyMap)
 		if matched {
 			for _, gwNN := range gwNNs {
 				ancestorGWs.Insert(gwNN)
@@ -1673,19 +1700,19 @@ func (t *Translator) resolveEffectivePolicy(
 	return t.buildTrafficFeatures(effectivePolicy)
 }
 
-// matchRouteBackendPolicy checks routeBackendPolicyMap for the given route metadata.
-// Returns: (matched, conflict). matched=true if this route has a backend BTP matching
-// the given policy. conflict=true if the route has multiple backendRefs.
-func matchRouteBackendPolicy(
+// matchRouteRuleBackendPolicy checks routeRuleBackendPolicyMap for the given route rule metadata.
+// Returns: (matched, conflict). matched=true if this rule has a backend BTP matching
+// the given policy. conflict=true if the rule has multiple backendRefs.
+func matchRouteRuleBackendPolicy(
 	md *ir.ResourceMetadata,
 	policy *egv1a1.BackendTrafficPolicy,
-	routeBackendPolicyMap map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) (matched, conflict bool) {
 	if md == nil {
 		return false, false
 	}
-	key := policyTargetRouteKey{Kind: md.Kind, Name: md.Name, Namespace: md.Namespace}
-	btp, exists := routeBackendPolicyMap[key]
+	key := routeRuleKeyFromMetadata(md)
+	btp, exists := routeRuleBackendPolicyMap[key]
 	if !exists {
 		return false, false
 	}
@@ -1695,30 +1722,8 @@ func matchRouteBackendPolicy(
 	return utils.NamespacedName(btp) == utils.NamespacedName(policy), false
 }
 
-// setUnsupportedBackendPolicyStatus sets a 500 DirectResponse and route status condition
-// for routes with multiple backendRefs when backend-targeted BTP is enabled.
-func setUnsupportedBackendPolicyStatus(
-	md *ir.ResourceMetadata,
-	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
-) {
-	if md == nil {
-		return
-	}
-	routeKey := policyTargetRouteKey{Kind: md.Kind, Name: md.Name, Namespace: md.Namespace}
-	if routeCtx, ok := routeMap[routeKey]; ok {
-		routeStatus := GetRouteStatus(routeCtx.RouteContext)
-		for idx := range routeStatus.Parents {
-			status.SetRouteStatusCondition(routeStatus, idx, routeCtx.RouteContext.GetGeneration(),
-				gwapiv1.RouteConditionAccepted, metav1.ConditionFalse,
-				status.RouteReasonUnsupportedBackendTrafficPolicy,
-				"Backend-targeted BackendTrafficPolicy is not supported for routes with multiple backendRefs",
-			)
-		}
-	}
-}
-
 // applyTrafficFeaturesToBackend applies traffic features to all routes whose backend
-// is owned by this policy (per routeBackendPolicyMap). Returns true if any route matched.
+// is owned by this policy (per routeRuleBackendPolicyMap). Returns true if any route matched.
 func (t *Translator) applyTrafficFeaturesToBackend(
 	x *ir.Xds,
 	policy *egv1a1.BackendTrafficPolicy,
@@ -1726,16 +1731,29 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 	gatewayPolicyMap map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	mergedPolicyCache map[NamespacedNameWithSection]*egv1a1.BackendTrafficPolicy,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
-	routeBackendPolicyMap map[policyTargetRouteKey]*egv1a1.BackendTrafficPolicy,
+	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) bool {
 	matched := false
+	// Collect rejected rule names per route for status reporting.
+	rejectedRules := make(map[policyTargetRouteKey][]string)
+	trackRejectedRule := func(md *ir.ResourceMetadata) {
+		if md == nil {
+			return
+		}
+		rk := policyTargetRouteKey{Kind: md.Kind, Name: md.Name, Namespace: md.Namespace}
+		if md.SectionName != "" {
+			rejectedRules[rk] = append(rejectedRules[rk], md.SectionName)
+		} else if _, exists := rejectedRules[rk]; !exists {
+			rejectedRules[rk] = nil
+		}
+	}
 
 	for _, tcp := range x.TCP {
 		for _, r := range tcp.Routes {
-			ok, conflict := matchRouteBackendPolicy(r.Metadata, policy, routeBackendPolicyMap)
+			ok, conflict := matchRouteRuleBackendPolicy(r.Metadata, policy, routeRuleBackendPolicyMap)
 			if conflict {
 				matched = true
-				setUnsupportedBackendPolicyStatus(r.Metadata, routeMap)
+				trackRejectedRule(r.Metadata)
 				continue
 			}
 			if !ok {
@@ -1763,10 +1781,10 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 			continue
 		}
 		r := udp.Route
-		ok, conflict := matchRouteBackendPolicy(r.Destination.Metadata, policy, routeBackendPolicyMap)
+		ok, conflict := matchRouteRuleBackendPolicy(r.Destination.Metadata, policy, routeRuleBackendPolicyMap)
 		if conflict {
 			matched = true
-			setUnsupportedBackendPolicyStatus(r.Destination.Metadata, routeMap)
+			trackRejectedRule(r.Destination.Metadata)
 			continue
 		}
 		if !ok {
@@ -1782,13 +1800,13 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 
 	for _, http := range x.HTTP {
 		for _, r := range http.Routes {
-			ok, conflict := matchRouteBackendPolicy(r.Metadata, policy, routeBackendPolicyMap)
+			ok, conflict := matchRouteRuleBackendPolicy(r.Metadata, policy, routeRuleBackendPolicyMap)
 			if conflict {
 				matched = true
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-				setUnsupportedBackendPolicyStatus(r.Metadata, routeMap)
+				trackRejectedRule(r.Metadata)
 				continue
 			}
 			if !ok {
@@ -1822,6 +1840,24 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 
 			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 			appendTrafficPolicyMetadata(r.Metadata, policy)
+		}
+	}
+
+	// Set route status for rejected rules, one condition per route with all rule names.
+	for routeKey, ruleNames := range rejectedRules {
+		if routeCtx, ok := routeMap[routeKey]; ok {
+			msg := "Backend-targeted BackendTrafficPolicy is not supported for route rules with multiple backendRefs"
+			if len(ruleNames) > 0 {
+				msg = fmt.Sprintf("%s: %v", msg, ruleNames)
+			}
+			routeStatus := GetRouteStatus(routeCtx.RouteContext)
+			for idx := range routeStatus.Parents {
+				status.SetRouteStatusCondition(routeStatus, idx, routeCtx.RouteContext.GetGeneration(),
+					gwapiv1.RouteConditionAccepted, metav1.ConditionFalse,
+					status.RouteReasonUnsupportedBackendTrafficPolicy,
+					msg,
+				)
+			}
 		}
 	}
 

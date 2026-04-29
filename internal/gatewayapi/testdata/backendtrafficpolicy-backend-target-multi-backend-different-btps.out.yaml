@@ -119,8 +119,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Backend-targeted BackendTrafficPolicy is not supported for routes
-          with multiple backendRefs
+        message: Backend-targeted BackendTrafficPolicy is not supported for route
+          rules with multiple backendRefs
         reason: UnsupportedBackendTrafficPolicy
         status: "False"
         type: Accepted
