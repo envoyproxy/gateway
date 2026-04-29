@@ -146,15 +146,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				res = append(res, policy)
-				handledPolicies[policyName] = policy
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
-		}
 		for _, currTarget := range targetRefs {
 			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -167,6 +158,15 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				t.processEnvoyExtensionPolicyForRoute(resources, xdsIR,
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
+		}
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				res = append(res, policy)
+				handledPolicies[policyName] = policy
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 	}
 
@@ -203,15 +203,6 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 			t.GetNamespace)
 		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				res = append(res, policy)
-				handledPolicies[policyName] = policy
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
-		}
 		for _, currTarget := range targetRefs {
 			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
@@ -224,6 +215,15 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
+		}
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				res = append(res, policy)
+				handledPolicies[policyName] = policy
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 	}
 

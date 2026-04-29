@@ -23,11 +23,17 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Target HTTPRoute policy-target-c/denied-route is not permitted by
-          any ReferenceGrant.
-        reason: RefNotPermitted
-        status: "False"
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Target HTTPRoute policy-target-b/denied-route is not permitted by
+          any ReferenceGrant.; Target HTTPRoute policy-target-c/denied-route is not
+          permitted by any ReferenceGrant.
+        reason: RefNotPermitted
+        status: "True"
+        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

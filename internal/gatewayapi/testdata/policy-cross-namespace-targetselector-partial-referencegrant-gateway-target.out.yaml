@@ -18,6 +18,18 @@ backendTrafficPolicies:
     - ancestorRef:
         group: gateway.networking.k8s.io
         kind: Gateway
+        name: allowed-gateway
+        namespace: policy-target-a
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
         name: denied-gateway
         namespace: policy-target-b
       conditions:
@@ -26,18 +38,6 @@ backendTrafficPolicies:
           any ReferenceGrant.
         reason: RefNotPermitted
         status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: allowed-gateway
-        namespace: policy-target-a
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:

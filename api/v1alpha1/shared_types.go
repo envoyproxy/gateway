@@ -71,8 +71,8 @@ const (
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
 
-	// PolicyReasonRefNotPermitted is used with the "Accepted" condition when the policy
-	// targets a cross-namespace object without a matching ReferenceGrant.
+	// PolicyReasonRefNotPermitted is used when the policy targets a cross-namespace
+	// object without a matching ReferenceGrant.
 	PolicyReasonRefNotPermitted gwapiv1.PolicyConditionReason = "RefNotPermitted"
 )
 
