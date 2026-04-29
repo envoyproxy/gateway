@@ -13,10 +13,10 @@ http:
     traffic:
       admissionControl:
         samplingWindow: 30s
-        successRateThreshold: 95
-        aggression: 1
-        rpsThreshold: 5
-        maxRejectionProbability: 80
+        minSuccessRate: 95
+        rejectionAggression: 1
+        minRequestRate: 5
+        maxRejectionPercent: 80
         successCriteria:
           http:
             httpSuccessStatus:
@@ -37,10 +37,10 @@ http:
     hostname: "*"
     traffic:
       admissionControl:
-        successRateThreshold: 80
-        aggression: 2
-        rpsThreshold: 10
-        maxRejectionProbability: 95
+        minSuccessRate: 80
+        rejectionAggression: 2
+        minRequestRate: 10
+        maxRejectionPercent: 95
         successCriteria:
           grpc:
             grpcSuccessStatus:

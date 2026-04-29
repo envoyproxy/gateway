@@ -76,10 +76,10 @@ backendTrafficPolicies:
         name: gateway-1
       admissionControl:
         samplingWindow: 60s
-        successRateThreshold: 90
-        aggression: 2
-        rpsThreshold: 10
-        maxRejectionProbability: 70
+        minSuccessRate: 90
+        rejectionAggression: 2
+        minRequestRate: 10
+        maxRejectionPercent: 70
         successCriteria:
           grpc:
             grpcSuccessStatus:
@@ -99,7 +99,7 @@ backendTrafficPolicies:
         name: httproute-1
       admissionControl:
         samplingWindow: 30s
-        successRateThreshold: 95
+        minSuccessRate: 95
         successCriteria:
           http:
             httpSuccessStatus:

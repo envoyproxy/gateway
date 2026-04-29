@@ -7,6 +7,7 @@ backendTrafficPolicies:
     namespace: default
   spec:
     admissionControl:
+      minSuccessRate: 95
       samplingWindow: 30s
       successCriteria:
         http:
@@ -14,7 +15,6 @@ backendTrafficPolicies:
           - 200
           - 201
           - 204
-      successRateThreshold: 95
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -49,9 +49,10 @@ backendTrafficPolicies:
     namespace: envoy-gateway
   spec:
     admissionControl:
-      aggression: 2
-      maxRejectionProbability: 70
-      rpsThreshold: 10
+      maxRejectionPercent: 70
+      minRequestRate: 10
+      minSuccessRate: 90
+      rejectionAggression: 2
       samplingWindow: 60s
       successCriteria:
         grpc:
@@ -59,7 +60,6 @@ backendTrafficPolicies:
           - Ok
           - Cancelled
           - DeadlineExceeded
-      successRateThreshold: 90
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -349,9 +349,10 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         traffic:
           admissionControl:
-            aggression: 2
-            maxRejectionProbability: 70
-            rpsThreshold: 10
+            maxRejectionPercent: 70
+            minRequestRate: 10
+            minSuccessRate: 90
+            rejectionAggression: 2
             samplingWindow: 1m0s
             successCriteria:
               grpc:
@@ -359,7 +360,6 @@ xdsIR:
                 - Ok
                 - Cancelled
                 - DeadlineExceeded
-            successRateThreshold: 90
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
@@ -442,6 +442,7 @@ xdsIR:
           prefix: /
         traffic:
           admissionControl:
+            minSuccessRate: 95
             samplingWindow: 30s
             successCriteria:
               http:
@@ -449,7 +450,6 @@ xdsIR:
                 - 200
                 - 201
                 - 204
-            successRateThreshold: 95
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

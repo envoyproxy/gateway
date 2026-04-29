@@ -56,34 +56,45 @@ spec:
                   probabilistically rejects requests based on the success rate of previous requests in a
                   configurable sliding time window.
                 properties:
-                  aggression:
+                  maxRejectionPercent:
                     description: |-
-                      Aggression controls the rejection probability curve. A value of 1 means a linear
-                      increase in rejection probability as the success rate decreases. Higher values
-                      result in more aggressive rejection at higher success rates.
-                      Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.
-                      Defaults to 1 if not specified.
-                    format: int32
-                    minimum: 1
-                    type: integer
-                  maxRejectionProbability:
-                    description: |-
-                      MaxRejectionProbability represents the upper limit of the rejection probability,
+                      MaxRejectionPercent represents the upper limit of the rejection probability,
                       expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified.
                     format: int32
                     maximum: 100
                     minimum: 0
                     type: integer
-                  rpsThreshold:
+                  minRequestRate:
                     description: |-
-                      RPSThreshold defines the minimum requests per second below which requests will
+                      MinRequestRate defines the minimum requests per second below which requests will
                       pass through the filter without rejection. Defaults to 0 if not specified.
                     format: int32
                     minimum: 0
                     type: integer
+                  minSuccessRate:
+                    description: |-
+                      MinSuccessRate is the lowest request success rate, as a percentage in the
+                      range [1, 100], at which the filter will not reject requests. Defaults to 95 if
+                      not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
+                    format: int32
+                    maximum: 100
+                    minimum: 1
+                    type: integer
+                  rejectionAggression:
+                    description: |-
+                      RejectionAggression controls how steeply the rejection probability rises
+                      as the observed success rate falls below MinSuccessRate. A value of 1
+                      produces a linear curve; higher values reject more aggressively for a
+                      given drop in success rate. Must be greater than 0; values below 1 are
+                      clamped to 1. Defaults to 1.
+                    format: int32
+                    minimum: 1
+                    type: integer
                   samplingWindow:
                     description: |-
                       SamplingWindow defines the time window over which request success rates are calculated.
+                      Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the
+                      denominator in RPS calculations, so sub-second values would produce a zero denominator.
                       Defaults to 30s if not specified.
                     pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                     type: string
@@ -137,23 +148,17 @@ spec:
                             type: array
                         type: object
                     type: object
-                  successRateThreshold:
-                    description: |-
-                      SuccessRateThreshold is the lowest request success rate, as a percentage in the
-                      range [1, 100], at which the filter will not reject requests. Defaults to 95 if
-                      not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
-                    format: int32
-                    maximum: 100
-                    minimum: 1
-                    type: integer
                 type: object
                 x-kubernetes-validations:
-                - message: successRateThreshold must be between 1 and 100
-                  rule: '!has(self.successRateThreshold) || (self.successRateThreshold
-                    >= 1 && self.successRateThreshold <= 100)'
-                - message: maxRejectionProbability must be between 0 and 100
-                  rule: '!has(self.maxRejectionProbability) || (self.maxRejectionProbability
-                    >= 0 && self.maxRejectionProbability <= 100)'
+                - message: minSuccessRate must be between 1 and 100
+                  rule: '!has(self.minSuccessRate) || (self.minSuccessRate >= 1 &&
+                    self.minSuccessRate <= 100)'
+                - message: maxRejectionPercent must be between 0 and 100
+                  rule: '!has(self.maxRejectionPercent) || (self.maxRejectionPercent
+                    >= 0 && self.maxRejectionPercent <= 100)'
+                - message: samplingWindow must be at least 1s
+                  rule: '!has(self.samplingWindow) || duration(self.samplingWindow)
+                    >= duration(''1s'')'
               bandwidthLimit:
                 description: |-
                   BandwidthLimit allows the user to limit the bandwidth of traffic

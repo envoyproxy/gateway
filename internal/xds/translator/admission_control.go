@@ -15,7 +15,6 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/proto"
 )
@@ -37,7 +36,7 @@ func buildUpstreamAdmissionControlFilter(ac *ir.AdmissionControl) (*hcmv3.HttpFi
 	}
 
 	return &hcmv3.HttpFilter{
-		Name: string(egv1a1.EnvoyFilterAdmissionControl),
+		Name: "envoy.filters.http.admission_control",
 		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: configAny,
 		},
@@ -61,27 +60,27 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 		config.SamplingWindow = durationpb.New(admissionControl.SamplingWindow.Duration)
 	}
 
-	if admissionControl.SuccessRateThreshold != nil {
+	if admissionControl.MinSuccessRate != nil {
 		config.SrThreshold = &corev3.RuntimePercent{
-			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.SuccessRateThreshold)},
+			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.MinSuccessRate)},
 		}
 	}
 
-	if admissionControl.Aggression != nil {
+	if admissionControl.RejectionAggression != nil {
 		config.Aggression = &corev3.RuntimeDouble{
-			DefaultValue: float64(*admissionControl.Aggression),
+			DefaultValue: float64(*admissionControl.RejectionAggression),
 		}
 	}
 
-	if admissionControl.RPSThreshold != nil {
+	if admissionControl.MinRequestRate != nil {
 		config.RpsThreshold = &corev3.RuntimeUInt32{
-			DefaultValue: *admissionControl.RPSThreshold,
+			DefaultValue: *admissionControl.MinRequestRate,
 		}
 	}
 
-	if admissionControl.MaxRejectionProbability != nil {
+	if admissionControl.MaxRejectionPercent != nil {
 		config.MaxRejectionProbability = &corev3.RuntimePercent{
-			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.MaxRejectionProbability)},
+			DefaultValue: &typev3.Percent{Value: float64(*admissionControl.MaxRejectionPercent)},
 		}
 	}
 

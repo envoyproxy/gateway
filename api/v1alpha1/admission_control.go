@@ -9,53 +9,60 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// AdmissionControl defines the admission control policy to be applied.
-// This configuration probabilistically rejects requests based on the success rate
-// of previous requests in a configurable sliding time window.
-// All fields are optional and will use Envoy's defaults when not specified.
+// AdmissionControl configures health-based load shedding for upstream backends.
 //
-// +kubebuilder:validation:XValidation:rule="!has(self.successRateThreshold) || (self.successRateThreshold >= 1 && self.successRateThreshold <= 100)",message="successRateThreshold must be between 1 and 100"
-// +kubebuilder:validation:XValidation:rule="!has(self.maxRejectionProbability) || (self.maxRejectionProbability >= 0 && self.maxRejectionProbability <= 100)",message="maxRejectionProbability must be between 0 and 100"
+// Envoy tracks recent upstream responses over a sliding sampling window. When the
+// observed success rate drops below the configured threshold, Envoy
+// probabilistically rejects new requests before forwarding them upstream. This can
+// reduce pressure on degraded backends and give them time to recover.
+//
+// All fields are optional. When omitted, Envoy's admission control defaults are used.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.minSuccessRate) || (self.minSuccessRate >= 1 && self.minSuccessRate <= 100)",message="minSuccessRate must be between 1 and 100"
+// +kubebuilder:validation:XValidation:rule="!has(self.maxRejectionPercent) || (self.maxRejectionPercent >= 0 && self.maxRejectionPercent <= 100)",message="maxRejectionPercent must be between 0 and 100"
+// +kubebuilder:validation:XValidation:rule="!has(self.samplingWindow) || duration(self.samplingWindow) >= duration('1s')",message="samplingWindow must be at least 1s"
 type AdmissionControl struct {
 	// SamplingWindow defines the time window over which request success rates are calculated.
+	// Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the
+	// denominator in RPS calculations, so sub-second values would produce a zero denominator.
 	// Defaults to 30s if not specified.
 	//
 	// +optional
 	SamplingWindow *gwapiv1.Duration `json:"samplingWindow,omitempty"`
 
-	// SuccessRateThreshold is the lowest request success rate, as a percentage in the
+	// MinSuccessRate is the lowest request success rate, as a percentage in the
 	// range [1, 100], at which the filter will not reject requests. Defaults to 95 if
 	// not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
-	SuccessRateThreshold *uint32 `json:"successRateThreshold,omitempty"`
+	MinSuccessRate *uint32 `json:"minSuccessRate,omitempty"`
 
-	// Aggression controls the rejection probability curve. A value of 1 means a linear
-	// increase in rejection probability as the success rate decreases. Higher values
-	// result in more aggressive rejection at higher success rates.
-	// Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.
-	// Defaults to 1 if not specified.
+	// RejectionAggression controls how steeply the rejection probability rises
+	// as the observed success rate falls below MinSuccessRate. A value of 1
+	// produces a linear curve; higher values reject more aggressively for a
+	// given drop in success rate. Must be greater than 0; values below 1 are
+	// clamped to 1. Defaults to 1.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	Aggression *uint32 `json:"aggression,omitempty"`
+	RejectionAggression *uint32 `json:"rejectionAggression,omitempty"`
 
-	// RPSThreshold defines the minimum requests per second below which requests will
+	// MinRequestRate defines the minimum requests per second below which requests will
 	// pass through the filter without rejection. Defaults to 0 if not specified.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	RPSThreshold *uint32 `json:"rpsThreshold,omitempty"`
+	MinRequestRate *uint32 `json:"minRequestRate,omitempty"`
 
-	// MaxRejectionProbability represents the upper limit of the rejection probability,
+	// MaxRejectionPercent represents the upper limit of the rejection probability,
 	// expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
-	MaxRejectionProbability *uint32 `json:"maxRejectionProbability,omitempty"`
+	MaxRejectionPercent *uint32 `json:"maxRejectionPercent,omitempty"`
 
 	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
 	//

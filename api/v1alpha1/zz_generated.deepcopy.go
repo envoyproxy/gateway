@@ -212,23 +212,23 @@ func (in *AdmissionControl) DeepCopyInto(out *AdmissionControl) {
 		*out = new(v1.Duration)
 		**out = **in
 	}
-	if in.SuccessRateThreshold != nil {
-		in, out := &in.SuccessRateThreshold, &out.SuccessRateThreshold
+	if in.MinSuccessRate != nil {
+		in, out := &in.MinSuccessRate, &out.MinSuccessRate
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.Aggression != nil {
-		in, out := &in.Aggression, &out.Aggression
+	if in.RejectionAggression != nil {
+		in, out := &in.RejectionAggression, &out.RejectionAggression
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.RPSThreshold != nil {
-		in, out := &in.RPSThreshold, &out.RPSThreshold
+	if in.MinRequestRate != nil {
+		in, out := &in.MinRequestRate, &out.MinRequestRate
 		*out = new(uint32)
 		**out = **in
 	}
-	if in.MaxRejectionProbability != nil {
-		in, out := &in.MaxRejectionProbability, &out.MaxRejectionProbability
+	if in.MaxRejectionPercent != nil {
+		in, out := &in.MaxRejectionPercent, &out.MaxRejectionPercent
 		*out = new(uint32)
 		**out = **in
 	}

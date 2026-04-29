@@ -1705,17 +1705,17 @@ type FaultInjectionAbort struct {
 type AdmissionControl struct {
 	// SamplingWindow defines the time window over which request success rates are calculated.
 	SamplingWindow *metav1.Duration `json:"samplingWindow,omitempty" yaml:"samplingWindow,omitempty"`
-	// SuccessRateThreshold is the lowest request success rate, as a percentage in the
+	// MinSuccessRate is the lowest request success rate, as a percentage in the
 	// range [1, 100], at which the filter will not reject requests.
-	SuccessRateThreshold *uint32 `json:"successRateThreshold,omitempty" yaml:"successRateThreshold,omitempty"`
-	// Aggression controls the rejection probability curve.
-	Aggression *uint32 `json:"aggression,omitempty" yaml:"aggression,omitempty"`
-	// RPSThreshold defines the minimum requests per second below which requests will
+	MinSuccessRate *uint32 `json:"minSuccessRate,omitempty" yaml:"minSuccessRate,omitempty"`
+	// RejectionAggression controls the rejection probability curve.
+	RejectionAggression *uint32 `json:"rejectionAggression,omitempty" yaml:"rejectionAggression,omitempty"`
+	// MinRequestRate defines the minimum requests per second below which requests will
 	// pass through the filter without rejection.
-	RPSThreshold *uint32 `json:"rpsThreshold,omitempty" yaml:"rpsThreshold,omitempty"`
-	// MaxRejectionProbability represents the upper limit of the rejection probability,
+	MinRequestRate *uint32 `json:"minRequestRate,omitempty" yaml:"minRequestRate,omitempty"`
+	// MaxRejectionPercent represents the upper limit of the rejection probability,
 	// as a percentage in the range [0, 100].
-	MaxRejectionProbability *uint32 `json:"maxRejectionProbability,omitempty" yaml:"maxRejectionProbability,omitempty"`
+	MaxRejectionPercent *uint32 `json:"maxRejectionPercent,omitempty" yaml:"maxRejectionPercent,omitempty"`
 	// SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC.
 	SuccessCriteria *AdmissionControlSuccessCriteria `json:"successCriteria,omitempty" yaml:"successCriteria,omitempty"`
 }

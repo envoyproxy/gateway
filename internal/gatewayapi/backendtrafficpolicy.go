@@ -1716,10 +1716,10 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 	}
 
 	ac := &ir.AdmissionControl{
-		SuccessRateThreshold:    policy.Spec.AdmissionControl.SuccessRateThreshold,
-		Aggression:              policy.Spec.AdmissionControl.Aggression,
-		RPSThreshold:            policy.Spec.AdmissionControl.RPSThreshold,
-		MaxRejectionProbability: policy.Spec.AdmissionControl.MaxRejectionProbability,
+		MinSuccessRate:      policy.Spec.AdmissionControl.MinSuccessRate,
+		RejectionAggression: policy.Spec.AdmissionControl.RejectionAggression,
+		MinRequestRate:      policy.Spec.AdmissionControl.MinRequestRate,
+		MaxRejectionPercent: policy.Spec.AdmissionControl.MaxRejectionPercent,
 	}
 
 	if policy.Spec.AdmissionControl.SamplingWindow != nil {

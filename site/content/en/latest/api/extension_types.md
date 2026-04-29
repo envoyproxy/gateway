@@ -193,21 +193,25 @@ _Appears in:_
 
 
 
-AdmissionControl defines the admission control policy to be applied.
-This configuration probabilistically rejects requests based on the success rate
-of previous requests in a configurable sliding time window.
-All fields are optional and will use Envoy's defaults when not specified.
+AdmissionControl configures health-based load shedding for upstream backends.
+
+Envoy tracks recent upstream responses over a sliding sampling window. When the
+observed success rate drops below the configured threshold, Envoy
+probabilistically rejects new requests before forwarding them upstream. This can
+reduce pressure on degraded backends and give them time to recover.
+
+All fields are optional. When omitted, Envoy's admission control defaults are used.
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Defaults to 30s if not specified. |
-| `successRateThreshold` | _integer_ |  false  |  | SuccessRateThreshold is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
-| `aggression` | _integer_ |  false  |  | Aggression controls the rejection probability curve. A value of 1 means a linear<br />increase in rejection probability as the success rate decreases. Higher values<br />result in more aggressive rejection at higher success rates.<br />Envoy requires aggression to be greater than 0 and clamps values below 1 to 1.<br />Defaults to 1 if not specified. |
-| `rpsThreshold` | _integer_ |  false  |  | RPSThreshold defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
-| `maxRejectionProbability` | _integer_ |  false  |  | MaxRejectionProbability represents the upper limit of the rejection probability,<br />expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified. |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the<br />denominator in RPS calculations, so sub-second values would produce a zero denominator.<br />Defaults to 30s if not specified. |
+| `minSuccessRate` | _integer_ |  false  |  | MinSuccessRate is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
+| `rejectionAggression` | _integer_ |  false  |  | RejectionAggression controls how steeply the rejection probability rises<br />as the observed success rate falls below MinSuccessRate. A value of 1<br />produces a linear curve; higher values reject more aggressively for a<br />given drop in success rate. Must be greater than 0; values below 1 are<br />clamped to 1. Defaults to 1. |
+| `minRequestRate` | _integer_ |  false  |  | MinRequestRate defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
+| `maxRejectionPercent` | _integer_ |  false  |  | MaxRejectionPercent represents the upper limit of the rejection probability,<br />expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified. |
 | `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC. |
 
 
@@ -1606,7 +1610,6 @@ _Appears in:_
 | `envoy.filters.http.custom_response` | EnvoyFilterCustomResponse defines the Envoy HTTP custom response filter.<br /> | 
 | `envoy.filters.http.health_check` | EnvoyFilterHealthCheck defines the Envoy HTTP health check filter.<br /> | 
 | `envoy.filters.http.fault` | EnvoyFilterFault defines the Envoy HTTP fault filter.<br /> | 
-| `envoy.filters.http.admission_control` | EnvoyFilterAdmissionControl defines the Envoy HTTP admission control filter.<br /> | 
 | `envoy.filters.http.cors` | EnvoyFilterCORS defines the Envoy HTTP CORS filter.<br /> | 
 | `envoy.filters.http.header_mutation` | EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter<br /> | 
 | `envoy.filters.http.ext_authz` | EnvoyFilterExtAuthz defines the Envoy HTTP external authorization filter.<br /> | 

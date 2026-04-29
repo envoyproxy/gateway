@@ -15,10 +15,10 @@ spec:
     name: example-route
   admissionControl:
     samplingWindow: 30s
-    successRateThreshold: 95
-    aggression: 1
-    rpsThreshold: 5
-    maxRejectionProbability: 80
+    minSuccessRate: 95
+    rejectionAggression: 1
+    minRequestRate: 5
+    maxRejectionPercent: 80
     successCriteria:
       http:
         httpSuccessStatus:
