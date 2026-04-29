@@ -16,6 +16,7 @@ new features: |
   Added a `xdsNACKTotal` metric to track the number of NACKs received from Envoy, labeled by node ID and resource type URL. A NACK is a DiscoveryRequest carrying an ErrorDetail, indicating that Envoy rejected the last config update. This metric can be used to alert on config issues causing xDS rejections.
   Added the `autoSNIFromEndpointHostname` TLS setting to Backends, allowing the SNI value sent to the backend to be automatically derived from the backend endpoint hostname instead of using a fixed SNI value.
   Added a `fromMetadata` field to global rate limit `limit` in `BackendTrafficPolicy`, allowing the limit value to be sourced from per-request dynamic metadata (e.g. set by an upstream ext_proc), falling back to the static `requests`/`unit` when the metadata is absent.
+  Added support for backend-targeted BackendTrafficPolicy, allowing Service Owners to define CDS configuration (health checks, circuit breakers, load balancer, etc.) for their service via a single policy targeting Service, ServiceImport, or Backend resources. Introduced behind the MergeBackends feature flag.
 
 bug fixes: |
   Fixed HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, and UDPRoute Accepted condition being set to False when an attached listener is not programmed due to a missing TLS certificate ref; listener programmed state is now correctly separated from route acceptance.
