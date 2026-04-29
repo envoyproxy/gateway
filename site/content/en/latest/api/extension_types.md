@@ -2678,7 +2678,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `grpcSuccessStatus` | _[GRPCSuccessCode](#grpcsuccesscode) array_ |  false  |  | GRPCSuccessStatus defines gRPC status codes that are considered successful.<br />Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc. |
+| `statusCodes` | _[GRPCSuccessCode](#grpcsuccesscode) array_ |  false  |  | StatusCodes defines gRPC status codes that are considered successful.<br />Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc. |
 
 
 #### Gateway
@@ -3192,7 +3192,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `httpSuccessStatus` | _[HTTPStatus](#httpstatus) array_ |  false  |  | HTTPSuccessStatus defines HTTP status codes that are considered successful. |
+| `statusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  |  | StatusCodes defines HTTP status codes that are considered successful. |
 
 
 #### HTTPTimeout

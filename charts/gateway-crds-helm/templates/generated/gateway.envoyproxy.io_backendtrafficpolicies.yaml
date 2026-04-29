@@ -105,9 +105,9 @@ spec:
                       grpc:
                         description: GRPC defines success criteria for gRPC requests.
                         properties:
-                          grpcSuccessStatus:
+                          statusCodes:
                             description: |-
-                              GRPCSuccessStatus defines gRPC status codes that are considered successful.
+                              StatusCodes defines gRPC status codes that are considered successful.
                               Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
                             items:
                               description: |-
@@ -137,9 +137,9 @@ spec:
                       http:
                         description: HTTP defines success criteria for HTTP requests.
                         properties:
-                          httpSuccessStatus:
-                            description: HTTPSuccessStatus defines HTTP status codes
-                              that are considered successful.
+                          statusCodes:
+                            description: StatusCodes defines HTTP status codes that
+                              are considered successful.
                             items:
                               description: HTTPStatus defines the http status code.
                               maximum: 599

@@ -49,10 +49,10 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 				MaxRejectionPercent: new(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
-						HTTPSuccessStatus: []int32{200, 201, 300, 301},
+						StatusCodes: []int32{200, 201, 300, 301},
 					},
 					GRPC: &ir.GRPCSuccessCriteria{
-						GRPCSuccessStatus: []string{"Ok", "Cancelled"},
+						StatusCodes: []string{"Ok", "Cancelled"},
 					},
 				},
 			},
@@ -63,7 +63,7 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			config: &ir.AdmissionControl{
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
-						HTTPSuccessStatus: []int32{200, 201, 202},
+						StatusCodes: []int32{200, 201, 202},
 					},
 				},
 			},
@@ -74,7 +74,7 @@ func TestBuildAdmissionControlConfig(t *testing.T) {
 			config: &ir.AdmissionControl{
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					GRPC: &ir.GRPCSuccessCriteria{
-						GRPCSuccessStatus: []string{"Ok"},
+						StatusCodes: []string{"Ok"},
 					},
 				},
 			},
@@ -148,10 +148,10 @@ func TestBuildAdmissionControlConfigValues(t *testing.T) {
 		MaxRejectionPercent: new(uint32(75)),
 		SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 			HTTP: &ir.HTTPSuccessCriteria{
-				HTTPSuccessStatus: []int32{200, 201, 202},
+				StatusCodes: []int32{200, 201, 202},
 			},
 			GRPC: &ir.GRPCSuccessCriteria{
-				GRPCSuccessStatus: []string{"Ok", "Cancelled", "Unknown"},
+				StatusCodes: []string{"Ok", "Cancelled", "Unknown"},
 			},
 		},
 	}
@@ -213,7 +213,7 @@ func TestBuildUpstreamAdmissionControlFilter(t *testing.T) {
 				MaxRejectionPercent: new(uint32(80)),
 				SuccessCriteria: &ir.AdmissionControlSuccessCriteria{
 					HTTP: &ir.HTTPSuccessCriteria{
-						HTTPSuccessStatus: []int32{200, 201},
+						StatusCodes: []int32{200, 201},
 					},
 				},
 			},

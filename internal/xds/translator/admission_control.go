@@ -89,9 +89,9 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 	// Set success criteria (part of EvaluationCriteria oneof)
 	if admissionControl.SuccessCriteria != nil {
 		// HTTP success criteria: each individual status code becomes a single-element range [code, code+1)
-		if admissionControl.SuccessCriteria.HTTP != nil && len(admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus) > 0 {
+		if admissionControl.SuccessCriteria.HTTP != nil && len(admissionControl.SuccessCriteria.HTTP.StatusCodes) > 0 {
 			httpCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_HttpCriteria{}
-			for _, code := range admissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
+			for _, code := range admissionControl.SuccessCriteria.HTTP.StatusCodes {
 				httpCriteria.HttpSuccessStatus = append(httpCriteria.HttpSuccessStatus, &typev3.Int32Range{
 					Start: code,
 					End:   code + 1,
@@ -100,9 +100,9 @@ func buildAdmissionControlConfig(admissionControl *ir.AdmissionControl) (*admiss
 			successCriteria.HttpCriteria = httpCriteria
 		}
 
-		if admissionControl.SuccessCriteria.GRPC != nil && len(admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus) > 0 {
+		if admissionControl.SuccessCriteria.GRPC != nil && len(admissionControl.SuccessCriteria.GRPC.StatusCodes) > 0 {
 			grpcCriteria := &admissioncontrolv3.AdmissionControl_SuccessCriteria_GrpcCriteria{}
-			for _, status := range admissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
+			for _, status := range admissionControl.SuccessCriteria.GRPC.StatusCodes {
 				if code, ok := grpcStatusCodeToUint32(status); ok {
 					grpcCriteria.GrpcSuccessStatus = append(grpcCriteria.GrpcSuccessStatus, code)
 				}

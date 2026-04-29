@@ -85,10 +85,10 @@ type AdmissionControlSuccessCriteria struct {
 
 // HTTPSuccessCriteria defines success criteria for HTTP requests.
 type HTTPSuccessCriteria struct {
-	// HTTPSuccessStatus defines HTTP status codes that are considered successful.
+	// StatusCodes defines HTTP status codes that are considered successful.
 	//
 	// +optional
-	HTTPSuccessStatus []HTTPStatus `json:"httpSuccessStatus,omitempty"`
+	StatusCodes []HTTPStatus `json:"statusCodes,omitempty"`
 }
 
 // GRPCSuccessCode defines gRPC status codes as defined in
@@ -118,9 +118,9 @@ const (
 
 // GRPCSuccessCriteria defines success criteria for gRPC requests.
 type GRPCSuccessCriteria struct {
-	// GRPCSuccessStatus defines gRPC status codes that are considered successful.
+	// StatusCodes defines gRPC status codes that are considered successful.
 	// Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
 	//
 	// +optional
-	GRPCSuccessStatus []GRPCSuccessCode `json:"grpcSuccessStatus,omitempty"`
+	StatusCodes []GRPCSuccessCode `json:"statusCodes,omitempty"`
 }

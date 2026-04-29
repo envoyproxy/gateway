@@ -1807,22 +1807,22 @@ func (t *Translator) buildAdmissionControl(policy *egv1a1.BackendTrafficPolicy) 
 		ac.SuccessCriteria = &ir.AdmissionControlSuccessCriteria{}
 
 		if policy.Spec.AdmissionControl.SuccessCriteria.HTTP != nil {
-			httpStatuses := make([]int32, len(policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus))
-			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.HTTPSuccessStatus {
+			httpStatuses := make([]int32, len(policy.Spec.AdmissionControl.SuccessCriteria.HTTP.StatusCodes))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.HTTP.StatusCodes {
 				httpStatuses[i] = int32(s)
 			}
 			ac.SuccessCriteria.HTTP = &ir.HTTPSuccessCriteria{
-				HTTPSuccessStatus: httpStatuses,
+				StatusCodes: httpStatuses,
 			}
 		}
 
 		if policy.Spec.AdmissionControl.SuccessCriteria.GRPC != nil {
-			grpcStatuses := make([]string, len(policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus))
-			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.GRPC.GRPCSuccessStatus {
+			grpcStatuses := make([]string, len(policy.Spec.AdmissionControl.SuccessCriteria.GRPC.StatusCodes))
+			for i, s := range policy.Spec.AdmissionControl.SuccessCriteria.GRPC.StatusCodes {
 				grpcStatuses[i] = string(s)
 			}
 			ac.SuccessCriteria.GRPC = &ir.GRPCSuccessCriteria{
-				GRPCSuccessStatus: grpcStatuses,
+				StatusCodes: grpcStatuses,
 			}
 		}
 	}

@@ -1738,16 +1738,16 @@ type AdmissionControlSuccessCriteria struct {
 //
 // +k8s:deepcopy-gen=true
 type HTTPSuccessCriteria struct {
-	// HTTPSuccessStatus defines HTTP status codes that are considered successful.
-	HTTPSuccessStatus []int32 `json:"httpSuccessStatus,omitempty" yaml:"httpSuccessStatus,omitempty"`
+	// StatusCodes defines HTTP status codes that are considered successful.
+	StatusCodes []int32 `json:"statusCodes,omitempty" yaml:"statusCodes,omitempty"`
 }
 
 // GRPCSuccessCriteria defines success criteria for gRPC requests.
 //
 // +k8s:deepcopy-gen=true
 type GRPCSuccessCriteria struct {
-	// GRPCSuccessStatus defines gRPC status codes that are considered successful (string enum names).
-	GRPCSuccessStatus []string `json:"grpcSuccessStatus,omitempty" yaml:"grpcSuccessStatus,omitempty"`
+	// StatusCodes defines gRPC status codes that are considered successful (string enum names).
+	StatusCodes []string `json:"statusCodes,omitempty" yaml:"statusCodes,omitempty"`
 }
 
 // MirrorPolicy specifies a destination to mirror traffic in addition

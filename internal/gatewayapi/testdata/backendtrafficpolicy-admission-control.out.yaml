@@ -11,7 +11,7 @@ backendTrafficPolicies:
       samplingWindow: 30s
       successCriteria:
         http:
-          httpSuccessStatus:
+          statusCodes:
           - 200
           - 201
           - 204
@@ -56,7 +56,7 @@ backendTrafficPolicies:
       samplingWindow: 60s
       successCriteria:
         grpc:
-          grpcSuccessStatus:
+          statusCodes:
           - Ok
           - Cancelled
           - DeadlineExceeded
@@ -356,7 +356,7 @@ xdsIR:
             samplingWindow: 1m0s
             successCriteria:
               grpc:
-                grpcSuccessStatus:
+                statusCodes:
                 - Ok
                 - Cancelled
                 - DeadlineExceeded
@@ -446,7 +446,7 @@ xdsIR:
             samplingWindow: 30s
             successCriteria:
               http:
-                httpSuccessStatus:
+                statusCodes:
                 - 200
                 - 201
                 - 204

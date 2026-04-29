@@ -19,7 +19,7 @@ http:
         maxRejectionPercent: 80
         successCriteria:
           http:
-            httpSuccessStatus:
+            statusCodes:
             - 200
             - 201
             - 202
@@ -43,7 +43,7 @@ http:
         maxRejectionPercent: 95
         successCriteria:
           grpc:
-            grpcSuccessStatus:
+            statusCodes:
             - "Ok"
             - "Cancelled"
     pathMatch:

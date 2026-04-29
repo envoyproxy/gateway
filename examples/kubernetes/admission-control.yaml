@@ -21,12 +21,12 @@ spec:
     maxRejectionPercent: 80
     successCriteria:
       http:
-        httpSuccessStatus:
+        statusCodes:
           - 200
           - 201
           - 204
       grpc:
-        grpcSuccessStatus:
+        statusCodes:
           - Ok
 ---
 apiVersion: gateway.networking.k8s.io/v1

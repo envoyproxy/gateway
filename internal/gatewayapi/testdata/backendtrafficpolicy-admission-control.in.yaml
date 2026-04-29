@@ -82,7 +82,7 @@ backendTrafficPolicies:
         maxRejectionPercent: 70
         successCriteria:
           grpc:
-            grpcSuccessStatus:
+            statusCodes:
               - Ok
               - Cancelled
               - DeadlineExceeded
@@ -102,7 +102,7 @@ backendTrafficPolicies:
         minSuccessRate: 95
         successCriteria:
           http:
-            httpSuccessStatus:
+            statusCodes:
               - 200
               - 201
               - 204
