@@ -26,7 +26,7 @@ sources:
 
 dependencies:
   - name: prometheus
-    version: 29.2.1
+    version: 29.3.0
     repository: https://prometheus-community.github.io/helm-charts
     condition: prometheus.enabled
   - name: grafana
@@ -39,10 +39,10 @@ dependencies:
     condition: fluent-bit.enabled
   - name: alloy
     repository: https://grafana.github.io/helm-charts
-    version: 1.7.0
+    version: 1.8.0
     condition: alloy.enabled
   - name: loki
-    version: 6.55.0
+    version: 7.0.0
     repository: https://grafana.github.io/helm-charts
     condition: loki.enabled
   - name: tempo
