@@ -362,8 +362,10 @@ func hasInvalidCondition(listener *ListenerContext) bool {
 
 // isSpecValidForConflictChecks returns whether a listener should participate in
 // conflict detection. In the normal translation flow this is driven by
-// listener.specValid. The fallback keeps direct unit tests meaningful when they
-// invoke conflict checks without running per-listener spec validation first.
+// listener.specValid. The fallback to hasInvalidCondition exists only for unit
+// tests that invoke conflict checks directly without running per-listener spec
+// validation (Phase 1) first. Production code paths always run validateListenerSpec
+// before conflict detection.
 func isSpecValidForConflictChecks(listener *ListenerContext) bool {
 	if listener.specValid {
 		return true
@@ -767,12 +769,7 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 		specValid = false
 	}
 
-	// If no kinds were explicitly specified but there were no errors, set default supported kinds
-	if len(supportedKinds) == 0 && specValid {
-		listener.SetSupportedKinds(canSupportKinds...)
-	} else {
-		listener.SetSupportedKinds(supportedKinds...)
-	}
+	listener.SetSupportedKinds(supportedKinds...)
 	return specValid
 }
 
@@ -859,39 +856,52 @@ func (t *Translator) validateConflictedProtocolsListeners(gateways []*GatewayCon
 				continue
 			}
 
-			// If all conflicted listeners are from ListenerSet, the first one wins and
-			// the rest are marked conflicted when incompatible with the winner.
-			seenNonUDPProtocol := false
-			seenUDPProtocol := false
+			// When nonListenerSetCount == 1, explicitly pick the Gateway-owned listener as winner.
+			// When nonListenerSetCount == 0, pick the first ListenerSet listener as winner.
+			// Note: UDP conflicts are handled by validateConflictedLayer4Listeners, so we skip
+			// UDP listeners here (this branch is only reached when len(nonUDPProtocols) > 1).
+			var winnerProtocol string
+			if nonListenerSetCount == 1 {
+				// Find and use the non-ListenerSet listener's protocol as the winner
+				for _, listener := range listenersOnPort {
+					protocol := getProtocolForListener(listener)
+					if !listener.isFromListenerSet() && protocol != string(gwapiv1.UDPProtocolType) {
+						winnerProtocol = protocol
+						break
+					}
+				}
+			}
+
 			for _, listener := range listenersOnPort {
 				protocol := getProtocolForListener(listener)
+				// Skip UDP listeners as they are handled by validateConflictedLayer4Listeners
 				if protocol == string(gwapiv1.UDPProtocolType) {
-					if !seenUDPProtocol {
-						seenUDPProtocol = true
-						continue
+					continue
+				}
+
+				// If we have an explicit winner protocol, use it; otherwise first one wins
+				if winnerProtocol != "" {
+					if protocol != winnerProtocol {
+						listener.SetCondition(
+							gwapiv1.ListenerConditionConflicted,
+							metav1.ConditionTrue,
+							gwapiv1.ListenerReasonProtocolConflict,
+							"All listeners for a given port must use a compatible protocol",
+						)
 					}
-					// Multiple UDP listeners on the same port is a conflict.
-					listener.SetCondition(
-						gwapiv1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						gwapiv1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-					continue
+				} else {
+					// All conflicted listeners are from ListenerSet, first one wins
+					if winnerProtocol == "" {
+						winnerProtocol = protocol
+					} else if protocol != winnerProtocol {
+						listener.SetCondition(
+							gwapiv1.ListenerConditionConflicted,
+							metav1.ConditionTrue,
+							gwapiv1.ListenerReasonProtocolConflict,
+							"All listeners for a given port must use a compatible protocol",
+						)
+					}
 				}
-
-				if !seenNonUDPProtocol {
-					seenNonUDPProtocol = true
-					continue
-				}
-
-				// Multiple non-UDP protocols on the same port is a conflict.
-				listener.SetCondition(
-					gwapiv1.ListenerConditionConflicted,
-					metav1.ConditionTrue,
-					gwapiv1.ListenerReasonProtocolConflict,
-					"All listeners for a given port must use a compatible protocol",
-				)
 			}
 		}
 	}
