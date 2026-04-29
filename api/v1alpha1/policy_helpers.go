@@ -42,7 +42,6 @@ type PolicyTargetReferences struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="has(self.group) ? self.group == 'gateway.networking.k8s.io' : true ", message="group must be gateway.networking.k8s.io"
-// +kubebuilder:validation:XValidation:rule="has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)", message="at least one of namespaces, matchLabels, or matchExpressions must be specified"
 type TargetSelector struct {
 	// Group is the group that this selector targets. Defaults to gateway.networking.k8s.io
 	//

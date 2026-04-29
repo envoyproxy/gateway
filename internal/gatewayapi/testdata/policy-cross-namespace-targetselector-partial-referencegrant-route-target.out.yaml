@@ -23,7 +23,7 @@ backendTrafficPolicies:
         sectionName: http
       conditions:
       - lastTransitionTime: null
-        message: Target HTTPRoute policy-target-b/denied-route is not permitted by
+        message: Target HTTPRoute policy-target-c/denied-route is not permitted by
           any ReferenceGrant.
         reason: RefNotPermitted
         status: "False"
@@ -46,7 +46,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 2
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -114,6 +114,43 @@ httpRoutes:
       policy: selected
     name: denied-route
     namespace: policy-target-b
+  spec:
+    parentRefs:
+    - name: mixed-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: denied-service
+        port: 8080
+      matches:
+      - path:
+          value: /denied
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    labels:
+      policy: selected
+    name: denied-route
+    namespace: policy-target-c
   spec:
     parentRefs:
     - name: mixed-gateway
@@ -267,6 +304,36 @@ xdsIR:
           name: denied-route
           namespace: policy-target-b
         name: httproute/policy-target-b/denied-route/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /denied
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: denied-route
+            namespace: policy-target-c
+          name: httproute/policy-target-c/denied-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.4.4
+              port: 8080
+            metadata:
+              kind: Service
+              name: denied-service
+              namespace: policy-target-c
+              sectionName: "8080"
+            name: httproute/policy-target-c/denied-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: denied-route
+          namespace: policy-target-c
+        name: httproute/policy-target-c/denied-route/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""

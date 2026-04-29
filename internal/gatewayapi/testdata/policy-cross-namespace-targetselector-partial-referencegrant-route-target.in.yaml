@@ -52,6 +52,25 @@ httpRoutes:
       backendRefs:
       - name: denied-service
         port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-c
+    name: denied-route
+    labels:
+      policy: selected
+  spec:
+    parentRefs:
+    - name: mixed-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /denied
+      backendRefs:
+      - name: denied-service
+        port: 8080
 backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
@@ -76,6 +95,10 @@ namespaces:
   kind: Namespace
   metadata:
     name: policy-target-b
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-c
 referenceGrants:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: ReferenceGrant
@@ -112,6 +135,16 @@ services:
     - port: 8080
       name: http
       protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-c
+    name: denied-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
 endpointSlices:
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
@@ -135,6 +168,23 @@ endpointSlices:
   metadata:
     name: endpointslice-denied-service
     namespace: policy-target-b
+    labels:
+      kubernetes.io/service-name: denied-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.4.4
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-denied-service
+    namespace: policy-target-c
     labels:
       kubernetes.io/service-name: denied-service
   addressType: IPv4

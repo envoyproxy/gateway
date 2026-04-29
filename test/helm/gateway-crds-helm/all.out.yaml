@@ -25403,9 +25403,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: at least one of namespaces, matchLabels, or matchExpressions
-                      must be specified
-                    rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
                 type: array
               tcpKeepalive:
                 description: |-
@@ -27256,9 +27253,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: at least one of namespaces, matchLabels, or matchExpressions
-                      must be specified
-                    rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
                 type: array
               tcpKeepalive:
                 description: |-
@@ -30039,9 +30033,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: at least one of namespaces, matchLabels, or matchExpressions
-                      must be specified
-                    rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
                 type: array
               wasm:
                 description: |-
@@ -56990,9 +56981,6 @@ spec:
                   - message: group must be gateway.networking.k8s.io
                     rule: 'has(self.group) ? self.group == ''gateway.networking.k8s.io''
                       : true '
-                  - message: at least one of namespaces, matchLabels, or matchExpressions
-                      must be specified
-                    rule: has(self.namespaces) || has(self.matchLabels) || has(self.matchExpressions)
                 type: array
             type: object
             x-kubernetes-validations:
