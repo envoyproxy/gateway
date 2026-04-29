@@ -96,9 +96,10 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
+        message: Backend-targeted BackendTrafficPolicy is not supported for routes
+          with multiple backendRefs
+        reason: UnsupportedBackendTrafficPolicy
+        status: "False"
         type: Accepted
       - lastTransitionTime: null
         message: Resolved all the Object references for the Route
@@ -202,24 +203,19 @@ xdsIR:
             name: httproute/default/httproute-1/rule/0/backend/1
             protocol: HTTP
             weight: 50
+        directResponse:
+          statusCode: 500
         hostname: gateway.envoyproxy.io
         isHTTP2: false
         metadata:
           kind: HTTPRoute
           name: httproute-1
           namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-for-both-services
-            namespace: default
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""
           prefix: /
-        traffic:
-          circuitBreaker:
-            maxConnections: 100
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

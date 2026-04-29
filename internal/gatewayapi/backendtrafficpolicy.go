@@ -1458,9 +1458,9 @@ func backendPolicyKeyFromMetadata(md *ir.ResourceMetadata) backendPolicyKey {
 // during the route merge phase.
 // buildRouteBackendPolicyMap walks the IR once and, for each HTTP route, determines
 // which backend BTP (if any) applies. It also detects multi-backendRef conflicts:
-//   - Key present, value non-nil → valid: all backends share this BTP (or single backend)
-//   - Key present, value nil → conflict: non-uniform backend BTPs (partial coverage or different BTPs)
-//   - Key absent → no backend BTP targets any of this route's backends
+//   - Key present, value non-nil → valid: single-backend route with a matching backend BTP
+//   - Key present, value nil → unsupported: route has multiple backendRefs
+//   - Key absent → no backend BTP targets this route's backend
 func (t *Translator) buildRouteBackendPolicyMap(
 	xdsIR resource.XdsIRMap,
 	backendPolicyMap map[backendPolicyKey]*egv1a1.BackendTrafficPolicy,
@@ -1470,8 +1470,8 @@ func (t *Translator) buildRouteBackendPolicyMap(
 		return
 	}
 
-	// resolveRouteDestination checks a route's destination settings and records the
-	// backend BTP (or conflict) in routeBackendPolicyMap.
+	// resolveRouteDestination checks a route's destination and records the backend BTP
+	// in routeBackendPolicyMap. Multi-backend routes are marked as unsupported (nil).
 	resolveRouteDestination := func(dest *ir.RouteDestination, md *ir.ResourceMetadata) {
 		if dest == nil || md == nil || len(dest.Settings) == 0 {
 			return
@@ -1485,27 +1485,18 @@ func (t *Translator) buildRouteBackendPolicyMap(
 			return
 		}
 
-		var matchedBTP *egv1a1.BackendTrafficPolicy
-		matchCount := 0
-		conflict := false
-		for _, ds := range dest.Settings {
-			if ds.Metadata == nil {
-				continue
-			}
-			if btp, ok := backendPolicyMap[backendPolicyKeyFromMetadata(ds.Metadata)]; ok {
-				matchCount++
-				if matchedBTP == nil {
-					matchedBTP = btp
-				} else if utils.NamespacedName(matchedBTP) != utils.NamespacedName(btp) {
-					conflict = true
-					break
-				}
-			}
-		}
-		if matchCount > 0 && (conflict || matchCount < len(dest.Settings)) {
+		// Multi-backend routes are not supported with backend-targeted BTP.
+		if len(dest.Settings) > 1 {
 			routeBackendPolicyMap[key] = nil
-		} else if matchedBTP != nil {
-			routeBackendPolicyMap[key] = matchedBTP
+			return
+		}
+
+		// Single-backend route: check if its backend has a BTP.
+		ds := dest.Settings[0]
+		if ds.Metadata != nil {
+			if btp, ok := backendPolicyMap[backendPolicyKeyFromMetadata(ds.Metadata)]; ok {
+				routeBackendPolicyMap[key] = btp
+			}
 		}
 	}
 
@@ -1684,7 +1675,7 @@ func (t *Translator) resolveEffectivePolicy(
 
 // matchRouteBackendPolicy checks routeBackendPolicyMap for the given route metadata.
 // Returns: (matched, conflict). matched=true if this route has a backend BTP matching
-// the given policy. conflict=true if the route has non-uniform backend BTPs.
+// the given policy. conflict=true if the route has multiple backendRefs.
 func matchRouteBackendPolicy(
 	md *ir.ResourceMetadata,
 	policy *egv1a1.BackendTrafficPolicy,
@@ -1704,9 +1695,9 @@ func matchRouteBackendPolicy(
 	return utils.NamespacedName(btp) == utils.NamespacedName(policy), false
 }
 
-// setConflictingBackendPolicyStatus sets a 500 DirectResponse and route status condition
-// for routes with non-uniform backend BTPs.
-func setConflictingBackendPolicyStatus(
+// setUnsupportedBackendPolicyStatus sets a 500 DirectResponse and route status condition
+// for routes with multiple backendRefs when backend-targeted BTP is enabled.
+func setUnsupportedBackendPolicyStatus(
 	md *ir.ResourceMetadata,
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 ) {
@@ -1719,8 +1710,8 @@ func setConflictingBackendPolicyStatus(
 		for idx := range routeStatus.Parents {
 			status.SetRouteStatusCondition(routeStatus, idx, routeCtx.RouteContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted, metav1.ConditionFalse,
-				status.RouteReasonConflictingBackendTrafficPolicies,
-				"Route has multiple backends with non-uniform BackendTrafficPolicies; all backends must either have no backend-targeted BTP or share the same one",
+				status.RouteReasonUnsupportedBackendTrafficPolicy,
+				"Backend-targeted BackendTrafficPolicy is not supported for routes with multiple backendRefs",
 			)
 		}
 	}
@@ -1744,7 +1735,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 			ok, conflict := matchRouteBackendPolicy(r.Metadata, policy, routeBackendPolicyMap)
 			if conflict {
 				matched = true
-				setConflictingBackendPolicyStatus(r.Metadata, routeMap)
+				setUnsupportedBackendPolicyStatus(r.Metadata, routeMap)
 				continue
 			}
 			if !ok {
@@ -1775,7 +1766,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 		ok, conflict := matchRouteBackendPolicy(r.Destination.Metadata, policy, routeBackendPolicyMap)
 		if conflict {
 			matched = true
-			setConflictingBackendPolicyStatus(r.Destination.Metadata, routeMap)
+			setUnsupportedBackendPolicyStatus(r.Destination.Metadata, routeMap)
 			continue
 		}
 		if !ok {
@@ -1797,7 +1788,7 @@ func (t *Translator) applyTrafficFeaturesToBackend(
 				r.DirectResponse = &ir.CustomResponse{
 					StatusCode: new(uint32(500)),
 				}
-				setConflictingBackendPolicyStatus(r.Metadata, routeMap)
+				setUnsupportedBackendPolicyStatus(r.Metadata, routeMap)
 				continue
 			}
 			if !ok {

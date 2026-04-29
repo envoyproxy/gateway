@@ -119,10 +119,9 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: Route has multiple backends with non-uniform BackendTrafficPolicies;
-          all backends must either have no backend-targeted BTP or share the same
-          one
-        reason: ConflictingBackendTrafficPolicies
+        message: Backend-targeted BackendTrafficPolicy is not supported for routes
+          with multiple backendRefs
+        reason: UnsupportedBackendTrafficPolicy
         status: "False"
         type: Accepted
       - lastTransitionTime: null

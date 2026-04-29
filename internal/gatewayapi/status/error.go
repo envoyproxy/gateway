@@ -32,7 +32,7 @@ const (
 	RouteReasonEndpointsNotFound      gwapiv1.RouteConditionReason = "EndpointsNotFound"
 
 	// Backend policy related reasons
-	RouteReasonConflictingBackendTrafficPolicies gwapiv1.RouteConditionReason = "ConflictingBackendTrafficPolicies"
+	RouteReasonUnsupportedBackendTrafficPolicy gwapiv1.RouteConditionReason = "UnsupportedBackendTrafficPolicy"
 
 	// Network configuration related condition types
 	RouteConditionBackendsAvailable gwapiv1.RouteConditionType = "BackendsAvailable"
