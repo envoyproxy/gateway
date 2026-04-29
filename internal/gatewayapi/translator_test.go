@@ -91,14 +91,16 @@ func TestTranslate(t *testing.T) {
 			ModifyListenerPort:              true,
 		},
 		{
-			name:           "sds",
-			BackendEnabled: true,
-			SDSEnabled:     true,
+			name:               "sds",
+			BackendEnabled:     true,
+			SDSEnabled:         true,
+			ModifyListenerPort: true,
 		},
 		{
-			name:           "sds-invalid",
-			BackendEnabled: true,
-			SDSEnabled:     true,
+			name:               "sds-invalid",
+			BackendEnabled:     true,
+			SDSEnabled:         true,
+			ModifyListenerPort: true,
 		},
 	}
 
@@ -1152,7 +1154,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeRemote,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							UseListenerPortAsContainerPort: ptr.To(false),
+							UseListenerPortAsContainerPort: new(false),
 						},
 					},
 				},
@@ -1167,7 +1169,7 @@ func TestServicePortToContainerPort(t *testing.T) {
 					Provider: &egv1a1.EnvoyProxyProvider{
 						Type: egv1a1.EnvoyProxyProviderTypeRemote,
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
-							UseListenerPortAsContainerPort: ptr.To(true),
+							UseListenerPortAsContainerPort: new(true),
 						},
 					},
 				},
