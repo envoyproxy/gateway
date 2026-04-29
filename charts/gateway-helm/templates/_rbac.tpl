@@ -22,6 +22,8 @@ All cluster scoped resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.cluster.gateway.networking" . | nindent 2 | trim }}
 - {{ include "eg.rbac.cluster.gateway.networking.status" . | nindent 2 | trim }}
 - {{ include "eg.rbac.cluster.multiclusterservices" . | nindent 2 | trim }}
+- {{ include "eg.rbac.cluster.auth" . | nindent 2 | trim }}
+- {{ include "eg.rbac.cluster.authz" . | nindent 2 | trim }}
 {{- end }}
 
 {{/*
@@ -190,6 +192,24 @@ verbs:
 - get
 - list
 - watch
+{{- end }}
+
+{{- define "eg.rbac.cluster.auth" -}}
+apiGroups:
+- authentication.k8s.io
+resources:
+- tokenreviews
+verbs:
+- create
+{{- end }}
+
+{{- define "eg.rbac.cluster.authz" -}}
+apiGroups:
+- authorization.k8s.io
+resources:
+- subjectaccessreviews
+verbs:
+- create
 {{- end }}
 
 {{- define "eg.rbac.cluster.gateway.networking.status" -}}
