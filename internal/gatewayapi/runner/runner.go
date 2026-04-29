@@ -183,7 +183,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 		return
 	}
 	cacheOption := wasm.CacheOptions{}
-	if r.EnvoyGateway.Provider.Type == egv1a1.ProviderTypeKubernetes {
+	if r.EnvoyGateway.Provider.IsRunningOnKubernetes() {
 		cacheOption.CacheDir = "/var/lib/eg/wasm"
 	} else {
 		h, _ := os.UserHomeDir() // Assume we always get the home directory.
