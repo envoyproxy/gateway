@@ -1031,6 +1031,11 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, rewrite *ir.URLRewrite,
 		case ptr.Deref(rewriteHost.Backend, false):
 			if ep != nil && ep.Hostname != nil {
 				return *ep.Hostname
+			if ep != nil && ep.Hostname != nil {
+				return *ep.Hostname
+			}
+			if ep != nil && net.ParseIP(ep.Host) == nil {
+				return ep.Host
 			}
 			// If the rewrite host is from a header, we cannot set it on the EndpointHealthCheckConfig since it is dynamic and evaluated at request time.
 			// case rewriteHost.Header != nil:
