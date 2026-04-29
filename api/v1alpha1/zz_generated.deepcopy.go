@@ -2688,6 +2688,13 @@ func (in *EnvoyGatewaySpec) DeepCopyInto(out *EnvoyGatewaySpec) {
 		*out = new(ExtensionManager)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ExtensionManagers != nil {
+		in, out := &in.ExtensionManagers, &out.ExtensionManagers
+		*out = make([]ExtensionManager, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.ExtensionAPIs != nil {
 		in, out := &in.ExtensionAPIs, &out.ExtensionAPIs
 		*out = new(ExtensionAPISettings)
@@ -7466,6 +7473,11 @@ func (in *ResponseOverride) DeepCopyInto(out *ResponseOverride) {
 		in, out := &in.Redirect, &out.Redirect
 		*out = new(CustomRedirect)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Source != nil {
+		in, out := &in.Source, &out.Source
+		*out = new(ResponseOverrideSource)
+		**out = **in
 	}
 }
 
