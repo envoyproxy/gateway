@@ -304,6 +304,9 @@ const (
 	// EnvoyFilterCORS defines the Envoy HTTP CORS filter.
 	EnvoyFilterCORS EnvoyFilter = "envoy.filters.http.cors"
 
+	// EnvoyFilterCSRF defines the Envoy HTTP CSRF filter.
+	EnvoyFilterCSRF EnvoyFilter = "envoy.filters.http.csrf"
+
 	// EnvoyFilterHeaderMutation defines the Envoy HTTP header mutation filter
 	EnvoyFilterHeaderMutation EnvoyFilter = "envoy.filters.http.header_mutation"
 
