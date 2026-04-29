@@ -4000,6 +4000,125 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"retry is not allowed when targeting a backend",
 			},
 		},
+		{
+			desc: "service targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(""),
+								Kind:  gwapiv1.Kind("Service"),
+								Name:  gwapiv1.ObjectName("my-svc"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "serviceimport targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+								Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+								Name:  gwapiv1.ObjectName("my-svc-import"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "backend targetRef with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group(egv1a1.GroupName),
+								Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+								Name:  gwapiv1.ObjectName("my-backend"),
+							},
+							SectionName: &sn,
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "service targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(""),
+									Kind:  gwapiv1.Kind("Service"),
+									Name:  gwapiv1.ObjectName("my-svc"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "serviceimport targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(mcsapiv1a1.GroupName),
+									Kind:  gwapiv1.Kind(mcsapiv1a1.ServiceImportKindName),
+									Name:  gwapiv1.ObjectName("my-svc-import"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
+		},
+		{
+			desc: "backend targetRefs with sectionName rejected",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				sn := gwapiv1a2.SectionName("http")
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRefs: []gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group(egv1a1.GroupName),
+									Kind:  gwapiv1.Kind(egv1a1.KindBackend),
+									Name:  gwapiv1.ObjectName("my-backend"),
+								},
+								SectionName: &sn,
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"sectionName is not supported when targeting a backend"},
 		},
 	}
 

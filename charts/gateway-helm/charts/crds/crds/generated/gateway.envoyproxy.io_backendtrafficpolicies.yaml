@@ -3392,6 +3392,12 @@ spec:
               rule: '!((has(self.targetRef) && self.targetRef.kind in [''Service'',
                 ''ServiceImport'', ''Backend'']) || (has(self.targetRefs) && self.targetRefs.exists(ref,
                 ref.kind in [''Service'', ''ServiceImport'', ''Backend'']))) || !has(self.retry)'
+            - message: sectionName is not supported when targeting a backend
+              rule: '!has(self.targetRef) || !(self.targetRef.kind in [''Service'',
+                ''ServiceImport'', ''Backend'']) || !has(self.targetRef.sectionName)'
+            - message: sectionName is not supported when targeting a backend
+              rule: '!has(self.targetRefs) || self.targetRefs.all(ref, !(ref.kind
+                in [''Service'', ''ServiceImport'', ''Backend'']) || !has(ref.sectionName))'
             - message: either compression or compressor can be set, not both
               rule: '!has(self.compression) || !has(self.compressor)'
             - message: requestBuffer cannot be used together with httpUpgrade
