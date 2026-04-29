@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/hex"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"time"
@@ -1031,6 +1032,7 @@ func getHealthCheckOverridesHostname(hc *ir.HealthCheck, rewrite *ir.URLRewrite,
 		case ptr.Deref(rewriteHost.Backend, false):
 			if ep != nil && ep.Hostname != nil {
 				return *ep.Hostname
+			}
 			if ep != nil && ep.Hostname != nil {
 				return *ep.Hostname
 			}
