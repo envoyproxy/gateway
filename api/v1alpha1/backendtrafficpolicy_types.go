@@ -45,6 +45,7 @@ type BackendTrafficPolicy struct {
 // +kubebuilder:validation:XValidation:rule="has(self.targetRefs) ? self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']) : true ", message="this policy can only have a targetRefs[*].kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
 // +kubebuilder:validation:XValidation:rule="!has(self.compression) || !has(self.compressor)", message="either compression or compressor can be set, not both"
 // +kubebuilder:validation:XValidation:rule="!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size() == 0", message="requestBuffer cannot be used together with httpUpgrade"
+// +kubebuilder:validation:XValidation:rule="!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']) && (!has(self.targetRefs) || self.targetRefs.all(ref, ref.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel, sel.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute'])))", message="admissionControl can only be used with HTTPRoute, GRPCRoute, or Gateway targets"
 type BackendTrafficPolicySpec struct {
 	PolicyTargetReferences `json:",inline"`
 	ClusterSettings        `json:",inline"`
@@ -67,13 +68,18 @@ type BackendTrafficPolicySpec struct {
 	// BandwidthLimit allows the user to limit the bandwidth of traffic
 	// sent to and received from the backend.
 	// +optional
-	// +notImplementedHide
 	BandwidthLimit *BandwidthLimitSpec `json:"bandwidthLimit,omitempty"`
 
 	// FaultInjection defines the fault injection policy to be applied. This configuration can be used to
 	// inject delays and abort requests to mimic failure scenarios such as service failures and overloads
 	// +optional
 	FaultInjection *FaultInjection `json:"faultInjection,omitempty"`
+
+	// AdmissionControl defines the admission control policy to be applied. This configuration
+	// probabilistically rejects requests based on the success rate of previous requests in a
+	// configurable sliding time window.
+	// +optional
+	AdmissionControl *AdmissionControl `json:"admissionControl,omitempty"`
 
 	// UseClientProtocol configures Envoy to prefer sending requests to backends using
 	// the same HTTP protocol that the incoming request used. Defaults to false, which means

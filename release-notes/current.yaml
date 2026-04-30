@@ -45,8 +45,15 @@ new features: |
   Added support for invert match in CIDR match RateLimit API.
   Added support for ignoring HTTP/1.1 Upgrade requests in ClientTrafficPolicy via `http1.ignoredUpgradeTypes`.
   Added support for OpenTelemetry sampler configuration for tracing.
+  Added support for multiple ExtensionManagers with sequential chaining via a new `extensionManagers` field in `EnvoyGateway` configuration.
   Added support for default EnvoyProxy settings on EnvoyGatewaySpec that can be overridden by GatewayClass or Gateway-level EnvoyProxy configurations. A new MergeType field allows choosing between Replace (default), StrategicMerge, or JSONMerge strategies for combining configurations.
   Added support for sending Envoy Gateway route metadata to external authorization backends via `SecurityPolicy.spec.extAuth.includeRouteMetadata`.
+  Added support for cross-namespace policy attachment for ClientTrafficPolicy, BackendTrafficPolicy, EnvoyExtensionPolicy, and SecurityPolicy.
+  Added `source` field to `responseOverride` rules in BackendTrafficPolicy, allowing rules to target only Envoy-generated responses (`Local`), only upstream responses (`Backend`), or both (`All`, the default). This enables overriding envoy responses (e.g. auth/rate-limit failures) without affecting legitimate upstream responses with the same status code.
+  Added support for path override in ExtAuth HTTP service.
+  Added support for bandwidth limit.
+  Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart.  Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
+  Added support for Envoy Admission Control to BackendTrafficPolicy, enabling client-side load shedding based on historical upstream success rates using Envoy's admission control filter.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
@@ -78,6 +85,7 @@ bug fixes: |
   Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
   Fixed BackendTrafficPolicy rate limit `requests` values above uint32 max (4294967295) being silently truncated modulo 2^32 by the rate limit service and Envoy token bucket. The field now rejects such values at admission time with a clear schema validation error. See envoyproxy/ai-gateway#2012.
   Fixed status conditions not being updated when a route is rejected due to multiple errors.
+  Fixed dpanic in gatewayapi translator logger.
 
 # Enhancements that improve performance.
 performance improvements: |

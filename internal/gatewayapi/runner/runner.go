@@ -275,15 +275,17 @@ func (r *Runner) subscribeAndTranslate(sub <-chan watchable.Snapshot[string, *re
 					LuaEnvoyExtensionPolicyDisabled: r.EnvoyGateway.ExtensionAPIs != nil && r.EnvoyGateway.ExtensionAPIs.DisableLua,
 				}
 
-				// If an extension is loaded, pass its supported groups/kinds to the translator
-				if r.EnvoyGateway.ExtensionManager != nil {
+				// If extensions are loaded, pass their supported groups/kinds to the translator
+				if extensions := r.EnvoyGateway.GetExtensionManagers(); len(extensions) > 0 {
 					var extGKs []schema.GroupKind
-					for _, gvk := range r.EnvoyGateway.ExtensionManager.Resources {
-						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
-					}
-					// Include backend resources in extension group kinds for custom backend support
-					for _, gvk := range r.EnvoyGateway.ExtensionManager.BackendResources {
-						extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+					for _, em := range extensions {
+						for _, gvk := range em.Resources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+						}
+						// Include backend resources in extension group kinds for custom backend support
+						for _, gvk := range em.BackendResources {
+							extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+						}
 					}
 					t.ExtensionGroupKinds = extGKs
 					traceLogger.Info("extension resources", "GVKs count", len(extGKs))
