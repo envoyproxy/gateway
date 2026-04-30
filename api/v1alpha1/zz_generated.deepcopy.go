@@ -877,6 +877,11 @@ func (in *BackendTrafficPolicySpec) DeepCopyInto(out *BackendTrafficPolicySpec) 
 		*out = new(RequestBuffer)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.RequestBodyBufferLimit != nil {
+		in, out := &in.RequestBodyBufferLimit, &out.RequestBodyBufferLimit
+		x := (*in).DeepCopy()
+		*out = &x
+	}
 	if in.Telemetry != nil {
 		in, out := &in.Telemetry, &out.Telemetry
 		*out = new(BackendTelemetry)

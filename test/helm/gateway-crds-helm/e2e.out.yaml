@@ -2860,6 +2860,21 @@ spec:
                     - Local
                     type: string
                 type: object
+              requestBodyBufferLimit:
+                allOf:
+                - pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                - pattern: ^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$
+                anyOf:
+                - type: integer
+                - type: string
+                description: |-
+                  RequestBodyBufferLimit specifies the maximum size in bytes that Envoy may buffer for request bodies.
+                  This configures Envoy's request body buffer limit without enabling full request buffering.
+
+                  If exceeded, the request will be rejected with HTTP 413 Content Too Large.
+
+                  Accepts values in resource.Quantity format (e.g., "10Mi", "500Ki").
+                x-kubernetes-int-or-string: true
               requestBuffer:
                 description: |-
                   RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request
