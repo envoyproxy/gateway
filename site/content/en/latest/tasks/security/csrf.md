@@ -23,8 +23,11 @@ Note: Envoy's CSRF filter compares against the host and port of the origin only 
 before matching). Additional origins must be specified as `host` or `host:port` values, not full URLs.
 For example, use `www.example.com` instead of `https://www.example.com`.
 
+The filter supports gradual rollout via `filterEnabled` (percentage of requests enforced, defaults to 100)
+and `shadowEnabled` (percentage of requests evaluated in dry-run mode without enforcing).
+
 The below example defines a SecurityPolicy that enables CSRF protection and allows additional origins
-matching `https://www.example.com` exactly and any subdomain of `trusted.com` via regex.
+matching `www.example.com` exactly and any subdomain of `trusted.com` via regex.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -81,6 +84,32 @@ With this configuration:
 - A `POST` request with `Origin: https://app.trusted.com` will be **allowed** (Envoy extracts `app.trusted.com` which matches the regex).
 - A `POST` request with `Origin: https://www.malicious.com` will be **rejected** with a `403 Forbidden`.
 - A `GET` request from any origin will be **allowed** (non-mutating).
+
+### Shadow mode (dry-run)
+
+To evaluate CSRF policies without enforcing them (useful for gradual rollout), set `filterEnabled` to 0
+and `shadowEnabled` to the desired percentage:
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: csrf-shadow
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: backend
+  csrf:
+    filterEnabled: 0
+    shadowEnabled: 100
+    additionalOrigins:
+    - type: Exact
+      value: "www.example.com"
+```
+
+In this mode, all requests are allowed but Envoy tracks CSRF metrics (`request_valid` / `request_invalid`)
+so you can monitor the impact before enabling enforcement.
 
 [csrf]: https://owasp.org/www-community/attacks/csrf
 [SecurityPolicy]: ../../../api/extension_types#securitypolicy

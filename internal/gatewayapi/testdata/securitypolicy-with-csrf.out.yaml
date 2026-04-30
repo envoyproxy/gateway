@@ -103,6 +103,8 @@ securityPolicies:
     namespace: default
   spec:
     csrf:
+      filterEnabled: 80
+      shadowEnabled: 20
       additionalOrigins:
       - type: Exact
         value: www.example.com
@@ -210,6 +212,8 @@ xdsIR:
           prefix: /
         security:
           csrf:
+            filterEnabled: 80
+            shadowEnabled: 20
             additionalOrigins:
             - distinct: false
               exact: www.example.com

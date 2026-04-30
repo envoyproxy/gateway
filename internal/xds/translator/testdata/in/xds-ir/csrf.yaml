@@ -26,4 +26,21 @@ http:
         - prefix: app.example
         - suffix: .trusted.com
         - safeRegex: .*\.partner\.com$
+  - name: "second-route"
+    hostname: "*"
+    pathMatch:
+      exact: "bar/baz"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50001
+        name: "second-route-dest/backend/0"
+    security:
+      csrf:
+        filterEnabled: 50
+        shadowEnabled: 25
+        additionalOrigins:
+        - exact: staging.example.com
 

@@ -1200,6 +1200,11 @@ type CORS struct {
 //
 // +k8s:deepcopy-gen=true
 type CSRF struct {
+	// FilterEnabled is the percentage of requests for which CSRF is enforced (0-100).
+	// nil means 100%.
+	FilterEnabled *int32 `json:"filterEnabled,omitempty" yaml:"filterEnabled,omitempty"`
+	// ShadowEnabled is the percentage of requests evaluated in shadow/dry-run mode (0-100).
+	ShadowEnabled *int32 `json:"shadowEnabled,omitempty" yaml:"shadowEnabled,omitempty"`
 	// AdditionalOrigins specifies additional origins that are allowed.
 	AdditionalOrigins []*StringMatch `json:"additionalOrigins,omitempty" yaml:"additionalOrigins,omitempty"`
 }

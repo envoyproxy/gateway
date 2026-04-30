@@ -13,7 +13,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	csrfv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/csrf/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -124,17 +123,7 @@ func (*csrf) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPL
 		return fmt.Errorf("route already contains csrf config: %+v", route)
 	}
 
-	additionalOrigins := buildXdsCSRFOrigins(irRoute.Security.CSRF)
-
-	routeCfgProto := &csrfv3.CsrfPolicy{
-		FilterEnabled: &corev3.RuntimeFractionalPercent{
-			DefaultValue: &xdstype.FractionalPercent{
-				Numerator:   100,
-				Denominator: xdstype.FractionalPercent_HUNDRED,
-			},
-		},
-		AdditionalOrigins: additionalOrigins,
-	}
+	routeCfgProto := buildXdsCSRFPolicy(irRoute.Security.CSRF)
 
 	routeCfgAny, err := anypb.New(routeCfgProto)
 	if err != nil {
@@ -154,18 +143,38 @@ func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error 
 	return nil
 }
 
-// buildXdsCSRFOrigins converts IR StringMatches to Envoy StringMatchers for CSRF origins.
-// Values are passed directly to Envoy without transformation. Users must provide
-// host:port values (not full URLs) because Envoy's CSRF filter strips the scheme
-// from the Origin header before matching.
-func buildXdsCSRFOrigins(csrf *ir.CSRF) []*matcherv3.StringMatcher {
-	if csrf == nil {
-		return nil
+// buildXdsCSRFPolicy builds the full Envoy CSRF policy from the IR.
+func buildXdsCSRFPolicy(csrf *ir.CSRF) *csrfv3.CsrfPolicy {
+	// Default to 100% enabled.
+	filterEnabledNumerator := uint32(100)
+	if csrf.FilterEnabled != nil {
+		filterEnabledNumerator = uint32(*csrf.FilterEnabled) //nolint:gosec
 	}
 
-	var origins []*matcherv3.StringMatcher
-	for _, origin := range csrf.AdditionalOrigins {
-		origins = append(origins, buildXdsStringMatcher(origin))
+	policy := &csrfv3.CsrfPolicy{
+		FilterEnabled: &corev3.RuntimeFractionalPercent{
+			DefaultValue: &xdstype.FractionalPercent{
+				Numerator:   filterEnabledNumerator,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
 	}
-	return origins
+
+	if csrf.ShadowEnabled != nil {
+		policy.ShadowEnabled = &corev3.RuntimeFractionalPercent{
+			DefaultValue: &xdstype.FractionalPercent{
+				Numerator:   uint32(*csrf.ShadowEnabled), //nolint:gosec
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		}
+	}
+
+	// Values are passed directly to Envoy without transformation. Users must provide
+	// host:port values (not full URLs) because Envoy's CSRF filter strips the scheme
+	// from the Origin header before matching.
+	for _, origin := range csrf.AdditionalOrigins {
+		policy.AdditionalOrigins = append(policy.AdditionalOrigins, buildXdsStringMatcher(origin))
+	}
+
+	return policy
 }

@@ -24,3 +24,21 @@
           filterEnabled:
             defaultValue:
               numerator: 100
+    - match:
+        path: bar/baz
+      name: second-route
+      route:
+        cluster: second-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+      typedPerFilterConfig:
+        envoy.filters.http.csrf:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.csrf.v3.CsrfPolicy
+          additionalOrigins:
+          - exact: staging.example.com
+          filterEnabled:
+            defaultValue:
+              numerator: 50
+          shadowEnabled:
+            defaultValue:
+              numerator: 25
