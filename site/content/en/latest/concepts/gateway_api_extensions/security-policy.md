@@ -268,6 +268,7 @@ In this example, the route-level policy merges with the gateway-level policy, re
 - When `mergeType` is unset, no merging occurs - only the most specific policy takes effect
 - The merged configuration combines both policies, enabling layered security strategies
 - When the same security feature is configured in both parent and child policies (e.g., both define CORS), the child policy's configuration takes precedence for that specific feature
+- Secret references and backend references are resolved against the namespace of the **policy that originally configured the field** (either route or parent). For example, if a Gateway policy defines BasicAuth, its secret is looked up in the Gateway policy's namespace even after merging.
 
 ## Related Resources
 - [API Key Authentication](../../tasks/security/apikey-auth.md)
