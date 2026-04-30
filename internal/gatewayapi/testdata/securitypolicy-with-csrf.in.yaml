@@ -10,6 +10,8 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-1
     csrf:
+      filterEnabled: 80
+      shadowEnabled: 20
       additionalOrigins:
       - type: Exact
         value: www.example.com

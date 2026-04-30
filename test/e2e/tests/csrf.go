@@ -174,5 +174,29 @@ var CSRFFromSecurityPolicyTest = suite.ConformanceTest{
 			}
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 		})
+
+		// Shadow mode tests: filterEnabled=0, shadowEnabled=100
+		// Requests should be allowed regardless of Origin (dry-run mode)
+		shadowRouteNN := types.NamespacedName{Name: "http-with-csrf-shadow", Namespace: ns}
+		shadowGwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, shadowRouteNN)
+
+		SecurityPolicyMustBeAccepted(t, suite.Client, types.NamespacedName{Name: "csrf-shadow-mode", Namespace: ns}, suite.ControllerName, ancestorRef)
+
+		t.Run("shadow mode should allow POST with non-matching Origin", func(t *testing.T) {
+			expectedResponse := http.ExpectedResponse{
+				Request: http.Request{
+					Path:   "/csrf-shadow",
+					Method: "POST",
+					Headers: map[string]string{
+						"Origin": "https://www.malicious.com",
+					},
+				},
+				Response: http.Response{
+					StatusCodes: []int{200},
+				},
+				Namespace: ns,
+			}
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, shadowGwAddr, expectedResponse)
+		})
 	},
 }
