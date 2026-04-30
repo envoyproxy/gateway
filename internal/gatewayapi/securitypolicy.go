@@ -2558,63 +2558,73 @@ func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv
 	if err != nil {
 		return nil, nil, err
 	}
-	return mergedPolicy, &securityPolicyOwners{
-		basicAuth:                chooseBasicAuthOwner(routePolicy, parentPolicy),
-		apiKeyAuthCredentialRefs: chooseAPIKeyAuthOwner(routePolicy, parentPolicy),
-		authorizationRules:       chooseAuthorizationRulesOwner(routePolicy, parentPolicy),
-		extAuth:                  chooseExtAuthOwner(routePolicy, parentPolicy),
-		extAuthBackendRefs:       chooseExtAuthBackendRefsOwner(routePolicy, parentPolicy),
-		extAuthContextExtensions: buildExtAuthContextExtensionOwners(routePolicy, parentPolicy),
-		oidc:                     chooseOIDCOwner(routePolicy, parentPolicy),
-		oidcProviderBackendRefs:  chooseOIDCProviderBackendRefsOwner(routePolicy, parentPolicy),
-		oidcClientIDRef:          chooseOIDCClientIDRefOwner(routePolicy, parentPolicy),
-		oidcClientSecret:         chooseOIDCClientSecretOwner(routePolicy, parentPolicy),
-		jwtProviders:             chooseJWTProvidersOwner(routePolicy, parentPolicy),
-	}, nil
+	return mergedPolicy, buildSecurityPolicyOwners(routePolicy, parentPolicy), nil
 }
 
-func chooseBasicAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.BasicAuth != nil {
+// ownerOf returns route if routeOwns(route) is true, otherwise parent.
+// Use this when ownership of a merged field is determined by a single predicate.
+func ownerOf(
+	route, parent *egv1a1.SecurityPolicy,
+	routeOwns func(*egv1a1.SecurityPolicy) bool,
+) *egv1a1.SecurityPolicy {
+	if routeOwns(route) {
 		return route
 	}
 	return parent
 }
 
-func chooseAPIKeyAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.APIKeyAuth != nil && len(route.Spec.APIKeyAuth.CredentialRefs) > 0 {
-		return route
+// buildSecurityPolicyOwners determines, for each merged field, which policy
+// (route or parent) is considered the owner. The owner is used later to resolve
+// references (e.g. Secrets, BackendRefs) scoped to the owning policy's namespace,
+// and to derive IR resource names tied to the owning policy.
+func buildSecurityPolicyOwners(route, parent *egv1a1.SecurityPolicy) *securityPolicyOwners {
+	return &securityPolicyOwners{
+		basicAuth: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.BasicAuth != nil
+		}),
+		apiKeyAuthCredentialRefs: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.APIKeyAuth != nil && len(p.Spec.APIKeyAuth.CredentialRefs) > 0
+		}),
+		authorizationRules: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.Authorization != nil && len(p.Spec.Authorization.Rules) > 0
+		}),
+		extAuth: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.ExtAuth != nil
+		}),
+		extAuthBackendRefs: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			ea := p.Spec.ExtAuth
+			if ea == nil {
+				return false
+			}
+			if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) {
+				return true
+			}
+			if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) {
+				return true
+			}
+			return false
+		}),
+		extAuthContextExtensions: buildExtAuthContextExtensionOwners(route, parent),
+		oidc: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.OIDC != nil
+		}),
+		oidcProviderBackendRefs: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.OIDC != nil && len(p.Spec.OIDC.Provider.BackendRefs) > 0
+		}),
+		oidcClientIDRef: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.OIDC != nil && p.Spec.OIDC.ClientIDRef != nil
+		}),
+		oidcClientSecret: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.OIDC != nil
+		}),
+		jwtProviders: ownerOf(route, parent, func(p *egv1a1.SecurityPolicy) bool {
+			return p.Spec.JWT != nil && len(p.Spec.JWT.Providers) > 0
+		}),
 	}
-	return parent
 }
 
-func chooseAuthorizationRulesOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.Authorization != nil && len(route.Spec.Authorization.Rules) > 0 {
-		return route
-	}
-	return parent
-}
-
-func chooseExtAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.ExtAuth != nil {
-		return route
-	}
-	return parent
-}
-
-func chooseExtAuthBackendRefsOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	ea := route.Spec.ExtAuth
-	if ea == nil {
-		return parent
-	}
-	if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) {
-		return route
-	}
-	if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) {
-		return route
-	}
-	return parent
-}
-
+// buildExtAuthContextExtensionOwners returns a per-key owner map for ExtAuth ContextExtensions.
+// Parent keys are added first so that route-level extensions take precedence on conflict.
 func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) map[string]*egv1a1.SecurityPolicy {
 	owners := make(map[string]*egv1a1.SecurityPolicy)
 	if parent.Spec.ExtAuth != nil {
@@ -2628,41 +2638,6 @@ func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) ma
 		}
 	}
 	return owners
-}
-
-func chooseOIDCOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.OIDC != nil {
-		return route
-	}
-	return parent
-}
-
-func chooseOIDCClientSecretOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.OIDC != nil {
-		return route
-	}
-	return parent
-}
-
-func chooseOIDCProviderBackendRefsOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.OIDC != nil && len(route.Spec.OIDC.Provider.BackendRefs) > 0 {
-		return route
-	}
-	return parent
-}
-
-func chooseOIDCClientIDRefOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.OIDC != nil && route.Spec.OIDC.ClientIDRef != nil {
-		return route
-	}
-	return parent
-}
-
-func chooseJWTProvidersOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
-	if route.Spec.JWT != nil && len(route.Spec.JWT.Providers) > 0 {
-		return route
-	}
-	return parent
 }
 
 // securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
