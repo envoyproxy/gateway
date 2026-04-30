@@ -50,6 +50,115 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              admissionControl:
+                description: |-
+                  AdmissionControl defines the admission control policy to be applied. This configuration
+                  probabilistically rejects requests based on the success rate of previous requests in a
+                  configurable sliding time window.
+                properties:
+                  maxRejectionPercent:
+                    description: |-
+                      MaxRejectionPercent represents the upper limit of the rejection probability,
+                      expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified.
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  minRequestRate:
+                    description: |-
+                      MinRequestRate defines the minimum requests per second below which requests will
+                      pass through the filter without rejection. Defaults to 0 if not specified.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  minSuccessRate:
+                    description: |-
+                      MinSuccessRate is the lowest request success rate, as a percentage in the
+                      range [1, 100], at which the filter will not reject requests. Defaults to 95 if
+                      not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed.
+                    format: int32
+                    maximum: 100
+                    minimum: 1
+                    type: integer
+                  rejectionAggression:
+                    description: |-
+                      RejectionAggression controls how steeply the rejection probability rises
+                      as the observed success rate falls below MinSuccessRate. A value of 1
+                      produces a linear curve; higher values reject more aggressively for a
+                      given drop in success rate. Must be greater than 0; values below 1 are
+                      clamped to 1. Defaults to 1.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  samplingWindow:
+                    description: |-
+                      SamplingWindow defines the time window over which request success rates are calculated.
+                      Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the
+                      denominator in RPS calculations, so sub-second values would produce a zero denominator.
+                      Defaults to 30s if not specified.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  successCriteria:
+                    description: SuccessCriteria defines what constitutes a successful
+                      request for both HTTP and gRPC.
+                    properties:
+                      grpc:
+                        description: GRPC defines success criteria for gRPC requests.
+                        properties:
+                          statusCodes:
+                            description: |-
+                              StatusCodes defines gRPC status codes that are considered successful.
+                              Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                            items:
+                              description: |-
+                                GRPCSuccessCode defines gRPC status codes as defined in
+                                https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+                              enum:
+                              - Ok
+                              - Cancelled
+                              - Unknown
+                              - InvalidArgument
+                              - DeadlineExceeded
+                              - NotFound
+                              - AlreadyExists
+                              - PermissionDenied
+                              - ResourceExhausted
+                              - FailedPrecondition
+                              - Aborted
+                              - OutOfRange
+                              - Unimplemented
+                              - Internal
+                              - Unavailable
+                              - DataLoss
+                              - Unauthenticated
+                              type: string
+                            type: array
+                        type: object
+                      http:
+                        description: HTTP defines success criteria for HTTP requests.
+                        properties:
+                          statusCodes:
+                            description: StatusCodes defines HTTP status codes that
+                              are considered successful.
+                            items:
+                              description: HTTPStatus defines the http status code.
+                              maximum: 599
+                              minimum: 100
+                              type: integer
+                            type: array
+                        type: object
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: minSuccessRate must be between 1 and 100
+                  rule: '!has(self.minSuccessRate) || (self.minSuccessRate >= 1 &&
+                    self.minSuccessRate <= 100)'
+                - message: maxRejectionPercent must be between 0 and 100
+                  rule: '!has(self.maxRejectionPercent) || (self.maxRejectionPercent
+                    >= 0 && self.maxRejectionPercent <= 100)'
+                - message: samplingWindow must be at least 1s
+                  rule: '!has(self.samplingWindow) || duration(self.samplingWindow)
+                    >= duration(''1s'')'
               bandwidthLimit:
                 description: |-
                   BandwidthLimit allows the user to limit the bandwidth of traffic
@@ -3141,6 +3250,13 @@ spec:
             - message: requestBuffer cannot be used together with httpUpgrade
               rule: '!has(self.requestBuffer) || !has(self.httpUpgrade) || self.httpUpgrade.size()
                 == 0'
+            - message: admissionControl can only be used with HTTPRoute, GRPCRoute,
+                or Gateway targets
+              rule: '!has(self.admissionControl) || ((!has(self.targetRef) || self.targetRef.kind
+                in [''Gateway'', ''HTTPRoute'', ''GRPCRoute'']) && (!has(self.targetRefs)
+                || self.targetRefs.all(ref, ref.kind in [''Gateway'', ''HTTPRoute'',
+                ''GRPCRoute''])) && (!has(self.targetSelectors) || self.targetSelectors.all(sel,
+                sel.kind in [''Gateway'', ''HTTPRoute'', ''GRPCRoute''])))'
             - message: predictivePercent in preconnect policy only works with RoundRobin
                 or Random load balancers
               rule: '!((has(self.connection) && has(self.connection.preconnect) &&

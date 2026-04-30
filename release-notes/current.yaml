@@ -52,6 +52,7 @@ new features: |
   Added support for path override in ExtAuth HTTP service.
   Added support for bandwidth limit.
   Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart.  Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
+  Added support for Envoy Admission Control to BackendTrafficPolicy, enabling client-side load shedding based on historical upstream success rates using Envoy's admission control filter.
 
 bug fixes: |
   Fixed local rate limit rules with identical sourceCIDR client selectors producing conflicting descriptors.
