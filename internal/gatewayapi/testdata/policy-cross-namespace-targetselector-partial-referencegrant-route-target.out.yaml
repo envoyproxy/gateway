@@ -1,0 +1,351 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: cross-ns-policy
+    namespace: policy-ns
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      matchLabels:
+        policy: selected
+      namespaces:
+        from: All
+    useClientProtocol: true
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Target HTTPRoute policy-target-b/denied-route is not permitted by
+          any ReferenceGrant.; Target HTTPRoute policy-target-c/denied-route is not
+          permitted by any ReferenceGrant.
+        reason: RefNotPermitted
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: mixed-gateway
+    namespace: gateway-ns
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 3
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    labels:
+      policy: selected
+    name: allowed-route
+    namespace: policy-target-a
+  spec:
+    parentRefs:
+    - name: mixed-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: allowed-service
+        port: 8080
+      matches:
+      - path:
+          value: /allowed
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    labels:
+      policy: selected
+    name: denied-route
+    namespace: policy-target-b
+  spec:
+    parentRefs:
+    - name: mixed-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: denied-service
+        port: 8080
+      matches:
+      - path:
+          value: /denied
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    labels:
+      policy: selected
+    name: denied-route
+    namespace: policy-target-c
+  spec:
+    parentRefs:
+    - name: mixed-gateway
+      namespace: gateway-ns
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: denied-service
+        port: 8080
+      matches:
+      - path:
+          value: /denied
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+infraIR:
+  gateway-ns/mixed-gateway:
+    proxy:
+      listeners:
+      - name: gateway-ns/mixed-gateway/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: mixed-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: gateway-ns
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: gateway-ns/mixed-gateway
+      namespace: envoy-gateway-system
+xdsIR:
+  gateway-ns/mixed-gateway:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-gateway-ns-mixed-gateway-b951d52e
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: gateway-ns/mixed-gateway
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-gateway-ns-mixed-gateway-b951d52e
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: gateway-ns/mixed-gateway
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: mixed-gateway
+        namespace: gateway-ns
+        sectionName: http
+      name: gateway-ns/mixed-gateway/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: allowed-route
+            namespace: policy-target-a
+          name: httproute/policy-target-a/allowed-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            metadata:
+              kind: Service
+              name: allowed-service
+              namespace: policy-target-a
+              sectionName: "8080"
+            name: httproute/policy-target-a/allowed-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: allowed-route
+          namespace: policy-target-a
+          policies:
+          - kind: BackendTrafficPolicy
+            name: cross-ns-policy
+            namespace: policy-ns
+        name: httproute/policy-target-a/allowed-route/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /allowed
+        traffic: {}
+        useClientProtocol: true
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: denied-route
+            namespace: policy-target-b
+          name: httproute/policy-target-b/denied-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.4.4
+              port: 8080
+            metadata:
+              kind: Service
+              name: denied-service
+              namespace: policy-target-b
+              sectionName: "8080"
+            name: httproute/policy-target-b/denied-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: denied-route
+          namespace: policy-target-b
+        name: httproute/policy-target-b/denied-route/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /denied
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: denied-route
+            namespace: policy-target-c
+          name: httproute/policy-target-c/denied-route/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 8.8.4.4
+              port: 8080
+            metadata:
+              kind: Service
+              name: denied-service
+              namespace: policy-target-c
+              sectionName: "8080"
+            name: httproute/policy-target-c/denied-route/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: '*'
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: denied-route
+          namespace: policy-target-c
+        name: httproute/policy-target-c/denied-route/rule/0/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /denied
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

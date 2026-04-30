@@ -2359,7 +2359,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `name` | _string_ |  false  |  | Name is a unique identifier for this extension manager. Required when using<br />the plural ExtensionManagers field. Used for logging, metrics, and error identification. |
 | `resources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | Resources defines the set of K8s resources the extension will handle as route<br />filter resources |
-| `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
+| `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached Gateway API policies. Only policies in the same namespace as<br />the target Gateway resources are supported. Cross-namespace attachments are not supported. |
 | `backendResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | BackendResources defines the set of K8s resources the extension will handle as<br />custom backendRef resources. These resources can be referenced in HTTPRoute<br />backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)<br />that are not natively supported by Envoy Gateway. |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
@@ -6062,6 +6062,22 @@ _Appears in:_
 | `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
+#### TargetNamespaceFrom
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [TargetSelectorNamespaces](#targetselectornamespaces)
+
+| Value | Description |
+| ----- | ----------- |
+| `Same` | TargetNamespaceFromSame limits target selection to the policy's namespace.<br /> | 
+| `All` | TargetNamespaceFromAll allows target selection from all watched namespaces.<br /> | 
+| `Selector` | TargetNamespaceFromSelector allows target selection from watched namespaces matching the selector.<br /> | 
+
+
 #### TargetSelector
 
 
@@ -6079,8 +6095,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
+
+
+#### TargetSelectorNamespaces
+
+
+
+TargetSelectorNamespaces determines which namespaces are considered for target selection.
+
+_Appears in:_
+- [TargetSelector](#targetselector)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `from` | _[TargetNamespaceFrom](#targetnamespacefrom)_ |  true  | Same | From indicates how namespaces are selected for this target selector.<br />All means all namespaces watched by Envoy Gateway.<br />Selector means namespaces watched by Envoy Gateway that match Selector. |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector selects namespaces when From is set to Selector. |
 
 
 #### Timeout
