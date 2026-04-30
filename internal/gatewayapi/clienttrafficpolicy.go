@@ -533,10 +533,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(
 		translatePathSettings(policy.Spec.Path, httpIR)
 
 		// Translate Host Settings
-		if err = translateHostSettings(policy.Spec.Host, httpIR); err != nil {
-			err = perr.WithMessage(err, "Host")
-			errs = errors.Join(errs, err)
-		}
+		translateHostSettings(policy.Spec.Host, httpIR)
 
 		// Translate HTTP1 Settings
 		if err = translateHTTP1Settings(policy.Spec.HTTP1, connection, httpIR); err != nil {
@@ -790,16 +787,17 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 
 	if headerSettings.MaxRequestHeaderBytes != nil {
 		bytes, ok := headerSettings.MaxRequestHeaderBytes.AsInt64()
-		if !ok {
+		switch {
+		case !ok:
 			errs = errors.Join(errs, fmt.Errorf("invalid MaxRequestHeaderBytes value %s",
 				headerSettings.MaxRequestHeaderBytes.String()))
-		} else if bytes < 1024 {
+		case bytes < 1024:
 			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderBytes must be at least 1Ki (1024 bytes), got %s",
 				headerSettings.MaxRequestHeaderBytes.String()))
-		} else if bytes/1024 > math.MaxUint32 {
+		case bytes/1024 > math.MaxUint32:
 			errs = errors.Join(errs, fmt.Errorf("MaxRequestHeaderBytes value %s exceeds maximum",
 				headerSettings.MaxRequestHeaderBytes.String()))
-		} else {
+		default:
 			// Floor division matches Envoy's KB granularity. Use Ki suffix (e.g. 80Ki) for aligned values.
 			kb := uint32(bytes / 1024)
 			httpIR.Headers.MaxRequestHeadersKB = &kb
@@ -809,9 +807,9 @@ func translateListenerHeaderSettings(headerSettings *egv1a1.HeaderSettings, http
 	return errs
 }
 
-func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPListener) error {
+func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPListener) {
 	if hostSettings == nil {
-		return nil
+		return
 	}
 	if hostSettings.StripPortMode != nil || hostSettings.StripTrailingHostDot != nil {
 		httpIR.Host = &ir.HostSettings{
@@ -822,7 +820,6 @@ func translateHostSettings(hostSettings *egv1a1.HostSettings, httpIR *ir.HTTPLis
 			httpIR.Host.StripPortMode = &mode
 		}
 	}
-	return nil
 }
 
 func translateHTTP1Settings(http1Settings *egv1a1.HTTP1Settings, connection *ir.ClientConnection, httpIR *ir.HTTPListener) error {
