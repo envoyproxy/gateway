@@ -92,6 +92,12 @@ type EnvoyProxySpec struct {
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
 
+	// MergeBackends enables backend-targeted BackendTrafficPolicy and cluster
+	// deduplication for routes sharing the same backend.
+	//
+	// +optional
+	MergeBackends *bool `json:"mergeBackends,omitempty"`
+
 	// Shutdown defines configuration for graceful envoy shutdown process.
 	//
 	// +optional

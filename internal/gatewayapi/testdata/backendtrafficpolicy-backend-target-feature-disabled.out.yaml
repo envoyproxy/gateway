@@ -20,7 +20,7 @@ backendTrafficPolicies:
         namespace: envoy-gateway
       conditions:
       - lastTransitionTime: null
-        message: Backend targeting in BackendTrafficPolicy is disabled; set enableBackendTargetsInBackendTrafficPolicy
+        message: Backend targeting in BackendTrafficPolicy is disabled; set mergeBackends
           in the EnvoyGateway configuration
         reason: Disabled
         status: "False"

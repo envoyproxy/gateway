@@ -1556,7 +1556,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 	backendMap map[backendPolicyKey]*policyBackendTargetContext,
 	routeRuleBackendPolicyMap map[policyTargetRouteRuleKey]*egv1a1.BackendTrafficPolicy,
 ) {
-	if !t.BackendTargetsInBTPEnabled {
+	if !t.MergeBackends {
 		ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(gateways))
 		for _, gw := range gateways {
 			ref := getAncestorRefForPolicy(utils.NamespacedName(gw), nil)
@@ -1568,7 +1568,7 @@ func (t *Translator) processBackendTrafficPolicyForBackend(
 			policy.Generation,
 			&status.PolicyResolveError{
 				Reason:  gwapiv1.PolicyConditionReason("Disabled"),
-				Message: "Backend targeting in BackendTrafficPolicy is disabled; set enableBackendTargetsInBackendTrafficPolicy in the EnvoyGateway configuration",
+				Message: "Backend targeting in BackendTrafficPolicy is disabled; set mergeBackends in the EnvoyGateway configuration",
 			},
 		)
 		return

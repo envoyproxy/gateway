@@ -625,6 +625,20 @@ func IsMergeGatewaysEnabled(resources *resource.Resources) bool {
 	return false
 }
 
+func IsMergeBackendsEnabled(resources *resource.Resources) bool {
+	if resources.EnvoyProxyForGatewayClass != nil &&
+		resources.EnvoyProxyForGatewayClass.Spec.MergeBackends != nil {
+		return *resources.EnvoyProxyForGatewayClass.Spec.MergeBackends
+	}
+
+	if resources.EnvoyProxyDefaultSpec != nil &&
+		resources.EnvoyProxyDefaultSpec.MergeBackends != nil {
+		return *resources.EnvoyProxyDefaultSpec.MergeBackends
+	}
+
+	return false
+}
+
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {
 	protocolStrings := make([]string, 0, len(protocols))
 	for _, protocol := range protocols {

@@ -52,7 +52,7 @@ func TestTranslate(t *testing.T) {
 		name                            string
 		EnvoyPatchPolicyEnabled         bool
 		BackendEnabled                  bool
-		BackendTargetsInBTPEnabled      bool
+		MergeBackends      bool
 		GatewayNamespaceMode            bool
 		RunningOnHost                   bool
 		LuaEnvoyExtensionPolicyDisabled bool
@@ -96,75 +96,75 @@ func TestTranslate(t *testing.T) {
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-basic",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-feature-disabled",
-			BackendTargetsInBTPEnabled: false,
+			MergeBackends: false,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-gateway-no-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-gateway-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-route-no-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-route-merge-no-gateway",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-no-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-with-route-merge-backend-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-multi-backend-different-btps",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-multi-backend-partial-coverage",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-multi-backend-same-btp",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-tcp-basic",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-udp-basic",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-tcp-with-route-merge-backend-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-tcp-multi-backend-partial-coverage",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-udp-with-route-merge-backend-merge",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-udp-multi-backend-partial-coverage",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 		{
 			name:                       "backendtrafficpolicy-backend-target-multi-rule-route",
-			BackendTargetsInBTPEnabled: true,
+			MergeBackends: true,
 		},
 	}
 
@@ -197,7 +197,7 @@ func TestTranslate(t *testing.T) {
 				if config.name == strings.Split(filepath.Base(inputFile), ".")[0] {
 					envoyPatchPolicyEnabled = config.EnvoyPatchPolicyEnabled
 					backendEnabled = config.BackendEnabled
-					backendTargetsInBTPEnabled = config.BackendTargetsInBTPEnabled
+					backendTargetsInBTPEnabled = config.MergeBackends
 					gatewayNamespaceMode = config.GatewayNamespaceMode
 					runningOnHost = config.RunningOnHost
 					luaEnvoyExtensionPolicyDisabled = config.LuaEnvoyExtensionPolicyDisabled
@@ -211,7 +211,7 @@ func TestTranslate(t *testing.T) {
 				GlobalRateLimitEnabled:          true,
 				EnvoyPatchPolicyEnabled:         envoyPatchPolicyEnabled,
 				BackendEnabled:                  backendEnabled,
-				BackendTargetsInBTPEnabled:      backendTargetsInBTPEnabled,
+				MergeBackends:      backendTargetsInBTPEnabled,
 				SDSSecretRefEnabled:             sdsEnabled,
 				ControllerNamespace:             "envoy-gateway-system",
 				MergeGateways:                   IsMergeGatewaysEnabled(resources),

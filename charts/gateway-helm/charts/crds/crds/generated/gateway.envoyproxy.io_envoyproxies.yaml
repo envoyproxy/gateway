@@ -775,6 +775,11 @@ spec:
                 - InsecureSyntax
                 - Disabled
                 type: string
+              mergeBackends:
+                description: |-
+                  MergeBackends enables backend-targeted BackendTrafficPolicy and cluster
+                  deduplication for routes sharing the same backend.
+                type: boolean
               mergeGateways:
                 description: |-
                   MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.

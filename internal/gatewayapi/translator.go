@@ -89,6 +89,10 @@ type Translator struct {
 	// should be merged under the parent GatewayClass.
 	MergeGateways bool
 
+	// MergeBackends enables backend-targeted BackendTrafficPolicy and
+	// cluster deduplication for routes sharing the same backend.
+	MergeBackends bool
+
 	// GatewayNamespaceMode is true if controller uses gateway namespace mode for infra deployments.
 	GatewayNamespaceMode bool
 
@@ -101,10 +105,6 @@ type Translator struct {
 
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
-
-	// BackendTargetsInBTPEnabled when BackendTrafficPolicy can target backend
-	// resources (Service, ServiceImport, Backend).
-	BackendTargetsInBTPEnabled bool
 
 	// SDSSecretRefEnabled is true if EnvoyProxy can reference SDS secrets using the sds-ref type Secret.
 	// This could be enabled by Envoy Gateway configuration.
