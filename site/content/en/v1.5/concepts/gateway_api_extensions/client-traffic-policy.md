@@ -120,7 +120,7 @@ kind: ClientTrafficPolicy
 metadata:
   name: gateway-wide-policy
 spec:
-  targetRefs:
+  targetSelectors:
     - kind: Gateway
       name: my-gateway  # Targets all listeners
   timeout:
