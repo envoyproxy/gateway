@@ -1,0 +1,17 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: chaining-route
+  namespace: gateway-resilience
+spec:
+  parentRefs:
+    - name: all-namespaces
+  hostnames: ["www.chain.com"]
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /chain
+      backendRefs:
+        - name: backend
+          port: 8080

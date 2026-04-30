@@ -908,6 +908,152 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "both extensionManager and extensionManagers set",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManager: &egv1a1.ExtensionManager{
+						Hooks: &egv1a1.ExtensionHooks{
+							XDSTranslator: &egv1a1.XDSTranslatorHooks{
+								Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+							},
+						},
+						Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+					},
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers explicitly empty",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:           egv1a1.DefaultGateway(),
+					Provider:          egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with duplicate names",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+						{
+							Name: "ext1",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "bar.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with missing name",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "foo.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "extensionManagers with invalid individual extension manager",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "good-ext",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "good.extension", Port: 80},
+						},
+						{
+							Name: "bad-ext",
+							// Missing hooks → should fail individual validation
+							Service: &egv1a1.ExtensionService{Host: "bad.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "valid extensionManagers plural config",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway:  egv1a1.DefaultGateway(),
+					Provider: egv1a1.DefaultEnvoyGatewayProvider(),
+					ExtensionManagers: []egv1a1.ExtensionManager{
+						{
+							Name: "ai-gateway",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSRoute, egv1a1.XDSTranslation},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "ai-gw.extension", Port: 80},
+						},
+						{
+							Name: "observability",
+							Hooks: &egv1a1.ExtensionHooks{
+								XDSTranslator: &egv1a1.XDSTranslatorHooks{
+									Post: []egv1a1.XDSTranslatorHook{egv1a1.XDSHTTPListener},
+								},
+							},
+							Service: &egv1a1.ExtensionService{Host: "obs.extension", Port: 80},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1171,4 +1317,49 @@ func TestEnvoyGatewayTelemetry(t *testing.T) {
 	assert.NotNil(t, eg.Telemetry.Metrics)
 	assert.False(t, eg.Telemetry.Metrics.Prometheus.Disable)
 	assert.Nil(t, eg.Telemetry.Metrics.Sinks)
+}
+
+func TestGetExtensionManagers(t *testing.T) {
+	t.Run("both nil returns nil", func(t *testing.T) {
+		spec := egv1a1.EnvoyGatewaySpec{}
+		assert.Nil(t, spec.GetExtensionManagers())
+	})
+
+	t.Run("only singular set returns it as slice", func(t *testing.T) {
+		ext := egv1a1.ExtensionManager{Name: "ext1"}
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManager: &ext,
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 1)
+		assert.Equal(t, "ext1", result[0].Name)
+	})
+
+	t.Run("only plural set returns plural", func(t *testing.T) {
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManagers: []egv1a1.ExtensionManager{
+				{Name: "ext1"},
+				{Name: "ext2"},
+			},
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 2)
+		assert.Equal(t, "ext1", result[0].Name)
+		assert.Equal(t, "ext2", result[1].Name)
+	})
+
+	t.Run("both set returns plural (plural takes precedence)", func(t *testing.T) {
+		ext := egv1a1.ExtensionManager{Name: "singular"}
+		spec := egv1a1.EnvoyGatewaySpec{
+			ExtensionManager: &ext,
+			ExtensionManagers: []egv1a1.ExtensionManager{
+				{Name: "plural1"},
+				{Name: "plural2"},
+			},
+		}
+		result := spec.GetExtensionManagers()
+		require.Len(t, result, 2)
+		assert.Equal(t, "plural1", result[0].Name)
+		assert.Equal(t, "plural2", result[1].Name)
+	})
 }

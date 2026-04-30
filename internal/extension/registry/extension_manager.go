@@ -24,6 +24,8 @@ import (
 	"google.golang.org/grpc/security/advancedtls"
 	"google.golang.org/grpc/test/bufconn"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -60,32 +62,85 @@ type Manager struct {
 	extensionConnCache *grpc.ClientConn
 }
 
-// NewManager returns a new Manager
+// newK8sClient creates a Kubernetes client if running in-cluster.
+func newK8sClient(inK8s bool) (k8scli.Client, error) {
+	if !inK8s {
+		return nil, nil
+	}
+	return k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
+}
+
+// NewManager creates a Manager (or CompositeManager) from the server configuration.
+// It uses GetExtensionManagers() to normalize the singular/plural extension manager fields.
+//   - 0 extensions → returns a Manager with empty config (no-op)
+//   - 1 extension → returns a plain Manager
+//   - 2+ extensions → creates individual Managers per extension, wraps in CompositeManager
 func NewManager(cfg *config.Server, inK8s bool) (extTypes.Manager, error) {
-	var cli k8scli.Client
-	var err error
-	if inK8s {
-		cli, err = k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
-		if err != nil {
-			return nil, err
+	cli, err := newK8sClient(inK8s)
+	if err != nil {
+		return nil, err
+	}
+
+	extensions := cfg.EnvoyGateway.GetExtensionManagers()
+
+	switch len(extensions) {
+	case 0:
+		return &Manager{
+			k8sClient: cli,
+			namespace: cfg.ControllerNamespace,
+			extension: egv1a1.ExtensionManager{},
+		}, nil
+	case 1:
+		return &Manager{
+			k8sClient: cli,
+			namespace: cfg.ControllerNamespace,
+			extension: extensions[0],
+		}, nil
+	default:
+		named := make([]namedManager, 0, len(extensions))
+		for i := range extensions {
+			ext := &extensions[i]
+			mgr := &Manager{
+				k8sClient: cli,
+				namespace: cfg.ControllerNamespace,
+				extension: *ext,
+			}
+
+			resourceGKSet, policyGKSet := buildManagerGKSets(ext)
+
+			named = append(named, namedManager{
+				name:            ext.Name,
+				manager:         mgr,
+				resourceGKSet:   resourceGKSet,
+				policyGKSet:     policyGKSet,
+				cleanupHookConn: mgr.CleanupHookConns,
+			})
 		}
+
+		return NewCompositeManager(named), nil
+	}
+}
+
+// buildManagerGKSets returns (resourceGKSet, policyGKSet) for an ExtensionManager.
+// resourceGKSet covers Resources + BackendResources (used for per-extension filtering
+// in PostRouteModifyHook / PostClusterModifyHook). policyGKSet covers PolicyResources
+// (used in PostHTTPListenerModifyHook / PostTranslateModifyHook).
+// Version is intentionally dropped so matching aligns with runner.ExtensionGroupKinds
+// and Manager.HasExtension, which also compare by group+kind only.
+func buildManagerGKSets(ext *egv1a1.ExtensionManager) (sets.Set[schema.GroupKind], sets.Set[schema.GroupKind]) {
+	resourceGKSet := sets.New[schema.GroupKind]()
+	for _, gvk := range ext.Resources {
+		resourceGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+	}
+	for _, gvk := range ext.BackendResources {
+		resourceGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 	}
 
-	var extension *egv1a1.ExtensionManager
-	if cfg.EnvoyGateway != nil {
-		extension = cfg.EnvoyGateway.ExtensionManager
+	policyGKSet := sets.New[schema.GroupKind]()
+	for _, gvk := range ext.PolicyResources {
+		policyGKSet.Insert(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 	}
-
-	// Setup an empty default in the case that no config was provided
-	if extension == nil {
-		extension = &egv1a1.ExtensionManager{}
-	}
-
-	return &Manager{
-		k8sClient: cli,
-		namespace: cfg.ControllerNamespace,
-		extension: *extension,
-	}, nil
+	return resourceGKSet, policyGKSet
 }
 
 func NewInMemoryManager(cfg *egv1a1.ExtensionManager, server extension.EnvoyGatewayExtensionServer) (extTypes.Manager, func(), error) {

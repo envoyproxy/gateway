@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
@@ -140,7 +139,7 @@ func (t *Translator) validateBackendNamespace(backendRef *gwapiv1a2.BackendRef, 
 	resources *resource.Resources, routeKind gwapiv1.Kind,
 ) status.Error {
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespaceReferencePermitted(
 			crossNamespaceFrom{
 				group:     gwapiv1.GroupName,
 				kind:      string(routeKind),
@@ -411,7 +410,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(
 				fromKind = resource.KindListenerSet
 			}
 
-			if !t.validateCrossNamespaceRef(
+			if !isCrossNamespaceReferencePermitted(
 				crossNamespaceFrom{
 					group:     fromGroup,
 					kind:      fromKind,
@@ -833,47 +832,6 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 	}
 }
 
-func (t *Translator) validateCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*gwapiv1b1.ReferenceGrant) bool {
-	for _, referenceGrant := range referenceGrants {
-		// The ReferenceGrant must be defined in the namespace of
-		// the "to" (the referent).
-		if referenceGrant.Namespace != to.namespace {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "from".
-		var fromAllowed bool
-		for _, refGrantFrom := range referenceGrant.Spec.From {
-			if string(refGrantFrom.Namespace) == from.namespace && string(refGrantFrom.Group) == from.group && string(refGrantFrom.Kind) == from.kind {
-				fromAllowed = true
-				break
-			}
-		}
-		if !fromAllowed {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "to".
-		var toAllowed bool
-		for _, refGrantTo := range referenceGrant.Spec.To {
-			if string(refGrantTo.Group) == to.group && string(refGrantTo.Kind) == to.kind && (refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
-				toAllowed = true
-				break
-			}
-		}
-		if !toAllowed {
-			continue
-		}
-
-		// If we got here, both the "from" and the "to" were allowed by this
-		// reference grant.
-		return true
-	}
-
-	// If we got here, no reference policy or reference grant allowed both the "from" and "to".
-	return false
-}
-
 // Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address
 func (t *Translator) validateHostname(hostname string) error {
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
@@ -988,7 +946,7 @@ func (t *Translator) validateSecretObjectRef(
 				from.namespace)
 		}
 
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespaceReferencePermitted(
 			from,
 			crossNamespaceTo{
 				group:     "",
@@ -1103,7 +1061,7 @@ func (t *Translator) validateExtServiceBackendReference(
 	// check if the cross-namespace reference is permitted
 	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" &&
 		string(*backendRef.Namespace) != ownerNamespace {
-		if !t.validateCrossNamespaceRef(
+		if !isCrossNamespaceReferencePermitted(
 			crossNamespaceFrom{
 				group:     egv1a1.GroupName,
 				kind:      policyKind,

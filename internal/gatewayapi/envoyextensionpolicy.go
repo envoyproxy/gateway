@@ -116,10 +116,10 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting RouteRules
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is defined, then it's a route rule.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName != nil {
+			if isRouteRule(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -136,10 +136,18 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting xRoutes
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, routes, currPolicy.Namespace)
+		allowed, denied := resolvePolicyTargetsFromSelectors(
+			currPolicy.Spec.TargetSelectors,
+			routes,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
 		for _, currTarget := range targetRefs {
-			// If the target is not a gateway, then it's an xRoute. If the section name is not defined, then it's a route.
-			if currTarget.Kind != resource.KindGateway && currTarget.SectionName == nil {
+			if isRoute(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -151,15 +159,24 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 					routeMap, gatewayRouteMap, policy, currTarget)
 			}
 		}
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				res = append(res, policy)
+				handledPolicies[policyName] = policy
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
+		}
 	}
 
 	// Process the policies targeting Listeners
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		// Only resolve TargetRefs from targetRefs field since TargetSelectors can't specify sectionName.
+		targetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is defined, then it's a listener.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName != nil {
+			if isListener(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -176,10 +193,18 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 	// Process the policies targeting Gateways
 	for i, currPolicy := range envoyExtensionPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
+		allowed, denied := resolvePolicyTargetsFromSelectors(
+			currPolicy.Spec.TargetSelectors,
+			gateways,
+			resources.ReferenceGrants,
+			egv1a1.GroupName,
+			egv1a1.KindEnvoyExtensionPolicy,
+			currPolicy.Namespace,
+			t.GetNamespace)
+		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
+		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
 		for _, currTarget := range targetRefs {
-			// If the target is a gateway and the section name is not defined, then it's a gateway.
-			if currTarget.Kind == resource.KindGateway && currTarget.SectionName == nil {
+			if isGateway(currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
 					policy = policyCopies[i]
@@ -190,6 +215,15 @@ func (t *Translator) ProcessEnvoyExtensionPolicies(
 				t.processEnvoyExtensionPolicyForGateway(resources, xdsIR,
 					gatewayMap, gatewayRouteMap, policy, currTarget)
 			}
+		}
+		if len(denied) > 0 {
+			policy, found := handledPolicies[policyName]
+			if !found {
+				policy = policyCopies[i]
+				res = append(res, policy)
+				handledPolicies[policyName] = policy
+			}
+			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 	}
 
@@ -208,7 +242,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	routeMap map[policyTargetRouteKey]*policyRouteTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedRoute RouteContext
@@ -216,7 +250,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 		resolveErr    *status.PolicyResolveError
 	)
 
-	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(policy, currTarget, routeMap)
+	targetedRoute, resolveErr = resolveEnvoyExtensionPolicyRouteTargetRef(currTarget, routeMap)
 	// Skip if the route is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -293,7 +327,7 @@ func (t *Translator) processEnvoyExtensionPolicyForRoute(
 	key := policyTargetRouteKey{
 		Kind:      string(currTarget.Kind),
 		Name:      string(currTarget.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(currTarget.Namespace),
 	}
 	overriddenTargetsMessage := getOverriddenTargetsMessageForRoute(routeMap[key], currTarget.SectionName)
 	if overriddenTargetsMessage != "" {
@@ -315,14 +349,14 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 	gatewayMap map[types.NamespacedName]*policyGatewayTargetContext,
 	gatewayRouteMap map[string]map[string]sets.Set[string],
 	policy *egv1a1.EnvoyExtensionPolicy,
-	currTarget gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	currTarget policyTargetReferenceWithSectionName,
 ) {
 	var (
 		targetedGateway *GatewayContext
 		resolveErr      *status.PolicyResolveError
 	)
 
-	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(policy, currTarget, gatewayMap)
+	targetedGateway, resolveErr = resolveEnvoyExtensionPolicyGatewayTargetRef(currTarget, gatewayMap)
 	// Skip if the gateway is not found
 	// It's not necessarily an error because the EnvoyExtensionPolicy may be
 	// reconciled by multiple controllers. And the other controller may
@@ -382,14 +416,13 @@ func (t *Translator) processEnvoyExtensionPolicyForGateway(
 }
 
 func resolveEnvoyExtensionPolicyGatewayTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	gateways map[types.NamespacedName]*policyGatewayTargetContext,
 ) (*GatewayContext, *status.PolicyResolveError) {
 	// Check if the gateway exists
 	key := types.NamespacedName{
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 	gateway, ok := gateways[key]
 
@@ -444,15 +477,14 @@ func resolveEnvoyExtensionPolicyGatewayTargetRef(
 }
 
 func resolveEnvoyExtensionPolicyRouteTargetRef(
-	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	routes map[policyTargetRouteKey]*policyRouteTargetContext,
 ) (RouteContext, *status.PolicyResolveError) {
 	// Check if the route exists
 	key := policyTargetRouteKey{
 		Kind:      string(target.Kind),
 		Name:      string(target.Name),
-		Namespace: policy.Namespace,
+		Namespace: string(target.Namespace),
 	}
 
 	route, ok := routes[key]
@@ -505,7 +537,7 @@ func resolveEnvoyExtensionPolicyRouteTargetRef(
 func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	route RouteContext,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
 ) error {
@@ -619,7 +651,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 
 func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 	policy *egv1a1.EnvoyExtensionPolicy,
-	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
+	target policyTargetReferenceWithSectionName,
 	gateway *GatewayContext,
 	xdsIR resource.XdsIRMap,
 	resources *resource.Resources,
