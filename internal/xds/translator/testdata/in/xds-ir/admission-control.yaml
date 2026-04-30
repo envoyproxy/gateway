@@ -1,0 +1,70 @@
+http:
+- name: "first-listener"
+  address: "::"
+  port: 10080
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    traffic:
+      admissionControl:
+        samplingWindow: 30s
+        minSuccessRate: 95
+        rejectionAggression: 1
+        minRequestRate: 5
+        maxRejectionPercent: 80
+        successCriteria:
+          http:
+            statusCodes:
+            - 200
+            - 201
+            - 202
+            - 204
+    pathMatch:
+      exact: "foo/bar"
+    destination:
+      name: "first-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "first-route-dest/backend/0"
+  - name: "second-route"
+    hostname: "*"
+    traffic:
+      admissionControl:
+        minSuccessRate: 80
+        rejectionAggression: 2
+        minRequestRate: 10
+        maxRejectionPercent: 95
+        successCriteria:
+          grpc:
+            statusCodes:
+            - "Ok"
+            - "Cancelled"
+    pathMatch:
+      exact: "example"
+    destination:
+      name: "second-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "second-route-dest/backend/0"
+  - name: "third-route"
+    hostname: "*"
+    traffic:
+      admissionControl: {}
+    pathMatch:
+      exact: "test"
+    destination:
+      name: "third-route-dest"
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
+        name: "third-route-dest/backend/0"

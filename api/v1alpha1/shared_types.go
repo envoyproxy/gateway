@@ -70,6 +70,10 @@ const (
 	// PolicyReasonDeprecatedField is used with the "Warning" condition when the policy
 	// uses deprecated fields that should be migrated to newer alternatives.
 	PolicyReasonDeprecatedField gwapiv1.PolicyConditionReason = "DeprecatedField"
+
+	// PolicyReasonRefNotPermitted is used when the policy targets a cross-namespace
+	// object without a matching ReferenceGrant.
+	PolicyReasonRefNotPermitted gwapiv1.PolicyConditionReason = "RefNotPermitted"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
