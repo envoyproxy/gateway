@@ -1429,7 +1429,7 @@ func Test_buildContextExtensions(t *testing.T) {
 	tests := []struct {
 		name              string
 		contextExtensions []*egv1a1.ContextExtension
-		fieldOwners       PolicyFieldOwners[*egv1a1.SecurityPolicy]
+		owners            *securityPolicyOwners
 		defaultOwner      *egv1a1.SecurityPolicy
 		translatorContext *TranslatorContext
 		want              []*ir.ContextExtention
@@ -1438,11 +1438,13 @@ func Test_buildContextExtensions(t *testing.T) {
 		{
 			name:              "Nil",
 			contextExtensions: nil,
+			owners:            &securityPolicyOwners{},
 			want:              nil,
 		},
 		{
 			name:              "Empty",
 			contextExtensions: []*egv1a1.ContextExtension{},
+			owners:            &securityPolicyOwners{},
 			want:              nil,
 		},
 		{
@@ -1450,11 +1452,13 @@ func Test_buildContextExtensions(t *testing.T) {
 			contextExtensions: []*egv1a1.ContextExtension{
 				{Name: "foo", Value: new("bar")},
 			},
-			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+			owners: &securityPolicyOwners{},
+			want:   []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name:              "TypeValueEmpty",
 			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
+			owners:            &securityPolicyOwners{},
 			want:              []*ir.ContextExtention{{Name: "foo", Value: nil}},
 		},
 		{
@@ -1466,13 +1470,15 @@ func Test_buildContextExtensions(t *testing.T) {
 					Value: new("bar"),
 				},
 			},
-			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+			owners: &securityPolicyOwners{},
+			want:   []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name: "TypeValueRefNil",
 			contextExtensions: []*egv1a1.ContextExtension{
 				{Name: "foo", Type: egv1a1.ContextExtensionValueTypeValueRef},
 			},
+			owners:  &securityPolicyOwners{},
 			wantErr: true,
 		},
 		{
@@ -1488,6 +1494,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:            &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{},
 			wantErr:           true,
 		},
@@ -1504,6 +1511,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
 					{Namespace: policyNs, Name: "test-cm"}: {},
@@ -1524,6 +1532,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
 					{Namespace: policyNs, Name: "test-cm"}: {
@@ -1559,12 +1568,10 @@ func Test_buildContextExtensions(t *testing.T) {
 					},
 				},
 			},
-			fieldOwners: PolicyFieldOwners[*egv1a1.SecurityPolicy]{
-				spFieldExtAuthContextExtension("parent-only"): &egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "parent-ns"},
-				},
-				spFieldExtAuthContextExtension("route-only"): &egv1a1.SecurityPolicy{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns"},
+			owners: &securityPolicyOwners{
+				extAuthContextExtensions: map[string]*egv1a1.SecurityPolicy{
+					"parent-only": {ObjectMeta: metav1.ObjectMeta{Namespace: "parent-ns"}},
+					"route-only":  {ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns"}},
 				},
 			},
 			defaultOwner: &egv1a1.SecurityPolicy{
@@ -1598,6 +1605,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:            &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{},
 			wantErr:           true,
 		},
@@ -1614,6 +1622,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				SecretMap: map[types.NamespacedName]*corev1.Secret{
 					{Namespace: policyNs, Name: "test-secret"}: {},
@@ -1634,6 +1643,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				SecretMap: map[types.NamespacedName]*corev1.Secret{
 					{Namespace: policyNs, Name: "test-secret"}: {
@@ -1656,6 +1666,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:  &securityPolicyOwners{},
 			wantErr: true,
 		},
 	}
@@ -1666,7 +1677,7 @@ func Test_buildContextExtensions(t *testing.T) {
 			if owner == nil {
 				owner = defaultOwner
 			}
-			got, err := translator.buildContextExtensions(tt.contextExtensions, tt.fieldOwners, owner)
+			got, err := translator.buildContextExtensions(tt.contextExtensions, tt.owners, owner)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, got)
@@ -1914,13 +1925,10 @@ func TestMergeSecurityPolicy(t *testing.T) {
 	}
 }
 
-func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
-	t.Run("route policy overrides parent for the same owner keys", func(t *testing.T) {
+func Test_securityPolicyOwnerChoose(t *testing.T) {
+	t.Run("route policy overrides parent for the same owner fields", func(t *testing.T) {
 		parentPolicy := &egv1a1.SecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "parent",
-				Namespace: "parent-ns",
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
 			Spec: egv1a1.SecurityPolicySpec{
 				BasicAuth: &egv1a1.BasicAuth{
 					Users: gwapiv1.SecretObjectReference{Name: "parent-users"},
@@ -1957,22 +1965,15 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 					},
 				},
 				JWT: &egv1a1.JWT{
-					Providers: []egv1a1.JWTProvider{{
-						Name: "parent-jwt-provider",
-						RemoteJWKS: &egv1a1.RemoteJWKS{
-							URI: "https://parent.example.com/jwks",
-						},
-					}},
+					Providers: []egv1a1.JWTProvider{{Name: "parent-jwt-provider"}},
 				},
 			},
 		}
 
 		routePolicy := &egv1a1.SecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "route",
-				Namespace: "route-ns",
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
 			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
 				BasicAuth: &egv1a1.BasicAuth{
 					Users: gwapiv1.SecretObjectReference{Name: "route-users"},
 				},
@@ -2008,42 +2009,35 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 					},
 				},
 				JWT: &egv1a1.JWT{
-					Providers: []egv1a1.JWTProvider{{
-						Name: "route-jwt-provider",
-						LocalJWKS: &egv1a1.LocalJWKS{
-							Type:   new(egv1a1.LocalJWKSTypeInline),
-							Inline: new(`{"keys":[]}`),
-						},
-					}},
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt-provider"}},
 				},
 			},
 		}
 
-		owners := buildSecurityPolicyFieldOwners(routePolicy, parentPolicy)
+		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
 		require.NotNil(t, owners)
 
-		assert.Same(t, routePolicy, owners[spFieldBasicAuth])
-		assert.Same(t, routePolicy, owners[spFieldAPIKeyAuthCreds])
-		assert.Same(t, routePolicy, owners[spFieldAuthRules])
-		assert.Same(t, routePolicy, owners[spFieldExtAuth])
-		assert.Same(t, routePolicy, owners[spFieldExtAuthHTTPBackendRefs])
-		assert.Same(t, routePolicy, owners[spFieldOIDC])
-		assert.Same(t, routePolicy, owners[spFieldOIDCClientIDRef])
-		assert.Same(t, routePolicy, owners[spFieldOIDCClientSecret])
-		assert.Same(t, routePolicy, owners[spFieldOIDCProviderBackendRefs])
-		assert.Same(t, routePolicy, owners[spFieldJwtProviders])
-		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtension("shared")])
-		assert.Same(t, routePolicy, owners[spFieldExtAuthContextExtension("route-only")])
-		assert.Same(t, parentPolicy, owners[spFieldExtAuthContextExtension("parent-only")])
+		assert.Same(t, routePolicy, owners.basicAuth)
+		assert.Same(t, routePolicy, owners.apiKeyAuthCredentialRefs)
+		assert.Same(t, routePolicy, owners.authorizationRules)
+		assert.Same(t, routePolicy, owners.extAuth)
+		assert.Same(t, routePolicy, owners.extAuthBackendRefs)
+		assert.Same(t, routePolicy, owners.oidc)
+		assert.Same(t, routePolicy, owners.oidcClientIDRef)
+		assert.Same(t, routePolicy, owners.oidcClientSecret)
+		assert.Same(t, routePolicy, owners.oidcProviderBackendRefs)
+		assert.Same(t, routePolicy, owners.jwtProviders)
+		assert.Same(t, routePolicy, owners.extAuthContextExtensions["shared"])
+		assert.Same(t, routePolicy, owners.extAuthContextExtensions["route-only"])
+		assert.Same(t, parentPolicy, owners.extAuthContextExtensions["parent-only"])
 	})
 
 	t.Run("uses parent owner for grpc backend fields when route does not set them", func(t *testing.T) {
 		parentPolicy := &egv1a1.SecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "parent",
-				Namespace: "parent-ns",
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
 			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
 				ExtAuth: &egv1a1.ExtAuth{
 					GRPC: &egv1a1.GRPCExtAuthService{
 						BackendCluster: egv1a1.BackendCluster{
@@ -2057,17 +2051,15 @@ func Test_buildSecurityPolicyFieldOwners(t *testing.T) {
 		}
 
 		routePolicy := &egv1a1.SecurityPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "route",
-				Namespace: "route-ns",
-			},
-			Spec: egv1a1.SecurityPolicySpec{},
+			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
+			Spec:       egv1a1.SecurityPolicySpec{MergeType: new(egv1a1.StrategicMerge)},
 		}
 
-		owners := buildSecurityPolicyFieldOwners(routePolicy, parentPolicy)
+		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
 		require.NotNil(t, owners)
 
-		assert.Same(t, parentPolicy, owners[spFieldExtAuth])
-		assert.Same(t, parentPolicy, owners[spFieldExtAuthGRPCBackendRefs])
+		assert.Same(t, parentPolicy, owners.extAuth)
+		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
 	})
 }

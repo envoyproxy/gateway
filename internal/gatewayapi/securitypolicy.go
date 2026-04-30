@@ -54,28 +54,7 @@ const (
 	oidcHMACSecretKey  = "hmac-secret"
 	// JWKSConfigMapKey is the key used in ConfigMaps to store JWKS data
 	JWKSConfigMapKey = "jwks"
-
-	spFieldBasicAuth FieldPath = "spec.basicAuth"
-	// nolint: gosec
-	spFieldAPIKeyAuthCreds          FieldPath = "spec.apiKeyAuth.credentialRefs"
-	spFieldAuthRules                FieldPath = "spec.authorization.rules"
-	spFieldExtAuth                  FieldPath = "spec.extAuth"
-	spFieldExtAuthHTTPBackendRef    FieldPath = "spec.extAuth.http.backendRef"
-	spFieldExtAuthHTTPBackendRefs   FieldPath = "spec.extAuth.http.backendRefs"
-	spFieldExtAuthGRPCBackendRef    FieldPath = "spec.extAuth.grpc.backendRef"
-	spFieldExtAuthGRPCBackendRefs   FieldPath = "spec.extAuth.grpc.backendRefs"
-	spFieldExtAuthContextExtensions FieldPath = "spec.extAuth.contextExtensions"
-	spFieldOIDC                     FieldPath = "spec.oidc"
-	spFieldOIDCProviderBackendRefs  FieldPath = "spec.oidc.provider.backendRefs"
-	spFieldOIDCClientIDRef          FieldPath = "spec.oidc.clientIDRef"
-	// nolint: gosec
-	spFieldOIDCClientSecret FieldPath = "spec.oidc.clientSecret"
-	spFieldJwtProviders     FieldPath = "spec.jwt.providers"
 )
-
-func spFieldExtAuthContextExtension(name string) FieldPath {
-	return FieldPath(fmt.Sprintf("%s.%s", spFieldExtAuthContextExtensions, name))
-}
 
 // deprecatedFieldsUsedInSecurityPolicy returns a map of deprecated field paths to their alternatives.
 func deprecatedFieldsUsedInSecurityPolicy(policy *egv1a1.SecurityPolicy) map[string]string {
@@ -389,7 +368,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 	// Check if merging is enabled
 	if policy.Spec.MergeType == nil {
 		// No merging - use existing translation logic
-		if err := t.translateSecurityPolicyForRoute(policy, nil, targetedRoute, currTarget, resources, xdsIR, nil, nil); err != nil {
+		if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, nil, nil); err != nil {
 			status.SetTranslationErrorForPolicyAncestors(&policy.Status,
 				ancestorRefs,
 				t.GatewayControllerName,
@@ -419,7 +398,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 
 				if gwPolicy == nil && listenerPolicy == nil {
 					// No parent policy found, fall back to current policy
-					if err := t.translateSecurityPolicyForRoute(policy, nil, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
+					if err := t.translateSecurityPolicyForRoute(policy, &securityPolicyOwners{}, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
 						status.SetConditionForPolicyAncestor(&policy.Status,
 							&ancestorRef,
 							t.GatewayControllerName,
@@ -438,7 +417,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Merge with parent policy
-				mergedPolicy, fieldOwners, err := mergeSecurityPolicy(policy, parentPolicy)
+				mergedPolicy, owners, err := mergeSecurityPolicy(policy, parentPolicy)
 				if err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
@@ -464,7 +443,7 @@ func (t *Translator) processSecurityPolicyForRoute(
 				}
 
 				// Apply merged policy
-				if err := t.translateSecurityPolicyForRoute(mergedPolicy, fieldOwners, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
+				if err := t.translateSecurityPolicyForRoute(mergedPolicy, owners, targetedRoute, currTarget, resources, xdsIR, &gwNN, &listener.Name); err != nil {
 					status.SetConditionForPolicyAncestor(&policy.Status,
 						&ancestorRef,
 						t.GatewayControllerName,
@@ -844,7 +823,7 @@ func resolveSecurityPolicyRouteTargetRef(
 
 func (t *Translator) translateSecurityPolicyForRoute(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	route RouteContext,
 	target gwapiv1.LocalPolicyTargetReferenceWithSectionName,
 	resources *resource.Resources,
@@ -869,7 +848,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
-			fieldOwners,
+			owners,
 			resources,
 		); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
@@ -880,7 +859,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	if policy.Spec.APIKeyAuth != nil {
 		if apiKeyAuth, err = t.buildAPIKeyAuth(
 			policy,
-			fieldOwners,
+			owners,
 			resources,
 		); err != nil {
 			err = perr.WithMessage(err, "APIKeyAuth")
@@ -889,7 +868,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.Authorization != nil {
-		if authorization, err = t.buildAuthorization(policy, fieldOwners); err != nil {
+		if authorization, err = t.buildAuthorization(policy, owners); err != nil {
 			err = perr.WithMessage(err, "Authorization")
 			errs = errors.Join(errs, err)
 		}
@@ -929,7 +908,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		if policy.Spec.ExtAuth != nil {
 			if extAuth, extAuthErr = t.buildExtAuth(
 				policy,
-				fieldOwners,
+				owners,
 				resources,
 				gtwCtx,
 			); extAuthErr != nil {
@@ -942,7 +921,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		if policy.Spec.OIDC != nil {
 			if oidc, err = t.buildOIDC(
 				policy,
-				fieldOwners,
+				owners,
 				resources,
 				gtwCtx,
 			); err != nil {
@@ -956,7 +935,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		if policy.Spec.JWT != nil {
 			if jwt, err = t.buildJWT(
 				policy,
-				fieldOwners,
+				owners,
 				resources,
 				gtwCtx,
 			); err != nil {
@@ -1087,6 +1066,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	xdsIR resource.XdsIRMap,
 ) error {
 	// Build IR
+	noOwners := &securityPolicyOwners{}
 	var (
 		cors                  *ir.CORS
 		jwt                   *ir.JWT
@@ -1106,7 +1086,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.JWT != nil {
 		if jwt, err = t.buildJWT(
 			policy,
-			nil,
+			noOwners,
 			resources,
 			gtwCtx,
 		); err != nil {
@@ -1118,7 +1098,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.OIDC != nil {
 		if oidc, err = t.buildOIDC(
 			policy,
-			nil,
+			noOwners,
 			resources,
 			gtwCtx,
 		); err != nil {
@@ -1130,7 +1110,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.BasicAuth != nil {
 		if basicAuth, err = t.buildBasicAuth(
 			policy,
-			nil,
+			noOwners,
 			resources,
 		); err != nil {
 			err = perr.WithMessage(err, "BasicAuth")
@@ -1141,7 +1121,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.APIKeyAuth != nil {
 		if apiKeyAuth, err = t.buildAPIKeyAuth(
 			policy,
-			nil,
+			noOwners,
 			resources,
 		); err != nil {
 			err = perr.WithMessage(err, "APIKeyAuth")
@@ -1150,7 +1130,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	}
 
 	if policy.Spec.Authorization != nil {
-		if authorization, err = t.buildAuthorization(policy, nil); err != nil {
+		if authorization, err = t.buildAuthorization(policy, noOwners); err != nil {
 			errs = errors.Join(errs, err)
 		}
 	}
@@ -1160,7 +1140,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.ExtAuth != nil {
 		if extAuth, extAuthErr = t.buildExtAuth(
 			policy,
-			nil,
+			noOwners,
 			resources,
 			gtwCtx,
 		); extAuthErr != nil {
@@ -1337,7 +1317,7 @@ func wildcard2regex(wildcard string) string {
 
 func (t *Translator) buildJWT(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.JWT, error) {
@@ -1345,7 +1325,7 @@ func (t *Translator) buildJWT(
 		return nil, err
 	}
 
-	jwtOwnerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldJwtProviders, policy)
+	jwtOwnerPolicy := policyOwnerOr(owners.jwtProviders, policy)
 	providers := make([]ir.JWTProvider, 0, len(policy.Spec.JWT.Providers))
 	for i, p := range policy.Spec.JWT.Providers {
 		provider := ir.JWTProvider{
@@ -1554,7 +1534,7 @@ func (t *Translator) buildLocalJWKS(
 
 func (t *Translator) buildOIDC(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.OIDC, error) {
@@ -1573,7 +1553,7 @@ func (t *Translator) buildOIDC(
 		err                    error
 	)
 
-	if provider, err = t.buildOIDCProvider(policy, fieldOwners, resources, gtwCtx); err != nil {
+	if provider, err = t.buildOIDCProvider(policy, owners, resources, gtwCtx); err != nil {
 		return nil, err
 	}
 
@@ -1582,7 +1562,7 @@ func (t *Translator) buildOIDC(
 	case oidc.ClientID != nil:
 		clientID = *oidc.ClientID
 	case oidc.ClientIDRef != nil:
-		ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldOIDCClientIDRef, policy)
+		ownerPolicy := policyOwnerOr(owners.oidcClientIDRef, policy)
 		from := crossNamespaceFrom{
 			group:     egv1a1.GroupName,
 			kind:      resource.KindSecurityPolicy,
@@ -1603,11 +1583,11 @@ func (t *Translator) buildOIDC(
 		return nil, fmt.Errorf("client ID must be specified in OIDC policy %s/%s", policy.Namespace, policy.Name)
 	}
 
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldOIDCClientSecret, policy)
+	clientSecretOwner := policyOwnerOr(owners.oidcClientSecret, policy)
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
-		namespace: ownerPolicy.Namespace,
+		namespace: clientSecretOwner.Namespace,
 	}
 	if clientSecret, err = t.validateSecretRef(true, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
@@ -1666,8 +1646,9 @@ func (t *Translator) buildOIDC(
 			"HMAC secret not found in secret %s/%s", t.ControllerNamespace, oidcHMACSecretName)
 	}
 
+	oidcOwner := policyOwnerOr(owners.oidc, policy)
 	irOIDC := &ir.OIDC{
-		Name:                   irConfigName(resolvePolicyFieldOwner(fieldOwners, spFieldOIDC, policy)),
+		Name:                   irConfigName(oidcOwner),
 		Provider:               *provider,
 		ClientID:               clientID,
 		ClientSecret:           clientSecretBytes,
@@ -1717,7 +1698,7 @@ func (t *Translator) buildOIDC(
 
 func (t *Translator) buildOIDCProvider(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.OIDCProvider, error) {
@@ -1750,10 +1731,10 @@ func (t *Translator) buildOIDCProvider(
 		protocol = ir.HTTP
 	}
 
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldOIDCProviderBackendRefs, policy)
+	oidcProviderOwner := policyOwnerOr(owners.oidcProviderBackendRefs, policy)
 	if len(provider.BackendRefs) > 0 {
 		if rd, err = t.translateExtServiceBackendRefs(
-			ownerPolicy, provider.BackendRefs, protocol, resources, gtwCtx, "oidc", 0); err != nil {
+			oidcProviderOwner, provider.BackendRefs, protocol, resources, gtwCtx, "oidc", 0); err != nil {
 			return nil, err
 		}
 	}
@@ -2033,10 +2014,10 @@ func validateTokenEndpoint(tokenEndpoint string) error {
 
 func (t *Translator) buildAPIKeyAuth(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 ) (*ir.APIKeyAuth, error) {
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldAPIKeyAuthCreds, policy)
+	ownerPolicy := policyOwnerOr(owners.apiKeyAuthCredentialRefs, policy)
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
@@ -2091,7 +2072,7 @@ func (t *Translator) buildAPIKeyAuth(
 
 func (t *Translator) buildBasicAuth(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 ) (*ir.BasicAuth, error) {
 	var (
@@ -2100,7 +2081,7 @@ func (t *Translator) buildBasicAuth(
 		err         error
 	)
 
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldBasicAuth, policy)
+	ownerPolicy := policyOwnerOr(owners.basicAuth, policy)
 	from := crossNamespaceFrom{
 		group:     egv1a1.GroupName,
 		kind:      resource.KindSecurityPolicy,
@@ -2166,23 +2147,24 @@ func validateHtpasswdFormat(data []byte) error {
 
 func (t *Translator) buildExtAuth(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
 ) (*ir.ExtAuth, error) {
 	var (
-		http                   = policy.Spec.ExtAuth.HTTP
-		grpc                   = policy.Spec.ExtAuth.GRPC
-		backendRefs            []egv1a1.BackendRef
-		backendSettings        *egv1a1.ClusterSettings
-		protocol               ir.AppProtocol
-		rd                     *ir.RouteDestination
-		authority              string
-		err                    error
-		traffic                *ir.TrafficFeatures
-		contextExtensions      []*ir.ContextExtention
-		backendRefsOwnerPolicy *egv1a1.SecurityPolicy
+		http              = policy.Spec.ExtAuth.HTTP
+		grpc              = policy.Spec.ExtAuth.GRPC
+		backendRefs       []egv1a1.BackendRef
+		backendSettings   *egv1a1.ClusterSettings
+		protocol          ir.AppProtocol
+		rd                *ir.RouteDestination
+		authority         string
+		err               error
+		traffic           *ir.TrafficFeatures
+		contextExtensions []*ir.ContextExtention
 	)
+
+	backendRefsOwnerPolicy := policyOwnerOr(owners.extAuthBackendRefs, policy)
 
 	// These are sanity checks, they should never happen because the API server
 	// should have caught them
@@ -2199,14 +2181,12 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(http.BackendRefs) > 0:
 			backendRefs = http.BackendRefs
-			backendRefsOwnerPolicy = resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthHTTPBackendRefs, policy)
 		case http.BackendRef != nil:
 			backendRefs = []egv1a1.BackendRef{
 				{
 					BackendObjectReference: *http.BackendRef,
 				},
 			}
-			backendRefsOwnerPolicy = resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthHTTPBackendRef, policy)
 		default:
 			// This is a sanity check, it should never happen because the API server should have caught it
 			return nil, errors.New("http backend refs must be specified")
@@ -2217,14 +2197,12 @@ func (t *Translator) buildExtAuth(
 		switch {
 		case len(grpc.BackendRefs) > 0:
 			backendRefs = grpc.BackendRefs
-			backendRefsOwnerPolicy = resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthGRPCBackendRefs, policy)
 		case grpc.BackendRef != nil:
 			backendRefs = []egv1a1.BackendRef{
 				{
 					BackendObjectReference: *grpc.BackendRef,
 				},
 			}
-			backendRefsOwnerPolicy = resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthGRPCBackendRef, policy)
 		default:
 			// This is a sanity check, it should never happen because the API server should have caught it
 			return nil, errors.New("grpc backend refs must be specified")
@@ -2250,12 +2228,13 @@ func (t *Translator) buildExtAuth(
 		return nil, err
 	}
 
-	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, fieldOwners, policy); err != nil {
+	if contextExtensions, err = t.buildContextExtensions(policy.Spec.ExtAuth.ContextExtensions, owners, policy); err != nil {
 		return nil, err
 	}
 
+	extAuthOwner := policyOwnerOr(owners.extAuth, policy)
 	extAuth := &ir.ExtAuth{
-		Name:                 irConfigName(resolvePolicyFieldOwner(fieldOwners, spFieldExtAuth, policy)),
+		Name:                 irConfigName(extAuthOwner),
 		HeadersToExtAuth:     policy.Spec.ExtAuth.HeadersToExtAuth,
 		ContextExtensions:    contextExtensions,
 		FailOpen:             policy.Spec.ExtAuth.FailOpen,
@@ -2306,7 +2285,7 @@ func parseExtAuthTimeout(timeout *gwapiv1.Duration) *metav1.Duration {
 
 func (t *Translator) buildContextExtensions(
 	contextExtensions []*egv1a1.ContextExtension,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 	defaultOwner *egv1a1.SecurityPolicy,
 ) ([]*ir.ContextExtention, error) {
 	if len(contextExtensions) == 0 {
@@ -2317,7 +2296,7 @@ func (t *Translator) buildContextExtensions(
 	for _, ext := range contextExtensions {
 		var value ir.PrivateBytes
 		if ext.Type == egv1a1.ContextExtensionValueTypeValueRef {
-			ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldExtAuthContextExtension(ext.Name), defaultOwner)
+			ownerPolicy := policyOwnerOr(owners.extAuthContextExtensions[ext.Name], defaultOwner)
 			var err error
 			if value, err = t.getContextExtensionValueFromRef(ext.ValueRef, ownerPolicy.Namespace); err != nil {
 				return nil, err
@@ -2408,7 +2387,7 @@ func (t *Translator) backendRefAuthority(
 
 func (t *Translator) buildAuthorization(
 	policy *egv1a1.SecurityPolicy,
-	fieldOwners PolicyFieldOwners[*egv1a1.SecurityPolicy],
+	owners *securityPolicyOwners,
 ) (*ir.Authorization, error) {
 	var (
 		authorization = policy.Spec.Authorization
@@ -2417,7 +2396,7 @@ func (t *Translator) buildAuthorization(
 		defaultAction = egv1a1.AuthorizationActionDeny
 	)
 
-	ownerPolicy := resolvePolicyFieldOwner(fieldOwners, spFieldAuthRules, policy)
+	ownerPolicy := policyOwnerOr(owners.authorizationRules, policy)
 
 	if authorization.DefaultAction != nil {
 		defaultAction = *authorization.DefaultAction
@@ -2545,84 +2524,145 @@ func defaultAuthorizationRuleName(policy *egv1a1.SecurityPolicy, index int) stri
 		strconv.Itoa(index))
 }
 
+type securityPolicyOwners struct {
+	basicAuth                *egv1a1.SecurityPolicy
+	apiKeyAuthCredentialRefs *egv1a1.SecurityPolicy
+	authorizationRules       *egv1a1.SecurityPolicy
+	extAuth                  *egv1a1.SecurityPolicy
+	extAuthBackendRefs       *egv1a1.SecurityPolicy
+	extAuthContextExtensions map[string]*egv1a1.SecurityPolicy
+	oidc                     *egv1a1.SecurityPolicy
+	oidcProviderBackendRefs  *egv1a1.SecurityPolicy
+	oidcClientIDRef          *egv1a1.SecurityPolicy
+	oidcClientSecret         *egv1a1.SecurityPolicy
+	jwtProviders             *egv1a1.SecurityPolicy
+}
+
+// policyOwnerOr returns owner if non-nil, otherwise fallback.
+// Used to resolve per-field owners from securityPolicyOwners: the owner is the policy
+// that contributed the field (route overrides parent), falling back to the active policy
+// when no merge occurred or the field was not set by either side.
+func policyOwnerOr(owner, fallback *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if owner != nil {
+		return owner
+	}
+	return fallback
+}
+
 // mergeSecurityPolicy merges a route-level SecurityPolicy with a parent (Gateway/Listener) SecurityPolicy.
-func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, PolicyFieldOwners[*egv1a1.SecurityPolicy], error) {
+func mergeSecurityPolicy(routePolicy, parentPolicy *egv1a1.SecurityPolicy) (*egv1a1.SecurityPolicy, *securityPolicyOwners, error) {
 	if routePolicy.Spec.MergeType == nil || parentPolicy == nil {
 		return routePolicy, nil, nil
 	}
-	fieldOwners := buildSecurityPolicyFieldOwners(routePolicy, parentPolicy)
 	mergedPolicy, err := utils.Merge[*egv1a1.SecurityPolicy](parentPolicy, routePolicy, *routePolicy.Spec.MergeType)
 	if err != nil {
 		return nil, nil, err
 	}
-	return mergedPolicy, fieldOwners, nil
+	return mergedPolicy, &securityPolicyOwners{
+		basicAuth:                chooseBasicAuthOwner(routePolicy, parentPolicy),
+		apiKeyAuthCredentialRefs: chooseAPIKeyAuthOwner(routePolicy, parentPolicy),
+		authorizationRules:       chooseAuthorizationRulesOwner(routePolicy, parentPolicy),
+		extAuth:                  chooseExtAuthOwner(routePolicy, parentPolicy),
+		extAuthBackendRefs:       chooseExtAuthBackendRefsOwner(routePolicy, parentPolicy),
+		extAuthContextExtensions: buildExtAuthContextExtensionOwners(routePolicy, parentPolicy),
+		oidc:                     chooseOIDCOwner(routePolicy, parentPolicy),
+		oidcProviderBackendRefs:  chooseOIDCProviderBackendRefsOwner(routePolicy, parentPolicy),
+		oidcClientIDRef:          chooseOIDCClientIDRefOwner(routePolicy, parentPolicy),
+		oidcClientSecret:         chooseOIDCClientSecretOwner(routePolicy, parentPolicy),
+		jwtProviders:             chooseJWTProvidersOwner(routePolicy, parentPolicy),
+	}, nil
 }
 
-func buildSecurityPolicyFieldOwners(
-	routePolicy *egv1a1.SecurityPolicy,
-	parentPolicy *egv1a1.SecurityPolicy,
-) PolicyFieldOwners[*egv1a1.SecurityPolicy] {
-	// Route policy owners are applied last so they override parent owners when both define the same field key.
-	owners := make(PolicyFieldOwners[*egv1a1.SecurityPolicy])
-	applySecurityPolicyFieldOwners(owners, parentPolicy)
-	applySecurityPolicyFieldOwners(owners, routePolicy)
+func chooseBasicAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.BasicAuth != nil {
+		return route
+	}
+	return parent
+}
+
+func chooseAPIKeyAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.APIKeyAuth != nil && len(route.Spec.APIKeyAuth.CredentialRefs) > 0 {
+		return route
+	}
+	return parent
+}
+
+func chooseAuthorizationRulesOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.Authorization != nil && len(route.Spec.Authorization.Rules) > 0 {
+		return route
+	}
+	return parent
+}
+
+func chooseExtAuthOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.ExtAuth != nil {
+		return route
+	}
+	return parent
+}
+
+func chooseExtAuthBackendRefsOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	ea := route.Spec.ExtAuth
+	if ea == nil {
+		return parent
+	}
+	if ea.HTTP != nil && (len(ea.HTTP.BackendRefs) > 0 || ea.HTTP.BackendRef != nil) {
+		return route
+	}
+	if ea.GRPC != nil && (len(ea.GRPC.BackendRefs) > 0 || ea.GRPC.BackendRef != nil) {
+		return route
+	}
+	return parent
+}
+
+func buildExtAuthContextExtensionOwners(route, parent *egv1a1.SecurityPolicy) map[string]*egv1a1.SecurityPolicy {
+	owners := make(map[string]*egv1a1.SecurityPolicy)
+	if parent.Spec.ExtAuth != nil {
+		for _, ext := range parent.Spec.ExtAuth.ContextExtensions {
+			owners[ext.Name] = parent
+		}
+	}
+	if route.Spec.ExtAuth != nil {
+		for _, ext := range route.Spec.ExtAuth.ContextExtensions {
+			owners[ext.Name] = route
+		}
+	}
 	return owners
 }
 
-func applySecurityPolicyFieldOwners(
-	owners PolicyFieldOwners[*egv1a1.SecurityPolicy],
-	policy *egv1a1.SecurityPolicy,
-) {
-	if policy == nil {
-		return
+func chooseOIDCOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.OIDC != nil {
+		return route
 	}
+	return parent
+}
 
-	if policy.Spec.BasicAuth != nil {
-		owners[spFieldBasicAuth] = policy
+func chooseOIDCClientSecretOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.OIDC != nil {
+		return route
 	}
-	if policy.Spec.APIKeyAuth != nil &&
-		len(policy.Spec.APIKeyAuth.CredentialRefs) > 0 {
-		owners[spFieldAPIKeyAuthCreds] = policy
-	}
-	if policy.Spec.Authorization != nil &&
-		len(policy.Spec.Authorization.Rules) > 0 {
-		owners[spFieldAuthRules] = policy
-	}
-	if policy.Spec.ExtAuth != nil {
-		owners[spFieldExtAuth] = policy
+	return parent
+}
 
-		if policy.Spec.ExtAuth.HTTP != nil && len(policy.Spec.ExtAuth.HTTP.BackendRefs) > 0 {
-			owners[spFieldExtAuthHTTPBackendRefs] = policy
-		}
-		if policy.Spec.ExtAuth.HTTP != nil && policy.Spec.ExtAuth.HTTP.BackendRef != nil {
-			owners[spFieldExtAuthHTTPBackendRef] = policy
-		}
-		if policy.Spec.ExtAuth.GRPC != nil && len(policy.Spec.ExtAuth.GRPC.BackendRefs) > 0 {
-			owners[spFieldExtAuthGRPCBackendRefs] = policy
-		}
-		if policy.Spec.ExtAuth.GRPC != nil && policy.Spec.ExtAuth.GRPC.BackendRef != nil {
-			owners[spFieldExtAuthGRPCBackendRef] = policy
-		}
-		if len(policy.Spec.ExtAuth.ContextExtensions) > 0 {
-			for _, ext := range policy.Spec.ExtAuth.ContextExtensions {
-				owners[spFieldExtAuthContextExtension(ext.Name)] = policy
-			}
-		}
+func chooseOIDCProviderBackendRefsOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.OIDC != nil && len(route.Spec.OIDC.Provider.BackendRefs) > 0 {
+		return route
 	}
-	if policy.Spec.OIDC != nil {
-		owners[spFieldOIDC] = policy
-		owners[spFieldOIDCClientSecret] = policy
+	return parent
+}
 
-		if len(policy.Spec.OIDC.Provider.BackendRefs) > 0 {
-			owners[spFieldOIDCProviderBackendRefs] = policy
-		}
-		if policy.Spec.OIDC.ClientIDRef != nil {
-			owners[spFieldOIDCClientIDRef] = policy
-		}
+func chooseOIDCClientIDRefOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.OIDC != nil && route.Spec.OIDC.ClientIDRef != nil {
+		return route
 	}
-	if policy.Spec.JWT != nil && len(policy.Spec.JWT.Providers) > 0 {
-		owners[spFieldJwtProviders] = policy
+	return parent
+}
+
+func chooseJWTProvidersOwner(route, parent *egv1a1.SecurityPolicy) *egv1a1.SecurityPolicy {
+	if route.Spec.JWT != nil && len(route.Spec.JWT.Providers) > 0 {
+		return route
 	}
+	return parent
 }
 
 // securityPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
