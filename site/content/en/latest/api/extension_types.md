@@ -189,6 +189,47 @@ _Appears in:_
 | `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
+#### AdmissionControl
+
+
+
+AdmissionControl configures health-based load shedding for upstream backends.
+
+Envoy tracks recent upstream responses over a sliding sampling window. When the
+observed success rate drops below the configured threshold, Envoy
+probabilistically rejects new requests before forwarding them upstream. This can
+reduce pressure on degraded backends and give them time to recover.
+
+All fields are optional. When omitted, Envoy's admission control defaults are used.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the<br />denominator in RPS calculations, so sub-second values would produce a zero denominator.<br />Defaults to 30s if not specified. |
+| `minSuccessRate` | _integer_ |  false  |  | MinSuccessRate is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
+| `rejectionAggression` | _integer_ |  false  |  | RejectionAggression controls how steeply the rejection probability rises<br />as the observed success rate falls below MinSuccessRate. A value of 1<br />produces a linear curve; higher values reject more aggressively for a<br />given drop in success rate. Must be greater than 0; values below 1 are<br />clamped to 1. Defaults to 1. |
+| `minRequestRate` | _integer_ |  false  |  | MinRequestRate defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
+| `maxRejectionPercent` | _integer_ |  false  |  | MaxRejectionPercent represents the upper limit of the rejection probability,<br />expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified. |
+| `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC. |
+
+
+#### AdmissionControlSuccessCriteria
+
+
+
+AdmissionControlSuccessCriteria defines the criteria for determining successful requests.
+
+_Appears in:_
+- [AdmissionControl](#admissioncontrol)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `http` | _[HTTPSuccessCriteria](#httpsuccesscriteria)_ |  false  |  | HTTP defines success criteria for HTTP requests. |
+| `grpc` | _[GRPCSuccessCriteria](#grpcsuccesscriteria)_ |  false  |  | GRPC defines success criteria for gRPC requests. |
+
+
 #### AppProtocolType
 
 _Underlying type:_ _string_
@@ -544,6 +585,7 @@ _Appears in:_
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
 | `bandwidthLimit` | _[BandwidthLimitSpec](#bandwidthlimitspec)_ |  false  |  | BandwidthLimit allows the user to limit the bandwidth of traffic<br />sent to and received from the backend. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
+| `admissionControl` | _[AdmissionControl](#admissioncontrol)_ |  false  |  | AdmissionControl defines the admission control policy to be applied. This configuration<br />probabilistically rejects requests based on the success rate of previous requests in a<br />configurable sliding time window. |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
@@ -2594,6 +2636,51 @@ _Appears in:_
 | `enableWeb` | _boolean_ |  false  |  | EnableWeb configures the gRPC-web filter on the listener.<br />The gRPC-web filter allows clients (typically browsers) to make gRPC calls<br />using HTTP/1.1 or HTTP/2.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 
 
+#### GRPCSuccessCode
+
+_Underlying type:_ _string_
+
+GRPCSuccessCode defines gRPC status codes as defined in
+https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+
+_Appears in:_
+- [GRPCSuccessCriteria](#grpcsuccesscriteria)
+
+| Value | Description |
+| ----- | ----------- |
+| `Ok` |  | 
+| `Cancelled` |  | 
+| `Unknown` |  | 
+| `InvalidArgument` |  | 
+| `DeadlineExceeded` |  | 
+| `NotFound` |  | 
+| `AlreadyExists` |  | 
+| `PermissionDenied` |  | 
+| `ResourceExhausted` |  | 
+| `FailedPrecondition` |  | 
+| `Aborted` |  | 
+| `OutOfRange` |  | 
+| `Unimplemented` |  | 
+| `Internal` |  | 
+| `Unavailable` |  | 
+| `DataLoss` |  | 
+| `Unauthenticated` |  | 
+
+
+#### GRPCSuccessCriteria
+
+
+
+GRPCSuccessCriteria defines success criteria for gRPC requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `statusCodes` | _[GRPCSuccessCode](#grpcsuccesscode) array_ |  false  |  | StatusCodes defines gRPC status codes that are considered successful.<br />Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc. |
+
+
 #### Gateway
 
 
@@ -3089,8 +3176,23 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [HTTPSuccessCriteria](#httpsuccesscriteria)
 - [RetryOn](#retryon)
 
+
+
+#### HTTPSuccessCriteria
+
+
+
+HTTPSuccessCriteria defines success criteria for HTTP requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `statusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  |  | StatusCodes defines HTTP status codes that are considered successful. |
 
 
 #### HTTPTimeout
