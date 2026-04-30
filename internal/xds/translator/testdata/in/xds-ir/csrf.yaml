@@ -22,8 +22,8 @@ http:
     security:
       csrf:
         additionalOrigins:
-        - exact: https://www.example.com
-        - prefix: https://app.example
+        - exact: www.example.com
+        - prefix: app.example
         - suffix: .trusted.com
-        - safeRegex: https://.*\.partner\.com
+        - safeRegex: .*\.partner\.com$
 

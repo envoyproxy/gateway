@@ -155,6 +155,9 @@ func (*csrf) patchResources(*types.ResourceVersionTable, []*ir.HTTPRoute) error 
 }
 
 // buildXdsCSRFOrigins converts IR StringMatches to Envoy StringMatchers for CSRF origins.
+// Values are passed directly to Envoy without transformation. Users must provide
+// host:port values (not full URLs) because Envoy's CSRF filter strips the scheme
+// from the Origin header before matching.
 func buildXdsCSRFOrigins(csrf *ir.CSRF) []*matcherv3.StringMatcher {
 	if csrf == nil {
 		return nil

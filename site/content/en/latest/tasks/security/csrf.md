@@ -19,6 +19,10 @@ When CSRF protection is enabled, the Envoy CSRF filter validates that the `Origi
 (POST, PUT, DELETE, PATCH) matches the destination or one of the configured additional origins.
 Non-mutating requests (GET, HEAD, OPTIONS) are not affected.
 
+Note: Envoy's CSRF filter compares against the host and port of the origin only (the scheme is stripped
+before matching). Additional origins must be specified as `host` or `host:port` values, not full URLs.
+For example, use `www.example.com` instead of `https://www.example.com`.
+
 The below example defines a SecurityPolicy that enables CSRF protection and allows additional origins
 matching `https://www.example.com` exactly and any subdomain of `trusted.com` via regex.
 
@@ -39,9 +43,9 @@ spec:
   csrf:
     additionalOrigins:
     - type: Exact
-      value: "https://www.example.com"
+      value: "www.example.com"
     - type: RegularExpression
-      value: "https://.*\\.trusted\\.com"
+      value: ".*\\.trusted\\.com$"
 EOF
 ```
 
@@ -63,9 +67,9 @@ spec:
   csrf:
     additionalOrigins:
     - type: Exact
-      value: "https://www.example.com"
+      value: "www.example.com"
     - type: RegularExpression
-      value: "https://.*\\.trusted\\.com"
+      value: ".*\\.trusted\\.com$"
 ```
 
 {{% /tab %}}
@@ -73,8 +77,8 @@ spec:
 
 With this configuration:
 
-- A `POST` request with `Origin: https://www.example.com` will be **allowed**.
-- A `POST` request with `Origin: https://app.trusted.com` will be **allowed** (matches the regex).
+- A `POST` request with `Origin: https://www.example.com` will be **allowed** (Envoy extracts `www.example.com` and matches the exact origin).
+- A `POST` request with `Origin: https://app.trusted.com` will be **allowed** (Envoy extracts `app.trusted.com` which matches the regex).
 - A `POST` request with `Origin: https://www.malicious.com` will be **rejected** with a `403 Forbidden`.
 - A `GET` request from any origin will be **allowed** (non-mutating).
 

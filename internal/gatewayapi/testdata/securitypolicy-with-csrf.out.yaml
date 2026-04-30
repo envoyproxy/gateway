@@ -105,13 +105,13 @@ securityPolicies:
     csrf:
       additionalOrigins:
       - type: Exact
-        value: https://www.example.com
+        value: www.example.com
       - type: Prefix
-        value: https://app.example
+        value: app.example
       - type: Suffix
         value: .trusted.com
       - type: RegularExpression
-        value: https://.*\.partner\.com
+        value: .*\.partner\.com$
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -212,17 +212,17 @@ xdsIR:
           csrf:
             additionalOrigins:
             - distinct: false
-              exact: https://www.example.com
+              exact: www.example.com
               name: csrf
             - distinct: false
               name: csrf
-              prefix: https://app.example
+              prefix: app.example
             - distinct: false
               name: csrf
               suffix: .trusted.com
             - distinct: false
               name: csrf
-              safeRegex: https://.*\.partner\.com
+              safeRegex: .*\.partner\.com$
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4

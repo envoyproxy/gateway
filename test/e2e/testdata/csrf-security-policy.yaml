@@ -28,10 +28,10 @@ spec:
   csrf:
     additionalOrigins:
     - type: Exact
-      value: "https://www.example.com"
+      value: "www.example.com"
     - type: Prefix
-      value: "https://app.example"
+      value: "app.example"
     - type: Suffix
       value: ".trusted.com"
     - type: RegularExpression
-      value: "https://.*\\.partner\\.com"
+      value: ".*\\.partner\\.com$"
