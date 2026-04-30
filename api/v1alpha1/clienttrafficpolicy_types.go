@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -79,6 +80,10 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	Path *PathSettings `json:"path,omitempty"`
+	// Host enables managing how the Host/Authority header can be normalized.
+	//
+	// +optional
+	Host *HostSettings `json:"host,omitempty"`
 	// HeaderSettings provides configuration for header management.
 	//
 	// +optional
@@ -183,7 +188,52 @@ type HeaderSettings struct {
 	//
 	// +optional
 	LateResponseHeaders *HTTPHeaderFilter `json:"lateResponseHeaders,omitempty"`
+
+	// MaxRequestHeaderBytes defines the maximum number of bytes for request headers allowed.
+	// Requests with larger header sizes will receive a 431 response.
+	// For example, 80Ki, 100Ki, 1Mi etc.
+	// Note that when the suffix is not provided, the value is interpreted as bytes.
+	// The value must be at least 1Ki (1024 bytes). If not set, the default value is 60 KiB.
+	//
+	// +optional
+	// +kubebuilder:validation:XIntOrString
+	// +kubebuilder:validation:Pattern="^[1-9]+[0-9]*([EPTGMK]i|[EPTGMk])?$"
+	MaxRequestHeaderBytes *resource.Quantity `json:"maxRequestHeaderBytes,omitempty"`
 }
+
+// HostSettings provides configuration options for the Host/Authority header on the listener.
+type HostSettings struct {
+	// StripPortMode configures how ports are stripped from the Host/Authority
+	// header before route matching.
+	// "Any" strips the port unconditionally, "Matching" strips it only when
+	// it matches the listener's port.
+	// If not set, no port stripping is performed (Envoy default).
+	//
+	// +optional
+	StripPortMode *StripPortMode `json:"stripPortMode,omitempty"`
+
+	// StripTrailingHostDot determines if the trailing dot of the host should be removed
+	// from the Host/Authority header before any processing of the request.
+	// This affects the upstream host header as well. Without this option, incoming requests
+	// with host "example.com." will not match routes with domains set to "example.com".
+	// When the host includes a port (e.g. "example.com.:443"), only the trailing dot
+	// from the host section is stripped, leaving the port as-is ("example.com:443").
+	// Defaults to false.
+	//
+	// +optional
+	StripTrailingHostDot *bool `json:"stripTrailingHostDot,omitempty"`
+}
+
+// StripPortMode defines the mode for stripping port from the Host header.
+// +kubebuilder:validation:Enum=Any;Matching
+type StripPortMode string
+
+const (
+	// StripPortModeAny strips the port from the Host header unconditionally.
+	StripPortModeAny StripPortMode = "Any"
+	// StripPortModeMatching strips the port only when it matches the listener's port.
+	StripPortModeMatching StripPortMode = "Matching"
+)
 
 // WithUnderscoresAction configures the action to take when an HTTP header with underscores
 // is encountered.
