@@ -7530,6 +7530,14 @@ spec:
                               type: string
                           type: object
                       type: object
+                    shadowMode:
+                      description: |-
+                        ShadowMode sets if envoy gateway should treat this external processor as "send and go".
+                        When enabled, Envoy forwards request/response data to the external processor but does
+                        not wait for or apply any response from it. This maps to Envoy's `observability_mode`
+                        on the ext_proc filter.
+                        Defaults to false.
+                      type: boolean
                   type: object
                   x-kubernetes-validations:
                   - message: BackendRefs must be used, backendRef is not supported.
@@ -7551,6 +7559,13 @@ spec:
                       && self.processingMode.request.body == ''FullDuplexStreamed'')
                       || (has(self.processingMode.response) && has(self.processingMode.response.body)
                       && self.processingMode.response.body == ''FullDuplexStreamed'')))'
+                  - message: If shadowMode is enabled, body processing mode must be
+                      Streamed or unset.
+                    rule: '!(has(self.shadowMode) && self.shadowMode == true && has(self.processingMode)
+                      && ((has(self.processingMode.request) && has(self.processingMode.request.body)
+                      && self.processingMode.request.body != ''Streamed'') || (has(self.processingMode.response)
+                      && has(self.processingMode.response.body) && self.processingMode.response.body
+                      != ''Streamed'')))'
                 maxItems: 16
                 type: array
               lua:

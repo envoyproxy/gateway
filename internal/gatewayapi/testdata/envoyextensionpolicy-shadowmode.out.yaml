@@ -9,12 +9,12 @@ envoyExtensionPolicies:
     - backendRefs:
       - name: grpc-backend
         port: 9000
-      shadowMode: true
       processingMode:
         request:
           body: Streamed
         response:
           body: Streamed
+      shadowMode: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
@@ -220,11 +220,11 @@ xdsIR:
                 protocol: GRPC
                 weight: 1
             name: envoyextensionpolicy/default/policy-for-http-route/extproc/0
-            shadowMode: true
             requestBodyProcessingMode: Streamed
             requestHeaderProcessing: true
             responseBodyProcessingMode: Streamed
             responseHeaderProcessing: true
+            shadowMode: true
         hostname: www.foo.com
         isHTTP2: false
         metadata:
