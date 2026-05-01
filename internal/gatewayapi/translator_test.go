@@ -942,8 +942,6 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		want           bool
 	}
 
-	translator := &Translator{}
-
 	baseCase := func() *testcase {
 		return &testcase{
 			name: "reference covered by reference grant (all resources of kind)",
@@ -1044,7 +1042,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 				referenceGrants = append(referenceGrants, tc.referenceGrant)
 			}
 
-			assert.Equal(t, tc.want, translator.validateCrossNamespaceRef(tc.from, tc.to, referenceGrants))
+			assert.Equal(t, tc.want, isCrossNamespaceReferencePermitted(tc.from, tc.to, referenceGrants))
 		})
 	}
 }

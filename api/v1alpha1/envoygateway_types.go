@@ -687,7 +687,8 @@ type ExtensionManager struct {
 	Resources []GroupVersionKind `json:"resources,omitempty"`
 
 	// PolicyResources defines the set of K8S resources the extension server will handle
-	// as directly attached GatewayAPI policies
+	// as directly attached Gateway API policies. Only policies in the same namespace as
+	// the target Gateway resources are supported. Cross-namespace attachments are not supported.
 	//
 	// +optional
 	PolicyResources []GroupVersionKind `json:"policyResources,omitempty"`

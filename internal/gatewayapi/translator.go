@@ -267,6 +267,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
 			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
 		)
 	}
 
@@ -449,7 +451,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			// Debug logging to inspect the final merged EnvoyProxy configuration
 			if logV := t.Logger.V(1); logV.Enabled() {
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
-				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...))
+				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
 		}
 

@@ -1,0 +1,134 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-all
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-all/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: Not Found
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: text/plain
+                  predicate:
+                    singlePredicate:
+                      input:
+                        name: http-response-status-code-match-input
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                      valueMatch:
+                        exact: "404"
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-backend
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-backend/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error": "Internal Server Error"}'
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "500"
+                      - singlePredicate:
+                          input:
+                            name: http-response-local-reply-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseLocalReplyMatchInput
+                          valueMatch:
+                            exact: "false"
+        - disabled: true
+          name: envoy.filters.http.custom_response/backendtrafficpolicy/default/policy-local
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.custom_response.v3.CustomResponse
+            customResponseMatcher:
+              matcherList:
+                matchers:
+                - onMatch:
+                    action:
+                      name: backendtrafficpolicy/default/policy-local/responseoverride/rule/0
+                      typedConfig:
+                        '@type': type.googleapis.com/envoy.extensions.http.custom_response.local_response_policy.v3.LocalResponsePolicy
+                        bodyFormat:
+                          textFormat: '{"error": "Unauthorized"}'
+                        responseHeadersToAdd:
+                        - appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+                          header:
+                            key: Content-Type
+                            value: application/json
+                  predicate:
+                    andMatcher:
+                      predicate:
+                      - singlePredicate:
+                          input:
+                            name: http-response-status-code-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseStatusCodeMatchInput
+                          valueMatch:
+                            exact: "401"
+                      - singlePredicate:
+                          input:
+                            name: http-response-local-reply-match-input
+                            typedConfig:
+                              '@type': type.googleapis.com/envoy.type.matcher.v3.HttpResponseLocalReplyMatchInput
+                          valueMatch:
+                            exact: "true"
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            suppressEnvoyHeaders: true
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: default/gateway-1/http
+        serverHeaderTransformation: PASS_THROUGH
+        statPrefix: http-10080
+        useRemoteAddress: true
+    name: default/gateway-1/http
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: default/gateway-1/http
+  perConnectionBufferLimitBytes: 32768
