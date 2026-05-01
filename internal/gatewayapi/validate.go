@@ -299,7 +299,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
 				"Sending translated listener configuration to the data plane")
 			return
-		case string(gwapiv1.ListenerReasonInvalidCertificateRef), string(gwapiv1.ListenerReasonRefNotPermitted):
+		case string(gwapiv1.ListenerReasonInvalidCertificateRef):
 			// The listener configuration is semantically valid, but the listener cannot serve traffic with an invalid certificate.
 			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
 				"Listener has been successfully translated")
