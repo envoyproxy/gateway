@@ -124,10 +124,26 @@ gateway.gateway.networking.k8s.io/eg condition met
 
 See [Testing in Secure Gateways](secure-gateways.md#testing) for the general idea.
 
+Get the Gateway address first:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+echo "$GATEWAY_HOST"
+```
+
+{{% alert title="Troubleshooting" color="primary" %}}
+If `GATEWAY_HOST` is empty or you see `curl: (7) Failed to connect to 127.0.0.1 port 443: Connection refused`, your cluster may not have a LoadBalancer — use `kubectl port-forward` instead:
+
+```shell
+kubectl port-forward service/envoy-default-eg -n envoy-gateway-system 8443:443 &
+curl -kv -HHost:www.example.com https://127.0.0.1:8443/get
+```
+{{% /alert %}}
+
 Since we have a self-signed certificate, `curl` will by default reject it, requiring the `-k` flag:
 
 ```console
-$ curl -kv -HHost:www.example.com https://127.0.0.1/get
+$ curl -kv -HHost:www.example.com "https://${GATEWAY_HOST}/get"
 ...
 * Server certificate:
 *  subject: CN=Hello World!

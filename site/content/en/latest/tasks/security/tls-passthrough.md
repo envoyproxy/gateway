@@ -83,6 +83,15 @@ curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:$
 --cacert example.com.crt https://passthrough.example.com:6443/get
 ```
 
+{{% alert title="Troubleshooting" color="primary" %}}
+If you see `SSL certificate problem: unable to get local issuer certificate`, the backend may be serving only its leaf certificate without the full chain. You can work around this by creating the TLS secret with a chained certificate:
+
+```shell
+cat passthrough.example.com.crt example.com.crt > passthrough-chain.crt
+kubectl create secret tls server-certs --key=passthrough.example.com.key --cert=passthrough-chain.crt
+```
+{{% /alert %}}
+
 {{% /tab %}}
 {{% tab header="Without LoadBalancer Support" %}}
 

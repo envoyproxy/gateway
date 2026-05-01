@@ -33,8 +33,13 @@ openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_seri
 Store the cert/key in a Secret:
 
 ```shell
-kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt --certificate-authority=example.com.crt
+kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
+
+{{% alert title="Note" color="primary" %}}
+`kubectl create secret tls` stores only the server certificate and key. The CA certificate is stored separately in the next step.
+If you encounter `x509: certificate signed by unknown authority` errors when creating the secret, ensure your `kubectl` client is configured correctly with your cluster's CA — this error comes from the `kubectl`→API-server connection, not from the TLS secret contents.
+{{% /alert %}}
 
 Store the CA Cert in another Secret:
 
