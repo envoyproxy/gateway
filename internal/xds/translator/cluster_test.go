@@ -469,7 +469,7 @@ func TestGetHealthCheckOverridesHostname(t *testing.T) {
 				Port:     8080,
 				Hostname: nil,
 			},
-			expected: "",
+			expected: "example.com",
 		},
 		{
 			name: "nil HTTP health checker",
