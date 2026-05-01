@@ -42,5 +42,4 @@ var (
 	runnerLabel          = metrics.NewLabel("runner")
 	messageLabel         = metrics.NewLabel("message")
 	runnerEventTypeLabel = metrics.NewLabel("event_type")
-	runnerNameLabel      = metrics.NewLabel("name")
 )
