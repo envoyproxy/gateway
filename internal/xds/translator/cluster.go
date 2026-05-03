@@ -85,7 +85,6 @@ type xdsClusterArgs struct {
 	unstructuredRefs  []*unstructured.Unstructured
 	extensionMgr      *extensionTypes.Manager
 	logger            logging.Logger
-	urlRewrite        *ir.URLRewrite
 }
 
 type EndpointType int
@@ -795,7 +794,7 @@ func buildCircuitBreakerRetryBudget(rb *ir.RetryBudget) *clusterv3.CircuitBreake
 	return trb
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, routeURLWrite *ir.URLRewrite, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting, hc *ir.HealthCheck, preferLocal *ir.PreferLocalZone, weightedZones []ir.WeightedZoneConfig) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
 	for i, ds := range destSettings {
 
@@ -820,18 +819,18 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// For more details see https://github.com/envoyproxy/gateway/issues/5307#issuecomment-2688767482
 		switch {
 		case len(weightedZones) > 0:
-			localities = append(localities, buildWeightedZonalLocalities(metadata, routeURLWrite, ds, hc, weightedZones)...)
+			localities = append(localities, buildWeightedZonalLocalities(metadata, ds, hc, weightedZones)...)
 		case ds.PreferLocal != nil || preferLocal != nil:
-			localities = append(localities, buildZonalLocalities(metadata, routeURLWrite, ds, hc)...)
+			localities = append(localities, buildZonalLocalities(metadata, ds, hc)...)
 		default:
-			localities = append(localities, buildWeightedLocalities(metadata, routeURLWrite, ds, hc))
+			localities = append(localities, buildWeightedLocalities(metadata, ds, hc))
 		}
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
-func buildZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
-	rewrite := getURLRewrite(routeURLWrite, ds)
+func buildZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) []*endpointv3.LocalityLbEndpoints {
+	rewrite := getURLRewrite(ds)
 	zonalEndpoints := make(map[string][]*endpointv3.LbEndpoint)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
@@ -877,18 +876,15 @@ func buildZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrit
 
 // getURLRewrite determines the URL rewrite configuration for an endpoint,
 // giving precedence to the most specific configuration (DestinationSetting level over route level).
-func getURLRewrite(routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting) *ir.URLRewrite {
+func getURLRewrite(ds *ir.DestinationSetting) *ir.URLRewrite {
 	if ds.Filters != nil && ds.Filters.URLRewrite != nil {
 		return ds.Filters.URLRewrite
-	}
-	if routeURLWrite != nil {
-		return routeURLWrite
 	}
 	return nil
 }
 
-func buildWeightedZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck, weightedZones []ir.WeightedZoneConfig) []*endpointv3.LocalityLbEndpoints {
-	rewrite := getURLRewrite(routeURLWrite, ds)
+func buildWeightedZonalLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck, weightedZones []ir.WeightedZoneConfig) []*endpointv3.LocalityLbEndpoints {
+	rewrite := getURLRewrite(ds)
 	// Build zone->weight lookup map
 	zoneWeights := make(map[string]uint32, len(weightedZones))
 	for _, wz := range weightedZones {
@@ -945,9 +941,9 @@ func buildWeightedZonalLocalities(metadata *corev3.Metadata, routeURLWrite *ir.U
 	return localities
 }
 
-func buildWeightedLocalities(metadata *corev3.Metadata, routeURLWrite *ir.URLRewrite, ds *ir.DestinationSetting, hc *ir.HealthCheck) *endpointv3.LocalityLbEndpoints {
+func buildWeightedLocalities(metadata *corev3.Metadata, ds *ir.DestinationSetting, hc *ir.HealthCheck) *endpointv3.LocalityLbEndpoints {
 	endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
-	rewrite := getURLRewrite(routeURLWrite, ds)
+	rewrite := getURLRewrite(ds)
 	for _, irEp := range ds.Endpoints {
 		healthStatus := corev3.HealthStatus_UNKNOWN
 		if irEp.Draining {
@@ -1465,7 +1461,6 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		extensionMgr:      extra.extensionMgr,
 		unstructuredRefs:  extra.unstructuredRefs,
 		logger:            extra.logger,
-		urlRewrite:        httpRoute.URLRewrite,
 	}
 
 	// Populate traffic features.
