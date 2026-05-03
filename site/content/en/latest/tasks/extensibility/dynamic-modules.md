@@ -51,7 +51,7 @@ spec:
       source: 
         type: Local
         local:
-        path: /etc/envoy/dynamic-modules/libcomposer.so
+          path: /etc/envoy/dynamic-modules/libcomposer.so
       doNotClose: true
       loadGlobally: false
 EOF
@@ -91,7 +91,7 @@ spec:
       source: 
         type: Local
         local:
-        path: /etc/envoy/dynamic-modules/libcomposer.so
+          path: /etc/envoy/dynamic-modules/libcomposer.so
       doNotClose: true
       loadGlobally: false
 ```
