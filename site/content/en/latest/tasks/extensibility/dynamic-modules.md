@@ -16,7 +16,7 @@ Envoy Gateway is able to load dynamic modules from the local filesystem using [E
 
 ### Installation
 
-Add the dynamic module to the Envoy proxy container's filesystem and load it into Envoy.
+Add the dynamic module to the Envoy proxy container's filesystem and configure the [DynamicModules][] spec to load it into Envoy.
 
 {{< tabpane text=true >}}
 {{% tab header="Apply from stdin" %}}
@@ -107,7 +107,7 @@ Alternative ways of loading the dynamic module are:
 - Copying from `InitContainer` to a shared volume
 
 
-Verify the EnvoyProxy status:
+Verify the [EnvoyProxy][] status:
 
 ```shell
 kubectl get envoyproxy/my-proxy -o yaml
@@ -128,11 +128,11 @@ kubectl patch gatewayclass eg --type=merge -p '{
 }'
 ```
 
-The entire configuration can also be specified directly on the Gateway instead by using `spec.envoyProxy`. 
+The entire configuration can also be specified directly on the Gateway instead by using `spec.envoyProxy`.
 
 ### Configuration
 
-Create a new EnvoyExtensionPolicy resource to configure the dynamic module for an entire Gateway or per HTTPRoute. 
+Create a new EnvoyExtensionPolicy resource to configure the dynamic module for an entire Gateway or per HTTPRoute.
 
 This EnvoyExtensionPolicy targets the Gateway "eg" created with the quickstart. It loads the Coraza WAF extension with its configuration.
 
@@ -240,7 +240,7 @@ The Coraza WAF should block the request and return a `403 Forbidden` response:
 
 Follow the steps from the [Quickstart](../../quickstart) to uninstall Envoy Gateway and the example manifest.
 
-Delete the EnvoyProxy and EnvoyExtensionPolicy:
+Delete the [EnvoyProxy][] and [EnvoyExtensionPolicy][]:
 
 ```shell
 kubectl delete envoyproxy/my-proxy
