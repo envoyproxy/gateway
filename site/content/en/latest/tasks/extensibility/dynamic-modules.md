@@ -66,7 +66,7 @@ Save and apply the following resource to your cluster:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
-  name: myproxy
+  name: my-proxy
 spec:
   provider:
     type: Kubernetes
@@ -110,7 +110,7 @@ Alternative ways of loading the dynamic module are:
 Verify the EnvoyProxy status:
 
 ```shell
-kubectl get envoyproxy/myproxy -o yaml
+kubectl get envoyproxy/my-proxy -o yaml
 ```
 
 Attach to Gateway via a GatewayClass with `spec.parametersRef`
