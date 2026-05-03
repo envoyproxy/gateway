@@ -5228,7 +5228,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers.<br />Increase the maxItems from 16 to 64, aligning with HTTPHeaderFilter.<br />Revert this change once the upstream Gateway API supports items more than 64. |
+| `headers` | _[HeaderMatch](#headermatch) array_ |  false  |  | Headers is a list of request headers to match. Multiple header values are ANDed together,<br />meaning, a request MUST match all the specified headers. |
 | `methods` | _[MethodMatch](#methodmatch) array_ |  false  |  | Methods is a list of request methods to match. Multiple method values are ORed together,<br />meaning, a request can match any one of the specified methods. If not specified, it matches all methods. |
 | `path` | _[PathMatch](#pathmatch)_ |  false  |  | Path is the request path to match.<br />Support Exact, PathPrefix and RegularExpression match types. |
 | `sourceCIDR` | _[SourceMatch](#sourcematch)_ |  false  |  | SourceCIDR is the client IP Address range to match on. |

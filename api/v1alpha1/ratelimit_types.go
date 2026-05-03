@@ -229,8 +229,6 @@ type RateLimitSelectCondition struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=64
-	// Increase the maxItems from 16 to 64, aligning with HTTPHeaderFilter.
-	// Revert this change once the upstream Gateway API supports items more than 64.
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
 	// Methods is a list of request methods to match. Multiple method values are ORed together,

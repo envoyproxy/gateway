@@ -1467,9 +1467,6 @@ spec:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-
-                                      Increase the maxItems from 16 to 64, aligning with HTTPHeaderFilter.
-                                      Revert this change once the upstream Gateway API supports items more than 64.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
@@ -1854,9 +1851,6 @@ spec:
                                     description: |-
                                       Headers is a list of request headers to match. Multiple header values are ANDed together,
                                       meaning, a request MUST match all the specified headers.
-
-                                      Increase the maxItems from 16 to 64, aligning with HTTPHeaderFilter.
-                                      Revert this change once the upstream Gateway API supports items more than 64.
                                     items:
                                       description: HeaderMatch defines the match attributes
                                         within the HTTP Headers of the request.
