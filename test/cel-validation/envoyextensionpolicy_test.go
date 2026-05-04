@@ -1374,7 +1374,7 @@ func TestEnvoyExtensionPolicyTarget(t *testing.T) {
 				"spec.extProc[0]: Invalid value:",
 				": If shadowMode is enabled, body processing mode must be Streamed or unset.",
 			},
-		}
+		},
 	}
 
 	for _, tc := range cases {
