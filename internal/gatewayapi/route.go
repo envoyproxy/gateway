@@ -2271,7 +2271,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			listener.IncrementAttachedRoutes()
 		}
 
-		if !HasReadyListener(selectedListeners) {
+		if !HasReadyListener(allowedListeners) {
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,

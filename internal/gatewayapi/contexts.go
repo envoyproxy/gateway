@@ -103,6 +103,10 @@ type ListenerContext struct {
 	tlsSecrets        []*corev1.Secret
 	certDNSNames      []string
 
+	// specValid indicates whether per-listener spec validation succeeded.
+	// Conflict detection should only consider listeners with specValid=true.
+	specValid bool
+
 	httpIR *ir.HTTPListener
 }
 
