@@ -42,6 +42,16 @@ services:
     - port: 9000
       name: grpc
       protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: default
+    name: grpc-backend
+  spec:
+    ports:
+    - port: 9000
+      name: grpc
+      protocol: TCP
 endpointSlices:
 - apiVersion: discovery.k8s.io/v1
   kind: EndpointSlice
@@ -60,12 +70,30 @@ endpointSlices:
     - 8.8.8.8
     conditions:
       ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    namespace: default
+    name: endpointslice-grpc-backend
+    labels:
+      kubernetes.io/service-name: grpc-backend
+  addressType: IPv4
+  ports:
+  - name: grpc
+    protocol: TCP
+    port: 9000
+  endpoints:
+  - addresses:
+    - 9.9.9.9
+    conditions:
+      ready: true
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
     name: policy-for-gateway
+    uid: "aaaaaaaa-0000-0000-0000-000000000001" # check: oidc suffix value [c3556d06]
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -121,6 +149,7 @@ securityPolicies:
   metadata:
     namespace: default
     name: policy-for-route
+    uid: "bbbbbbbb-0000-0000-0000-000000000002" # check: oidc suffix value [6ac6170b]
   spec:
     mergeType: StrategicMerge
     targetRefs:
@@ -128,6 +157,10 @@ securityPolicies:
       kind: HTTPRoute
       name: httproute-1
     extAuth:
+      grpc:
+        backendRefs:
+        - name: grpc-backend
+          port: 9000
       contextExtensions:
       - name: shared
         type: ValueRef

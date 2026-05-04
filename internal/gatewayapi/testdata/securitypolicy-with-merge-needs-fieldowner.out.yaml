@@ -117,6 +117,7 @@ securityPolicies:
   metadata:
     name: policy-for-route
     namespace: default
+    uid: bbbbbbbb-0000-0000-0000-000000000002
   spec:
     extAuth:
       contextExtensions:
@@ -134,6 +135,10 @@ securityPolicies:
           key: data
           kind: ConfigMap
           name: context-extension-for-route
+      grpc:
+        backendRefs:
+        - name: grpc-backend
+          port: 9000
     mergeType: StrategicMerge
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -164,6 +169,7 @@ securityPolicies:
   metadata:
     name: policy-for-gateway
     namespace: envoy-gateway
+    uid: aaaaaaaa-0000-0000-0000-000000000001
   spec:
     basicAuth:
       users:
@@ -312,31 +318,31 @@ xdsIR:
             - name: parent-only
               value: '[redacted]'
             grpc:
-              authority: grpc-backend.envoy-gateway:9000
+              authority: grpc-backend.default:9000
               destination:
                 metadata:
                   kind: SecurityPolicy
-                  name: policy-for-gateway
-                  namespace: envoy-gateway
-                name: securitypolicy/envoy-gateway/policy-for-gateway/extauth/0
+                  name: policy-for-route
+                  namespace: default
+                name: securitypolicy/default/policy-for-route/extauth/0
                 settings:
                 - addressType: IP
                   endpoints:
-                  - host: 8.8.8.8
+                  - host: 9.9.9.9
                     port: 9000
                   metadata:
                     kind: Service
                     name: grpc-backend
-                    namespace: envoy-gateway
+                    namespace: default
                     sectionName: "9000"
-                  name: securitypolicy/envoy-gateway/policy-for-gateway/extauth/0/backend/0
+                  name: securitypolicy/default/policy-for-route/extauth/0/backend/0
                   protocol: GRPC
                   weight: 1
             name: securitypolicy/default/policy-for-route
           oidc:
             clientID: client1.apps.googleusercontent.com
             clientSecret: '[redacted]'
-            cookieSuffix: 811c9dc5
+            cookieSuffix: c3556d06
             hmacSecret: '[redacted]'
             logoutPath: /logout
             name: securitypolicy/envoy-gateway/policy-for-gateway
