@@ -10,6 +10,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed deduplicate CA certificates in ClientTrafficPolicy mTLS
 
 # Enhancements that improve performance.
 performance improvements: |
