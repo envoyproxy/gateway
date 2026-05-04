@@ -2006,7 +2006,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 16
+                                    maxItems: 64
                                     type: array
                                   methods:
                                     description: |-
@@ -2390,7 +2390,7 @@ spec:
                                       required:
                                       - name
                                       type: object
-                                    maxItems: 16
+                                    maxItems: 64
                                     type: array
                                   methods:
                                     description: |-
