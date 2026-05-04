@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -276,4 +277,31 @@ func validateCipherSuites(ciphers []string) error {
 		}
 	}
 	return nil
+}
+
+// deduplicatePEMCerts removes duplicate PEM certificate blocks from data.
+func deduplicatePEMCerts(data []byte) []byte {
+	seen := make(map[[sha256.Size]byte]struct{})
+	result := make([]byte, 0, len(data))
+
+	rest := data
+	for len(rest) > 0 {
+		block, remaining := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = remaining
+
+		if block.Type == "CERTIFICATE" {
+			hash := sha256.Sum256(block.Bytes)
+			if _, exists := seen[hash]; exists {
+				continue
+			}
+			seen[hash] = struct{}{}
+		}
+
+		result = append(result, pem.EncodeToMemory(block)...)
+	}
+
+	return result
 }

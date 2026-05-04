@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/pem"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,9 +14,13 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -335,4 +340,126 @@ func TestFilterValidCertificates(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeduplicatePEMCerts(t *testing.T) {
+	rsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
+	require.NoError(t, err)
+
+	ecdsaCert, err := os.ReadFile(filepath.Join("testdata", "tls", "ecdsa-p256-cert.pem"))
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name     string
+		input    []byte
+		expected []byte
+	}{
+		{
+			name:     "single cert unchanged",
+			input:    rsaCert,
+			expected: rsaCert,
+		},
+		{
+			name:     "two distinct certs unchanged",
+			input:    append(append([]byte{}, rsaCert...), ecdsaCert...),
+			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
+		},
+		{
+			name:     "duplicate cert within single bundle is deduplicated",
+			input:    append(append([]byte{}, rsaCert...), rsaCert...),
+			expected: rsaCert,
+		},
+		{
+			name:     "first occurrence kept when cert appears twice in multi-cert bundle",
+			input:    append(append(append([]byte{}, rsaCert...), ecdsaCert...), rsaCert...),
+			expected: append(append([]byte{}, rsaCert...), ecdsaCert...),
+		},
+		{
+			name:     "three copies collapsed to one",
+			input:    append(append(append([]byte{}, rsaCert...), rsaCert...), rsaCert...),
+			expected: rsaCert,
+		},
+		{
+			name:     "empty input returns empty output",
+			input:    []byte{},
+			expected: []byte{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := deduplicatePEMCerts(tc.input)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
+	caCertPEM, err := os.ReadFile(filepath.Join("testdata", "tls", "rsa-cert.pem"))
+	require.NoError(t, err)
+
+	ns := "envoy-gateway"
+
+	// both secrets contain the identical CA PEM
+	makeCASecret := func(name string) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+			Data:       map[string][]byte{CACertKey: caCertPEM},
+		}
+	}
+
+	policy := &egv1a1.ClientTrafficPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "test-policy"},
+		Spec: egv1a1.ClientTrafficPolicySpec{
+			TLS: &egv1a1.ClientTLSSettings{
+				ClientValidation: &egv1a1.ClientValidationContext{
+					CACertificateRefs: []gwapiv1.SecretObjectReference{
+						{Name: "ca-secret-1", Namespace: ptr.To(gwapiv1.Namespace(ns))},
+						{Name: "ca-secret-2", Namespace: ptr.To(gwapiv1.Namespace(ns))},
+					},
+				},
+			},
+		},
+	}
+
+	resources := &resource.Resources{
+		Secrets: []*corev1.Secret{
+			makeCASecret("ca-secret-1"),
+			makeCASecret("ca-secret-2"),
+		},
+		ReferenceGrants: nil,
+	}
+
+	translator := &Translator{
+		TranslatorContext: &TranslatorContext{},
+	}
+	translator.SetSecrets(resources.Secrets)
+
+	// seed irTLSConfig with a server cert so buildListenerTLSParameters doesn't
+	// return early
+	irTLSConfig := &ir.TLSConfig{
+		Certificates: []ir.TLSCertificate{
+			{Name: "dummy"},
+		},
+	}
+
+	result, err := translator.buildListenerTLSParameters(policy, irTLSConfig, resources)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, result.CACertificate)
+
+	// PEM blocks must be 1.
+	pemCount := 0
+	rest := result.CACertificate.Certificate
+	for len(rest) > 0 {
+		var block *pem.Block
+		block, rest = pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		pemCount++
+	}
+	require.Equal(t, 1, pemCount,
+		"expected exactly 1 PEM block after deduplication, got %d — "+
+			"deduplicatePEMCerts call may be missing from buildListenerTLSParameters", pemCount)
 }
