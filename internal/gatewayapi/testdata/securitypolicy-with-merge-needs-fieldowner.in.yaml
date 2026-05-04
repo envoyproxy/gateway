@@ -93,7 +93,8 @@ securityPolicies:
   metadata:
     namespace: envoy-gateway
     name: policy-for-gateway
-    uid: "aaaaaaaa-0000-0000-0000-000000000001" # check: oidc suffix value [c3556d06]
+    # check: oidc suffix value [c3556d06]
+    uid: "aaaaaaaa-0000-0000-0000-000000000001"
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
@@ -149,7 +150,8 @@ securityPolicies:
   metadata:
     namespace: default
     name: policy-for-route
-    uid: "bbbbbbbb-0000-0000-0000-000000000002" # check: oidc suffix value [6ac6170b]
+    # check: oidc suffix value [6ac6170b]
+    uid: "bbbbbbbb-0000-0000-0000-000000000002"
   spec:
     mergeType: StrategicMerge
     targetRefs:
