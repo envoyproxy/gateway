@@ -197,21 +197,6 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-3
-    - matches:
-      - path:
-          value: "/v6-rewrite"
-      # Hostname rewrite filter applied, should use example2.com when doing health check.
-      filters:
-      - type: URLRewrite
-        urlRewrite:
-          hostname: example2.com
-      backendRefs:
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-2
-      - group: gateway.envoyproxy.io
-        kind: Backend
-        name: backend-3
 backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: Backend
