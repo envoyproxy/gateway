@@ -842,7 +842,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 	hasFailClose := false
 	for idx, ep := range policy.Spec.ExtProc {
 		name := irConfigNameForExtProc(policy, idx)
-		extProcIR, err := t.buildExtProc(name, policy, ep, idx, resources, gtwCtx)
+		extProcIR, err := t.buildExtProc(name, policy, &ep, idx, resources, gtwCtx)
 		if err != nil {
 			errs = errors.Join(errs, err)
 			if ep.FailOpen == nil || !*ep.FailOpen {
@@ -863,7 +863,7 @@ func (t *Translator) buildExtProcs(policy *egv1a1.EnvoyExtensionPolicy, resource
 func (t *Translator) buildExtProc(
 	name string,
 	policy *egv1a1.EnvoyExtensionPolicy,
-	extProc egv1a1.ExtProc,
+	extProc *egv1a1.ExtProc,
 	extProcIdx int,
 	resources *resource.Resources,
 	gtwCtx *GatewayContext,
