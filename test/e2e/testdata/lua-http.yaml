@@ -89,9 +89,17 @@ metadata:
   namespace: gateway-conformance-infra
 data:
   lua: |
+    function envoy_on_request(request_handle)
+      local ctx = request_handle:filterContext()
+      if ctx ~= nil then
+        request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "custom_value", ctx["custom_value"])
+      end
+    end
     function envoy_on_response(response_handle)
-      local ctx = response_handle:filterContext()
-      response_handle:headers():add("X-Lua-Filter-Context", ctx["custom_value"])
+      local meta = response_handle:streamInfo():dynamicMetadata():get("envoy.filters.http.lua")
+      if meta ~= nil then
+        response_handle:headers():add("X-Lua-Filter-Context", meta["custom_value"])
+      end
     end
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
