@@ -21,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
@@ -207,7 +206,7 @@ func TestPDB(t *testing.T) {
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
 				MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 10},
 				Patch: &egv1a1.KubernetesPatchSpec{
-					Type: ptr.To(egv1a1.StrategicMerge),
+					Type: new(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
 						Raw: []byte("{\"spec\":{\"maxUnavailable\": 11}}"),
 					},
@@ -225,7 +224,7 @@ func TestPDB(t *testing.T) {
 				},
 			},
 			pdb: &egv1a1.KubernetesPodDisruptionBudgetSpec{
-				Name: ptr.To("custom-pdb-name"),
+				Name: new("custom-pdb-name"),
 			},
 		},
 	}
@@ -293,7 +292,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
-					Type: ptr.To(egv1a1.StrategicMerge),
+					Type: new(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{"spec":{"template":{"spec":{"hostNetwork":true,"dnsPolicy":"ClusterFirstWithHostNet"}}}}`),
 					},
@@ -305,7 +304,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
 				Patch: &egv1a1.KubernetesPatchSpec{
-					Type: ptr.To(egv1a1.StrategicMerge),
+					Type: new(egv1a1.StrategicMerge),
 					Value: apiextensionsv1.JSON{
 						Raw: []byte(`{
     "spec": {
@@ -335,18 +334,18 @@ func TestDeployment(t *testing.T) {
 			caseName:  "custom",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -358,7 +357,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -367,14 +366,14 @@ func TestDeployment(t *testing.T) {
 			caseName:  "extension-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -388,7 +387,7 @@ func TestDeployment(t *testing.T) {
 							Value: "env_b_value",
 						},
 					},
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -400,7 +399,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -409,19 +408,19 @@ func TestDeployment(t *testing.T) {
 			caseName:  "default-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
 					Env:   nil,
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -433,7 +432,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -442,14 +441,14 @@ func TestDeployment(t *testing.T) {
 			caseName:  "override-env",
 			rateLimit: rateLimit,
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -459,7 +458,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -471,7 +470,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -492,14 +491,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 				},
 				Container: &egv1a1.KubernetesContainerSpec{
@@ -513,7 +512,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -525,7 +524,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -546,14 +545,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 					Tolerations: []corev1.Toleration{
 						{
@@ -575,7 +574,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -587,7 +586,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				},
 			},
@@ -608,14 +607,14 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 			deploy: &egv1a1.KubernetesDeploymentSpec{
-				Replicas: ptr.To[int32](2),
+				Replicas: new(int32(2)),
 				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: ptr.To[int64](1000),
+						RunAsUser: new(int64(1000)),
 					},
 					Tolerations: []corev1.Toleration{
 						{
@@ -631,7 +630,7 @@ func TestDeployment(t *testing.T) {
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  "custom-cert",
-									DefaultMode: ptr.To[int32](420),
+									DefaultMode: new(int32(420)),
 								},
 							},
 						},
@@ -648,7 +647,7 @@ func TestDeployment(t *testing.T) {
 							Value: "true",
 						},
 					},
-					Image: ptr.To("custom-image"),
+					Image: new("custom-image"),
 					Resources: &corev1.ResourceRequirements{
 						Limits: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("400m"),
@@ -660,7 +659,7 @@ func TestDeployment(t *testing.T) {
 						},
 					},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 					VolumeMounts: []corev1.VolumeMount{},
 				},
@@ -726,7 +725,7 @@ func TestDeployment(t *testing.T) {
 				},
 				Telemetry: &egv1a1.RateLimitTelemetry{
 					Tracing: &egv1a1.RateLimitTracing{
-						SamplingRate: ptr.To[uint32](55),
+						SamplingRate: new(uint32(55)),
 						Provider: &egv1a1.RateLimitTracingProvider{
 							URL: "trace-collector.envoy-gateway-system.svc.cluster.local:4317",
 						},
@@ -829,15 +828,15 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				},
 			},
 			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-				MinReplicas: ptr.To[int32](5),
-				MaxReplicas: ptr.To[int32](10),
+				MinReplicas: new(int32(5)),
+				MaxReplicas: new(int32(10)),
 				Metrics: []autoscalingv2.MetricSpec{
 					{
 						Resource: &autoscalingv2.ResourceMetricSource{
 							Name: corev1.ResourceCPU,
 							Target: autoscalingv2.MetricTarget{
 								Type:               autoscalingv2.UtilizationMetricType,
-								AverageUtilization: ptr.To[int32](60),
+								AverageUtilization: new(int32(60)),
 							},
 						},
 						Type: autoscalingv2.ResourceMetricSourceType,
@@ -847,7 +846,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 							Name: corev1.ResourceMemory,
 							Target: autoscalingv2.MetricTarget{
 								Type:               autoscalingv2.UtilizationMetricType,
-								AverageUtilization: ptr.To[int32](70),
+								AverageUtilization: new(int32(70)),
 							},
 						},
 						Type: autoscalingv2.ResourceMetricSourceType,
@@ -867,7 +866,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 			},
 			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{},
 			rateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
-				Name: ptr.To("foo"),
+				Name: new("foo"),
 			},
 		},
 		{
@@ -881,7 +880,7 @@ func TestHorizontalPodAutoscaler(t *testing.T) {
 				},
 			},
 			rateLimitHpa: &egv1a1.KubernetesHorizontalPodAutoscalerSpec{
-				Name: ptr.To("custom-hpa-name"),
+				Name: new("custom-hpa-name"),
 			},
 		},
 	}

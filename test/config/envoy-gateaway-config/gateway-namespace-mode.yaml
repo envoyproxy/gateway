@@ -24,3 +24,13 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+    telemetry:
+      traces:
+        sink:
+          type: OpenTelemetry
+          openTelemetry:
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
+            protocol: grpc
+        samplingRate:
+          numerator: 100

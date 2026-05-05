@@ -189,6 +189,47 @@ _Appears in:_
 | `GRPC` | ActiveHealthCheckerTypeGRPC defines the GRPC type of health checking.<br /> | 
 
 
+#### AdmissionControl
+
+
+
+AdmissionControl configures health-based load shedding for upstream backends.
+
+Envoy tracks recent upstream responses over a sliding sampling window. When the
+observed success rate drops below the configured threshold, Envoy
+probabilistically rejects new requests before forwarding them upstream. This can
+reduce pressure on degraded backends and give them time to recover.
+
+All fields are optional. When omitted, Envoy's admission control defaults are used.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `samplingWindow` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | SamplingWindow defines the time window over which request success rates are calculated.<br />Must be at least 1s; Envoy truncates the window to whole seconds and uses it as the<br />denominator in RPS calculations, so sub-second values would produce a zero denominator.<br />Defaults to 30s if not specified. |
+| `minSuccessRate` | _integer_ |  false  |  | MinSuccessRate is the lowest request success rate, as a percentage in the<br />range [1, 100], at which the filter will not reject requests. Defaults to 95 if<br />not specified. Envoy rejects values below 1%, so values lower than 1 are not allowed. |
+| `rejectionAggression` | _integer_ |  false  |  | RejectionAggression controls how steeply the rejection probability rises<br />as the observed success rate falls below MinSuccessRate. A value of 1<br />produces a linear curve; higher values reject more aggressively for a<br />given drop in success rate. Must be greater than 0; values below 1 are<br />clamped to 1. Defaults to 1. |
+| `minRequestRate` | _integer_ |  false  |  | MinRequestRate defines the minimum requests per second below which requests will<br />pass through the filter without rejection. Defaults to 0 if not specified. |
+| `maxRejectionPercent` | _integer_ |  false  |  | MaxRejectionPercent represents the upper limit of the rejection probability,<br />expressed as a percentage in the range [0, 100]. Defaults to 80 if not specified. |
+| `successCriteria` | _[AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)_ |  false  |  | SuccessCriteria defines what constitutes a successful request for both HTTP and gRPC. |
+
+
+#### AdmissionControlSuccessCriteria
+
+
+
+AdmissionControlSuccessCriteria defines the criteria for determining successful requests.
+
+_Appears in:_
+- [AdmissionControl](#admissioncontrol)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `http` | _[HTTPSuccessCriteria](#httpsuccesscriteria)_ |  false  |  | HTTP defines success criteria for HTTP requests. |
+| `grpc` | _[GRPCSuccessCriteria](#grpcsuccesscriteria)_ |  false  |  | GRPC defines success criteria for gRPC requests. |
+
+
 #### AppProtocolType
 
 _Underlying type:_ _string_
@@ -542,7 +583,9 @@ _Appears in:_
 | `http2` | _[HTTP2Settings](#http2settings)_ |  false  |  | HTTP2 provides HTTP/2 configuration for backend connections. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType determines how this configuration is merged with existing BackendTrafficPolicy<br />configurations targeting a parent resource. When set, this configuration will be merged<br />into a parent BackendTrafficPolicy (i.e. the one targeting a Gateway or Listener).<br />This field cannot be set when targeting a parent resource (Gateway).<br />If unset, no merging occurs, and only the most specific configuration takes effect. |
 | `rateLimit` | _[RateLimitSpec](#ratelimitspec)_ |  false  |  | RateLimit allows the user to limit the number of incoming requests<br />to a predefined value based on attributes within the traffic flow. |
+| `bandwidthLimit` | _[BandwidthLimitSpec](#bandwidthlimitspec)_ |  false  |  | BandwidthLimit allows the user to limit the bandwidth of traffic<br />sent to and received from the backend. |
 | `faultInjection` | _[FaultInjection](#faultinjection)_ |  false  |  | FaultInjection defines the fault injection policy to be applied. This configuration can be used to<br />inject delays and abort requests to mimic failure scenarios such as service failures and overloads |
+| `admissionControl` | _[AdmissionControl](#admissioncontrol)_ |  false  |  | AdmissionControl defines the admission control policy to be applied. This configuration<br />probabilistically rejects requests based on the success rate of previous requests in a<br />configurable sliding time window. |
 | `useClientProtocol` | _boolean_ |  false  |  | UseClientProtocol configures Envoy to prefer sending requests to backends using<br />the same HTTP protocol that the incoming request used. Defaults to false, which means<br />that Envoy will use the protocol indicated by the attached BackendRef. |
 | `compression` | _[Compression](#compression) array_ |  false  |  | The compression config for the http streams.<br />Deprecated: Use Compressor instead. |
 | `compressor` | _[Compression](#compression) array_ |  false  |  | The compressor config for the http streams.<br />This provides more granular control over compression configuration.<br />Order matters: The first compressor in the list is preferred when q-values in Accept-Encoding are equal. |
@@ -598,6 +641,97 @@ _Appears in:_
 | `errorUtilizationPenaltyPercent` | _integer_ |  false  |  | ErrorUtilizationPenaltyPercent adjusts endpoint weights based on the error rate (eps/qps).<br />This is expressed as a percentage-based integer where 100 represents 1.0, 150 represents 1.5, etc.<br />For example:<br />- 100 => 1.0x<br />- 120 => 1.2x<br />- 200 => 2.0x<br />Must be non-negative. |
 | `metricNamesForComputingUtilization` | _string array_ |  false  |  | Metric names used to compute utilization if application_utilization is not set.<br />For map fields in ORCA proto, use the form "<map_field>.<key>", e.g., "named_metrics.foo". |
 | `keepResponseHeaders` | _boolean_ |  false  | false | KeepResponseHeaders keeps the ORCA load report headers/trailers before sending the response to the client.<br />Defaults to false. |
+
+
+#### BandwidthLimitRequestConfig
+
+
+
+BandwidthLimitRequestConfig defines the bandwidth limit configuration for the request direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+
+
+#### BandwidthLimitResponseConfig
+
+
+
+BandwidthLimitResponseConfig defines the bandwidth limit configuration for the response direction.
+
+_Appears in:_
+- [BandwidthLimitSpec](#bandwidthlimitspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `limit` | _[BandwidthLimitValue](#bandwidthlimitvalue)_ |  true  |  | Limit specifies the bandwidth limit as a bytes-per-unit throughput rate. |
+| `responseTrailers` | _[BandwidthLimitResponseTrailers](#bandwidthlimitresponsetrailers)_ |  false  |  | ResponseTrailers configures the trailer headers appended to responses<br />when bandwidth limiting introduces delays. |
+
+
+#### BandwidthLimitResponseTrailers
+
+
+
+BandwidthLimitResponseTrailers defines the trailer headers appended to responses.
+
+_Appears in:_
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `prefix` | _string_ |  false  |  | Prefix is prepended to each trailer header name.<br />If not set, no prefix is added and the trailers are named as-is.<br />For example, setting "x-eg" produces trailers such as "x-eg-bandwidth-request-delay-ms",<br />while leaving it unset produces "bandwidth-request-delay-ms".<br />The following four trailers can be added:<br />"bandwidth-request-delay-ms" is delay time in milliseconds it took for the request stream transfer<br />including request body transfer time and the time added by the filter.<br />"bandwidth-response-delay-ms" is delay time in milliseconds it took for the response stream transfer<br />including response body transfer time and the time added by the filter.<br />"bandwidth-request-filter-delay-ms" is delay time in milliseconds in request stream transfer added by the filter.<br />"bandwidth-response-filter-delay-ms" is delay time in milliseconds that added by the filter. |
+
+
+#### BandwidthLimitSpec
+
+
+
+BandwidthLimitSpec defines the desired state of BandwidthLimit.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `request` | _[BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)_ |  false  |  | Request configures bandwidth limits for traffic sent to the backend. |
+| `response` | _[BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)_ |  false  |  | Response configures bandwidth limits for traffic sent from the backend. |
+
+
+#### BandwidthLimitUnit
+
+_Underlying type:_ _string_
+
+BandwidthLimitUnit specifies the intervals for setting bandwidth limits.
+Valid BandwidthLimitUnit values are "Second", "Minute", "Hour".
+
+_Appears in:_
+- [BandwidthLimitValue](#bandwidthlimitvalue)
+
+| Value | Description |
+| ----- | ----------- |
+| `Second` | BandwidthLimitUnitSecond specifies the bandwidth limit interval to be 1 second.<br /> | 
+| `Minute` | BandwidthLimitUnitMinute specifies the bandwidth limit interval to be 1 minute.<br /> | 
+| `Hour` | BandwidthLimitUnitHour specifies the bandwidth limit interval to be 1 hour.<br /> | 
+
+
+#### BandwidthLimitValue
+
+
+
+BandwidthLimitValue defines the bandwidth limit value and its time unit.
+
+_Appears in:_
+- [BandwidthLimitRequestConfig](#bandwidthlimitrequestconfig)
+- [BandwidthLimitResponseConfig](#bandwidthlimitresponseconfig)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `value` | _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#quantity-resource-api)_ |  true  |  | Value specifies the bandwidth limit. |
+| `unit` | _[BandwidthLimitUnit](#bandwidthlimitunit)_ |  true  |  | Unit specifies the time unit for the bandwidth limit (e.g. Second, Minute, Hour). |
 
 
 #### BasicAuth
@@ -1329,6 +1463,26 @@ _Appears in:_
 | `loadGlobally` | _boolean_ |  false  | false | LoadGlobally loads the dynamic module with the RTLD_GLOBAL flag.<br />By default, modules are loaded with RTLD_LOCAL to avoid symbol conflicts.<br />Set this to true when the module needs to share symbols with other<br />dynamic libraries it loads.<br />Defaults to false. |
 
 
+#### DynamicModuleLBPolicy
+
+
+
+DynamicModuleLBPolicy configures a custom load balancing algorithm
+implemented as a dynamic module (runtime-loaded shared library).
+The module must be registered in the EnvoyProxy resource's dynamicModules allowlist.
+
+See https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/load_balancing_policies/dynamic_modules/v3/dynamic_modules.proto
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  true  |  | Name references a dynamic module registered in the EnvoyProxy resource's<br />dynamicModules list. The referenced module must exist in the registry;<br />otherwise, the policy will be rejected. |
+| `lbPolicyName` | _string_ |  true  |  | LBPolicyName identifies a specific load balancer implementation within<br />the dynamic module. A single shared library can contain multiple LB<br />policy implementations. This value is passed to the module's<br />initialization function to select the appropriate implementation. |
+| `config` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | Config is optional configuration for the module's load balancer<br />implementation. This is serialized and passed to the module's<br />initialization function. |
+
+
 #### DynamicModuleSource
 
 
@@ -1474,6 +1628,7 @@ _Appears in:_
 | `envoy.filters.http.rbac` | EnvoyFilterRBAC defines the Envoy RBAC filter.<br /> | 
 | `envoy.filters.http.local_ratelimit` | EnvoyFilterLocalRateLimit defines the Envoy HTTP local rate limit filter.<br /> | 
 | `envoy.filters.http.ratelimit` | EnvoyFilterRateLimit defines the Envoy HTTP rate limit filter.<br /> | 
+| `envoy.filters.http.bandwidth_limit` | EnvoyFilterBandwidthLimit defines the Envoy HTTP bandwidth limit filter.<br /> | 
 | `envoy.filters.http.grpc_web` | EnvoyFilterGRPCWeb defines the Envoy HTTP gRPC-web filter.<br /> | 
 | `envoy.filters.http.grpc_stats` | EnvoyFilterGRPCStats defines the Envoy HTTP gRPC stats filter.<br /> | 
 | `envoy.filters.http.credential_injector` | EnvoyFilterCredentialInjector defines the Envoy HTTP credential injector filter.<br /> | 
@@ -1502,10 +1657,11 @@ EnvoyGateway is the schema for the envoygateways API.
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
+| `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `gatewayAPI` | _[GatewayAPISettings](#gatewayapisettings)_ |  false  |  | GatewayAPI defines feature flags for experimental Gateway API resources.<br />These APIs live under the gateway.networking.x-k8s.io group and are opt-in. |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
-| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />The merge strategy for a more specific EnvoyProxy is controlled by its<br />spec.mergeType field. If mergeType is unset, the more specific EnvoyProxy<br />completely replaces less specific settings.<br />Note: mergeType has no effect in this default EnvoyProxySpec. |
 
 
 #### EnvoyGatewayAdmin
@@ -1715,6 +1871,7 @@ _Appears in:_
 
 _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -1790,10 +1947,11 @@ _Appears in:_
 | `xdsServer` | _[XDSServer](#xdsserver)_ |  false  |  | XDSServer defines the configuration for the Envoy Gateway xDS gRPC server.<br />If unspecified, default connection keepalive settings will be used. |
 | `rateLimit` | _[RateLimit](#ratelimit)_ |  false  |  | RateLimit defines the configuration associated with the Rate Limit service<br />deployed by Envoy Gateway required to implement the Global Rate limiting<br />functionality. The specific rate limit service used here is the reference<br />implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.<br />This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` | _[ExtensionManager](#extensionmanager)_ |  false  |  | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.<br />Warning: Enabling an Extension Server may lead to complete security compromise of your system.<br />Users that control the Extension Server can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
+| `extensionManagers` | _[ExtensionManager](#extensionmanager) array_ |  false  |  | ExtensionManagers defines multiple extension managers to register for the Envoy Gateway Control Plane.<br />Each extension's output becomes the next extension's input, enabling sequential chaining.<br />Each entry must have a unique Name field for identification.<br />This field is mutually exclusive with ExtensionManager.<br />Warning: Enabling Extension Servers may lead to complete security compromise of your system.<br />Users that control Extension Servers can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `extensionApis` | _[ExtensionAPISettings](#extensionapisettings)_ |  false  |  | ExtensionAPIs defines the settings related to specific Gateway API Extensions<br />implemented by Envoy Gateway |
 | `gatewayAPI` | _[GatewayAPISettings](#gatewayapisettings)_ |  false  |  | GatewayAPI defines feature flags for experimental Gateway API resources.<br />These APIs live under the gateway.networking.x-k8s.io group and are opt-in. |
 | `runtimeFlags` | _[RuntimeFlags](#runtimeflags)_ |  true  |  | RuntimeFlags defines the runtime flags for Envoy Gateway.<br />Unlike ExtensionAPIs, these flags are temporary and will be removed in future releases once the related features are stable. |
-| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />Currently, the most specific EnvoyProxy configuration wins completely (replace semantics).<br />A future release will introduce merge semantics to allow combining configurations<br />across multiple levels. |
+| `envoyProxy` | _[EnvoyProxySpec](#envoyproxyspec)_ |  false  |  | EnvoyProxy defines the default EnvoyProxy configuration that applies<br />to all managed Envoy Proxy fleet. This is an optional field and when<br />provided, the settings from this EnvoyProxySpec serve as the base<br />defaults for all Envoy Proxy instances.<br />The hierarchy for EnvoyProxy configuration is (highest to lowest priority):<br />1. Gateway-level EnvoyProxy (referenced via Gateway.spec.infrastructure.parametersRef)<br />2. GatewayClass-level EnvoyProxy (referenced via GatewayClass.spec.parametersRef)<br />3. This EnvoyProxy default spec<br />The merge strategy for a more specific EnvoyProxy is controlled by its<br />spec.mergeType field. If mergeType is unset, the more specific EnvoyProxy<br />completely replaces less specific settings.<br />Note: mergeType has no effect in this default EnvoyProxySpec. |
 
 
 #### EnvoyGatewayTelemetry
@@ -1810,6 +1968,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `metrics` | _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ |  true  |  | Metrics defines metrics configuration for envoy gateway. |
+| `traces` | _[EnvoyGatewayTraces](#envoygatewaytraces)_ |  true  |  | Traces defines traces configuration for envoy gateway. |
 
 
 #### EnvoyGatewayTopologyInjector
@@ -1824,6 +1983,37 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `disabled` | _boolean_ |  false  |  |  |
+
+
+#### EnvoyGatewayTraceSink
+
+
+
+EnvoyGatewayTraceSink defines control plane
+trace sinks where traces are sent to.
+
+_Appears in:_
+- [EnvoyGatewayTraces](#envoygatewaytraces)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[TraceSinkType](#tracesinktype)_ |  true  | OpenTelemetry | Type defines the trace sink type.<br />EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` | _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ |  true  |  | OpenTelemetry defines the configuration for OpenTelemetry sink.<br />It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayTraces
+
+
+
+EnvoyGatewayTraces defines control plane tracing configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `sink` | _[EnvoyGatewayTraceSink](#envoygatewaytracesink)_ |  true  |  | Sink defines the trace sink where traces are sent to. |
+| `samplingRate` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | SamplingRate controls the fraction of traces that are sampled.<br />The value is expressed as a Gateway API Fraction (numerator/denominator).<br />If denominator is omitted, it defaults to 100. |
 
 
 #### EnvoyJSONPatchConfig
@@ -2030,13 +2220,14 @@ _Appears in:_
 | `extraArgs` | _string array_ |  false  |  | ExtraArgs defines additional command line options that are provided to Envoy.<br />More info: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#command-line-options<br />Note: some command line options are used internally(e.g. --log-level) so they cannot be provided here. |
 | `mergeGateways` | _boolean_ |  false  |  | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.<br />Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.<br />This means that the port, protocol and hostname tuple must be unique for every listener.<br />If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
 | `shutdown` | _[ShutdownConfig](#shutdownconfig)_ |  false  |  | Shutdown defines configuration for graceful envoy shutdown process. |
-| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
+| `filterOrder` | _[FilterPosition](#filterposition) array_ |  false  |  | FilterOrder defines the order of filters in the Envoy proxy's HTTP filter chain.<br />The FilterPosition in the list will be applied in the order they are defined.<br />If unspecified, the default filter order is applied.<br />Default filter order is:<br />- envoy.filters.http.custom_response<br />- envoy.filters.http.health_check<br />- envoy.filters.http.fault<br />- envoy.filters.http.cors<br />- envoy.filters.http.header_mutation<br />- envoy.filters.http.ext_authz<br />- envoy.filters.http.api_key_auth<br />- envoy.filters.http.basic_auth<br />- envoy.filters.http.oauth2<br />- envoy.filters.http.jwt_authn<br />- envoy.filters.http.stateful_session<br />- envoy.filters.http.buffer<br />- envoy.filters.http.lua<br />- envoy.filters.http.ext_proc<br />- envoy.filters.http.wasm<br />- envoy.filters.http.dynamic_modules<br />- envoy.filters.http.geoip<br />- envoy.filters.http.rbac<br />- envoy.filters.http.local_ratelimit<br />- envoy.filters.http.ratelimit<br />- envoy.filters.http.bandwidth_limit<br />- envoy.filters.http.grpc_web<br />- envoy.filters.http.grpc_stats<br />- envoy.filters.http.credential_injector<br />- envoy.filters.http.compressor<br />- envoy.filters.http.dynamic_forward_proxy<br />- envoy.filters.http.router<br />Note: "envoy.filters.http.router" cannot be reordered, it's always the last filter in the chain. |
 | `backendTLS` | _[BackendTLSConfig](#backendtlsconfig)_ |  false  |  | BackendTLS is the TLS configuration for the Envoy proxy to use when connecting to backends.<br />These settings are applied on backends for which TLS policies are specified. |
 | `ipFamily` | _[IPFamily](#ipfamily)_ |  false  |  | IPFamily specifies the IP family for the EnvoyProxy fleet.<br />This setting only affects the Gateway listener port and does not impact<br />other aspects of the Envoy proxy configuration.<br />If not specified, the system will operate as follows:<br />- It defaults to IPv4 only.<br />- IPv6 and dual-stack environments are not supported in this default configuration.<br />Note: To enable IPv6 or dual-stack functionality, explicit configuration is required. |
 | `preserveRouteOrder` | _boolean_ |  false  |  | PreserveRouteOrder determines if the order of matching for HTTPRoutes is determined by Gateway-API<br />specification (https://gateway-api.sigs.k8s.io/reference/1.4/spec/#httprouterule)<br />or preserves the order defined by users in the HTTPRoute's HTTPRouteRule list.<br />Default: False |
 | `luaValidation` | _[LuaValidation](#luavalidation)_ |  false  |  | LuaValidation determines strictness of the Lua script validation for Lua EnvoyExtensionPolicies<br />Default: Strict |
-| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources. Each entry registers a module by<br />a logical name and specifies the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
+| `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
+| `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
 
 
 #### EnvoyProxyStatus
@@ -2088,6 +2279,7 @@ _Appears in:_
 | `timeout` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | Timeout defines the timeout for requests to the external authorization service.<br />If not specified, defaults to 10 seconds. |
 | `failOpen` | _boolean_ |  false  | false | FailOpen is a switch used to control the behavior when a response from the External Authorization service cannot be obtained.<br />If FailOpen is set to true, the system allows the traffic to pass through.<br />Otherwise, if it is set to false or not set (defaulting to false),<br />the system blocks the traffic and returns a HTTP 5xx error, reflecting a fail-closed approach.<br />This setting determines whether to prioritize accessibility over strict security in case of authorization service failure.<br />If set to true, the External Authorization will also be bypassed if its configuration is invalid. |
 | `recomputeRoute` | _boolean_ |  false  |  | RecomputeRoute clears the route cache and recalculates the routing decision.<br />This field must be enabled if the headers added or modified by the ExtAuth are used for<br />route matching decisions. If the recomputation selects a new route, features targeting<br />the new matched route will be applied. |
+| `includeRouteMetadata` | _boolean_ |  false  |  | IncludeRouteMetadata sends Envoy Gateway's built-in route metadata to the<br />external authorization service as context.<br />This includes Envoy Gateway's built-in metadata for the selected route in<br />the "envoy-gateway" metadata namespace.<br />The metadata is exposed under the "resources" field as a list of route<br />resource objects. For example:<br />envoy-gateway:<br />  resources:<br />  - kind: HTTPRoute<br />    name: backend<br />    namespace: default<br />    annotations:<br />      foo: bar<br />The resource object may include fields such as kind, namespace, name,<br />sectionName, and supported route annotations. |
 | `contextExtensions` | _[ContextExtension](#contextextension) array_ |  false  |  | ContextExtensions are analogous to http_request.headers, however these<br />contents will not be sent to the upstream server. This provides an<br />extension mechanism for sending additional information to the auth server<br />without modifying the proto definition. It maps to the internal opaque<br />context in the filter chain. |
 | `statusOnError` | _integer_ |  false  |  | Sets the HTTP status that is returned when the authorization service returns an error<br />or cannot be reached. Defaults to 403 Forbidden.<br />Only 4xx and 5xx status codes are supported. |
 
@@ -2177,6 +2369,7 @@ _Appears in:_
 | `enableEnvoyPatchPolicy` | _boolean_ |  true  |  | EnableEnvoyPatchPolicy enables Envoy Gateway to<br />reconcile and implement the EnvoyPatchPolicy resources.<br />Warning: Enabling `EnvoyPatchPolicy` may lead to complete security compromise of your system.<br />Users with `EnvoyPatchPolicy` permissions can inject arbitrary configuration to proxies,<br />leading to high Confidentiality, Integrity and Availability risks. |
 | `enableBackend` | _boolean_ |  true  |  | EnableBackend enables Envoy Gateway to<br />reconcile and implement the Backend resources. |
 | `disableLua` | _boolean_ |  true  |  | DisableLua determines if Lua EnvoyExtensionPolicies should be disabled.<br />If set to true, the Lua EnvoyExtensionPolicy feature will be disabled. |
+| `enableSDSSecretRef` | _boolean_ |  true  |  | EnableSDSSecretRef enables read SDS(Secret Discovery Service) settings from a secret(with type gateway.envoyproxy.io/sds). |
 
 
 #### ExtensionHooks
@@ -2206,8 +2399,9 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
+| `name` | _string_ |  false  |  | Name is a unique identifier for this extension manager. Required when using<br />the plural ExtensionManagers field. Used for logging, metrics, and error identification. |
 | `resources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | Resources defines the set of K8s resources the extension will handle as route<br />filter resources |
-| `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached GatewayAPI policies |
+| `policyResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | PolicyResources defines the set of K8S resources the extension server will handle<br />as directly attached Gateway API policies. Only policies in the same namespace as<br />the target Gateway resources are supported. Cross-namespace attachments are not supported. |
 | `backendResources` | _[GroupVersionKind](#groupversionkind) array_ |  false  |  | BackendResources defines the set of K8s resources the extension will handle as<br />custom backendRef resources. These resources can be referenced in HTTPRoute<br />backendRefs to enable support for custom backend types (e.g., S3, Lambda, etc.)<br />that are not natively supported by Envoy Gateway. |
 | `hooks` | _[ExtensionHooks](#extensionhooks)_ |  true  |  | Hooks defines the set of hooks the extension supports |
 | `service` | _[ExtensionService](#extensionservice)_ |  true  |  | Service defines the configuration of the extension service that the Envoy<br />Gateway Control Plane will call through extension hooks. |
@@ -2440,6 +2634,51 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `enableWeb` | _boolean_ |  false  |  | EnableWeb configures the gRPC-web filter on the listener.<br />The gRPC-web filter allows clients (typically browsers) to make gRPC calls<br />using HTTP/1.1 or HTTP/2.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
+
+
+#### GRPCSuccessCode
+
+_Underlying type:_ _string_
+
+GRPCSuccessCode defines gRPC status codes as defined in
+https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc.
+
+_Appears in:_
+- [GRPCSuccessCriteria](#grpcsuccesscriteria)
+
+| Value | Description |
+| ----- | ----------- |
+| `Ok` |  | 
+| `Cancelled` |  | 
+| `Unknown` |  | 
+| `InvalidArgument` |  | 
+| `DeadlineExceeded` |  | 
+| `NotFound` |  | 
+| `AlreadyExists` |  | 
+| `PermissionDenied` |  | 
+| `ResourceExhausted` |  | 
+| `FailedPrecondition` |  | 
+| `Aborted` |  | 
+| `OutOfRange` |  | 
+| `Unimplemented` |  | 
+| `Internal` |  | 
+| `Unavailable` |  | 
+| `DataLoss` |  | 
+| `Unauthenticated` |  | 
+
+
+#### GRPCSuccessCriteria
+
+
+
+GRPCSuccessCriteria defines success criteria for gRPC requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `statusCodes` | _[GRPCSuccessCode](#grpcsuccesscode) array_ |  false  |  | StatusCodes defines gRPC status codes that are considered successful.<br />Status codes are defined in https://github.com/grpc/grpc/blob/master/doc/statuscodes.md#status-codes-and-their-use-in-grpc. |
 
 
 #### Gateway
@@ -2793,7 +3032,8 @@ _Appears in:_
 | `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent.<br />Deprecated: Use BackendRefs instead. |
 | `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs references a Kubernetes object that represents the<br />backend server to which the authorization request will be sent. |
 | `backendSettings` | _[ClusterSettings](#clustersettings)_ |  false  |  | BackendSettings holds configuration for managing the connection<br />to the backend. |
-| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello". |
+| `path` | _string_ |  false  |  | Path is the path of the HTTP External Authorization service.<br />If path is specified, the authorization request will be sent to that path,<br />or else the authorization request will use the path of the original request.<br />Please note that the original request path will be appended to the path specified here.<br />For example, if the original request path is "/hello", and the path specified here is "/auth",<br />then the path of the authorization request will be "/auth/hello". If the path is not specified,<br />the path of the authorization request will be "/hello".<br />Only one of Path or PathOverride can be set. |
+| `pathOverride` | _string_ |  false  |  | PathOverride replaces the original request path in the authorization request.<br />If set, the path will be overridden to this value during authorization.<br />For example, if the original request path is "/hello", and PathOverride is set to "/auth",<br />then the path of the authorization request will be "/auth".<br />Only one of Path or PathOverride can be set. |
 | `headersToBackend` | _string array_ |  false  |  | HeadersToBackend are the authorization response headers that will be added<br />to the original client request before sending it to the backend server.<br />Note that coexisting headers will be overridden.<br />If not specified, no authorization response headers will be added to the<br />original client request. |
 
 
@@ -2936,8 +3176,23 @@ HTTPStatus defines the http status code.
 
 _Appears in:_
 - [HTTPActiveHealthChecker](#httpactivehealthchecker)
+- [HTTPSuccessCriteria](#httpsuccesscriteria)
 - [RetryOn](#retryon)
 
+
+
+#### HTTPSuccessCriteria
+
+
+
+HTTPSuccessCriteria defines success criteria for HTTP requests.
+
+_Appears in:_
+- [AdmissionControlSuccessCriteria](#admissioncontrolsuccesscriteria)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `statusCodes` | _[HTTPStatus](#httpstatus) array_ |  false  |  | StatusCodes defines HTTP status codes that are considered successful. |
 
 
 #### HTTPTimeout
@@ -3699,7 +3954,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization". |
+| `type` | _[LoadBalancerType](#loadbalancertype)_ |  true  |  | Type decides the type of Load Balancer policy.<br />Valid LoadBalancerType values are<br />"ConsistentHash",<br />"LeastRequest",<br />"Random",<br />"RoundRobin",<br />"BackendUtilization",<br />"DynamicModule". |
 | `consistentHash` | _[ConsistentHash](#consistenthash)_ |  false  |  | ConsistentHash defines the configuration when the load balancer type is<br />set to ConsistentHash |
 | `backendUtilization` | _[BackendUtilization](#backendutilization)_ |  false  |  | BackendUtilization defines the configuration when the load balancer type is<br />set to BackendUtilization. |
 | `endpointOverride` | _[EndpointOverride](#endpointoverride)_ |  false  |  | EndpointOverride defines the configuration for endpoint override.<br />When specified, the load balancer will attempt to route requests to endpoints<br />based on the override information extracted from request headers or metadata.<br /> If the override endpoints are not available, the configured load balancer policy will be used as fallback. |
@@ -3723,6 +3978,7 @@ _Appears in:_
 | `Random` | RandomLoadBalancerType load balancer policy.<br /> | 
 | `RoundRobin` | RoundRobinLoadBalancerType load balancer policy.<br /> | 
 | `BackendUtilization` | BackendUtilizationLoadBalancerType load balancer policy.<br /> | 
+| `DynamicModule` | DynamicModuleLoadBalancerType load balancer policy.<br />+notImplementedHide<br /> | 
 
 
 #### LocalDynamicModuleSource
@@ -3890,6 +4146,7 @@ MergeType defines the type of merge operation
 
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+- [EnvoyProxySpec](#envoyproxyspec)
 - [KubernetesPatchSpec](#kubernetespatchspec)
 - [SecurityPolicySpec](#securitypolicyspec)
 
@@ -3897,6 +4154,7 @@ _Appears in:_
 | ----- | ----------- |
 | `StrategicMerge` | StrategicMerge indicates a strategic merge patch type<br /> | 
 | `JSONMerge` | JSONMerge indicates a JSON merge patch type<br /> | 
+| `Replace` | Replace type - ie no merging<br /> | 
 
 
 #### MethodMatch
@@ -3953,6 +4211,7 @@ _Appears in:_
 | `denyRedirect` | _[OIDCDenyRedirect](#oidcdenyredirect)_ |  false  |  | Any request that matches any of the provided matchers (with either tokens that are expired or missing tokens) will not be redirected to the OIDC Provider.<br />This behavior can be useful for AJAX or machine requests. |
 | `logoutPath` | _string_ |  true  |  | The path to log a user out, clearing their credential cookies.<br />If not specified, uses a default logout path "/logout" |
 | `forwardAccessToken` | _boolean_ |  false  |  | ForwardAccessToken indicates whether the Envoy should forward the access token<br />via the Authorization header Bearer scheme to the upstream.<br />If not specified, defaults to false. |
+| `forwardIDToken` | _[OIDCTokenForwarding](#oidctokenforwarding)_ |  false  |  | ForwardIDToken configures forwarding of the OIDC ID token to the upstream.<br />If the configured header is "Authorization", EG forwards the ID token using<br />the "Bearer " prefix. For any other header, EG forwards the raw token value.<br />If not specified, the ID token will not be forwarded. |
 | `defaultTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DefaultTokenTTL is the default lifetime of the id token and access token.<br />Please note that Envoy will always use the expiry time from the response<br />of the authorization server if it is provided. This field is only used when<br />the expiry time is not provided by the authorization.<br />If not specified, defaults to 0. In this case, the "expires_in" field in<br />the authorization response must be set by the authorization server, or the<br />OAuth flow will fail. |
 | `refreshToken` | _boolean_ |  false  | true | RefreshToken indicates whether the Envoy should automatically refresh the<br />id token and access token when they expire.<br />When set to true, the Envoy will use the refresh token to get a new id token<br />and access token when they expire.<br />If not specified, defaults to true. |
 | `defaultRefreshTokenTTL` | _[Duration](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#duration)_ |  false  |  | DefaultRefreshTokenTTL is the default lifetime of the refresh token.<br />This field is only used when the exp (expiration time) claim is omitted in<br />the refresh token or the refresh token is not JWT.<br />If not specified, defaults to 604800s (one week).<br />Note: this field is only applicable when the "refreshToken" field is set to true. |
@@ -4046,6 +4305,20 @@ _Appears in:_
 | `authorizationEndpoint` | _string_ |  false  |  | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` | _string_ |  false  |  | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).<br />If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `endSessionEndpoint` | _string_ |  false  |  | The OIDC Provider's [end session endpoint](https://openid.net/specs/openid-connect-core-1_0.html#RPLogout).<br />If the end session endpoint is provided, EG will use it to log out the user from the OIDC Provider when the user accesses the logout path.<br />EG will also try to discover the end session endpoint from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse) when authorizationEndpoint or tokenEndpoint is not provided. |
+
+
+#### OIDCTokenForwarding
+
+
+
+OIDCTokenForwarding defines how an OIDC token is forwarded upstream.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `header` | _string_ |  true  |  | Header is the upstream request header that will carry the ID token. |
 
 
 #### OTelSampler
@@ -4591,6 +4864,7 @@ _Appears in:_
 | `enableVirtualHostStats` | _boolean_ |  false  |  | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 | `enablePerEndpointStats` | _boolean_ |  false  |  | EnablePerEndpointStats enables per endpoint envoy stats metrics.<br />Please use with caution. |
 | `enableRequestResponseSizesStats` | _boolean_ |  false  |  | EnableRequestResponseSizesStats enables publishing of histograms tracking header and body sizes of requests and responses. |
+| `enableGRPCStats` | _boolean_ |  false  |  | EnableGRPCStats enables the gRPC stats filter on listeners.<br />This is enabled by default for GRPCRoute and opt-in for HTTPRoute.<br />In general, gRPC traffic should be handled via GRPCRoute, but there are cases where<br />users want to route gRPC using HTTPRoute for its richer matching capabilities.<br />Therefore, we enable this behavior only when it is explicitly opted in. |
 | `clusterStatName` | _string_ |  false  |  | ClusterStatName defines the value of cluster alt_stat_name, determining how cluster stats are named.<br />For more details, see envoy docs: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto.html<br />The supported operators for this pattern are:<br />`%ROUTE_NAME%`: name of Gateway API xRoute resource<br />`%ROUTE_NAMESPACE%`: namespace of Gateway API xRoute resource<br />`%ROUTE_KIND%`: kind of Gateway API xRoute resource<br />`%ROUTE_RULE_NAME%`: name of the Gateway API xRoute section<br />`%ROUTE_RULE_NUMBER%`: name of the Gateway API xRoute section<br />`%BACKEND_REFS%`: names of all backends referenced in `<NAMESPACE>/<NAME>\|<NAMESPACE>/<NAME>\|...` format<br />Only xDS Clusters created for HTTPRoute and GRPCRoute are currently supported.<br />Default: `%ROUTE_KIND%/%ROUTE_NAMESPACE%/%ROUTE_NAME%/rule/%ROUTE_RULE_NUMBER%`<br />Example: `httproute/my-ns/my-route/rule/0` |
 
 
@@ -4937,6 +5211,7 @@ _Appears in:_
 | `cost` | _[RateLimitCost](#ratelimitcost)_ |  false  |  | Cost specifies the cost of requests and responses for the rule.<br />This is optional and if not specified, the default behavior is to reduce the rate limit counters by 1 on<br />the request path and do not reduce the rate limit counters on the response path. |
 | `shared` | _boolean_ |  false  |  | Shared determines whether this rate limit rule applies across all the policy targets.<br />If set to true, the rule is treated as a common bucket and is shared across all policy targets (xRoutes).<br />Default: false. |
 | `shadowMode` | _boolean_ |  false  |  | ShadowMode indicates whether this rate-limit rule runs in shadow mode.<br />When enabled, all rate-limiting operations are performed (cache lookups,<br />counter updates, telemetry generation), but the outcome is never enforced.<br />The request always succeeds, even if the configured limit is exceeded.<br />Only supported for Global Rate Limits. |
+| `xRateLimitHeaders` | _[XRateLimitHeadersOption](#xratelimitheadersoption)_ |  false  |  | XRateLimitHeaders controls whether X-RateLimit response headers are emitted for this rate limit rule.<br />When set, this overrides the global DisableRateLimitHeaders setting in ClientTrafficPolicy for this rule.<br />If not set, the rule inherits the listener-level setting (default behavior). |
 
 
 #### RateLimitSelectCondition
@@ -5078,7 +5353,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `requests` | _integer_ |  true  |  |  |
+| `requests` | _integer_ |  true  |  | Requests is the number of requests (or cost units, when used with<br />cost-based rate limiting) allowed per Unit. |
 | `unit` | _[RateLimitUnit](#ratelimitunit)_ |  true  |  |  |
 
 
@@ -5259,6 +5534,23 @@ _Appears in:_
 | `match` | _[CustomResponseMatch](#customresponsematch)_ |  true  |  | Match configuration. |
 | `response` | _[CustomResponse](#customresponse)_ |  true  |  | Response configuration. |
 | `redirect` | _[CustomRedirect](#customredirect)_ |  true  |  | Redirect configuration |
+| `source` | _[ResponseOverrideSource](#responseoverridesource)_ |  false  |  | Source specifies which responses this rule applies to.<br />Local overrides only Envoy-generated responses (e.g. auth failures).<br />Backend overrides only upstream responses.<br />All (default) overrides both. |
+
+
+#### ResponseOverrideSource
+
+_Underlying type:_ _string_
+
+ResponseOverrideSource specifies the source of responses to override.
+
+_Appears in:_
+- [ResponseOverride](#responseoverride)
+
+| Value | Description |
+| ----- | ----------- |
+| `All` | ResponseOverrideSourceAll overrides both Envoy-generated and upstream responses.<br /> | 
+| `Local` | ResponseOverrideSourceLocal overrides only Envoy-generated responses (e.g. auth failures, rate limits).<br /> | 
+| `Backend` | ResponseOverrideSourceBackend overrides only upstream/backend responses.<br /> | 
 
 
 #### ResponseValueType
@@ -5872,6 +6164,22 @@ _Appears in:_
 | `1.3` | TLSv1.3 specifies TLS version 1.3<br /> | 
 
 
+#### TargetNamespaceFrom
+
+_Underlying type:_ _string_
+
+
+
+_Appears in:_
+- [TargetSelectorNamespaces](#targetselectornamespaces)
+
+| Value | Description |
+| ----- | ----------- |
+| `Same` | TargetNamespaceFromSame limits target selection to the policy's namespace.<br /> | 
+| `All` | TargetNamespaceFromAll allows target selection from all watched namespaces.<br /> | 
+| `Selector` | TargetNamespaceFromSelector allows target selection from watched namespaces matching the selector.<br /> | 
+
+
 #### TargetSelector
 
 
@@ -5889,8 +6197,24 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
+
+
+#### TargetSelectorNamespaces
+
+
+
+TargetSelectorNamespaces determines which namespaces are considered for target selection.
+
+_Appears in:_
+- [TargetSelector](#targetselector)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `from` | _[TargetNamespaceFrom](#targetnamespacefrom)_ |  true  | Same | From indicates how namespaces are selected for this target selector.<br />All means all namespaces watched by Envoy Gateway.<br />Selector means namespaces watched by Envoy Gateway that match Selector. |
+| `selector` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | Selector selects namespaces when From is set to Selector. |
 
 
 #### Timeout
@@ -5907,6 +6231,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `tcp` | _[TCPTimeout](#tcptimeout)_ |  false  |  | Timeout settings for TCP. |
 | `http` | _[HTTPTimeout](#httptimeout)_ |  false  |  | Timeout settings for HTTP. |
+
+
+#### TraceSinkType
+
+_Underlying type:_ _string_
+
+TraceSinkType specifies the types of trace sinks supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGatewayTraceSink](#envoygatewaytracesink)
+
+| Value | Description |
+| ----- | ----------- |
+| `OpenTelemetry` | TraceSinkTypeOpenTelemetry captures traces for the OpenTelemetry sink.<br /> | 
 
 
 #### Tracing
@@ -6274,6 +6612,23 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `numTrustedHops` | _integer_ |  false  |  | NumTrustedHops specifies how many trusted hops to count from the rightmost side of<br />the X-Forwarded-For (XFF) header when determining the original client’s IP address.<br />If NumTrustedHops is set to N, the client IP is taken from the Nth address from the<br />right end of the XFF header.<br />Example:<br />  XFF = "203.0.113.128, 203.0.113.10, 203.0.113.1"<br />  NumTrustedHops = 2<br />  → Trusted client address = 203.0.113.10<br />Only one of NumTrustedHops or TrustedCIDRs should be configured. |
 | `trustedCIDRs` | _[CIDR](#cidr) array_ |  false  |  | TrustedCIDRs is a list of CIDR ranges to trust when evaluating<br />the remote IP address to determine the original client’s IP address.<br />When the remote IP address matches a trusted CIDR and the x-forwarded-for header was sent,<br />each entry in the x-forwarded-for header is evaluated from right to left<br />and the first public non-trusted address is used as the original client address.<br />If all addresses in x-forwarded-for are within the trusted list, the first (leftmost) entry is used.<br />Only one of NumTrustedHops and TrustedCIDRs must be set. |
+
+
+#### XRateLimitHeadersOption
+
+_Underlying type:_ _string_
+
+XRateLimitHeadersOption controls whether X-RateLimit response headers are sent for a rate limit rule.
+Valid values are "Off" and "DraftVersion03".
+This allows per-rule override of the global X-RateLimit header setting in ClientTrafficPolicy.
+
+_Appears in:_
+- [RateLimitRule](#ratelimitrule)
+
+| Value | Description |
+| ----- | ----------- |
+| `Disabled` | XRateLimitHeadersOptionDisabled disables X-RateLimit headers for this rate limit rule,<br />regardless of the global ClientTrafficPolicy setting.<br /> | 
+| `DraftVersion03` | XRateLimitHeadersOptionDraftVersion03 enables X-RateLimit headers using RFC draft version 03<br />for this rate limit rule, regardless of the global ClientTrafficPolicy setting.<br /> | 
 
 
 #### ZipkinTracingProvider

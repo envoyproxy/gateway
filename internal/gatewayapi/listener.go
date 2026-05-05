@@ -51,7 +51,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
 			allowInsecureFallback := false
 			if gtwDefaultFrontendTLSValidation.Validation != nil {
-				caCert, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
+				caCert, sds, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
 					Group:     gwapiv1.GroupVersion.Group,
 					Kind:      resource.KindGateway,
 					Name:      gtw.Name,
@@ -70,6 +70,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 						TLSCACertificate: &ir.TLSCACertificate{
 							Name:        irGatewayTLSCACertName(gtw.Gateway, "default"),
 							Certificate: caCert,
+							SDS:         sds,
 						},
 						Mode: frontendValidationMode(gtwDefaultFrontendTLSValidation.Validation.Mode),
 					}
@@ -82,9 +83,12 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			gtwPerPortCaCertificate := make(map[gwapiv1.PortNumber]*ListenerFrontendTLSValidation)
 			for _, portValidation := range gtw.Spec.TLS.Frontend.PerPort {
 				if portValidation.TLS.Validation == nil {
+					// An explicit per-port tls override with no validation disables
+					// frontend default validation on that port.
+					gtwPerPortCaCertificate[portValidation.Port] = nil
 					continue
 				}
-				caCert, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
+				caCert, sds, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
 					Group:     gwapiv1.GroupVersion.Group,
 					Kind:      resource.KindGateway,
 					Name:      gtw.Name,
@@ -103,6 +107,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 						TLSCACertificate: &ir.TLSCACertificate{
 							Name:        irGatewayTLSCACertName(gtw.Gateway, strconv.Itoa(int(portValidation.Port))),
 							Certificate: caCert,
+							SDS:         sds,
 						},
 						Mode: frontendValidationMode(portValidation.TLS.Validation.Mode),
 					}
@@ -146,7 +151,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 				ns := NamespaceDerefOr(gtw.Spec.TLS.Backend.ClientCertificateRef.Namespace, gtw.Namespace)
 				if ns != gtw.Namespace {
 					// check reference grant
-					if !t.validateCrossNamespaceRef(
+					if !isCrossNamespaceReferencePermitted(
 						crossNamespaceFrom{
 							group:     gwapiv1.GroupName,
 							kind:      string(resource.KindGateway),
@@ -214,9 +219,84 @@ func validClientCertificateRef(ref *gwapiv1.SecretObjectReference) error {
 	return nil
 }
 
+// allowedRouteKindsForProtocol returns the route kinds supported by the given listener protocol.
+func allowedRouteKindsForProtocol(protocol gwapiv1.ProtocolType, tlsMode *gwapiv1.TLSModeType) []gwapiv1.Kind {
+	switch protocol {
+	case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
+		return []gwapiv1.Kind{resource.KindHTTPRoute, resource.KindGRPCRoute}
+	case gwapiv1.TLSProtocolType:
+		if tlsMode != nil && *tlsMode == gwapiv1.TLSModePassthrough {
+			return []gwapiv1.Kind{resource.KindTLSRoute}
+		}
+		// Terminate mode or unspecified defaults to accept both TCP and TLS routes
+		return []gwapiv1.Kind{resource.KindTCPRoute, resource.KindTLSRoute}
+	case gwapiv1.TCPProtocolType:
+		return []gwapiv1.Kind{resource.KindTCPRoute}
+	case gwapiv1.UDPProtocolType:
+		return []gwapiv1.Kind{resource.KindUDPRoute}
+	default:
+		return nil
+	}
+}
+
+func (t *Translator) validateListenerSpec(listener *ListenerContext, resources *resource.Resources) bool {
+	// Validate listener spec directly without relying on conditions.
+	// Start with valid assumption and invalidate on failures.
+	// Phase 1: Validate fundamental rules
+	specValid := t.validateAllowedNamespaces(listener)
+
+	// Phase 2: Validate allowed routes based on protocol
+	if isSupportedListenerProtocol(listener.Protocol) {
+		var tlsMode *gwapiv1.TLSModeType
+		if listener.TLS != nil {
+			tlsMode = listener.TLS.Mode
+		}
+		allowedKinds := allowedRouteKindsForProtocol(listener.Protocol, tlsMode)
+		if !t.validateAllowedRoutes(listener, allowedKinds...) {
+			specValid = false
+		}
+	} else {
+		// Unsupported protocol
+		specValid = false
+		listener.SetSupportedKinds()
+		listener.SetCondition(
+			gwapiv1.ListenerConditionAccepted,
+			metav1.ConditionFalse,
+			gwapiv1.ListenerReasonUnsupportedProtocol,
+			fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
+				gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType),
+		)
+	}
+
+	// Phase 3: Validate TLS configuration details
+	if !t.validateTLSConfiguration(listener, resources) {
+		specValid = false
+	}
+
+	// Phase 4: Validate Hostname configuration
+	if !t.validateHostName(listener) {
+		specValid = false
+	}
+
+	return specValid
+}
+
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource.XdsIRMap, infraIR resource.InfraIRMap, resources *resource.Resources) {
 	// Infra IR proxy ports must be unique.
 	foundPorts := make(map[string][]*protocolPort)
+
+	// Phase 1: Validate each listener's spec independently.
+	// This must happen before conflict resolution so that invalid listeners
+	// don't block valid ones during conflict detection.
+	for _, gateway := range gateways {
+		for _, listener := range gateway.listeners {
+			listener.specValid = t.validateListenerSpec(listener, resources)
+		}
+	}
+
+	// Phase 2: Run conflict detection.
+	// Only listeners that haven't been marked as invalid will participate in conflict resolution.
+	t.validateConflictedProtocolsListeners(gateways)
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
@@ -224,9 +304,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		t.validateConflictedMergedListeners(gateways)
 	}
 
-	// Iterate through all listeners to validate spec
-	// and compute status for each, and add valid ones
-	// to the Xds IR.
+	// Phase 3: Build IR for valid listeners.
 	for _, gateway := range gateways {
 		irKey := t.getIRKey(gateway.Gateway)
 
@@ -237,49 +315,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 		t.processProxyObservability(gateway, xdsIR[irKey], infraIR[irKey].Proxy, resources)
 
 		for _, listener := range gateway.listeners {
-			// Process protocol & supported kinds
-			switch listener.Protocol {
-			case gwapiv1.TLSProtocolType:
-				if listener.TLS != nil {
-					switch *listener.TLS.Mode {
-					case gwapiv1.TLSModePassthrough:
-						t.validateAllowedRoutes(listener, resource.KindTLSRoute)
-					case gwapiv1.TLSModeTerminate:
-						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
-					default:
-						t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
-					}
-				} else {
-					t.validateAllowedRoutes(listener, resource.KindTCPRoute, resource.KindTLSRoute)
-				}
-			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
-				t.validateAllowedRoutes(listener, resource.KindHTTPRoute, resource.KindGRPCRoute)
-			case gwapiv1.TCPProtocolType:
-				t.validateAllowedRoutes(listener, resource.KindTCPRoute)
-			case gwapiv1.UDPProtocolType:
-				t.validateAllowedRoutes(listener, resource.KindUDPRoute)
-			default:
-				listener.SetSupportedKinds()
-				listener.SetCondition(
-					gwapiv1.ListenerConditionAccepted,
-					metav1.ConditionFalse,
-					gwapiv1.ListenerReasonUnsupportedProtocol,
-					fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
-						gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType),
-				)
-			}
-
-			// Validate allowed namespaces
-			t.validateAllowedNamespaces(listener)
-
-			// Process TLS configuration
-			t.validateTLSConfiguration(listener, resources)
-
-			// Process Hostname configuration
-			t.validateHostName(listener)
-
-			// Process conditions and check if the listener is ready
+			// Finalize listener conditions and check readiness.
 			t.validateListenerConditions(listener)
+			if !listener.IsReady() {
+				// Skip invalid listeners from IR building
+				continue
+			}
 
 			// Skip listeners with invalid frontend TLS validation as they are not functional.
 			if listener.frontendTLSValidationInvalid() {
@@ -322,6 +363,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR resource
 				}
 				irListener.PreserveRouteOrder = getPreserveRouteOrder(gateway.envoyProxy)
 				irListener.RequestID = getRequestIDExtensionAction(gateway.envoyProxy)
+				t.processProxyGRPCSettings(irListener, gateway.envoyProxy)
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 				// Store the HTTPListener IR in the listener context for use in the overlapping TLS config check.
 				listener.httpIR = irListener
@@ -421,8 +463,16 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
@@ -503,8 +553,16 @@ func checkOverlappingCertificates(httpsListeners []*ListenerContext) {
 		if overlappingListeners[i] != nil {
 			continue
 		}
+		// Skip listeners that are already marked as invalid from per-listener validation
+		if hasInvalidCondition(httpsListeners[i]) {
+			continue
+		}
 		for j := i + 1; j < len(httpsListeners); j++ {
 			if overlappingListeners[j] != nil {
+				continue
+			}
+			// Skip listeners that are already marked as invalid from per-listener validation
+			if hasInvalidCondition(httpsListeners[j]) {
 				continue
 			}
 			if httpsListeners[i].Port != httpsListeners[j].Port {
@@ -577,7 +635,7 @@ type overlappingCertificate struct {
 func isOverlappingCertificate(cert1DNSNames, cert2DNSNames []string) *overlappingCertificate {
 	for _, dns1 := range cert1DNSNames {
 		for _, dns2 := range cert2DNSNames {
-			if areOverlappingHostnames(ptr.To(gwapiv1.Hostname(dns1)), ptr.To(gwapiv1.Hostname(dns2))) {
+			if areOverlappingHostnames(new(gwapiv1.Hostname(dns1)), new(gwapiv1.Hostname(dns2))) {
 				return &overlappingCertificate{
 					san1: dns1,
 					san2: dns2,
@@ -729,11 +787,11 @@ func (t *Translator) processAccessLog(gwCtx *GatewayContext, envoyproxy *egv1a1.
 		if accessLog.Type != nil {
 			switch *accessLog.Type {
 			case egv1a1.ProxyAccessLogTypeRoute:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeRoute)
+				accessLogType = new(ir.ProxyAccessLogTypeRoute)
 			case egv1a1.ProxyAccessLogTypeListener:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeListener)
+				accessLogType = new(ir.ProxyAccessLogTypeListener)
 			case egv1a1.ProxyAccessLogTypeUpstream:
-				accessLogType = ptr.To(ir.ProxyAccessLogTypeUpstream)
+				accessLogType = new(ir.ProxyAccessLogTypeUpstream)
 			}
 		}
 
@@ -1109,6 +1167,23 @@ func (t *Translator) processMetrics(gwCtx *GatewayContext, envoyproxy *egv1a1.En
 	}, resolvedSinks, nil
 }
 
+func (t *Translator) processProxyGRPCSettings(
+	irListener *ir.HTTPListener,
+	envoyProxy *egv1a1.EnvoyProxy,
+) {
+	if envoyProxy == nil {
+		return
+	}
+
+	if envoyProxy.Spec.Telemetry != nil && envoyProxy.Spec.Telemetry.Metrics != nil &&
+		envoyProxy.Spec.Telemetry.Metrics.EnableGRPCStats != nil {
+		if irListener.GRPC == nil {
+			irListener.GRPC = &ir.GRPCSettings{}
+		}
+		irListener.GRPC.EnableGRPCStats = envoyProxy.Spec.Telemetry.Metrics.EnableGRPCStats
+	}
+}
+
 func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster egv1a1.BackendCluster, namespace string,
 	resources *resource.Resources, envoyProxy *egv1a1.EnvoyProxy, gwCtx *GatewayContext,
 ) ([]*ir.DestinationSetting, *ir.TrafficFeatures, error) {
@@ -1118,9 +1193,9 @@ func (t *Translator) processBackendRefsForTelemetry(name string, backendCluster 
 	}
 
 	parent := gwapiv1.ParentReference{
-		Group:     ptr.To(gwapiv1.Group(egv1a1.GroupName)),
-		Kind:      ptr.To(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
-		Namespace: ptr.To(gwapiv1.Namespace(envoyProxy.Namespace)),
+		Group:     new(gwapiv1.Group(egv1a1.GroupName)),
+		Kind:      new(gwapiv1.Kind(egv1a1.KindEnvoyProxy)),
+		Namespace: new(gwapiv1.Namespace(envoyProxy.Namespace)),
 		Name:      gwapiv1.ObjectName(envoyProxy.Name),
 	}
 
@@ -1186,9 +1261,9 @@ func destinationSettingFromHostAndPort(name, host string, port uint32) []*ir.Des
 	return []*ir.DestinationSetting{
 		{
 			Name:        name,
-			Weight:      ptr.To[uint32](1),
+			Weight:      new(uint32(1)),
 			Protocol:    ir.GRPC,
-			AddressType: ptr.To(addressType),
+			AddressType: new(addressType),
 			Endpoints:   []*ir.DestinationEndpoint{ir.NewDestEndpoint(nil, host, port, false, nil)},
 		},
 	}

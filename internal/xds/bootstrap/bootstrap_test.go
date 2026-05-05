@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -100,7 +99,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: ptr.To("otel-collector.monitoring.svc"),
+								Host: new("otel-collector.monitoring.svc"),
 								Port: 4317,
 							},
 						},
@@ -120,15 +119,15 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: ptr.To("otel-collector.monitoring.svc"),
+								Host: new("otel-collector.monitoring.svc"),
 								Port: 4317,
 								BackendCluster: egv1a1.BackendCluster{
 									BackendRefs: []egv1a1.BackendRef{
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
-												Port:      ptr.To(gwapiv1.PortNumber(4317)),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
+												Port:      new(gwapiv1.PortNumber(4317)),
 											},
 										},
 									},
@@ -151,10 +150,10 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host:                     ptr.To("otel-collector.monitoring.svc"),
+								Host:                     new("otel-collector.monitoring.svc"),
 								Port:                     4317,
-								ReportCountersAsDeltas:   ptr.To(true),
-								ReportHistogramsAsDeltas: ptr.To(true),
+								ReportCountersAsDeltas:   new(true),
+								ReportHistogramsAsDeltas: new(true),
 							},
 						},
 					},
@@ -173,7 +172,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						{
 							Type: egv1a1.MetricSinkTypeOpenTelemetry,
 							OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
-								Host: ptr.To("otel-collector.monitoring.svc"),
+								Host: new("otel-collector.monitoring.svc"),
 								Port: 4317,
 								Headers: []gwapiv1.HTTPHeader{
 									{
@@ -250,23 +249,23 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				ProxyMetrics: &egv1a1.ProxyMetrics{
 					Matches: []egv1a1.StringMatch{
 						{
-							Type:  ptr.To(egv1a1.StringMatchExact),
+							Type:  new(egv1a1.StringMatchExact),
 							Value: "http.foo.bar.cluster.upstream_rq",
 						},
 						{
-							Type:  ptr.To(egv1a1.StringMatchPrefix),
+							Type:  new(egv1a1.StringMatchPrefix),
 							Value: "http",
 						},
 						{
-							Type:  ptr.To(egv1a1.StringMatchSuffix),
+							Type:  new(egv1a1.StringMatchSuffix),
 							Value: "upstream_rq",
 						},
 						{
-							Type:  ptr.To(egv1a1.StringMatchRegularExpression),
+							Type:  new(egv1a1.StringMatchRegularExpression),
 							Value: "virtual.*",
 						},
 						{
-							Type:  ptr.To(egv1a1.StringMatchPrefix),
+							Type:  new(egv1a1.StringMatchPrefix),
 							Value: "cluster",
 						},
 					},
@@ -277,10 +276,10 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "custom-server-port",
 			opts: &RenderBootstrapConfigOptions{
-				XdsServerHost:   ptr.To("foo.bar"),
-				XdsServerPort:   ptr.To(int32(12345)),
-				AdminServerPort: ptr.To(int32(2222)),
-				StatsServerPort: ptr.To(int32(3333)),
+				XdsServerHost:   new("foo.bar"),
+				XdsServerPort:   new(int32(12345)),
+				AdminServerPort: new(int32(2222)),
+				StatsServerPort: new(int32(3333)),
 				SdsConfig:       sds,
 			},
 		},
@@ -294,7 +293,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "ipv6",
 			opts: &RenderBootstrapConfigOptions{
-				IPFamily: ptr.To(egv1a1.IPv6),
+				IPFamily: new(egv1a1.IPv6),
 			},
 		},
 		{
@@ -361,7 +360,7 @@ func TestGetRenderedBootstrapConfigErrors(t *testing.T) {
 										{
 											BackendObjectReference: gwapiv1.BackendObjectReference{
 												Name:      "otel-collector",
-												Namespace: ptr.To(gwapiv1.Namespace("monitoring")),
+												Namespace: new(gwapiv1.Namespace("monitoring")),
 												// Port is nil
 											},
 										},

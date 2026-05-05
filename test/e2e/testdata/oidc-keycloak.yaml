@@ -133,6 +133,12 @@ data:
     CLIENT_ID=oidctest
     CLIENT_SECRET=oidctest-client-secret
     REDIRECT_URL=http://www.example.com/myapp/oauth2/callback
+    CLIENT_FOO_ID=oidctest-foo
+    CLIENT_FOO_SECRET=oidctest-foo-client-secret
+    CLIENT_FOO_REDIRECT_URL=http://www.example.com/foo/oauth2/callback
+    CLIENT_BAR_ID=oidctest-bar
+    CLIENT_BAR_SECRET=oidctest-bar-client-secret
+    CLIENT_BAR_REDIRECT_URL=http://www.example.com/bar/oauth2/callback
 
     set -ex
 
@@ -152,12 +158,22 @@ data:
     --user "${KEYCLOAK_ADMIN}" \
     --password "${KEYCLOAK_ADMIN_PASSWORD}"
 
-    /opt/keycloak/bin/kcreg.sh create \
-    -s clientId="${CLIENT_ID}" \
-    -s secret="${CLIENT_SECRET}" \
-    -s "redirectUris=[\"${REDIRECT_URL}\"]" \
-    -s consentRequired=false \
-    --server "${KEYCLOAK_SERVER}" \
-    --realm "${REALM}" \
-    --user "${KEYCLOAK_ADMIN}" \
-    --password "${KEYCLOAK_ADMIN_PASSWORD}"
+    create_client() {
+      local client_id="$1"
+      local client_secret="$2"
+      local redirect_url="$3"
+
+      /opt/keycloak/bin/kcreg.sh create \
+      -s clientId="${client_id}" \
+      -s secret="${client_secret}" \
+      -s "redirectUris=[\"${redirect_url}\"]" \
+      -s consentRequired=false \
+      --server "${KEYCLOAK_SERVER}" \
+      --realm "${REALM}" \
+      --user "${KEYCLOAK_ADMIN}" \
+      --password "${KEYCLOAK_ADMIN_PASSWORD}"
+    }
+
+    create_client "${CLIENT_ID}" "${CLIENT_SECRET}" "${REDIRECT_URL}"
+    create_client "${CLIENT_FOO_ID}" "${CLIENT_FOO_SECRET}" "${CLIENT_FOO_REDIRECT_URL}"
+    create_client "${CLIENT_BAR_ID}" "${CLIENT_BAR_SECRET}" "${CLIENT_BAR_REDIRECT_URL}"

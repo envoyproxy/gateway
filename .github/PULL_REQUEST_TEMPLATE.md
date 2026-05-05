@@ -9,7 +9,7 @@ Examples:
 * "chore: change ci & build tools etc"
 * "api: add xxx fields in ClientTrafficPolicy"
 
-Before raising a PR, please go through this section of the developer guide, https://gateway.envoyproxy.io/contributions/develop/#raising-a-pr
+Before raising a PR, please go through this section of the developer guide, https://gateway.envoyproxy.io/community/develop/#raising-a-pr
 -->
 
 <!--

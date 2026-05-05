@@ -1,0 +1,22 @@
+- clusterName: backend-utilization-weighted-zones-endpoint-override-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 80
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 6.7.8.9
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      zone: us-east-1b

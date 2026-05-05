@@ -1,0 +1,485 @@
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-backend-source
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: Value
+          value: 500
+      response:
+        body:
+          inline: '{"error": "Internal Server Error"}'
+          type: Inline
+        contentType: application/json
+      source: Backend
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-backend
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-all-source
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: Value
+          value: 404
+      response:
+        body:
+          inline: Not Found
+          type: Inline
+        contentType: text/plain
+      source: All
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-all
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    name: policy-local-source
+    namespace: default
+  spec:
+    responseOverride:
+    - match:
+        statusCodes:
+        - type: Value
+          value: 401
+      response:
+        body:
+          inline: '{"error": "Unauthorized"}'
+          type: Inline
+        contentType: application/json
+      source: Local
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+      conditions:
+      - lastTransitionTime: null
+        message: Policy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: spec.targetRef is deprecated, use spec.targetRefs instead
+        reason: DeprecatedField
+        status: "True"
+        type: Warning
+      - lastTransitionTime: null
+        message: 'This policy is being overridden by other backendTrafficPolicies
+          for these routes: [default/httproute-all default/httproute-backend]'
+        reason: Overridden
+        status: "True"
+        type: Overridden
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway-1
+    namespace: default
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 3
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-local
+    namespace: default
+  spec:
+    hostnames:
+    - local.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-backend
+    namespace: default
+  spec:
+    hostnames:
+    - backend.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-all
+    namespace: default
+  spec:
+    hostnames:
+    - all.envoyproxy.io
+    parentRefs:
+    - name: gateway-1
+      namespace: default
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: default
+        sectionName: http
+infraIR:
+  default/gateway-1:
+    proxy:
+      listeners:
+      - name: default/gateway-1/http
+        ports:
+        - containerPort: 10080
+          name: http-80
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: default
+        ownerReference:
+          kind: GatewayClass
+          name: envoy-gateway-class
+      name: default/gateway-1
+      namespace: envoy-gateway-system
+xdsIR:
+  default/gateway-1:
+    accessLog:
+      json:
+      - path: /dev/stdout
+    globalResources:
+      proxyServiceCluster:
+        metadata:
+          kind: Service
+          name: envoy-default-gateway-1-bfd08ef4
+          namespace: envoy-gateway-system
+          sectionName: "8080"
+        name: default/gateway-1
+        settings:
+        - addressType: IP
+          endpoints:
+          - host: 7.6.5.4
+            port: 8080
+            zone: zone1
+          metadata:
+            kind: Service
+            name: envoy-default-gateway-1-bfd08ef4
+            namespace: envoy-gateway-system
+            sectionName: "8080"
+          name: default/gateway-1
+          protocol: TCP
+    http:
+    - address: 0.0.0.0
+      externalPort: 80
+      hostnames:
+      - '*'
+      metadata:
+        kind: Gateway
+        name: gateway-1
+        namespace: default
+        sectionName: http
+      name: default/gateway-1/http
+      path:
+        escapedSlashesAction: UnescapeAndRedirect
+        mergeSlashes: true
+      port: 10080
+      routes:
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-local
+            namespace: default
+          name: httproute/default/httproute-local/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-local/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: local.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-local
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-local-source
+            namespace: default
+        name: httproute/default/httproute-local/rule/0/match/0/local_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-local-source
+            rules:
+            - match:
+                statusCodes:
+                - value: 401
+              name: backendtrafficpolicy/default/policy-local-source/responseoverride/rule/0
+              response:
+                body: eyJlcnJvciI6ICJVbmF1dGhvcml6ZWQifQ==
+                contentType: application/json
+              source: Local
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-backend
+            namespace: default
+          name: httproute/default/httproute-backend/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-backend/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: backend.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-backend
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-backend-source
+            namespace: default
+        name: httproute/default/httproute-backend/rule/0/match/0/backend_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-backend-source
+            rules:
+            - match:
+                statusCodes:
+                - value: 500
+              name: backendtrafficpolicy/default/policy-backend-source/responseoverride/rule/0
+              response:
+                body: eyJlcnJvciI6ICJJbnRlcm5hbCBTZXJ2ZXIgRXJyb3IifQ==
+                contentType: application/json
+              source: Backend
+      - destination:
+          metadata:
+            kind: HTTPRoute
+            name: httproute-all
+            namespace: default
+          name: httproute/default/httproute-all/rule/0
+          settings:
+          - addressType: IP
+            endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            metadata:
+              kind: Service
+              name: service-1
+              namespace: default
+              sectionName: "8080"
+            name: httproute/default/httproute-all/rule/0/backend/0
+            protocol: HTTP
+            weight: 1
+        hostname: all.envoyproxy.io
+        isHTTP2: false
+        metadata:
+          kind: HTTPRoute
+          name: httproute-all
+          namespace: default
+          policies:
+          - kind: BackendTrafficPolicy
+            name: policy-all-source
+            namespace: default
+        name: httproute/default/httproute-all/rule/0/match/0/all_envoyproxy_io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+        traffic:
+          responseOverride:
+            name: backendtrafficpolicy/default/policy-all-source
+            rules:
+            - match:
+                statusCodes:
+                - value: 404
+              name: backendtrafficpolicy/default/policy-all-source/responseoverride/rule/0
+              response:
+                body: Tm90IEZvdW5k
+                contentType: text/plain
+              source: All
+    readyListener:
+      address: 0.0.0.0
+      ipFamily: IPv4
+      path: /ready
+      port: 19003

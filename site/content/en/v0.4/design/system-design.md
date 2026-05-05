@@ -171,4 +171,4 @@ The draft for this document is [here][draft_design].
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [ wcd ]: ./watching.md
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37
-[roadmap]: ../contributions/roadmap
+[roadmap]: /community/roadmap

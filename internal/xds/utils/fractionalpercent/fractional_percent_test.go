@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -107,7 +106,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To[int32](100),
+				Denominator: new(int32(100)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   1,
@@ -126,7 +125,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   50,
-				Denominator: ptr.To[int32](1000000),
+				Denominator: new(int32(1000000)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   50,
@@ -136,7 +135,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To[int32](1000),
+				Denominator: new(int32(1000)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   10,
@@ -146,7 +145,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To[int32](10000),
+				Denominator: new(int32(10000)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   1,
@@ -156,7 +155,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To[int32](100000),
+				Denominator: new(int32(100000)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   10,
@@ -166,7 +165,7 @@ func TestFromFraction(t *testing.T) {
 		{
 			input: &gwapiv1.Fraction{
 				Numerator:   1,
-				Denominator: ptr.To[int32](1000000),
+				Denominator: new(int32(1000000)),
 			},
 			expected: &xdstype.FractionalPercent{
 				Numerator:   1,
