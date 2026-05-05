@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
 
 // LuaValueType defines the types of values for Lua supported by Envoy Gateway.
 // +kubebuilder:validation:Enum=Inline;ValueRef
@@ -45,10 +48,11 @@ type Lua struct {
 	// +optional
 	// +unionMember
 	ValueRef *gwapiv1.LocalObjectReference `json:"valueRef,omitempty"`
-	// FilterContext is a set of key/value pairs that are made available to the Lua script
-	// via request_handle:filterContext(). This allows a shared script to be
-	// parameterized differently per EnvoyExtensionPolicy/route.
+	// FilterContext is the filter context configuration for the Lua script.
+	// This must be a JSON object (key/value pairs). The values are made available
+	// to the Lua script via request_handle:filterContext(). This allows a shared
+	// script to be parameterized differently per EnvoyExtensionPolicy/route.
 	//
 	// +optional
-	FilterContext map[string]string `json:"filterContext,omitempty"`
+	FilterContext *apiextensionsv1.JSON `json:"filterContext,omitempty"`
 }

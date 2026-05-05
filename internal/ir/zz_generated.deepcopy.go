@@ -3143,10 +3143,8 @@ func (in *Lua) DeepCopyInto(out *Lua) {
 	}
 	if in.FilterContext != nil {
 		in, out := &in.FilterContext, &out.FilterContext
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
+		*out = new(apiextensionsv1.JSON)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

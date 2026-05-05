@@ -3685,9 +3685,9 @@ type Lua struct {
 	Name string
 	// Code is the Lua source code
 	Code *string
-	// FilterContext is a set of key/value pairs passed to the Lua script
-	// via request_handle:filterContext().
-	FilterContext map[string]string `json:"filterContext,omitempty" yaml:"filterContext,omitempty"`
+	// FilterContext is the filter context configuration for the Lua script.
+	// This is a JSON object passed to the Lua script via request_handle:filterContext().
+	FilterContext *apiextensionsv1.JSON
 }
 
 // Wasm holds the information associated with the Wasm extensions.

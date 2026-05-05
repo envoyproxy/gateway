@@ -4105,7 +4105,7 @@ _Appears in:_
 | `type` | _[LuaValueType](#luavaluetype)_ |  true  | Inline | Type is the type of method to use to read the Lua value.<br />Valid values are Inline and ValueRef, default is Inline. |
 | `inline` | _string_ |  false  |  | Inline contains the source code as an inline string. |
 | `valueRef` | _[LocalObjectReference](#localobjectreference)_ |  false  |  | ValueRef has the source code specified as a local object reference.<br />Only a reference to ConfigMap is supported.<br />The value of key `lua` in the ConfigMap will be used.<br />If the key is not found, the first value in the ConfigMap will be used. |
-| `filterContext` | _object (keys:string, values:string)_ |  false  |  | FilterContext is a set of key/value pairs that are made available to the Lua script<br />via request_handle:filterContext(). This allows a shared script to be<br />parameterized differently per EnvoyExtensionPolicy/route. |
+| `filterContext` | _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#json-v1-apiextensions-k8s-io)_ |  false  |  | FilterContext is the filter context configuration for the Lua script.<br />This must be a JSON object (key/value pairs). The values are made available<br />to the Lua script via request_handle:filterContext(). This allows a shared<br />script to be parameterized differently per EnvoyExtensionPolicy/route. |
 
 
 #### LuaValidation

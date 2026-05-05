@@ -14,6 +14,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	luafilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -154,12 +155,12 @@ func (*lua) patchRoute(route *routev3.Route, irRoute *ir.HTTPRoute, _ *ir.HTTPLi
 				},
 			},
 		}
-		if len(ep.FilterContext) > 0 {
-			fields := make(map[string]*structpb.Value, len(ep.FilterContext))
-			for k, v := range ep.FilterContext {
-				fields[k] = structpb.NewStringValue(v)
+		if ep.FilterContext != nil && ep.FilterContext.Raw != nil {
+			filterCtx := &structpb.Struct{}
+			if err := protojson.Unmarshal(ep.FilterContext.Raw, filterCtx); err != nil {
+				return err
 			}
-			luaPerRoute.FilterContext = &structpb.Struct{Fields: fields}
+			luaPerRoute.FilterContext = filterCtx
 		}
 		luaPerRouteAny, err := anypb.New(luaPerRoute)
 		if err != nil {
