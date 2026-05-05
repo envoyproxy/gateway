@@ -2956,6 +2956,34 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{"either compression or compressor can be set, not both"},
 		},
+		{
+			desc: "valid endpoint hostname none",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{Type: egv1a1.BackendEndpointHostnameTypeNone},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid endpoint hostname kubernetes service",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{Type: egv1a1.BackendEndpointHostnameTypeKubernetesService},
+				}
+			},
+			wantErrors: []string{},
+		},
 	}
 
 	for _, tc := range cases {

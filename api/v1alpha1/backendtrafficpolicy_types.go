@@ -136,6 +136,12 @@ type BackendTrafficPolicySpec struct {
 	//
 	// +optional
 	RoutingType *RoutingType `json:"routingType,omitempty"`
+
+	// EndpointHostname configures the hostname value attached to backend endpoints.
+	// If unset, no hostname is attached to Kubernetes Service endpoints.
+	//
+	// +optional
+	EndpointHostname *BackendEndpointHostname `json:"endpointHostname,omitempty"`
 }
 
 type BackendTelemetry struct {

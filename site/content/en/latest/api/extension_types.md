@@ -369,6 +369,35 @@ _Appears in:_
 | `zone` | _string_ |  false  |  | Zone defines the service zone of the backend endpoint. |
 
 
+#### BackendEndpointHostname
+
+
+
+BackendEndpointHostname configures hostnames attached to backend endpoints.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `type` | _[BackendEndpointHostnameType](#backendendpointhostnametype)_ |  true  |  | Type determines how endpoint hostnames should be populated. |
+
+
+#### BackendEndpointHostnameType
+
+_Underlying type:_ _string_
+
+BackendEndpointHostnameType defines how endpoint hostnames should be populated.
+
+_Appears in:_
+- [BackendEndpointHostname](#backendendpointhostname)
+
+| Value | Description |
+| ----- | ----------- |
+| `None` | BackendEndpointHostnameTypeNone does not attach hostnames to backend endpoints.<br /> | 
+| `KubernetesService` | BackendEndpointHostnameTypeKubernetesService uses the Kubernetes Service FQDN.<br /> | 
+
+
 #### BackendMetrics
 
 
@@ -551,6 +580,7 @@ _Appears in:_
 | `requestBuffer` | _[RequestBuffer](#requestbuffer)_ |  false  |  | RequestBuffer allows the gateway to buffer and fully receive each request from a client before continuing to send the request<br />upstream to the backends. This can be helpful to shield your backend servers from slow clients, and also to enforce a maximum size per request<br />as any requests larger than the buffer size will be rejected.<br />This can have a negative performance impact so should only be enabled when necessary.<br />When enabling this option, you should also configure your connection buffer size to account for these request buffers. There will also be an<br />increase in memory usage for Envoy that should be accounted for in your deployment settings.<br />Request buffering is incompatible with streaming APIs and protocol upgrades such as gRPC streaming and WebSocket. Do not enable this option<br />on routes that need those protocols, because requests can hang instead of being forwarded upstream. |
 | `telemetry` | _[BackendTelemetry](#backendtelemetry)_ |  false  |  | Telemetry configures the telemetry settings for the policy target (Gateway or xRoute).<br />This will override the telemetry settings in the EnvoyProxy resource. |
 | `routingType` | _[RoutingType](#routingtype)_ |  false  |  | RoutingType can be set to "Service" to use the Service Cluster IP for routing to the backend,<br />or it can be set to "Endpoint" to use Endpoint routing.<br />When specified, this overrides the EnvoyProxy-level setting for the relevant targetRefs.<br />If not specified, the EnvoyProxy-level setting is used. |
+| `endpointHostname` | _[BackendEndpointHostname](#backendendpointhostname)_ |  false  |  | EndpointHostname configures the hostname value attached to backend endpoints.<br />If unset, no hostname is attached to Kubernetes Service endpoints. |
 
 
 #### BackendType

@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: rewrite-host
+  name: backend-endpoint-hostname-with-btp
   namespace: gateway-conformance-infra
 spec:
   parentRefs:
@@ -10,46 +10,44 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /header
+            value: /backend-endpoint-hostname-with-btp
       filters:
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
             kind: HTTPRouteFilter
-            name: header-host-rewrite
+            name: backend-endpoint-hostname-rewrite
       backendRefs:
         - name: infra-backend-v1
           port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: backend-endpoint-hostname-without-btp
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
     - matches:
         - path:
             type: PathPrefix
-            value: /backend
+            value: /backend-endpoint-hostname-without-btp
       filters:
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
             kind: HTTPRouteFilter
-            name: backend-host-rewrite
+            name: backend-endpoint-hostname-rewrite
       backendRefs:
-        - group: gateway.envoyproxy.io
-          kind: Backend
-          name: backend-fqdn
+        - name: infra-backend-v1
+          port: 8080
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: HTTPRouteFilter
 metadata:
-  name: header-host-rewrite
-  namespace: gateway-conformance-infra
-spec:
-  urlRewrite:
-    hostname:
-      type: Header
-      header: x-custom-host
----
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: HTTPRouteFilter
-metadata:
-  name: backend-host-rewrite
+  name: backend-endpoint-hostname-rewrite
   namespace: gateway-conformance-infra
 spec:
   urlRewrite:
@@ -57,12 +55,14 @@ spec:
       type: Backend
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: Backend
+kind: BackendTrafficPolicy
 metadata:
-  name: backend-fqdn
+  name: backend-endpoint-hostname
   namespace: gateway-conformance-infra
 spec:
-  endpoints:
-    - fqdn:
-        hostname: infra-backend-v1.gateway-conformance-infra.svc.cluster.local
-        port: 8080
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: backend-endpoint-hostname-with-btp
+  endpointHostname:
+    type: KubernetesService

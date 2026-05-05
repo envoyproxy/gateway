@@ -263,6 +263,14 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			acceptedGateways,
 		)
 	}
+	t.BTPEndpointHostnameIndex = nil
+	if hasBTPEndpointHostname(resources.BackendTrafficPolicies) {
+		t.BTPEndpointHostnameIndex = BuildBTPEndpointHostnameIndex(
+			resources.BackendTrafficPolicies,
+			routesToObjects(resources),
+			acceptedGateways,
+		)
+	}
 
 	// Process ListenerSets and attach them to the relevant Gateways
 	t.ProcessListenerSets(resources.ListenerSets, acceptedGateways)

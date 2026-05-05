@@ -335,6 +335,21 @@ spec:
                       Defaults to true.
                     type: boolean
                 type: object
+              endpointHostname:
+                description: |-
+                  EndpointHostname configures the hostname value attached to backend endpoints.
+                  If unset, no hostname is attached to Kubernetes Service endpoints.
+                properties:
+                  type:
+                    description: Type determines how endpoint hostnames should be
+                      populated.
+                    enum:
+                    - None
+                    - KubernetesService
+                    type: string
+                required:
+                - type
+                type: object
               faultInjection:
                 description: |-
                   FaultInjection defines the fault injection policy to be applied. This configuration can be used to

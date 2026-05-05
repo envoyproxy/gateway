@@ -1750,3 +1750,163 @@ func TestBTPRoutingTypeIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestBTPEndpointHostnameIndex(t *testing.T) {
+	kubernetesService := &egv1a1.BackendEndpointHostname{
+		Type: egv1a1.BackendEndpointHostnameTypeKubernetesService,
+	}
+	none := &egv1a1.BackendEndpointHostname{
+		Type: egv1a1.BackendEndpointHostnameTypeNone,
+	}
+
+	defaultHTTPRoute := &gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "route-1",
+		},
+	}
+	defaultGateway := &GatewayContext{
+		Gateway: &gwapiv1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "gateway-1",
+			},
+		},
+	}
+
+	routeNN := types.NamespacedName{Namespace: "default", Name: "route-1"}
+	gatewayNN := types.NamespacedName{Namespace: "default", Name: "gateway-1"}
+
+	tests := []struct {
+		name          string
+		btps          []*egv1a1.BackendTrafficPolicy
+		listenerName  *gwapiv1.SectionName
+		routeRuleName *gwapiv1.SectionName
+		expected      *egv1a1.BackendEndpointHostname
+	}{
+		{
+			name:     "no BTPs",
+			expected: nil,
+		},
+		{
+			name: "route has priority over gateway",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+							},
+						},
+						EndpointHostname: none,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						EndpointHostname: kubernetesService,
+					},
+				},
+			},
+			expected: kubernetesService,
+		},
+		{
+			name: "route rule has priority over route",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-route"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+							},
+						},
+						EndpointHostname: kubernetesService,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-rule"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("HTTPRoute"),
+									Name:  gwapiv1.ObjectName("route-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+							},
+						},
+						EndpointHostname: none,
+					},
+				},
+			},
+			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			expected:      none,
+		},
+		{
+			name: "listener has priority over gateway",
+			btps: []*egv1a1.BackendTrafficPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-gateway"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+							},
+						},
+						EndpointHostname: none,
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "btp-listener"},
+					Spec: egv1a1.BackendTrafficPolicySpec{
+						PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+							TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+								LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+									Group: gwapiv1.Group("gateway.networking.k8s.io"),
+									Kind:  gwapiv1.Kind("Gateway"),
+									Name:  gwapiv1.ObjectName("gateway-1"),
+								},
+								SectionName: ptr.To(gwapiv1.SectionName("http")),
+							},
+						},
+						EndpointHostname: kubernetesService,
+					},
+				},
+			},
+			listenerName: ptr.To(gwapiv1.SectionName("http")),
+			expected:     kubernetesService,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			idx := BuildBTPEndpointHostnameIndex(tt.btps, []client.Object{defaultHTTPRoute}, []*GatewayContext{defaultGateway})
+			got := idx.LookupBTPEndpointHostname("HTTPRoute", routeNN, gatewayNN, tt.listenerName, tt.routeRuleName)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
