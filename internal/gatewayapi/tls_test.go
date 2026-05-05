@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -414,8 +413,8 @@ func TestBuildListenerTLSParametersDedupCACerts(t *testing.T) {
 			TLS: &egv1a1.ClientTLSSettings{
 				ClientValidation: &egv1a1.ClientValidationContext{
 					CACertificateRefs: []gwapiv1.SecretObjectReference{
-						{Name: "ca-secret-1", Namespace: ptr.To(gwapiv1.Namespace(ns))},
-						{Name: "ca-secret-2", Namespace: ptr.To(gwapiv1.Namespace(ns))},
+						{Name: "ca-secret-1", Namespace: new(gwapiv1.Namespace(ns))},
+						{Name: "ca-secret-2", Namespace: new(gwapiv1.Namespace(ns))},
 					},
 				},
 			},
