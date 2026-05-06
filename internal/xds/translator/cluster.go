@@ -1017,8 +1017,8 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, rewrite *ir.URLRewrite, ep *ir.DestinationEndpoint) string {
 	// The precedence for hostname overrides is:
-	// 1. URL Rewrite Host
-	// 2. Active Health Check Host (if set, and is not the "*" wildcard)
+	// 1. URL Rewrite Host in HTTPRouteFilter (if set)
+	// 2. Active Health Check Host in BackendTrafficPolicy (if set, and is not the "*" wildcard)
 	// 3. Endpoint Hostname (if set)
 	if rewrite != nil && rewrite.Host != nil {
 		rewriteHost := rewrite.Host

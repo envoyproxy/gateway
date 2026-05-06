@@ -189,7 +189,7 @@ httpRoutes:
       - group: gateway.envoyproxy.io
         kind: Backend
         name: backend-2
-        # Hostname rewrite filter applied, should use example2.com when doing health check.
+        # Endpoint hostname change to example2.com, should use it when doing health check.
         filters:
         - type: URLRewrite
           urlRewrite:
