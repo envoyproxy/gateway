@@ -195,8 +195,8 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	// Policy with no section set (targeting all sections)
 	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
-		allowed, denied := resolvePolicyTargetsFromSelectors(
-			currPolicy.Spec.TargetSelectors,
+		targetRefs := resolvePolicyTargets(
+			currPolicy.Spec.PolicyTargetReferences,
 			gateways,
 			resources.ReferenceGrants,
 			egv1a1.GroupName,
@@ -204,8 +204,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			currPolicy.Namespace,
 			t.GetNamespace,
 		)
-		plainTargetRefs := resolvePolicyTargetsFromReferences(currPolicy.Spec.PolicyTargetReferences, currPolicy.Namespace)
-		targetRefs := composePolicyTargetRefs(allowed, plainTargetRefs)
 		for _, currTarget := range targetRefs {
 			if !hasSectionName(&currTarget) {
 
@@ -334,15 +332,6 @@ func (t *Translator) ProcessClientTrafficPolicies(
 					status.SetDeprecatedFieldsWarningForPolicyAncestor(&policy.Status, &ancestorRef, t.GatewayControllerName, policy.Generation, deprecatedFields)
 				}
 			}
-		}
-		if len(denied) > 0 {
-			policy, found := handledPolicies[policyName]
-			if !found {
-				policy = policyCopies[i]
-				res = append(res, policy)
-				handledPolicies[policyName] = policy
-			}
-			setPolicyTargetRefNotPermittedStatus(&policy.Status, denied, t.GatewayControllerName, policy.Generation)
 		}
 	}
 
