@@ -1,0 +1,212 @@
+namespaces:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: sds-allowed
+      labels:
+        sds: allowed
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway-system
+    name: test
+  spec:
+    backendTLS:
+      clientCertificateRef:
+        kind: Secret
+        name: sds-client-cert-default
+      alpnProtocols:
+        # without this, need to enforce mTLS with PeerAuthentication
+        - istio
+    sdsConfig:
+      allowedNamespaces:
+        matchLabels:
+          sds: allowed
+envoyProxiesForGateways:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyProxy
+    metadata:
+      namespace: sds-allowed
+      name: proxy-config
+    spec:
+      backendTLS:
+        clientCertificateRef:
+          kind: Secret
+          name: sds-client-cert-default
+        alpnProtocols:
+          # without this, need to enforce mTLS with PeerAuthentication
+          - istio
+      sdsConfig:
+        allowedNamespaces:
+          matchLabels:
+            sds: allowed
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      namespace: sds-allowed
+      name: gateway-2
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+      infrastructure:
+        parametersRef:
+          group: gateway.envoyproxy.io
+          kind: EnvoyProxy
+          name: proxy-config
+backendTLSPolicies:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls
+      namespace: default
+    spec:
+      targetRefs:
+        - kind: Service
+          name: service-1
+      validation:
+        caCertificateRefs:
+          - name: sds-client-cert-rootca
+            kind: Secret
+        hostname: example.com
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: BackendTLSPolicy
+    metadata:
+      name: policy-btls
+      namespace: sds-allowed
+    spec:
+      targetRefs:
+        - kind: Backend
+          name: backend-fqdn
+      validation:
+        caCertificateRefs:
+          - name: sds-client-cert-rootca
+            kind: Secret
+        hostname: primary.foo.com
+backends:
+  - apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: Backend
+    metadata:
+      name: backend-fqdn
+      namespace: sds-allowed
+    spec:
+      endpoints:
+        - fqdn:
+            hostname: primary.foo.com
+            port: 3000
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-1
+      namespace: default
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - matches:
+            - path:
+                type: Exact
+                value: "/exact"
+          backendRefs:
+            - name: service-1
+              port: 8080
+  # This route is invalid because the client SDS is not allowed.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-2
+      namespace: sds-allowed
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: backend-fqdn
+              kind: Backend
+              port: 3000
+  # This route is valid because the client SDS is allowed in sds-allowed namespace.
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: HTTPRoute
+    metadata:
+      name: httproute-3
+      namespace: sds-allowed
+    spec:
+      parentRefs:
+        - name: gateway-2
+          sectionName: http
+      rules:
+        - backendRefs:
+            - name: backend-fqdn
+              kind: Backend
+              port: 3000
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-client-cert-default
+      namespace: envoy-gateway-system
+    type: gateway.envoyproxy.io/sds
+    data:
+      # /var/run/secrets/workload-spiffe-uds/socket
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      # base64 for "default"
+      secretName: ZGVmYXVsdA==
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-client-cert-rootca
+      namespace: default
+    type: gateway.envoyproxy.io/sds
+    data:
+      # /var/run/secrets/workload-spiffe-uds/socket
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      # base64 for "ROOTCA"
+      secretName: Uk9PVENB
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-client-cert-default
+      namespace: sds-allowed
+    type: gateway.envoyproxy.io/sds
+    data:
+      # /var/run/secrets/workload-spiffe-uds/socket
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      # base64 for "default"
+      secretName: ZGVmYXVsdA==
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: sds-client-cert-rootca
+      namespace: sds-allowed
+    type: gateway.envoyproxy.io/sds
+    data:
+      # /var/run/secrets/workload-spiffe-uds/socket
+      url: L3Zhci9ydW4vc2VjcmV0cy93b3JrbG9hZC1zcGlmZmUtdWRzL3NvY2tldA==
+      # base64 for "ROOTCA"
+      secretName: Uk9PVENB

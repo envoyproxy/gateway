@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -97,6 +98,11 @@ func (t *Translator) applyBackendTLSSetting(
 		err                        error
 	)
 
+	var envoyproxy *egv1a1.EnvoyProxy
+	if gtwCtx != nil {
+		envoyproxy = gtwCtx.envoyProxy
+	}
+
 	// If the backendRef is a Backend resource, we need to check if it has TLS settings.
 	if KindDerefOr(backendRef.Kind, resource.KindService) == egv1a1.KindBackend {
 		backend := t.GetBackend(backendNamespace, string(backendRef.Name))
@@ -105,14 +111,15 @@ func (t *Translator) applyBackendTLSSetting(
 		}
 		if backend.Spec.TLS != nil {
 			// Get the server certificate validation settings from Backend resource.
-			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(backend); err != nil {
+			if backendValidationTLSConfig, err = t.processServerValidationTLSSettings(envoyproxy, backend); err != nil {
 				return nil, err
 			}
 
 			// Get the client certificate and common TLS settings from Backend resource.
 			if backend.Spec.TLS.BackendTLSConfig != nil {
 				if backendClientTLSConfig, err = t.processClientTLSSettings(
-					backend.Spec.TLS.BackendTLSConfig, &ResourceMetadata{
+					envoyproxy, backend.Spec.TLS.BackendTLSConfig,
+					&ResourceMetadata{
 						Name:      backend.Name,
 						Namespace: backend.Namespace,
 						Kind:      egv1a1.KindBackend,
@@ -124,7 +131,7 @@ func (t *Translator) applyBackendTLSSetting(
 	}
 
 	// Get the backend certificate validation settings from BackendTLSPolicy.
-	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(backendRef, backendNamespace, parent, resources); err != nil {
+	if btpValidationTLSConfig, err = t.processBackendTLSPolicy(envoyproxy, backendRef, backendNamespace, parent, resources); err != nil {
 		return nil, err
 	}
 
@@ -144,7 +151,7 @@ func (t *Translator) applyBackendTLSSetting(
 	// Get the client certificate and common TLS settings from EnvoyProxy resource.
 	if gtwBackendTLSConfig, owner := gtwCtx.GetBackendTLSConfig(); gtwBackendTLSConfig != nil {
 		if envoyProxyClientTLSConfig, err = t.processClientTLSSettings(
-			gtwBackendTLSConfig, owner); err != nil {
+			envoyproxy, gtwBackendTLSConfig, owner); err != nil {
 			return nil, err
 		}
 	}
@@ -250,6 +257,7 @@ func mergeClientTLSConfigs(
 }
 
 func (t *Translator) processServerValidationTLSSettings(
+	envoyproxy *egv1a1.EnvoyProxy,
 	backend *egv1a1.Backend,
 ) (*ir.TLSUpstreamConfig, error) {
 	tlsConfig := &ir.TLSUpstreamConfig{
@@ -269,7 +277,7 @@ func (t *Translator) processServerValidationTLSSettings(
 		} else if len(backend.Spec.TLS.CACertificateRefs) > 0 {
 			caRefs := getObjectReferences(gwapiv1.Namespace(backend.Namespace), backend.Spec.TLS.CACertificateRefs)
 			// Backend doesn't allow cross-namespace reference, so pass nil resources here.
-			caCert, sds, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
+			caCert, sds, err := t.getCaCertsFromCARefs(nil, envoyproxy, caRefs, resource.ResourceMetadata{
 				Name:      backend.Name,
 				Namespace: backend.Namespace,
 				Kind:      resource.KindBackendTLSPolicy,
@@ -289,6 +297,7 @@ func (t *Translator) processServerValidationTLSSettings(
 }
 
 func (t *Translator) processBackendTLSPolicy(
+	envoyproxy *egv1a1.EnvoyProxy,
 	backendRef gwapiv1.BackendObjectReference,
 	backendNamespace string,
 	parent gwapiv1.ParentReference,
@@ -299,7 +308,7 @@ func (t *Translator) processBackendTLSPolicy(
 		return nil, nil
 	}
 
-	tlsBundle, err := t.getBackendTLSBundle(policy)
+	tlsBundle, err := t.getBackendTLSBundle(envoyproxy, policy)
 	ancestorRefs := getAncestorRefs(policy)
 	ancestorRefs = append(ancestorRefs, &parent)
 
@@ -351,6 +360,7 @@ func (t *Translator) processBackendTLSPolicy(
 }
 
 func (t *Translator) processClientTLSSettings(
+	envoyproxy *egv1a1.EnvoyProxy,
 	clientTLS *egv1a1.BackendTLSConfig,
 	owner *ResourceMetadata,
 ) (*ir.TLSConfig, error) {
@@ -406,8 +416,8 @@ func (t *Translator) processClientTLSSettings(
 		}
 		// Check if this is an SDS reference secret
 		if secret.Type == egv1a1.SDSSecretType {
-			if !t.SDSSecretRefEnabled {
-				return tlsConfig, fmt.Errorf("SDS Secret reference is not enabled in EnvoyGateway configuration")
+			if err := t.validateSDSRef(envoyproxy, secret.Namespace); err != nil {
+				return tlsConfig, err
 			}
 			// For SDS reference secrets, extract the SDS secret name and URL from data
 			s, err := ir.NewSDSConfig(secret)
@@ -426,6 +436,35 @@ func (t *Translator) processClientTLSSettings(
 	}
 
 	return tlsConfig, nil
+}
+
+func (t *Translator) validateSDSRef(ep *egv1a1.EnvoyProxy, ns string) error {
+	if !t.SDSSecretRefEnabled {
+		return fmt.Errorf("SDS Secret reference is not enabled in EnvoyGateway configuration")
+	}
+
+	// Empty namespaces selector means all namespaces are allowed
+	if ep == nil || ep.Spec.SDSConfig == nil || ep.Spec.SDSConfig.AllowedNamespaces == nil {
+		return nil
+	}
+
+	secretNs := t.GetNamespace(ns)
+	if secretNs == nil {
+		// this should not happen, just in case.
+		return fmt.Errorf("namespace %s not found for SDS Secret reference", ns)
+	}
+
+	sdsSelector := ep.Spec.SDSConfig.AllowedNamespaces
+	selector, err := metav1.LabelSelectorAsSelector(sdsSelector)
+	if err != nil {
+		return fmt.Errorf("invalid AllowedNamespaces for SDS Secret reference: %w", err)
+	}
+
+	if !selector.Matches(labels.Set(secretNs.Labels)) {
+		return fmt.Errorf("SDS Secret reference is not allowed in namespace: %s", secretNs.Name)
+	}
+
+	return nil
 }
 
 func backendTLSTargetMatched(policy *gwapiv1.BackendTLSPolicy, target gwapiv1.LocalPolicyTargetReferenceWithSectionName, backendNamespace string) bool {
@@ -460,7 +499,7 @@ func (t *Translator) getBackendTLSPolicy(
 	return nil
 }
 
-func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
+func (t *Translator) getBackendTLSBundle(envoyproxy *egv1a1.EnvoyProxy, backendTLSPolicy *gwapiv1.BackendTLSPolicy) (*ir.TLSUpstreamConfig, error) {
 	// Translate SubjectAltNames from gwapiv1a3 to ir
 	subjectAltNames := make([]ir.SubjectAltName, 0, len(backendTLSPolicy.Spec.Validation.SubjectAltNames))
 	for _, san := range backendTLSPolicy.Spec.Validation.SubjectAltNames {
@@ -491,7 +530,7 @@ func (t *Translator) getBackendTLSBundle(backendTLSPolicy *gwapiv1.BackendTLSPol
 	caRefs := getObjectReferences(gwapiv1.Namespace(backendTLSPolicy.Namespace), backendTLSPolicy.Spec.Validation.CACertificateRefs)
 	// BackendTLSPolicy doesn't allow cross-namespace reference,
 	// so pass nil resources here
-	caCert, sds, err := t.getCaCertsFromCARefs(nil, caRefs, resource.ResourceMetadata{
+	caCert, sds, err := t.getCaCertsFromCARefs(nil, envoyproxy, caRefs, resource.ResourceMetadata{
 		Group:     egv1a1.GroupName,
 		Name:      backendTLSPolicy.Name,
 		Namespace: backendTLSPolicy.Namespace,
@@ -525,7 +564,8 @@ func getObjectReferences(ns gwapiv1.Namespace, refs []gwapiv1.LocalObjectReferen
 
 // getCaCertsFromCARefs retrieves CA certificates from the given CA refs. It supports ConfigMap, Secret, and ClusterTrustBundle kinds.
 // TODO: move out of backendtlspolicy.go
-func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCertificates []gwapiv1.ObjectReference, meta resource.ResourceMetadata,
+func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, envoyproxy *egv1a1.EnvoyProxy,
+	caCertificates []gwapiv1.ObjectReference, meta resource.ResourceMetadata,
 ) (caCert []byte, sds *ir.SDSConfig, err error) {
 	ca := ""
 	foundSupportedRef := false
@@ -581,8 +621,8 @@ func (t *Translator) getCaCertsFromCARefs(resources *resource.Resources, caCerti
 			if secret != nil {
 				// Check if this is an SDS reference secret
 				if secret.Type == egv1a1.SDSSecretType {
-					if !t.SDSSecretRefEnabled {
-						return nil, nil, fmt.Errorf("SDS Secret reference is not enabled in EnvoyGateway configuration")
+					if err := t.validateSDSRef(envoyproxy, secret.Namespace); err != nil {
+						return nil, nil, err
 					}
 					if foundSDSConfig != nil {
 						return nil, nil, fmt.Errorf("multiple SDS reference secrets are not supported")

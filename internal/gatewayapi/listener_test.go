@@ -1225,7 +1225,7 @@ func TestProcessServerValidationTLSSettings(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			translator := &Translator{}
-			actual, err := translator.processServerValidationTLSSettings(tc.input)
+			actual, err := translator.processServerValidationTLSSettings(nil, tc.input)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, actual)
 		})

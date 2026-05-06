@@ -93,6 +93,11 @@ func TestTranslate(t *testing.T) {
 			BackendEnabled: true,
 			SDSEnabled:     true,
 		},
+		{
+			name:           "sds-with-selector",
+			BackendEnabled: true,
+			SDSEnabled:     true,
+		},
 	}
 
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))

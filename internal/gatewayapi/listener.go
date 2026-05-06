@@ -51,7 +51,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 			gtwDefaultFrontendTLSValidation := gtw.Spec.TLS.Frontend.Default
 			allowInsecureFallback := false
 			if gtwDefaultFrontendTLSValidation.Validation != nil {
-				caCert, sds, err := t.getCaCertsFromCARefs(resources, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
+				caCert, sds, err := t.getCaCertsFromCARefs(resources, gtw.envoyProxy, gtwDefaultFrontendTLSValidation.Validation.CACertificateRefs, resource.ResourceMetadata{
 					Group:     gwapiv1.GroupVersion.Group,
 					Kind:      resource.KindGateway,
 					Name:      gtw.Name,
@@ -88,7 +88,7 @@ func (t *Translator) ProcessGatewayTLS(gateways []*GatewayContext, resources *re
 					gtwPerPortCaCertificate[portValidation.Port] = nil
 					continue
 				}
-				caCert, sds, err := t.getCaCertsFromCARefs(resources, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
+				caCert, sds, err := t.getCaCertsFromCARefs(resources, gtw.envoyProxy, portValidation.TLS.Validation.CACertificateRefs, resource.ResourceMetadata{
 					Group:     gwapiv1.GroupVersion.Group,
 					Kind:      resource.KindGateway,
 					Name:      gtw.Name,

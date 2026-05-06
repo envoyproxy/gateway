@@ -2228,6 +2228,7 @@ _Appears in:_
 | `dynamicModules` | _[DynamicModuleEntry](#dynamicmoduleentry) array_ |  false  |  | DynamicModules defines the set of dynamic modules that are allowed to be<br />used by EnvoyExtensionPolicy resources and dynamic module load balancer<br />policies. Each entry registers a module by a logical name and specifies<br />the shared library that Envoy will load.<br />The EnvoyProxy owner is responsible for ensuring the module .so files are available<br />on the proxy container's filesystem (e.g., via init containers, custom images,<br />or shared volumes). |
 | `geoIP` | _[EnvoyProxyGeoIP](#envoyproxygeoip)_ |  false  |  | GeoIP defines shared GeoIP provider configuration for this EnvoyProxy fleet. |
 | `mergeType` | _[MergeType](#mergetype)_ |  false  |  | MergeType controls how this EnvoyProxy merges with less specific configurations<br />in the hierarchy (EnvoyGateway defaults < GatewayClass < Gateway).<br />If unset, this EnvoyProxy completely replaces less specific settings.<br />Note: this field has no effect when set in EnvoyGateway's default EnvoyProxySpec. |
+| `sdsConfig` | _[SDSConfig](#sdsconfig)_ |  false  |  | SDSConfig defines configuration for Envoy's Secret Discovery Service (SDS)<br />and controls how Envoy proxies fetch secrets from the control plane. |
 
 
 #### EnvoyProxyStatus
@@ -5690,6 +5691,20 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `enabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
 | `disabled` | _[RuntimeFlag](#runtimeflag) array_ |  true  |  |  |
+
+
+#### SDSConfig
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `allowedNamespaces` | _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselector-v1-meta)_ |  false  |  | AllowedNamespaces selects namespaces where reading SDS settings from a secret is allowed.<br />If unspecified, it allows reading SDS settings from a secret in any namespace. |
 
 
 

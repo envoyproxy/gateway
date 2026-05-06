@@ -216,6 +216,19 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:validation:Enum=Replace;StrategicMerge;JSONMerge
 	// +optional
 	MergeType *MergeType `json:"mergeType,omitempty"`
+	// SDSConfig defines configuration for Envoy's Secret Discovery Service (SDS)
+	// and controls how Envoy proxies fetch secrets from the control plane.
+	//
+	// +optional
+	SDSConfig *SDSConfig `json:"sdsConfig,omitempty"`
+}
+
+type SDSConfig struct {
+	// AllowedNamespaces selects namespaces where reading SDS settings from a secret is allowed.
+	// If unspecified, it allows reading SDS settings from a secret in any namespace.
+	//
+	// +optional
+	AllowedNamespaces *metav1.LabelSelector `json:"allowedNamespaces,omitempty"`
 }
 
 // EnvoyProxyGeoIP defines shared GeoIP provider settings for EnvoyProxy.
