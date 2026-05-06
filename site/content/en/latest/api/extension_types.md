@@ -6197,7 +6197,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway.<br />Selecting targets across namespaces requires a ReferenceGrant in the target<br />namespace that allows this policy kind to reference the selected target kind.<br />Cross-namespace targets without a matching ReferenceGrant are ignored. |
 | `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
 

@@ -2,6 +2,7 @@ date: Pending
 
 # Changes that are expected to cause an incompatibility with previous versions, such as deletions or modifications to existing APIs.
 breaking changes: |
+  Merged SecurityPolicy IR/xDS resource names (OIDC, BasicAuth, ExtAuth, JWT) now derive from the policy that contributes the field (parent or route) rather than always using the route-level policy. EnvoyPatchPolicy users who reference those generated names must update their patch targets.
 
 # Updates addressing vulnerabilities, security flaws, or compliance requirements.
 security updates: |
@@ -10,6 +11,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
 
 # Enhancements that improve performance.
 performance improvements: |

@@ -1,38 +1,9 @@
-backendTrafficPolicies:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    name: cross-ns-policy
-    namespace: policy-ns
-  spec:
-    targetSelectors:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      matchLabels:
-        policy: selected
-      namespaces:
-        from: All
-    useClientProtocol: true
-  status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: target-gateway
-        namespace: policy-target-ns
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Target HTTPRoute policy-target-ns/target-route is not permitted by
-          any ReferenceGrant.
-        reason: RefNotPermitted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
+    labels:
+      policy: selected
     name: target-gateway
     namespace: policy-target-ns
   spec:
@@ -70,8 +41,6 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    labels:
-      policy: selected
     name: target-route
     namespace: policy-target-ns
   spec:
