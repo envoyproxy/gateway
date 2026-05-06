@@ -26,7 +26,7 @@ sources:
 
 dependencies:
   - name: prometheus
-    version: 29.3.0
+    version: 29.6.0
     repository: https://prometheus-community.github.io/helm-charts
     condition: prometheus.enabled
   - name: grafana
@@ -51,5 +51,5 @@ dependencies:
     condition: tempo.enabled
   - name: opentelemetry-collector
     repository: https://open-telemetry.github.io/opentelemetry-helm-charts
-    version: 0.152.0
+    version: 0.153.0
     condition: opentelemetry-collector.enabled
