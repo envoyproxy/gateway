@@ -79,11 +79,9 @@ The name of the Envoy Gateway image.
 {{- if .Values.deployment.envoyGateway.image.repository -}}
 {{/*  if global.imageRegistry is defined, it takes precedence always */}}
 {{-   if .Values.global.imageRegistry -}}
-{{-     $repositoryParts := splitn "/" 2 .Values.deployment.envoyGateway.image.repository -}}
-{{-     $registryName := .Values.global.imageRegistry -}}
-{{-     $repositoryName := $repositoryParts._1 -}}
+{{-     $repoPath := (splitn "/" 2 .Values.deployment.envoyGateway.image.repository)._1 -}}
 {{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
-{{-     printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{-     printf "%s/%s:%s" .Values.global.imageRegistry $repoPath $imageTag -}}
 {{/*  if global.imageRegistry is undefined, take repository as is */}}
 {{-   else -}}
 {{-     $imageTag := default .Chart.AppVersion .Values.deployment.envoyGateway.image.tag -}}
@@ -91,14 +89,12 @@ The name of the Envoy Gateway image.
 {{-   end -}}
 {{/* else, global image is used if defined */}}
 {{- else if .Values.global.images.envoyGateway.image -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyGateway.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{-   if .Values.global.imageRegistry -}}
+{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.envoyGateway.image)._1 -}}
+{{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
+{{-   else -}}
+{{-     .Values.global.images.envoyGateway.image -}}
+{{-   end -}}
 {{- else -}}
 docker.io/envoyproxy/gateway:{{ .Chart.Version }}
 {{- end -}}
@@ -133,14 +129,12 @@ imagePullSecrets: {{ toYaml list }}
 The name of the Envoy Ratelimit image.
 */}}
 {{- define "eg.ratelimit.image" -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.ratelimit.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "master" $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{-   if .Values.global.imageRegistry -}}
+{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.ratelimit.image)._1 -}}
+{{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
+{{-   else -}}
+{{-     .Values.global.images.ratelimit.image -}}
+{{-   end -}}
 {{- end -}}
 
 {{/*
@@ -162,14 +156,12 @@ imagePullSecrets: {{ toYaml list }}
 Resolve the Envoy Proxy image.
 */}}
 {{- define "eg.envoyProxy.image" -}}
-{{-   $imageParts := splitn "/" 2 .Values.global.images.envoyProxy.image -}}
-{{/*    if global.imageRegistry is defined, it takes precedence always */}}
-{{-   $registryName := default $imageParts._0 .Values.global.imageRegistry -}}
-{{-   $repositoryTag := $imageParts._1 -}}
-{{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
-{{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "distroless-dev" $repositoryParts._1 -}}
-{{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
+{{-   if .Values.global.imageRegistry -}}
+{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.envoyProxy.image)._1 -}}
+{{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
+{{-   else -}}
+{{-     .Values.global.images.envoyProxy.image -}}
+{{-   end -}}
 {{- end -}}
 
 {{/*
