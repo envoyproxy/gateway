@@ -100,7 +100,7 @@ type NodeAddresses struct {
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment or daemonset state.
-func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses NodeAddresses) {
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Service, envoyObj client.Object, nodeAddresses NodeAddresses, isInfraRemote bool) {
 	var addresses, hostnames []string
 	var addressNotUsable bool
 
@@ -145,7 +145,6 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 				}
 			}
 		}
-
 		gw.Status.Addresses = buildGatewayAddresses(addresses, hostnames)
 	} else {
 		gw.Status.Addresses = nil
@@ -161,7 +160,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1.Gateway, svc *corev1.Ser
 	}
 
 	// Update the programmed condition.
-	updateGatewayProgrammedCondition(gw, envoyObj)
+	updateGatewayProgrammedCondition(gw, envoyObj, isInfraRemote)
 }
 
 // Important: do not use this function directly, use listener.SetCondition instead so that listeners from ListenerSet can be updated correctly
@@ -179,16 +178,17 @@ func SetGatewayListenerStatusCondition(gateway *gwapiv1.Gateway, listenerStatusI
 }
 
 const (
-	messageAddressNotAssigned  = "No addresses have been assigned to the Gateway"
-	messageAddressNotUsable    = "One or more Gateway addresses cannot be used"
-	messageFmtTooManyAddresses = "Too many addresses (%d) have been assigned to the Gateway; only the first 16 are included in the status."
-	messageNoResources         = "Envoy replicas unavailable"
-	messageFmtProgrammed       = "Address assigned to the Gateway, %d/%d envoy replicas available"
+	messageAddressNotAssigned    = "No addresses have been assigned to the Gateway"
+	messageAddressNotUsable      = "One or more Gateway addresses cannot be used"
+	messageFmtTooManyAddresses   = "Too many addresses (%d) have been assigned to the Gateway; only the first 16 are included in the status."
+	messageNoResources           = "Envoy replicas unavailable"
+	messageFmtProgrammed         = "Address assigned to the Gateway, %d/%d envoy replicas available"
+	messageFmtProgrammedRemotely = "Address assigned to the Gateway, remote infrastructure is available"
 )
 
 // updateGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment or DaemonSet status is ready.
-func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Object) {
+func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Object, isInfraRemote bool) {
 	if len(gw.Status.Addresses) == 0 {
 		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
 			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionFalse, string(gwapiv1.GatewayReasonAddressNotAssigned),
@@ -204,6 +204,15 @@ func updateGatewayProgrammedCondition(gw *gwapiv1.Gateway, envoyObj client.Objec
 		// Truncate the addresses to 16
 		// so that the status can be updated successfully.
 		gw.Status.Addresses = gw.Status.Addresses[:16]
+		return
+	}
+
+	if isInfraRemote {
+		// We won't expect any Envoy replicas, hence we can assume (and document) that the remote provider should
+		// guarantee the Envoy addresses are made available IIF the Envoy data plane is ready to serve traffic.
+		gw.Status.Conditions = MergeConditions(gw.Status.Conditions,
+			newCondition(string(gwapiv1.GatewayConditionProgrammed), metav1.ConditionTrue, string(gwapiv1.GatewayConditionProgrammed),
+				fmt.Sprintf(messageFmtProgrammedRemotely), gw.Generation))
 		return
 	}
 
