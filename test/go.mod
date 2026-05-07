@@ -26,6 +26,7 @@ require (
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 	helm.sh/helm/v3 v3.20.2
+<<<<<<< Updated upstream
 	k8s.io/api v0.35.3
 	k8s.io/apiextensions-apiserver v0.35.3
 	k8s.io/apimachinery v0.35.3
@@ -33,6 +34,15 @@ require (
 	k8s.io/client-go v0.35.3
 	k8s.io/kubectl v0.35.3
 	sigs.k8s.io/controller-runtime v0.23.3
+=======
+	k8s.io/api v0.36.0
+	k8s.io/apiextensions-apiserver v0.36.0
+	k8s.io/apimachinery v0.36.0
+	k8s.io/cli-runtime v0.36.0
+	k8s.io/client-go v0.36.0
+	k8s.io/kubectl v0.36.0
+	sigs.k8s.io/controller-runtime v0.24.0
+>>>>>>> Stashed changes
 	sigs.k8s.io/gateway-api v1.5.1
 	sigs.k8s.io/gateway-api/conformance v1.5.1
 	sigs.k8s.io/yaml v1.6.0
