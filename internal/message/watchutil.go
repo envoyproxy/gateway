@@ -27,6 +27,17 @@ func PublishMetric(meta Metadata, count int) {
 	watchablePublishTotal.WithSuccess(meta.LabelValues()...).Add(float64(count))
 }
 
+func PublishRunnerEventMetric(runnerName string, isDelete bool) {
+	eventType := "update"
+	if isDelete {
+		eventType = "delete"
+	}
+	watchableEventTotal.With(
+		runnerEventTypeLabel.Value(eventType),
+		runnerLabel.Value(runnerName),
+	).Add(1)
+}
+
 func (m Metadata) LabelValues() []metrics.LabelValue {
 	labels := make([]metrics.LabelValue, 0, 2)
 	if m.Runner != "" {
