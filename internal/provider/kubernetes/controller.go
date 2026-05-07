@@ -2205,6 +2205,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if err := c.Watch(NewWatchAndReconcileSource(mgr.Elected(), &gwapiv1.GatewayClass{}, handler.EnqueueRequestsFromMapFunc(r.enqueueClass))); err != nil {
 		return fmt.Errorf("failed to watch GatewayClass: %w", err)
 	}
+	if err := addGatewayClassIndexers(ctx, mgr); err != nil {
+		return fmt.Errorf("failed to add indexer for GatewayClass: %w", err)
+	}
 
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1.GatewayClass{},

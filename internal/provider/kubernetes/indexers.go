@@ -64,6 +64,9 @@ const (
 	clusterTrustBundleBackendIndex = "clusterTrustBundleBackendIndex"
 	clusterTrustBundleBtlsIndex    = "clusterTrustBundleBtlsIndex"
 	clusterTrustBundleCtpIndex     = "clusterTrustBundleCtpIndex"
+
+	envoyProxyGatewayClassIndex = "envoyProxyGatewayClassIndex"
+	envoyProxyGatewayIndex      = "envoyProxyGatewayIndex"
 )
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -660,6 +663,10 @@ func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, envoyProxyGatewayIndex, envoyProxyGatewayIndexFunc); err != nil {
+		return err
+	}
+
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.Gateway{}, classGatewayIndex, gatewayIndexFunc); err != nil {
 		return err
 	}
@@ -687,6 +694,23 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return secretReferences
+}
+
+func envoyProxyGatewayIndexFunc(rawObj client.Object) []string {
+	gtw := rawObj.(*gwapiv1.Gateway)
+	var gatewayRefs []string
+	if gtw.Spec.Infrastructure != nil && gtw.Spec.Infrastructure.ParametersRef != nil {
+		ref := gtw.Spec.Infrastructure.ParametersRef
+		if isEnvoyProxyKind(ref.Group, ref.Kind) {
+			gatewayRefs = append(gatewayRefs,
+				types.NamespacedName{
+					Namespace: gtw.Namespace,
+					Name:      string(ref.Name),
+				}.String(),
+			)
+		}
+	}
+	return gatewayRefs
 }
 
 func gatewayIndexFunc(rawObj client.Object) []string {
@@ -1332,4 +1356,32 @@ func clusterTrustBundleEepIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return refs
+}
+
+func addGatewayClassIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.GatewayClass{}, envoyProxyGatewayClassIndex, envoyProxyGatewayClassIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func envoyProxyGatewayClassIndexFunc(rawObj client.Object) []string {
+	gc := rawObj.(*gwapiv1.GatewayClass)
+	var refs []string
+	if ref := gc.Spec.ParametersRef; ref != nil {
+		if isEnvoyProxyKind(ref.Group, ref.Kind) {
+			refs = append(refs, types.NamespacedName{
+				Name:      ref.Name,
+				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, "default"),
+			}.String())
+		}
+	}
+
+	return refs
+}
+
+func isEnvoyProxyKind(group gwapiv1.Group, kind gwapiv1.Kind) bool {
+	return string(kind) == egv1a1.KindEnvoyProxy &&
+		string(group) == egv1a1.GroupName
 }

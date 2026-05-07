@@ -167,14 +167,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 
 	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
 	testNs := config.DefaultNamespace
-
 	epName := "test-envoy-proxy"
-	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
-	require.NoError(t, cli.Create(ctx, ep))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, ep))
-	}()
 
 	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName, nil)
 	gc.Spec.ParametersRef = &gwapiv1.ParametersReference{
@@ -184,11 +177,17 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
 	require.NoError(t, cli.Create(ctx, gc))
-
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
 	}()
+	requireGatewayClassAcceptedCondition(t, cli, gc, metav1.ConditionFalse)
+	// Create the EnvoyProxy referenced by the GatewayClass.
 
+	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: testNs, Name: epName}, false)
+	require.NoError(t, cli.Create(ctx, ep))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, ep))
+	}()
 	requireGatewayClassAccepted(t, cli, gc)
 
 	require.Eventually(t, func() bool {
@@ -210,7 +209,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	}, defaultWait, defaultTick)
 }
 
-func requireGatewayClassAccepted(t *testing.T, cli client.Client, gc *gwapiv1.GatewayClass) {
+func requireGatewayClassAcceptedCondition(t *testing.T, cli client.Client, gc *gwapiv1.GatewayClass, status metav1.ConditionStatus) {
 	// Ensure the GatewayClass reports "Accepted".
 	require.Eventually(t, func() bool {
 		if err := cli.Get(t.Context(), types.NamespacedName{Name: gc.Name}, gc); err != nil {
@@ -218,13 +217,17 @@ func requireGatewayClassAccepted(t *testing.T, cli client.Client, gc *gwapiv1.Ga
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == status {
 				return true
 			}
 		}
 
 		return false
-	}, defaultWait, defaultTick, " timed out waiting for GatewayClass %s to report Accepted=True condition", gc.Name)
+	}, defaultWait, defaultTick, " timed out waiting for GatewayClass %s to report Accepted=%s condition", status, gc.Name)
+}
+
+func requireGatewayClassAccepted(t *testing.T, cli client.Client, gc *gwapiv1.GatewayClass) {
+	requireGatewayClassAcceptedCondition(t, cli, gc, metav1.ConditionTrue)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -242,7 +245,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	// Create the namespace for the Gateway under test.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
-
+	epName := "test-envoy-proxy"
 	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "scheduled-status-test",
@@ -255,6 +258,13 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 					Name:     "test",
 					Port:     int32(8080),
 					Protocol: gwapiv1.HTTPProtocolType,
+				},
+			},
+			Infrastructure: &gwapiv1.GatewayInfrastructure{
+				ParametersRef: &gwapiv1.LocalParametersReference{
+					Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+					Kind:  egv1a1.KindEnvoyProxy,
+					Name:  epName,
 				},
 			},
 		},
@@ -314,22 +324,15 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	require.NoError(t, cli.Create(ctx, deploy))
 	require.NoError(t, cli.Create(ctx, svc))
-
-	// Ensure the Gateway reports "Accepted".
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, utils.NamespacedName(gw), gw); err != nil {
-			return false
-		}
-
-		for _, cond := range gw.Status.Conditions {
-			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		t.Logf("Accepted=True condition not found in Gateway %s/%s conditions: %+v", gw.Namespace, gw.Name, gw.Status.Conditions)
-		return false
-	}, defaultWait, defaultTick, " timed out waiting for Gateway %s to report Accepted=True condition", utils.NamespacedName(gw))
+	// Report Accepted=False because EnvoyProxy missed.
+	requireGatewayAcceptedCondition(t, cli, gw, metav1.ConditionFalse)
+	ep := test.GetEnvoyProxy(types.NamespacedName{Namespace: gw.Namespace, Name: epName}, false)
+	require.NoError(t, cli.Create(ctx, ep))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, ep))
+	}()
+	// Report Accepted=True after EnvoyProxy created.
+	requireGatewayAcceptedCondition(t, cli, gw, metav1.ConditionTrue)
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gw))
@@ -368,6 +371,24 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
 	require.Equal(t, gw.Spec, res.Gateways[0].Spec)
+}
+
+func requireGatewayAcceptedCondition(t *testing.T, cli client.Client, gw *gwapiv1.Gateway, status metav1.ConditionStatus) {
+	// Ensure the Gateway reports "Accepted".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(t.Context(), utils.NamespacedName(gw), gw); err != nil {
+			return false
+		}
+
+		for _, cond := range gw.Status.Conditions {
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == status {
+				return true
+			}
+		}
+
+		t.Logf("Accepted=%s condition not found in Gateway %s conditions: %+v", status, utils.NamespacedName(gw), gw.Status.Conditions)
+		return false
+	}, defaultWait, defaultTick, " timed out waiting for Gateway %s to report Accepted=%s condition", utils.NamespacedName(gw), status)
 }
 
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
