@@ -11,13 +11,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"os"
-	"reflect"
 	"sync"
 	"testing"
 
+	grpcExtension "github.com/envoyproxy/gateway/internal/extension"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -28,7 +27,6 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -226,103 +224,6 @@ func TestGetExtensionServerAddress(t *testing.T) {
 	}
 }
 
-func Test_setupGRPCOpts(t *testing.T) {
-	type args struct {
-		ext *egv1a1.ExtensionManager
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []grpc.DialOption
-		wantErr bool
-	}{
-		{
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", math.MaxInt))),
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 0))),
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					MaxMessageSize: new(resource.MustParse(fmt.Sprintf("%dM", 10))),
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-						Retry: &egv1a1.ExtensionServiceRetry{
-							MaxAttempts:    new(20),
-							InitialBackoff: new(gwapiv1.Duration("500ms")),
-							MaxBackoff:     new(gwapiv1.Duration("5s")),
-							BackoffMultiplier: &gwapiv1.Fraction{
-								Numerator: 50,
-							},
-							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
-								"CANCELLED",
-								"UNKNOWN",
-								"INVALID_ARGUMENT",
-								"DEADLINE_EXCEEDED",
-								"NOT_FOUND",
-								"ALREADY_EXISTS",
-								"PERMISSION_DENIED",
-								"RESOURCE_EXHAUSTED",
-								"FAILED_PRECONDITION",
-								"ABORTED",
-								"OUT_OF_RANGE",
-								"UNIMPLEMENTED",
-								"INTERNAL",
-								"UNAVAILABLE",
-								"DATA_LOSS",
-								"UNAUTHENTICATED",
-							},
-						},
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fc := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-			_, err := setupGRPCOpts(context.TODO(), fc, tt.args.ext, "envoy-gateway-system")
-			if (err != nil) != tt.wantErr {
-				t.Errorf("setupGRPCOpts() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-		})
-	}
-}
-
 type testServer struct {
 	extension.UnimplementedEnvoyGatewayExtensionServer
 }
@@ -403,7 +304,7 @@ func Test_TLS(t *testing.T) {
 
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(secret).Build()
 
-	opts, err := setupGRPCOpts(context.Background(), fakeClient, extManager, "test-ns")
+	opts, err := grpcExtension.GenerateGRPCOptions(context.Background(), fakeClient, extManager.Service, extManager.MaxMessageSize, serviceName, "test-ns")
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
@@ -515,7 +416,7 @@ func Test_mTLS(t *testing.T) {
 
 	fakeClient := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(caSecret, clientSecret).Build()
 
-	opts, err := setupGRPCOpts(context.Background(), fakeClient, extManager, "test-ns")
+	opts, err := grpcExtension.GenerateGRPCOptions(context.Background(), fakeClient, extManager.Service, extManager.MaxMessageSize, serviceName, "test-ns")
 	require.NoError(t, err)
 	require.NotEmpty(t, opts)
 
@@ -536,162 +437,6 @@ func Test_mTLS(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "test-mtls-route", response.Route.Name)
-}
-
-func Test_buildServiceConfig(t *testing.T) {
-	type args struct {
-		ext *egv1a1.ExtensionManager
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-		{
-			name: "default",
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-					},
-				},
-			},
-			want: `{
-"methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
-	"waitForReady": true,
-	"retryPolicy": {
-		"MaxAttempts": 4,
-		"InitialBackoff": "0.100000s",
-		"MaxBackoff": "1.000000s",
-		"BackoffMultiplier": 2.000000,
-		"RetryableStatusCodes": [ "UNAVAILABLE" ]
-	}
-}]}`,
-		},
-		{
-			name: "valid",
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-						Retry: &egv1a1.ExtensionServiceRetry{
-							MaxAttempts:    new(20),
-							InitialBackoff: new(gwapiv1.Duration("500ms")),
-							MaxBackoff:     new(gwapiv1.Duration("5s")),
-							BackoffMultiplier: &gwapiv1.Fraction{
-								Numerator: 50,
-							},
-							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
-								"CANCELLED",
-								"UNKNOWN",
-								"INVALID_ARGUMENT",
-								"DEADLINE_EXCEEDED",
-								"NOT_FOUND",
-								"ALREADY_EXISTS",
-								"PERMISSION_DENIED",
-								"RESOURCE_EXHAUSTED",
-								"FAILED_PRECONDITION",
-								"ABORTED",
-								"OUT_OF_RANGE",
-								"UNIMPLEMENTED",
-								"INTERNAL",
-								"UNAVAILABLE",
-								"DATA_LOSS",
-								"UNAUTHENTICATED",
-							},
-						},
-					},
-				},
-			},
-			want: `{
-"methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
-	"waitForReady": true,
-	"retryPolicy": {
-		"MaxAttempts": 20,
-		"InitialBackoff": "0.500000s",
-		"MaxBackoff": "5.000000s",
-		"BackoffMultiplier": 0.500000,
-		"RetryableStatusCodes": [ "CANCELLED","UNKNOWN","INVALID_ARGUMENT","DEADLINE_EXCEEDED","NOT_FOUND","ALREADY_EXISTS","PERMISSION_DENIED","RESOURCE_EXHAUSTED","FAILED_PRECONDITION","ABORTED","OUT_OF_RANGE","UNIMPLEMENTED","INTERNAL","UNAVAILABLE","DATA_LOSS","UNAUTHENTICATED" ]
-	}
-}]}`,
-		},
-		{
-			name: "defaults",
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-					},
-				},
-			},
-			want: `{
-"methodConfig": [{
-	"name": [{"service": "envoygateway.extension.EnvoyGatewayExtension"}],
-	"waitForReady": true,
-	"retryPolicy": {
-		"MaxAttempts": 4,
-		"InitialBackoff": "0.100000s",
-		"MaxBackoff": "1.000000s",
-		"BackoffMultiplier": 2.000000,
-		"RetryableStatusCodes": [ "UNAVAILABLE" ]
-	}
-}]}`,
-		},
-		{
-			name: "invalid-code",
-			args: args{
-				ext: &egv1a1.ExtensionManager{
-					Service: &egv1a1.ExtensionService{
-						BackendEndpoint: egv1a1.BackendEndpoint{
-							FQDN: &egv1a1.FQDNEndpoint{
-								Hostname: "foo.bar",
-								Port:     44344,
-							},
-						},
-						Retry: &egv1a1.ExtensionServiceRetry{
-							RetryableStatusCodes: []egv1a1.RetryableGRPCStatusCode{
-								"CANCELLED",
-								"NOTACODE",
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildServiceConfig(tt.args.ext)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildServiceConfig() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("buildServiceConfig() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }
 
 type retryTestServer struct {
