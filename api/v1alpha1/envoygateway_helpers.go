@@ -394,6 +394,18 @@ func (r *EnvoyGatewayProvider) IsRunningOnKubernetes() bool {
 	return false
 }
 
+func (r *EnvoyGatewayProvider) IsInfraManagedRemotely() bool {
+	if r.Type != ProviderTypeCustom {
+		return false
+	}
+
+	if r.Custom == nil || r.Custom.Infrastructure == nil {
+		return false
+	}
+
+	return r.Custom.Infrastructure.Type == InfrastructureProviderTypeRemote
+}
+
 func (r *EnvoyGatewayProvider) IsRunningOnHost() bool {
 	return r.Type == ProviderTypeCustom &&
 		r.Custom.Infrastructure != nil &&
