@@ -26,6 +26,8 @@ type Infra struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cfg *config.Server, errors message.RunnerErrorNotifier) (*Infra, error) {
+	// We initialize the client here, that way if the remote connection is misconfigured, then the pod
+	// crashes rather than silently failing when infrastructure changes happen.
 	infraClient, err := newRemoteInfraClient(cfg, cfg.EnvoyGateway.Provider.IsRunningOnKubernetes())
 	if err != nil {
 		if infraClient != nil {
@@ -54,9 +56,9 @@ func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 }
 
 func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
-	return nil
+	return i.ic.CreateOrUpdateRateLimitInfra(ctx)
 }
 
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context) error {
-	return nil
+	return i.ic.DeleteRateLimitInfra(ctx)
 }
