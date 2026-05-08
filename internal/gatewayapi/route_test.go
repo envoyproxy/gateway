@@ -557,9 +557,10 @@ func TestServiceEndpointHostname(t *testing.T) {
 	t.Run("cluster ip endpoint uses resolved hostname", func(t *testing.T) {
 		translator := &Translator{}
 		port := int32(8080)
+		portNum := gwapiv1.PortNumber(port)
 		backendRef := gwapiv1.BackendObjectReference{
 			Name: "service-1",
-			Port: new(gwapiv1.PortNumber(port)),
+			Port: &portNum,
 		}
 		service := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default"},
@@ -586,5 +587,43 @@ func TestServiceEndpointHostname(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, ds.Endpoints, 1)
 		require.Equal(t, new("service-1.default.svc.cluster.local"), ds.Endpoints[0].Hostname)
+	})
+
+	t.Run("static type returns specified hostname", func(t *testing.T) {
+		translator := &Translator{}
+		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default"}}
+		setting := &egv1a1.BackendEndpointHostname{
+			Type:     egv1a1.BackendEndpointHostnameTypeStatic,
+			Hostname: new("custom-static.example.com"),
+		}
+
+		hostname := translator.serviceEndpointHostname(service, setting)
+
+		require.Equal(t, new("custom-static.example.com"), hostname)
+	})
+
+	t.Run("static type with nil hostname returns nil", func(t *testing.T) {
+		translator := &Translator{}
+		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default"}}
+		setting := &egv1a1.BackendEndpointHostname{
+			Type:     egv1a1.BackendEndpointHostnameTypeStatic,
+			Hostname: nil,
+		}
+
+		hostname := translator.serviceEndpointHostname(service, setting)
+
+		require.Nil(t, hostname)
+	})
+
+	t.Run("static type ignores nil service", func(t *testing.T) {
+		translator := &Translator{}
+		setting := &egv1a1.BackendEndpointHostname{
+			Type:     egv1a1.BackendEndpointHostnameTypeStatic,
+			Hostname: new("custom-static.example.com"),
+		}
+
+		hostname := translator.serviceEndpointHostname(nil, setting)
+
+		require.Equal(t, new("custom-static.example.com"), hostname)
 	})
 }

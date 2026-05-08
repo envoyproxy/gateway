@@ -17,6 +17,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -3394,6 +3395,73 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				}
 			},
 			wantErrors: []string{},
+		},
+		{
+			desc: "valid endpoint hostname static with hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{
+						Type:     egv1a1.BackendEndpointHostnameTypeStatic,
+						Hostname: ptr.To("custom-static.example.com"),
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid endpoint hostname static without hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{
+						Type: egv1a1.BackendEndpointHostnameTypeStatic,
+					},
+				}
+			},
+			wantErrors: []string{"hostname must be set when type is Static"},
+		},
+		{
+			desc: "invalid endpoint hostname none with hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{
+						Type:     egv1a1.BackendEndpointHostnameTypeNone,
+						Hostname: ptr.To("custom-static.example.com"),
+					},
+				}
+			},
+			wantErrors: []string{"hostname must not be set when type is not Static"},
+		},
+		{
+			desc: "invalid endpoint hostname kubernetes service with hostname",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{Group: "gateway.networking.k8s.io", Kind: "Gateway", Name: "eg"},
+						},
+					},
+					EndpointHostname: &egv1a1.BackendEndpointHostname{
+						Type:     egv1a1.BackendEndpointHostnameTypeKubernetesService,
+						Hostname: ptr.To("custom-static.example.com"),
+					},
+				}
+			},
+			wantErrors: []string{"hostname must not be set when type is not Static"},
 		},
 		{
 			desc: "valid bandwidthLimit with request and response set to different limits",

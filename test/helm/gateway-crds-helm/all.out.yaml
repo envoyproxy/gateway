@@ -23067,6 +23067,35 @@ spec:
                       Defaults to true.
                     type: boolean
                 type: object
+              endpointHostname:
+                description: |-
+                  EndpointHostname configures the hostname value attached to backend endpoints.
+                  If unset, no hostname is attached to Kubernetes Service endpoints.
+                properties:
+                  hostname:
+                    description: |-
+                      Hostname is a custom static hostname to attach to backend endpoints.
+                      This field is required when type is "Static" and must not be set for other types.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  type:
+                    description: Type determines how endpoint hostnames should be
+                      populated.
+                    enum:
+                    - None
+                    - KubernetesService
+                    - Static
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: hostname must be set when type is Static
+                  rule: 'self.type == ''Static'' ? has(self.hostname) : true'
+                - message: hostname must not be set when type is not Static
+                  rule: 'self.type != ''Static'' ? !has(self.hostname) : true'
               faultInjection:
                 description: |-
                   FaultInjection defines the fault injection policy to be applied. This configuration can be used to

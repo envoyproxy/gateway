@@ -2141,16 +2141,21 @@ func (t *Translator) processServiceDestinationSetting(
 }
 
 func (t *Translator) serviceEndpointHostname(service *corev1.Service, endpointHostname *egv1a1.BackendEndpointHostname) *string {
-	if service == nil || endpointHostname == nil {
+	if endpointHostname == nil {
 		return nil
 	}
 
 	switch endpointHostname.Type {
 	case egv1a1.BackendEndpointHostnameTypeKubernetesService:
-		if service.Name == "" || service.Namespace == "" {
+		if service == nil || service.Name == "" || service.Namespace == "" {
 			return nil
 		}
 		return ptr.To(fmt.Sprintf("%s.%s.svc.%s", service.Name, service.Namespace, t.dnsDomain()))
+	case egv1a1.BackendEndpointHostnameTypeStatic:
+		if endpointHostname.Hostname == nil || *endpointHostname.Hostname == "" {
+			return nil
+		}
+		return endpointHostname.Hostname
 	default:
 		return nil
 	}

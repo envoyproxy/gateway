@@ -695,7 +695,7 @@ type ClusterSettings struct {
 
 // BackendEndpointHostnameType defines how endpoint hostnames should be populated.
 //
-// +kubebuilder:validation:Enum=None;KubernetesService
+// +kubebuilder:validation:Enum=None;KubernetesService;Static
 type BackendEndpointHostnameType string
 
 const (
@@ -703,14 +703,28 @@ const (
 	BackendEndpointHostnameTypeNone BackendEndpointHostnameType = "None"
 	// BackendEndpointHostnameTypeKubernetesService uses the Kubernetes Service FQDN.
 	BackendEndpointHostnameTypeKubernetesService BackendEndpointHostnameType = "KubernetesService"
+	// BackendEndpointHostnameTypeStatic uses a user-specified static hostname.
+	BackendEndpointHostnameTypeStatic BackendEndpointHostnameType = "Static"
 )
 
 // BackendEndpointHostname configures hostnames attached to backend endpoints.
+//
+// +kubebuilder:validation:XValidation:message="hostname must be set when type is Static",rule="self.type == 'Static' ? has(self.hostname) : true"
+// +kubebuilder:validation:XValidation:message="hostname must not be set when type is not Static",rule="self.type != 'Static' ? !has(self.hostname) : true"
 type BackendEndpointHostname struct {
 	// Type determines how endpoint hostnames should be populated.
 	//
 	// +kubebuilder:validation:Required
 	Type BackendEndpointHostnameType `json:"type"`
+
+	// Hostname is a custom static hostname to attach to backend endpoints.
+	// This field is required when type is "Static" and must not be set for other types.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Hostname *string `json:"hostname,omitempty"`
 }
 
 // CIDR defines a CIDR Address range.

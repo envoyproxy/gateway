@@ -30,9 +30,11 @@ var HTTPRouteBackendEndpointHostname = suite.ConformanceTest{
 		gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 		withBTPRouteNN := types.NamespacedName{Name: "backend-endpoint-hostname-with-btp", Namespace: ns}
 		withoutBTPRouteNN := types.NamespacedName{Name: "backend-endpoint-hostname-without-btp", Namespace: ns}
-		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, withBTPRouteNN, withoutBTPRouteNN)
+		staticBTPRouteNN := types.NamespacedName{Name: "backend-endpoint-hostname-static", Namespace: ns}
+		gwAddr := kubernetes.GatewayAndRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), &gwapiv1.HTTPRoute{}, false, withBTPRouteNN, withoutBTPRouteNN, staticBTPRouteNN)
 		kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, withBTPRouteNN, gwNN)
 		kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, withoutBTPRouteNN, gwNN)
+		kubernetes.HTTPRouteMustHaveResolvedRefsConditionsTrue(t, suite.Client, suite.TimeoutConfig, staticBTPRouteNN, gwNN)
 
 		testCases := []http.ExpectedResponse{
 			{
@@ -58,6 +60,20 @@ var HTTPRouteBackendEndpointHostname = suite.ConformanceTest{
 					Request: http.Request{
 						Path: "/backend-endpoint-hostname-without-btp",
 						Host: "example.com",
+					},
+				},
+				Backend:   "infra-backend-v1",
+				Namespace: ns,
+			},
+			{
+				Request: http.Request{
+					Host: "example.com",
+					Path: "/backend-endpoint-hostname-static",
+				},
+				ExpectedRequest: &http.ExpectedRequest{
+					Request: http.Request{
+						Path: "/backend-endpoint-hostname-static",
+						Host: "custom-static.example.com",
 					},
 				},
 				Backend:   "infra-backend-v1",

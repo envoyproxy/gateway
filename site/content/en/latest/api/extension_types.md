@@ -422,6 +422,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `type` | _[BackendEndpointHostnameType](#backendendpointhostnametype)_ |  true  |  | Type determines how endpoint hostnames should be populated. |
+| `hostname` | _string_ |  false  |  | Hostname is a custom static hostname to attach to backend endpoints.<br />This field is required when type is "Static" and must not be set for other types. |
 
 
 #### BackendEndpointHostnameType
@@ -437,6 +438,7 @@ _Appears in:_
 | ----- | ----------- |
 | `None` | BackendEndpointHostnameTypeNone does not attach hostnames to backend endpoints.<br /> | 
 | `KubernetesService` | BackendEndpointHostnameTypeKubernetesService uses the Kubernetes Service FQDN.<br /> | 
+| `Static` | BackendEndpointHostnameTypeStatic uses a user-specified static hostname.<br /> | 
 
 
 #### BackendMetrics
