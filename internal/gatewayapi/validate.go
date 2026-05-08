@@ -289,15 +289,24 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) {
 		return
 	}
 
-	// Edge case: only one condition which is ResolvedRefs=False, Reason=PartiallyInvalidCertificateRef
-	// In this case, we can still consider the listener as ready because we only program the listener using only the valid certificates.
-	if len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs) &&
-		lConditions[0].Reason == string(status.ListenerReasonPartiallyInvalidCertificateRef) {
-		listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
-			"Listener has been successfully translated")
-		listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
-			"Sending translated listener configuration to the data plane")
-		return
+	onlyResolvedRefFailure := len(lConditions) == 1 && lConditions[0].Type == string(gwapiv1.ListenerConditionResolvedRefs)
+	if onlyResolvedRefFailure {
+		switch lConditions[0].Reason {
+		case string(status.ListenerReasonPartiallyInvalidCertificateRef):
+			// The listener is ready because we program it using only the valid certificates.
+			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionTrue, gwapiv1.ListenerReasonProgrammed,
+				"Sending translated listener configuration to the data plane")
+			return
+		case string(gwapiv1.ListenerReasonInvalidCertificateRef):
+			// The listener configuration is semantically valid, but the listener cannot serve traffic with an invalid certificate.
+			listener.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionTrue, gwapiv1.ListenerReasonAccepted,
+				"Listener has been successfully translated")
+			listener.SetCondition(gwapiv1.ListenerConditionProgrammed, metav1.ConditionFalse, gwapiv1.ListenerReasonInvalid,
+				"Listener is invalid, see other Conditions for details.")
+			return
+		}
 	}
 
 	// Any condition on the listener apart from Programmed=true indicates an error.
