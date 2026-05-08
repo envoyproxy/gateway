@@ -64,6 +64,12 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -123,6 +129,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -159,6 +171,12 @@ metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
   namespace: "default"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -261,6 +279,12 @@ metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
   namespace: "app-ns"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -606,6 +630,12 @@ kind: RoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
   namespace: "default"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -621,6 +651,12 @@ kind: RoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
   namespace: "app-ns"
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
