@@ -2,25 +2,26 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-httproute-with-overrides
+    name: policy-btp-host
     namespace: default
   spec:
     healthCheck:
       active:
         healthyThreshold: 1
         http:
+          expectedStatuses:
+          - 200
+          hostname: btp-health.example.com
           method: GET
           path: /healthz
         interval: 5s
-        overrides:
-          port: 9090
-        timeout: 1s
+        timeout: 2s
         type: HTTP
         unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-with-overrides
+      name: httproute-btp-host
   status:
     ancestors:
     - ancestorRef:
@@ -35,32 +36,29 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-httproute-with-no-overrides
+    name: policy-backend-host
     namespace: default
   spec:
     healthCheck:
       active:
         healthyThreshold: 1
         http:
+          expectedStatuses:
+          - 200
           method: GET
           path: /healthz
         interval: 5s
-        timeout: 1s
+        timeout: 2s
         type: HTTP
         unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
+    targetRefs:
+    - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-with-no-overrides
+      name: httproute-backend-host
   status:
     ancestors:
     - ancestorRef:
@@ -75,33 +73,29 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    name: policy-for-grpcroute-with-overrides
+    name: policy-route-host
     namespace: default
   spec:
     healthCheck:
       active:
-        grpc:
-          service: foo-service
         healthyThreshold: 1
+        http:
+          expectedStatuses:
+          - 200
+          method: GET
+          path: /healthz
         interval: 5s
-        overrides:
-          port: 50052
-        timeout: 1s
-        type: GRPC
+        timeout: 2s
+        type: HTTP
         unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-with-overrides
+    targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-route-host
   status:
     ancestors:
     - ancestorRef:
@@ -116,51 +110,43 @@ backendTrafficPolicies:
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+backends:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
+  kind: Backend
   metadata:
-    name: policy-for-grpcroute-with-no-overrides
+    name: backend-with-hostname
     namespace: default
   spec:
-    healthCheck:
-      active:
-        grpc:
-          service: bar-service
-        healthyThreshold: 1
-        interval: 5s
-        timeout: 1s
-        type: GRPC
-        unhealthyThreshold: 3
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-with-no-overrides
+    endpoints:
+    - fqdn:
+        hostname: backend-address.example.com
+        port: 443
+      hostname: backend-endpoint.example.com
   status:
-    ancestors:
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: gateway
-        namespace: envoy-gateway
-        sectionName: http
-      conditions:
-      - lastTransitionTime: null
-        message: Policy has been accepted.
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: spec.targetRef is deprecated, use spec.targetRefs instead
-        reason: DeprecatedField
-        status: "True"
-        type: Warning
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-without-hostname
+    namespace: default
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: backend-no-endpoint-host.example.com
+        port: 443
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: The Backend was accepted
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
@@ -178,7 +164,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 4
+    - attachedRoutes: 3
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -201,91 +187,27 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    name: grpcroute-with-overrides
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: grpc-backend
-        port: 50051
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway
-        namespace: envoy-gateway
-        sectionName: http
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    name: grpcroute-with-no-overrides
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: grpc-backend
-        port: 50051
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway
-        namespace: envoy-gateway
-        sectionName: http
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-with-overrides
+    name: httproute-btp-host
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - btp-route.example.com
     parentRefs:
     - name: gateway
       namespace: envoy-gateway
       sectionName: http
     rules:
     - backendRefs:
-      - name: http-backend
-        port: 8080
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-with-hostname
       matches:
       - path:
-          value: /with-overrides
+          value: /btp-host
   status:
     parents:
     - conditions:
@@ -307,22 +229,61 @@ httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
-    name: httproute-with-no-overrides
+    name: httproute-backend-host
     namespace: default
   spec:
     hostnames:
-    - gateway.envoyproxy.io
+    - backend-route.example.com
     parentRefs:
     - name: gateway
       namespace: envoy-gateway
       sectionName: http
     rules:
     - backendRefs:
-      - name: http-backend
-        port: 8080
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-with-hostname
       matches:
       - path:
-          value: /with-no-overrides
+          value: /backend-host
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway
+        namespace: envoy-gateway
+        sectionName: http
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: httproute-route-host
+    namespace: default
+  spec:
+    hostnames:
+    - route-fallback.example.com
+    parentRefs:
+    - name: gateway
+      namespace: envoy-gateway
+      sectionName: http
+    rules:
+    - backendRefs:
+      - group: gateway.envoyproxy.io
+        kind: Backend
+        name: backend-without-hostname
+      matches:
+      - path:
+          value: /route-host
   status:
     parents:
     - conditions:
@@ -389,9 +350,6 @@ xdsIR:
     http:
     - address: 0.0.0.0
       externalPort: 80
-      grpc:
-        enableGRPCStats: true
-        enableGRPCWeb: true
       hostnames:
       - '*'
       metadata:
@@ -408,37 +366,37 @@ xdsIR:
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-with-no-overrides
+            name: httproute-backend-host
             namespace: default
-          name: httproute/default/httproute-with-no-overrides/rule/0
+          name: httproute/default/httproute-backend-host/rule/0
           settings:
-          - addressType: IP
+          - addressType: FQDN
             endpoints:
-            - host: 7.7.7.7
-              port: 8080
+            - host: backend-address.example.com
+              hostname: backend-endpoint.example.com
+              port: 443
             metadata:
-              kind: Service
-              name: http-backend
+              kind: Backend
+              name: backend-with-hostname
               namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-with-no-overrides/rule/0/backend/0
+            name: httproute/default/httproute-backend-host/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
+        hostname: backend-route.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-with-no-overrides
+          name: httproute-backend-host
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-httproute-with-no-overrides
+            name: policy-backend-host
             namespace: default
-        name: httproute/default/httproute-with-no-overrides/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-backend-host/rule/0/match/0/backend-route_example_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /with-no-overrides
+          prefix: /backend-host
         traffic:
           healthCheck:
             active:
@@ -450,42 +408,41 @@ xdsIR:
                 method: GET
                 path: /healthz
               interval: 5s
-              timeout: 1s
+              timeout: 2s
               unhealthyThreshold: 3
       - destination:
           metadata:
             kind: HTTPRoute
-            name: httproute-with-overrides
+            name: httproute-route-host
             namespace: default
-          name: httproute/default/httproute-with-overrides/rule/0
+          name: httproute/default/httproute-route-host/rule/0
           settings:
-          - addressType: IP
+          - addressType: FQDN
             endpoints:
-            - host: 7.7.7.7
-              port: 8080
+            - host: backend-no-endpoint-host.example.com
+              port: 443
             metadata:
-              kind: Service
-              name: http-backend
+              kind: Backend
+              name: backend-without-hostname
               namespace: default
-              sectionName: "8080"
-            name: httproute/default/httproute-with-overrides/rule/0/backend/0
+            name: httproute/default/httproute-route-host/rule/0/backend/0
             protocol: HTTP
             weight: 1
-        hostname: gateway.envoyproxy.io
+        hostname: route-fallback.example.com
         isHTTP2: false
         metadata:
           kind: HTTPRoute
-          name: httproute-with-overrides
+          name: httproute-route-host
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-httproute-with-overrides
+            name: policy-route-host
             namespace: default
-        name: httproute/default/httproute-with-overrides/rule/0/match/0/gateway_envoyproxy_io
+        name: httproute/default/httproute-route-host/rule/0/match/0/route-fallback_example_com
         pathMatch:
           distinct: false
           name: ""
-          prefix: /with-overrides
+          prefix: /route-host
         traffic:
           healthCheck:
             active:
@@ -497,89 +454,54 @@ xdsIR:
                 method: GET
                 path: /healthz
               interval: 5s
-              overrides:
-                port: 9090
-              timeout: 1s
+              timeout: 2s
               unhealthyThreshold: 3
       - destination:
           metadata:
-            kind: GRPCRoute
-            name: grpcroute-with-overrides
+            kind: HTTPRoute
+            name: httproute-btp-host
             namespace: default
-          name: grpcroute/default/grpcroute-with-overrides/rule/0
+          name: httproute/default/httproute-btp-host/rule/0
           settings:
-          - addressType: IP
+          - addressType: FQDN
             endpoints:
-            - host: 8.8.8.8
-              port: 50051
+            - host: backend-address.example.com
+              hostname: backend-endpoint.example.com
+              port: 443
             metadata:
-              kind: Service
-              name: grpc-backend
+              kind: Backend
+              name: backend-with-hostname
               namespace: default
-              sectionName: "50051"
-            name: grpcroute/default/grpcroute-with-overrides/rule/0/backend/0
-            protocol: GRPC
+            name: httproute/default/httproute-btp-host/rule/0/backend/0
+            protocol: HTTP
             weight: 1
-        hostname: '*'
-        isHTTP2: true
+        hostname: btp-route.example.com
+        isHTTP2: false
         metadata:
-          kind: GRPCRoute
-          name: grpcroute-with-overrides
+          kind: HTTPRoute
+          name: httproute-btp-host
           namespace: default
           policies:
           - kind: BackendTrafficPolicy
-            name: policy-for-grpcroute-with-overrides
+            name: policy-btp-host
             namespace: default
-        name: grpcroute/default/grpcroute-with-overrides/rule/0/match/-1/*
+        name: httproute/default/httproute-btp-host/rule/0/match/0/btp-route_example_com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /btp-host
         traffic:
           healthCheck:
             active:
-              grpc:
-                service: foo-service
               healthyThreshold: 1
+              http:
+                expectedStatuses:
+                - 200
+                host: btp-health.example.com
+                method: GET
+                path: /healthz
               interval: 5s
-              overrides:
-                port: 50052
-              timeout: 1s
-              unhealthyThreshold: 3
-      - destination:
-          metadata:
-            kind: GRPCRoute
-            name: grpcroute-with-no-overrides
-            namespace: default
-          name: grpcroute/default/grpcroute-with-no-overrides/rule/0
-          settings:
-          - addressType: IP
-            endpoints:
-            - host: 8.8.8.8
-              port: 50051
-            metadata:
-              kind: Service
-              name: grpc-backend
-              namespace: default
-              sectionName: "50051"
-            name: grpcroute/default/grpcroute-with-no-overrides/rule/0/backend/0
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        isHTTP2: true
-        metadata:
-          kind: GRPCRoute
-          name: grpcroute-with-no-overrides
-          namespace: default
-          policies:
-          - kind: BackendTrafficPolicy
-            name: policy-for-grpcroute-with-no-overrides
-            namespace: default
-        name: grpcroute/default/grpcroute-with-no-overrides/rule/0/match/-1/*
-        traffic:
-          healthCheck:
-            active:
-              grpc:
-                service: bar-service
-              healthyThreshold: 1
-              interval: 5s
-              timeout: 1s
+              timeout: 2s
               unhealthyThreshold: 3
     readyListener:
       address: 0.0.0.0

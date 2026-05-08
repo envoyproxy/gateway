@@ -885,7 +885,7 @@ xdsIR:
                 expectedStatuses:
                 - 200
                 - 300
-                host: '*'
+                host: ""
                 method: GET
                 path: /healthz
               interval: 3s
@@ -1173,7 +1173,7 @@ xdsIR:
                   text: pong
                 expectedStatuses:
                 - 200
-                host: gateway.envoyproxy.io
+                host: ""
                 method: GET
                 path: /healthz
               interval: 5s

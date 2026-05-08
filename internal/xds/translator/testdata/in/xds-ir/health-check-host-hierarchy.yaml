@@ -1,0 +1,88 @@
+# Health check Host header hierarchy:
+# 1. Explicit BackendTrafficPolicy hostname is a cluster-level health check host.
+# 2. Backend endpoint hostname is emitted as Endpoint.HealthCheckConfig.hostname
+#    when the cluster-level host was only defaulted from the effective route
+#    hostname for the listener.
+# 3. Effective route hostname stays as the cluster-level fallback when no
+#    endpoint hostname exists.
+http:
+- name: health-check-host-hierarchy-listener
+  address: "::"
+  path:
+    mergeSlashes: true
+    escapedSlashesAction: UnescapeAndRedirect
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: btp-host-route
+    hostname: btp-route.example.com
+    traffic:
+      healthCheck:
+        active:
+          timeout: 2s
+          interval: 5s
+          healthyThreshold: 1
+          unhealthyThreshold: 3
+          http:
+            host: btp-health.example.com
+            path: /healthz
+            method: GET
+            expectedStatuses:
+            - 200
+    destination:
+      name: btp-host-route-dest
+      settings:
+      - name: btp-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-address.example.com
+          hostname: backend-endpoint.example.com
+          port: 443
+  - name: backend-host-route
+    hostname: backend-route.example.com
+    traffic:
+      healthCheck:
+        active:
+          timeout: 2s
+          interval: 5s
+          healthyThreshold: 1
+          unhealthyThreshold: 3
+          http:
+            host: ""
+            path: /healthz
+            method: GET
+            expectedStatuses:
+            - 200
+    destination:
+      name: backend-host-route-dest
+      settings:
+      - name: backend-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-address.example.com
+          hostname: backend-endpoint.example.com
+          port: 443
+  - name: route-host-route
+    hostname: route-fallback.example.com
+    traffic:
+      healthCheck:
+        active:
+          timeout: 2s
+          interval: 5s
+          healthyThreshold: 1
+          unhealthyThreshold: 3
+          http:
+            host: ""
+            path: /healthz
+            method: GET
+            expectedStatuses:
+            - 200
+    destination:
+      name: route-host-route-dest
+      settings:
+      - name: route-host-route-dest/backend/0
+        addressType: FQDN
+        endpoints:
+        - host: backend-no-endpoint-host.example.com
+          port: 443
