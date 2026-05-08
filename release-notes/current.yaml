@@ -10,7 +10,6 @@ security updates: |
   Bump Envoy ratelimit image to `05c08d03`.
 # New features or capabilities added in this release.
 new features: |
-  Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart.  Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
 
 bug fixes: |
   Rejected ClientTrafficPolicy if invalid TLS cipher suites are configured.

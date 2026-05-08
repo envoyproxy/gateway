@@ -10,7 +10,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
-  Added support for defining Envoy Proxy image, pullPolicy, and pullSecrets via the helm chart. Note that to merge these helm-configured values with EnvoyProxy resources, the EnvoyProxy must include `mergeType: StrategicMerge` or `mergeType: JSONMerge`.
+
 
 bug fixes: |
   Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
