@@ -385,6 +385,7 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 			for i := range tt.gateway.listeners {
 				tt.gateway.listeners[i].listenerStatusIdx = i
 				tt.gateway.listeners[i].gateway = tt.gateway
+				tt.gateway.listeners[i].httpIR = &ir.HTTPListener{}
 				tt.gateway.Status.Listeners[i] = gwapiv1.ListenerStatus{
 					Name:       tt.gateway.listeners[i].Name,
 					Conditions: []metav1.Condition{},
@@ -419,6 +420,10 @@ func TestCheckOverlappingHostnames(t *testing.T) {
 					// expectedHostname == "" means matching all hostnames
 					t.Errorf("expected condition for listener %d, got nil or False", idx)
 				}
+			}
+			for idx, listener := range tt.gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.False(t, listener.httpIR.TLSOverlaps, "hostname overlap must not trigger ALPN downgrade for listener %d", idx)
 			}
 
 			if len(tt.expected) == 0 {
@@ -647,6 +652,7 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 				}
 				gateway.listeners[i].listenerStatusIdx = i
 				gateway.listeners[i].gateway = gateway
+				gateway.listeners[i].httpIR = &ir.HTTPListener{}
 			}
 
 			// Process overlapping certificates
@@ -699,6 +705,15 @@ func TestCheckOverlappingCertificates(t *testing.T) {
 						}
 					}
 				}
+			}
+
+			expectedTLSOverlaps := map[string]bool{}
+			for _, expected := range tt.expectedStatus {
+				expectedTLSOverlaps[expected.listenerName] = true
+			}
+			for _, listener := range gateway.listeners {
+				require.NotNil(t, listener.httpIR)
+				assert.Equal(t, expectedTLSOverlaps[string(listener.Name)], listener.httpIR.TLSOverlaps, "unexpected TLSOverlaps for listener %s", listener.Name)
 			}
 		})
 	}

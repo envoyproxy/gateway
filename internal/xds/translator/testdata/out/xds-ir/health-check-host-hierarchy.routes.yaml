@@ -1,0 +1,36 @@
+- ignorePortInHostMatching: true
+  name: health-check-host-hierarchy-listener
+  virtualHosts:
+  - domains:
+    - btp-route.example.com
+    name: health-check-host-hierarchy-listener/btp-route_example_com
+    routes:
+    - match:
+        prefix: /
+      name: btp-host-route
+      route:
+        cluster: btp-host-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - backend-route.example.com
+    name: health-check-host-hierarchy-listener/backend-route_example_com
+    routes:
+    - match:
+        prefix: /
+      name: backend-host-route
+      route:
+        cluster: backend-host-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+  - domains:
+    - route-fallback.example.com
+    name: health-check-host-hierarchy-listener/route-fallback_example_com
+    routes:
+    - match:
+        prefix: /
+      name: route-host-route
+      route:
+        cluster: route-host-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

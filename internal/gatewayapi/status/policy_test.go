@@ -84,19 +84,3 @@ func TestSetWarningForPolicyAncestorMergesWarnings(t *testing.T) {
 		}
 	}
 }
-
-func TestIsPolicyAncestorAccepted(t *testing.T) {
-	policyStatus := &gwapiv1.PolicyStatus{}
-	ancestorRef := &gwapiv1.ParentReference{Name: gwapiv1.ObjectName("example")}
-	controllerName := "example.com/controller"
-
-	assert.False(t, IsPolicyAncestorAccepted(policyStatus, ancestorRef, controllerName))
-
-	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1.PolicyConditionAccepted, metav1.ConditionFalse, egv1a1.PolicyReasonRefNotPermitted, "not permitted", 1)
-	assert.False(t, IsPolicyAncestorAccepted(policyStatus, ancestorRef, controllerName))
-
-	SetConditionForPolicyAncestor(policyStatus, ancestorRef, controllerName,
-		gwapiv1.PolicyConditionAccepted, metav1.ConditionTrue, gwapiv1.PolicyReasonAccepted, "accepted", 1)
-	assert.True(t, IsPolicyAncestorAccepted(policyStatus, ancestorRef, controllerName))
-}

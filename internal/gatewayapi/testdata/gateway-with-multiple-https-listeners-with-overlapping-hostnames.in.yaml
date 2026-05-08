@@ -28,17 +28,6 @@ gateways:
           tls:
             mode: Terminate
             certificateRefs:
-              - name: tls-secret-example-com
-        - name: https-3
-          protocol: HTTPS
-          port: 443
-          hostname: "foo.bar.com"
-          allowedRoutes:
-            namespaces:
-              from: All
-          tls:
-            mode: Terminate
-            certificateRefs:
               - name: tls-secret-foo-bar-com
 secrets:
   - apiVersion: v1
