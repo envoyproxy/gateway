@@ -101,6 +101,10 @@ type Translator struct {
 	// BackendEnabled when the Backend feature is enabled.
 	BackendEnabled bool
 
+	// SDSSecretRefEnabled is true if EnvoyProxy can reference SDS secrets using the sds-ref type Secret.
+	// This could be enabled by Envoy Gateway configuration.
+	SDSSecretRefEnabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -263,6 +267,8 @@ func (t *Translator) Translate(resources *resource.Resources) (*TranslateResult,
 			resources.BackendTrafficPolicies,
 			routesToObjects(resources),
 			acceptedGateways,
+			resources.ReferenceGrants,
+			t.GetNamespace,
 		)
 	}
 
@@ -445,7 +451,7 @@ func (t *Translator) GetRelevantGateways(resources *resource.Resources) (
 			// Debug logging to inspect the final merged EnvoyProxy configuration
 			if logV := t.Logger.V(1); logV.Enabled() {
 				spec, _ := json.Marshal(gCtx.envoyProxy.Spec)
-				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...))
+				logV.Info("Merged EnvoyProxy configuration", append([]any{"merged_config", string(spec)}, logKeysAndValues...)...)
 			}
 		}
 

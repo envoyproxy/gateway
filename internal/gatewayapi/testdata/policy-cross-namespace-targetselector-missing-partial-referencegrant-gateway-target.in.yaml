@@ -1,0 +1,155 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: policy-target-a
+    name: allowed-gateway
+    labels:
+      policy: selected
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: policy-target-b
+    name: denied-gateway
+    labels:
+      policy: selected
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-a
+    name: allowed-route
+  spec:
+    parentRefs:
+    - name: allowed-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: allowed-service
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: policy-target-b
+    name: denied-route
+  spec:
+    parentRefs:
+    - name: denied-gateway
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: /
+      backendRefs:
+      - name: denied-service
+        port: 8080
+backendTrafficPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: policy-ns
+    name: cross-ns-policy
+  spec:
+    targetSelectors:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespaces:
+        from: All
+      matchLabels:
+        policy: selected
+    useClientProtocol: true
+namespaces:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-a
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    name: policy-target-b
+referenceGrants:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: ReferenceGrant
+  metadata:
+    namespace: policy-target-a
+    name: allow-btp
+  spec:
+    from:
+    - group: gateway.envoyproxy.io
+      kind: BackendTrafficPolicy
+      namespace: policy-ns
+    to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: allowed-gateway
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-a
+    name: allowed-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: policy-target-b
+    name: denied-service
+  spec:
+    ports:
+    - port: 8080
+      name: http
+      protocol: TCP
+endpointSlices:
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-allowed-service
+    namespace: policy-target-a
+    labels:
+      kubernetes.io/service-name: allowed-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.8.8
+    conditions:
+      ready: true
+- apiVersion: discovery.k8s.io/v1
+  kind: EndpointSlice
+  metadata:
+    name: endpointslice-denied-service
+    namespace: policy-target-b
+    labels:
+      kubernetes.io/service-name: denied-service
+  addressType: IPv4
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8080
+  endpoints:
+  - addresses:
+    - 8.8.4.4
+    conditions:
+      ready: true
