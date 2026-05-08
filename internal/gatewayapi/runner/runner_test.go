@@ -11,6 +11,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -693,8 +694,6 @@ func TestHTTPRouteStatusStaleAfterListenerHostnameChange(t *testing.T) {
 		"cycle 1: expected Accepted=False/NoMatchingListenerHostname with ObservedGeneration=1")
 
 	// Cycle 2: Gateway gen=2, still mismatching hostname
-	// If the route did not change, gen still 1. And neither did the condition outcome, still Accepted=False/NoMatchingListenerHostname.
-	// The new status value is byte-for-byte identical to cycle 1's value. So the subscriber goroutine never fires and Kubernetes status is never patched.
 	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
 		Resources: buildResources("other.example.com", 2),
 	})
@@ -706,21 +705,19 @@ func TestHTTPRouteStatusStaleAfterListenerHostnameChange(t *testing.T) {
 		}
 		for _, cond := range status.Parents[0].Conditions {
 			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
-				// must have bumped ObservedGeneration to 2 even though
-				// the condition outcome (False/NoMatchingListenerHostname) is unchanged.
 				return cond.Status == metav1.ConditionFalse &&
 					cond.Reason == string(gwapiv1.RouteReasonNoMatchingListenerHostname) &&
-					cond.ObservedGeneration == 2
+					cond.ObservedGeneration == 1 &&
+					strings.Contains(cond.Message, "gateway generation: 2")
 			}
 		}
 		return false
 	}, 5*time.Second, 50*time.Millisecond,
-		"cycle 2: expected ObservedGeneration to be bumped to 2 when Gateway generation increased, "+
+		"cycle 2: expected message to contain 'gateway generation: 2' when Gateway generation increased, "+
 			"even though the condition outcome (Accepted=False/NoMatchingListenerHostname) is unchanged. "+
-			"Without the fix, ObservedGeneration stays at 1 and the watchable DeepEqual gate suppresses the update.")
+			"Without the fix, the message is identical to cycle 1 and the watchable DeepEqual gate suppresses the update.")
 
 	// Cycle 3: Gateway gen=3, hostname is fixed to match the route
-	// Now both hostnames agree, Accepted=True, ObservedGeneration=3
 	pResources.GatewayAPIResources.Store(egv1a1.GatewayControllerName, &resource.ControllerResourcesContext{
 		Resources: buildResources("app.example.com", 3),
 	})
@@ -918,14 +915,15 @@ func TestHTTPRouteStatusStaleAfterAllowedRoutesChange(t *testing.T) {
 			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
 				return cond.Status == metav1.ConditionFalse &&
 					cond.Reason == string(gwapiv1.RouteReasonNotAllowedByListeners) &&
-					cond.ObservedGeneration == 2
+					cond.ObservedGeneration == 1 &&
+					strings.Contains(cond.Message, "gateway generation: 2")
 			}
 		}
 		return false
 	}, 5*time.Second, 50*time.Millisecond,
-		"cycle 2: expected ObservedGeneration to be bumped to 2 when Gateway generation increased, "+
+		"cycle 2: expected message to contain 'gateway generation: 2' when Gateway generation increased, "+
 			"even though the condition outcome (Accepted=False/NotAllowedByListeners) is unchanged. "+
-			"Without the fix in processAllowedListenersForParentRefs, ObservedGeneration stays at 1 "+
+			"Without the fix in processAllowedListenersForParentRefs, the message is identical to cycle 1 "+
 			"and the watchable DeepEqual gate suppresses the update.")
 
 	// Cycle 3: Gateway gen=3, AllowedRoutes.From=All, route is now allowed
@@ -940,7 +938,8 @@ func TestHTTPRouteStatusStaleAfterAllowedRoutesChange(t *testing.T) {
 		}
 		for _, cond := range status.Parents[0].Conditions {
 			if cond.Type == string(gwapiv1.RouteConditionAccepted) {
-				return cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == 3
+				return cond.Status == metav1.ConditionTrue &&
+					strings.Contains(cond.Message, "gateway generation: 3")
 			}
 		}
 		return false

@@ -110,21 +110,22 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*gwapiv1.GRPCRoute, gateways
 	return relevantGRPCRoutes
 }
 
+// gatewayAcceptedMsg returns the message embedding the Gateway's generation
+// so that a gateway-only update changes the message text and breaks the watchable DeepEqual gate
+// observedGeneration stays as the route's own generation to remain spec-compliant.
+func (t *Translator) gatewayMsg(gw *GatewayContext, base string) string {
+	if gw != nil && gw.GetGeneration() > 0 {
+		return fmt.Sprintf("%s (gateway generation: %d)", base, gw.GetGeneration())
+	}
+	return base
+}
+
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *resource.Resources, xdsIR resource.XdsIRMap) {
 	for _, parentRef := range httpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processHTTPRouteRules(httpRoute, parentRef, resources)
-
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := httpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
-			observedGeneration = gw.GetGeneration()
-		}
-
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(httpRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -195,11 +196,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -214,11 +215,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			routeStatus := GetRouteStatus(httpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				httpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 	}
@@ -855,15 +856,6 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes, errs, unacceptedRules := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
-
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := grpcRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
-			observedGeneration = gw.GetGeneration()
-		}
-
 		if len(errs) > 0 {
 			routeStatus := GetRouteStatus(grpcRoute)
 			// errs are already grouped by condition type in TypedErrorCollector
@@ -938,11 +930,11 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -952,11 +944,11 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 			routeStatus := GetRouteStatus(grpcRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				grpcRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 
@@ -1413,14 +1405,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			destName     = irRouteDestinationName(tlsRoute, -1 /*rule index*/)
 		)
 
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := tlsRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
-			observedGeneration = gw.GetGeneration()
-		}
-
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for i := range rule.BackendRefs {
@@ -1521,11 +1505,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			routeStatus := GetRouteStatus(tlsRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				tlsRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
+				t.gatewayMsg(parentRef.GetGateway(), "There were no hostname intersections between the TLSRoute and this parent ref's Listener(s)."),
 			)
 		}
 
@@ -1540,11 +1524,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			routeStatus := GetRouteStatus(tlsRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				tlsRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 	}
@@ -1603,14 +1587,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			resolveErrs  = &status.MultiStatusError{}
 			destName     = irRouteDestinationName(udpRoute, -1 /*rule index*/)
 		)
-
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := udpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
-			observedGeneration = gw.GetGeneration()
-		}
 
 		for i := range udpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -1689,11 +1665,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeStatus := GetRouteStatus(udpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 
@@ -1701,11 +1677,11 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			routeStatus := GetRouteStatus(udpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				udpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
-				"Multiple routes on the same UDP listener",
+				t.gatewayMsg(parentRef.GetGateway(), "Multiple routes on the same UDP listener"),
 			)
 		}
 	}
@@ -1764,14 +1740,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			resolveErrs  = &status.MultiStatusError{}
 			destName     = irRouteDestinationName(tcpRoute, -1 /*rule index*/)
 		)
-
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := tcpRoute.GetGeneration()
-		if gw := parentRef.GetGateway(); gw != nil && gw.GetGeneration() > 0 {
-			observedGeneration = gw.GetGeneration()
-		}
 
 		for i := range tcpRoute.Spec.Rules[0].BackendRefs {
 			settingName := irDestinationSettingName(destName, i)
@@ -1859,22 +1827,22 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			routeStatus := GetRouteStatus(tcpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionTrue,
 				gwapiv1.RouteReasonAccepted,
-				"Route is accepted",
+				t.gatewayMsg(parentRef.GetGateway(), "Route is accepted"),
 			)
 		}
 		if !accepted {
 			routeStatus := GetRouteStatus(tcpRoute)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRef.routeParentStatusIdx,
-				observedGeneration,
+				tcpRoute.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonUnsupportedValue,
-				"Multiple routes on the same TCP listener",
+				t.gatewayMsg(parentRef.GetGateway(), "Multiple routes on the same TCP listener"),
 			)
 		}
 
@@ -2310,7 +2278,7 @@ func (t *Translator) processAllowedListenersForParentRefs(
 	var relevantRoute bool
 	ns := gwapiv1.Namespace(routeContext.GetNamespace())
 	for _, parentRef := range GetParentReferences(routeContext) {
-		isRelevantParentRef, matchedGateway, selectedListeners := GetReferencedListeners(ns, parentRef, gateways)
+		isRelevantParentRef, selectedListeners := GetReferencedListeners(ns, parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
 		if !isRelevantParentRef {
@@ -2322,23 +2290,15 @@ func (t *Translator) processAllowedListenersForParentRefs(
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
-		// For gateway-driven conditions, use the Gateway's generation as observedGeneration
-		// Gateway-only edit produces a condition value that differs
-		// from the stale stored one, unblocking the watchable DeepEqual gate.
-		observedGeneration := routeContext.GetGeneration()
-		if matchedGateway != nil && matchedGateway.GetGeneration() > 0 {
-			observedGeneration = matchedGateway.GetGeneration()
-		}
-
 		if len(selectedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
-				observedGeneration,
+				routeContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNoMatchingParent,
-				"No listeners match this parent ref",
+				t.gatewayMsg(parentRefCtx.GetGateway(), "No listeners match this parent ref"),
 			)
 			continue
 		}
@@ -2352,28 +2312,46 @@ func (t *Translator) processAllowedListenersForParentRefs(
 			}
 		}
 
+		var selectedGateway *GatewayContext
+		if len(selectedListeners) > 0 {
+			selectedGateway = selectedListeners[0].gateway
+		}
+
 		if len(allowedListeners) == 0 {
 			routeStatus := GetRouteStatus(routeContext)
 			status.SetRouteStatusCondition(routeStatus,
 				parentRefCtx.routeParentStatusIdx,
-				observedGeneration,
+				routeContext.GetGeneration(),
 				gwapiv1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				gwapiv1.RouteReasonNotAllowedByListeners,
-				"No listeners included by this parent ref allowed this attachment.",
+				t.gatewayMsg(selectedGateway, "No listeners included by this parent ref allowed this attachment."),
 			)
 			continue
 		}
 		parentRefCtx.SetListeners(allowedListeners...)
 
+		if !HasReadyListener(selectedListeners) {
+			routeStatus := GetRouteStatus(routeContext)
+			status.SetRouteStatusCondition(routeStatus,
+				parentRefCtx.routeParentStatusIdx,
+				routeContext.GetGeneration(),
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				"NoReadyListeners",
+				t.gatewayMsg(parentRefCtx.GetGateway(), "There are no ready listeners for this parent ref"),
+			)
+			continue
+		}
+
 		routeStatus := GetRouteStatus(routeContext)
 		status.SetRouteStatusCondition(routeStatus,
 			parentRefCtx.routeParentStatusIdx,
-			observedGeneration,
+			routeContext.GetGeneration(),
 			gwapiv1.RouteConditionAccepted,
 			metav1.ConditionTrue,
 			gwapiv1.RouteReasonAccepted,
-			"Route is accepted",
+			t.gatewayMsg(parentRefCtx.GetGateway(), "Route is accepted"),
 		)
 	}
 	return relevantRoute

@@ -147,8 +147,7 @@ func IsRefToGateway(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentRe
 // in the given list, and if so, a list of the Listeners within that Gateway or ListenerSet that
 // are included by the parent ref (either one specific Listener, or all Listeners
 // in the Gateway or ListenerSet, depending on whether section name is specified or not).
-// The second return value is the matched GatewayContext when the parentRef points to a Gateway
-func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, *GatewayContext, []*ListenerContext) {
+func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.ParentReference, gateways []*GatewayContext) (bool, []*ListenerContext) {
 	var referencedListeners []*ListenerContext
 
 	// The parentRef is an ListenerSet
@@ -174,7 +173,7 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 				}
 			}
 		}
-		return matchedListenerSet, nil, referencedListeners
+		return matchedListenerSet, referencedListeners
 	}
 
 	// The parentRef is a Gateway
@@ -189,11 +188,11 @@ func GetReferencedListeners(routeNamespace gwapiv1.Namespace, parentRef gwapiv1.
 					referencedListeners = append(referencedListeners, listener)
 				}
 			}
-			return true, gateway, referencedListeners
+			return true, referencedListeners
 		}
 	}
 
-	return false, nil, referencedListeners
+	return false, referencedListeners
 }
 
 func isRefToListenerSet(parentRef gwapiv1.ParentReference) bool {
