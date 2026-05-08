@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -171,7 +172,10 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 // dynamic module. When the user supplied BackendRefs (resolved into Destination),
 // that cluster name is used; otherwise the cluster is synthesized from URL.
 func dynamicModuleClusterName(remote *ir.RemoteDynamicModuleSource) (string, error) {
-	if remote.Destination != nil && len(remote.Destination.Settings) > 0 {
+	if remote.Destination != nil {
+		if len(remote.Destination.Settings) == 0 {
+			return "", fmt.Errorf("dynamic module %q: backendRefs resolved to no endpoints", remote.Destination.Name)
+		}
 		return remote.Destination.Name, nil
 	}
 	uc, err := url2Cluster(remote.URL)
@@ -206,7 +210,11 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 				continue
 			}
 
-			if dm.Remote.Destination != nil && len(dm.Remote.Destination.Settings) > 0 {
+			if dm.Remote.Destination != nil {
+				if len(dm.Remote.Destination.Settings) == 0 {
+					errs = errors.Join(errs, fmt.Errorf("dynamic module %q: backendRefs resolved to no endpoints", dm.Remote.Destination.Name))
+					continue
+				}
 				if err := createExtServiceXDSCluster(dm.Remote.Destination, dm.Remote.Traffic, tCtx); err != nil {
 					errs = errors.Join(errs, err)
 				}

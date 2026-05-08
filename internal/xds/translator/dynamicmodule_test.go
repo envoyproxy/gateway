@@ -280,4 +280,46 @@ func TestDynamicModulePatchResourcesUsesDestinationCluster(t *testing.T) {
 	require.NotNil(t, cluster.TransportSocket, "expected TLS transport socket from BackendTLSPolicy-derived destination")
 }
 
+// TestDynamicModuleEmptyDestinationFailsClosed verifies that when BackendRefs
+// were configured but resolved to zero settings (e.g. all entries with weight: 0),
+// translation fails rather than silently falling back to URL-based fetching.
+// Falling back would bypass the user's pinning intent and any BackendTLSPolicy,
+// which is especially dangerous because dynamic modules load executable code.
+func TestDynamicModuleEmptyDestinationFailsClosed(t *testing.T) {
+	emptyDest := &ir.RouteDestination{
+		Name:     "envoyextensionpolicy/default/policy/dynamic-module/0",
+		Settings: nil,
+	}
+
+	_, err := dynamicModuleClusterName(&ir.RemoteDynamicModuleSource{
+		URL:         "https://modules.example.com/libremote_auth.so",
+		Destination: emptyDest,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "resolved to no endpoints")
+
+	tCtx := &types.ResourceVersionTable{XdsResources: types.XdsResources{}}
+	routes := []*ir.HTTPRoute{
+		{
+			EnvoyExtensions: &ir.EnvoyExtensionFeatures{
+				DynamicModules: []ir.DynamicModule{
+					{
+						Name: "envoyextensionpolicy/default/policy/dynamic-module/0",
+						Remote: &ir.RemoteDynamicModuleSource{
+							URL:         "https://modules.example.com/libremote_auth.so",
+							SHA256:      "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+							Destination: emptyDest,
+						},
+					},
+				},
+			},
+		},
+	}
+	err = (&dynamicModule{}).patchResources(tCtx, routes)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "resolved to no endpoints")
+	require.Nil(t, findXdsCluster(tCtx, "modules_example_com_443"),
+		"must not synthesize URL-based cluster when BackendRefs were configured but empty")
+}
+
 func ptrTo[T any](v T) *T { return &v }
