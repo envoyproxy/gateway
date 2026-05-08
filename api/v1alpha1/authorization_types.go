@@ -119,7 +119,7 @@ type Operation struct {
 // or any other identity that can be extracted from a custom header.
 // If there are multiple principal types, all principals must match for the rule to match.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations))",message="at least one of clientCIDRs, jwt, headers, or clientIPGeoLocations must be specified"
+// +kubebuilder:validation:XValidation:rule="(has(self.clientCIDRs) || has(self.jwt) || has(self.headers) || has(self.clientIPGeoLocations) || has(self.clientCert))",message="at least one of clientCIDRs, jwt, headers, clientIPGeoLocations, or clientCert must be specified"
 type Principal struct {
 	// ClientCIDRs are the IP CIDR ranges of the client.
 	// Valid examples are "192.168.1.0/24" or "2001:db8::/64"
@@ -171,6 +171,62 @@ type Principal struct {
 	// +optional
 	// +kubebuilder:validation:MinItems=1
 	ClientIPGeoLocations []ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
+
+	// ClientCert authorizes the request based on the client certificate
+	// presented during the mutual TLS handshake.
+	//
+	// Prerequisites: mTLS must be configured on the gateway listener receiving
+	// the request. This requires a `ClientTrafficPolicy` targeting that listener
+	// with `spec.tls.clientValidation.caCertificateRefs` set to validate the
+	// client certificate. Without mTLS configured, no client certificate is
+	// available and this principal will never match.
+	//
+	// At least one of `subject` or `subjectAltNames` must be specified. When
+	// both are set, both must match for the principal to match.
+	//
+	// Supported match types: Subject DN (via `subject`), URI SANs (via
+	// `subjectAltNames.uris`), and DNS SANs (via `subjectAltNames.dnsNames`).
+	// Email address, IP address, and OtherName SAN types are not currently
+	// supported and will be rejected with a validation error.
+	//
+	// This principal is supported for HTTPRoute and GRPCRoute authorization
+	// targets. It is not applicable to TCPRoute targets.
+	// +optional
+	ClientCert *ClientCertPrincipal `json:"clientCert,omitempty"`
+}
+
+// ClientCertPrincipal specifies match criteria against fields of the validated
+// peer client certificate. Used in conjunction with mTLS configured via
+// ClientTrafficPolicy.
+//
+// Supported match fields:
+//   - `subject`: matches the Subject Distinguished Name (DN) of the certificate.
+//   - `subjectAltNames.uris`: matches URI SANs (e.g. SPIFFE IDs).
+//   - `subjectAltNames.dnsNames`: matches DNS SANs.
+//
+// The following SAN types are not currently supported and will produce a
+// validation error if specified: `emailAddresses`, `ipAddresses`, `otherNames`.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.subject) || has(self.subjectAltNames)",message="at least one of subject or subjectAltNames must be specified"
+// +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.emailAddresses)",message="emailAddresses is not supported in clientCert; use uris or dnsNames"
+// +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.ipAddresses)",message="ipAddresses is not supported in clientCert; use uris or dnsNames"
+// +kubebuilder:validation:XValidation:rule="!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)",message="otherNames is not supported in clientCert; use uris or dnsNames"
+type ClientCertPrincipal struct {
+	// Subject matches the client certificate's Subject Distinguished Name in
+	// RFC 4514 string form (e.g. "CN=client.example.com,O=Example Inc.,C=US").
+	// Use a `RegularExpression` matcher to match a subset of the DN.
+	// +optional
+	Subject *StringMatch `json:"subject,omitempty"`
+
+	// SubjectAltNames matches values in the certificate's Subject Alternative
+	// Name extension.
+	//
+	// Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported.
+	// Specifying `emailAddresses`, `ipAddresses`, or `otherNames` will produce
+	// a validation error.
+	//
+	// +optional
+	SubjectAltNames *SubjectAltNames `json:"subjectAltNames,omitempty"`
 }
 
 // ClientIPGeoLocation specifies geolocation-based match criteria for authorization.

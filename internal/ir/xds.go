@@ -1890,6 +1890,8 @@ type Principal struct {
 	Headers []egv1a1.AuthorizationHeaderMatch `json:"headers,omitempty"`
 	// ClientIPGeoLocations defines the geolocation metadata to be matched.
 	ClientIPGeoLocations []egv1a1.ClientIPGeoLocation `json:"clientIPGeoLocations,omitempty"`
+	// ClientCert defines the validated peer client certificate match (mTLS).
+	ClientCert *egv1a1.ClientCertPrincipal `json:"clientCert,omitempty"`
 }
 
 // FaultInjection defines the schema for injecting faults into requests.

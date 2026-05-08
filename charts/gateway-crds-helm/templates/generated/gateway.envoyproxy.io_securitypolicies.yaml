@@ -341,6 +341,217 @@ spec:
                                 type: string
                               minItems: 1
                               type: array
+                            clientCert:
+                              description: |-
+                                ClientCert authorizes the request based on the client certificate
+                                presented during the mutual TLS handshake.
+
+                                Prerequisites: mTLS must be configured on the gateway listener receiving
+                                the request. This requires a `ClientTrafficPolicy` targeting that listener
+                                with `spec.tls.clientValidation.caCertificateRefs` set to validate the
+                                client certificate. Without mTLS configured, no client certificate is
+                                available and this principal will never match.
+
+                                At least one of `subject` or `subjectAltNames` must be specified. When
+                                both are set, both must match for the principal to match.
+
+                                Supported match types: Subject DN (via `subject`), URI SANs (via
+                                `subjectAltNames.uris`), and DNS SANs (via `subjectAltNames.dnsNames`).
+                                Email address, IP address, and OtherName SAN types are not currently
+                                supported and will be rejected with a validation error.
+
+                                This principal is supported for HTTPRoute and GRPCRoute authorization
+                                targets. It is not applicable to TCPRoute targets.
+                              properties:
+                                subject:
+                                  description: |-
+                                    Subject matches the client certificate's Subject Distinguished Name in
+                                    RFC 4514 string form (e.g. "CN=client.example.com,O=Example Inc.,C=US").
+                                    Use a `RegularExpression` matcher to match a subset of the DN.
+                                  properties:
+                                    type:
+                                      default: Exact
+                                      description: Type specifies how to match against
+                                        a string.
+                                      enum:
+                                      - Exact
+                                      - Prefix
+                                      - Suffix
+                                      - RegularExpression
+                                      type: string
+                                    value:
+                                      description: Value specifies the string value
+                                        that the match must have.
+                                      maxLength: 1024
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - value
+                                  type: object
+                                subjectAltNames:
+                                  description: |-
+                                    SubjectAltNames matches values in the certificate's Subject Alternative
+                                    Name extension.
+
+                                    Only `uris` (URI SANs) and `dnsNames` (DNS SANs) are currently supported.
+                                    Specifying `emailAddresses`, `ipAddresses`, or `otherNames` will produce
+                                    a validation error.
+                                  properties:
+                                    dnsNames:
+                                      description: DNS names matchers
+                                      items:
+                                        description: |-
+                                          StringMatch defines how to match any strings.
+                                          This is a general purpose match condition that can be used by other EG APIs
+                                          that need to match against a string.
+                                        properties:
+                                          type:
+                                            default: Exact
+                                            description: Type specifies how to match
+                                              against a string.
+                                            enum:
+                                            - Exact
+                                            - Prefix
+                                            - Suffix
+                                            - RegularExpression
+                                            type: string
+                                          value:
+                                            description: Value specifies the string
+                                              value that the match must have.
+                                            maxLength: 1024
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - value
+                                        type: object
+                                      type: array
+                                    emailAddresses:
+                                      description: Email addresses matchers
+                                      items:
+                                        description: |-
+                                          StringMatch defines how to match any strings.
+                                          This is a general purpose match condition that can be used by other EG APIs
+                                          that need to match against a string.
+                                        properties:
+                                          type:
+                                            default: Exact
+                                            description: Type specifies how to match
+                                              against a string.
+                                            enum:
+                                            - Exact
+                                            - Prefix
+                                            - Suffix
+                                            - RegularExpression
+                                            type: string
+                                          value:
+                                            description: Value specifies the string
+                                              value that the match must have.
+                                            maxLength: 1024
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - value
+                                        type: object
+                                      type: array
+                                    ipAddresses:
+                                      description: IP addresses matchers
+                                      items:
+                                        description: |-
+                                          StringMatch defines how to match any strings.
+                                          This is a general purpose match condition that can be used by other EG APIs
+                                          that need to match against a string.
+                                        properties:
+                                          type:
+                                            default: Exact
+                                            description: Type specifies how to match
+                                              against a string.
+                                            enum:
+                                            - Exact
+                                            - Prefix
+                                            - Suffix
+                                            - RegularExpression
+                                            type: string
+                                          value:
+                                            description: Value specifies the string
+                                              value that the match must have.
+                                            maxLength: 1024
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - value
+                                        type: object
+                                      type: array
+                                    otherNames:
+                                      description: Other names matchers
+                                      items:
+                                        properties:
+                                          oid:
+                                            description: OID Value
+                                            type: string
+                                          type:
+                                            default: Exact
+                                            description: Type specifies how to match
+                                              against a string.
+                                            enum:
+                                            - Exact
+                                            - Prefix
+                                            - Suffix
+                                            - RegularExpression
+                                            type: string
+                                          value:
+                                            description: Value specifies the string
+                                              value that the match must have.
+                                            maxLength: 1024
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - oid
+                                        - value
+                                        type: object
+                                      type: array
+                                    uris:
+                                      description: URIs matchers
+                                      items:
+                                        description: |-
+                                          StringMatch defines how to match any strings.
+                                          This is a general purpose match condition that can be used by other EG APIs
+                                          that need to match against a string.
+                                        properties:
+                                          type:
+                                            default: Exact
+                                            description: Type specifies how to match
+                                              against a string.
+                                            enum:
+                                            - Exact
+                                            - Prefix
+                                            - Suffix
+                                            - RegularExpression
+                                            type: string
+                                          value:
+                                            description: Value specifies the string
+                                              value that the match must have.
+                                            maxLength: 1024
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - value
+                                        type: object
+                                      type: array
+                                  type: object
+                              type: object
+                              x-kubernetes-validations:
+                              - message: at least one of subject or subjectAltNames
+                                  must be specified
+                                rule: has(self.subject) || has(self.subjectAltNames)
+                              - message: emailAddresses is not supported in clientCert;
+                                  use uris or dnsNames
+                                rule: '!has(self.subjectAltNames) || !has(self.subjectAltNames.emailAddresses)'
+                              - message: ipAddresses is not supported in clientCert;
+                                  use uris or dnsNames
+                                rule: '!has(self.subjectAltNames) || !has(self.subjectAltNames.ipAddresses)'
+                              - message: otherNames is not supported in clientCert;
+                                  use uris or dnsNames
+                                rule: '!has(self.subjectAltNames) || !has(self.subjectAltNames.otherNames)'
                             clientIPGeoLocations:
                               description: |-
                                 ClientIPGeoLocations authorizes the request based on geolocation metadata derived from the client IP.
@@ -546,10 +757,10 @@ spec:
                                 rule: (has(self.claims) || has(self.scopes))
                           type: object
                           x-kubernetes-validations:
-                          - message: at least one of clientCIDRs, jwt, headers, or
-                              clientIPGeoLocations must be specified
+                          - message: at least one of clientCIDRs, jwt, headers, clientIPGeoLocations,
+                              or clientCert must be specified
                             rule: (has(self.clientCIDRs) || has(self.jwt) || has(self.headers)
-                              || has(self.clientIPGeoLocations))
+                              || has(self.clientIPGeoLocations) || has(self.clientCert))
                       required:
                       - action
                       type: object
@@ -8012,10 +8223,6 @@ spec:
 
                         When specified, the effective set of namespaces is always constrained to the
                         namespaces watched by Envoy Gateway.
-
-                        Selecting targets across namespaces requires a ReferenceGrant in the target
-                        namespace that allows this policy kind to reference the selected target kind.
-                        Cross-namespace targets without a matching ReferenceGrant are ignored.
                       properties:
                         from:
                           default: Same
