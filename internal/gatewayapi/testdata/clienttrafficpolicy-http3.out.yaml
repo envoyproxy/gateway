@@ -92,8 +92,7 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname *.example.com overlaps with the hostname bar.example.com
-          in listener https-bar. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection
-          coalescing, unless explicitly configured via ClientTrafficPolicy
+          in listener https-bar.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -122,8 +121,7 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname foo.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+          in listener https-wildcard.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -152,8 +150,7 @@ gateways:
         type: ResolvedRefs
       - lastTransitionTime: null
         message: The hostname bar.example.com overlaps with the hostname *.example.com
-          in listener https-wildcard. ALPN will default to HTTP/1.1 to prevent HTTP/2
-          connection coalescing, unless explicitly configured via ClientTrafficPolicy
+          in listener https-wildcard.
         reason: OverlappingHostnames
         status: "True"
         type: OverlappingTLSConfig
@@ -304,7 +301,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
@@ -359,7 +355,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
     - address: 0.0.0.0
       externalPort: 443
       hostnames:
@@ -414,7 +409,6 @@ xdsIR:
           privateKey: '[redacted]'
         maxVersion: "1.3"
         minVersion: "1.2"
-      tlsOverlaps: true
     readyListener:
       address: 0.0.0.0
       ipFamily: IPv4
