@@ -90,7 +90,8 @@ The name of the Envoy Gateway image.
 {{/* else, global image is used if defined */}}
 {{- else if .Values.global.images.envoyGateway.image -}}
 {{-   if .Values.global.imageRegistry -}}
-{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.envoyGateway.image)._1 -}}
+{{-     $oldRegistry := (splitn "/" 2 .Values.global.images.envoyGateway.image)._0 -}}
+{{-     $repoAndTag := trimPrefix (printf "%s/" $oldRegistry) .Values.global.images.envoyGateway.image -}}
 {{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
 {{-   else -}}
 {{-     .Values.global.images.envoyGateway.image -}}
@@ -130,7 +131,8 @@ The name of the Envoy Ratelimit image.
 */}}
 {{- define "eg.ratelimit.image" -}}
 {{-   if .Values.global.imageRegistry -}}
-{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.ratelimit.image)._1 -}}
+{{-     $oldRegistry := (splitn "/" 2 .Values.global.images.ratelimit.image)._0 -}}
+{{-     $repoAndTag := trimPrefix (printf "%s/" $oldRegistry) .Values.global.images.ratelimit.image -}}
 {{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
 {{-   else -}}
 {{-     .Values.global.images.ratelimit.image -}}
@@ -157,7 +159,8 @@ Resolve the Envoy Proxy image.
 */}}
 {{- define "eg.envoyProxy.image" -}}
 {{-   if .Values.global.imageRegistry -}}
-{{-     $repoAndTag := (splitn "/" 2 .Values.global.images.envoyProxy.image)._1 -}}
+{{-     $oldRegistry := (splitn "/" 2 .Values.global.images.envoyProxy.image)._0 -}}
+{{-     $repoAndTag := trimPrefix (printf "%s/" $oldRegistry) .Values.global.images.envoyProxy.image -}}
 {{-     printf "%s/%s" .Values.global.imageRegistry $repoAndTag -}}
 {{-   else -}}
 {{-     .Values.global.images.envoyProxy.image -}}
