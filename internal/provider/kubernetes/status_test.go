@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -32,9 +31,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						ControllerName: "istio.io/gateway-controller",
 						ParentRef: gwapiv1.ParentReference{
 							Name:        "gateway1",
-							Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-							Port:        ptr.To[gwapiv1.PortNumber](80),
+							Namespace:   new(gwapiv1.Namespace("default")),
+							SectionName: new(gwapiv1.SectionName("listener1")),
+							Port:        new(gwapiv1.PortNumber(80)),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -94,9 +93,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					ControllerName: "istio.io/gateway-controller",
 					ParentRef: gwapiv1.ParentReference{
 						Name:        "gateway1",
-						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-						Port:        ptr.To[gwapiv1.PortNumber](80),
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
 					},
 					Conditions: []metav1.Condition{
 						{
@@ -139,9 +138,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						ControllerName: "istio.io/gateway-controller",
 						ParentRef: gwapiv1.ParentReference{
 							Name:        "gateway1",
-							Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-							Port:        ptr.To[gwapiv1.PortNumber](80),
+							Namespace:   new(gwapiv1.Namespace("default")),
+							SectionName: new(gwapiv1.SectionName("listener1")),
+							Port:        new(gwapiv1.PortNumber(80)),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -219,9 +218,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					ControllerName: "istio.io/gateway-controller",
 					ParentRef: gwapiv1.ParentReference{
 						Name:        "gateway1",
-						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-						Port:        ptr.To[gwapiv1.PortNumber](80),
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
 					},
 					Conditions: []metav1.Condition{
 						{
@@ -282,9 +281,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						ControllerName: "istio.io/gateway-controller",
 						ParentRef: gwapiv1.ParentReference{
 							Name:        "gateway1",
-							Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-							Port:        ptr.To[gwapiv1.PortNumber](80),
+							Namespace:   new(gwapiv1.Namespace("default")),
+							SectionName: new(gwapiv1.SectionName("listener1")),
+							Port:        new(gwapiv1.PortNumber(80)),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -344,9 +343,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					ControllerName: "istio.io/gateway-controller",
 					ParentRef: gwapiv1.ParentReference{
 						Name:        "gateway1",
-						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-						Port:        ptr.To[gwapiv1.PortNumber](80),
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
 					},
 					Conditions: []metav1.Condition{
 						{
@@ -414,9 +413,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 						ControllerName: "istio.io/gateway-controller",
 						ParentRef: gwapiv1.ParentReference{
 							Name:        "gateway1",
-							Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-							SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-							Port:        ptr.To[gwapiv1.PortNumber](80),
+							Namespace:   new(gwapiv1.Namespace("default")),
+							SectionName: new(gwapiv1.SectionName("listener1")),
+							Port:        new(gwapiv1.PortNumber(80)),
 						},
 						Conditions: []metav1.Condition{
 							{
@@ -457,9 +456,9 @@ func Test_mergeRouteParentStatus(t *testing.T) {
 					ControllerName: "istio.io/gateway-controller",
 					ParentRef: gwapiv1.ParentReference{
 						Name:        "gateway1",
-						Namespace:   ptr.To[gwapiv1.Namespace]("default"),
-						SectionName: ptr.To[gwapiv1.SectionName]("listener1"),
-						Port:        ptr.To[gwapiv1.PortNumber](80),
+						Namespace:   new(gwapiv1.Namespace("default")),
+						SectionName: new(gwapiv1.SectionName("listener1")),
+						Port:        new(gwapiv1.PortNumber(80)),
 					},
 					Conditions: []metav1.Condition{
 						{

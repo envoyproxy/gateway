@@ -254,6 +254,60 @@ image name and tag.
 
   After updating Envoy Gateway's configmap, restart Envoy Gateway.
 
+### Multiple extension servers
+
+Envoy Gateway also supports chaining multiple extension servers. Use the
+`extensionManagers` field (plural) instead of `extensionManager`:
+
+```yaml
+extensionManagers:
+- name: ext-a
+  resources:
+  - group: a.example.io
+    version: v1
+    kind: FooFilter
+  hooks:
+    xdsTranslator:
+      post:
+      - Route
+  service:
+    fqdn:
+      hostname: ext-server-a.envoy-gateway-system.svc.cluster.local
+      port: 5005
+- name: ext-b
+  resources:
+  - group: b.example.io
+    version: v1
+    kind: BarFilter
+  hooks:
+    xdsTranslator:
+      post:
+      - Route
+  service:
+    fqdn:
+      hostname: ext-server-b.envoy-gateway-system.svc.cluster.local
+      port: 5005
+```
+
+A few nuances apply when multiple extension managers are configured:
+
+* **Sequential chaining.** Hooks are invoked in the order the servers are
+  declared. Each server sees the output of the previous one, so mutations
+  compose.
+* **Resource isolation.** Each server only receives the extension resources
+  whose GVK it declares under `resources`, `policyResources`, or
+  `backendResources`. In the example above a `FooFilter` is sent to `ext-a`
+  but not to `ext-b`.
+* **`failOpen` is per server.** Setting `failOpen: true` on a server causes
+  Envoy Gateway to skip that server in the chain when its hook returns an
+  error (or when its gRPC connection cannot be established), while still
+  invoking the remaining servers.
+* **Unique `name` required.** Every entry in `extensionManagers` must have a
+  distinct `name`. Names surface in error messages as
+  `extension "<name>": <error>`.
+* **Mutually exclusive with the singular form.** `extensionManager` and
+  `extensionManagers` cannot both be set.
+
 ## Testing
 
 Get the Gateway's address:
@@ -335,7 +389,7 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
-[design documentation]: /contributions/design/extending-envoy-gateway
+[design documentation]: /community/design/extending-envoy-gateway
 [CVE-2026-22771]: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options

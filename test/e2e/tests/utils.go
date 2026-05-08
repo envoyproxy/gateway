@@ -629,23 +629,7 @@ func OverLimitCount(suite *suite.ConformanceTestSuite) (int, error) {
 	return total, nil
 }
 
-// QueryLogCountFromLoki queries log count from loki
-func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
-	svc := corev1.Service{}
-	if err := c.Get(context.Background(), types.NamespacedName{
-		Namespace: "monitoring",
-		Name:      "loki",
-	}, &svc); err != nil {
-		return -1, err
-	}
-	lokiHost := ""
-	for _, ing := range svc.Status.LoadBalancer.Ingress {
-		if ing.IP != "" {
-			lokiHost = ing.IP
-			break
-		}
-	}
-
+func buildLokiQuery(keyValues map[string]string, match string) string {
 	qParams := make([]string, 0, len(keyValues))
 	for k, v := range keyValues {
 		qParams = append(qParams, fmt.Sprintf("%s=\"%s\"", k, v))
@@ -655,13 +639,34 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	if match != "" {
 		q = q + "|~\"" + match + "\""
 	}
+
+	return q
+}
+
+func queryLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (*LokiQueryResponse, string, error) {
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "loki",
+	}, &svc); err != nil {
+		return nil, "", err
+	}
+	lokiHost := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			lokiHost = ing.IP
+			break
+		}
+	}
+
+	q := buildLokiQuery(keyValues, match)
 	params := url.Values{}
 	params.Add("query", q)
 	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
 	lokiQueryURL := fmt.Sprintf("http://%s/loki/api/v1/query_range?%s", net.JoinHostPort(lokiHost, "3100"), params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
 	defer func() {
 		_ = res.Body.Close()
@@ -670,11 +675,21 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
-		return -1, err
+		return nil, q, err
 	}
 
 	lokiResponse := &LokiQueryResponse{}
 	if err := json.Unmarshal(b, lokiResponse); err != nil {
+		return nil, q, err
+	}
+
+	return lokiResponse, q, nil
+}
+
+// QueryLogCountFromLoki queries log count from loki
+func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) (int, error) {
+	lokiResponse, q, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
 		return -1, err
 	}
 
@@ -688,6 +703,32 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, keyValues map[string]s
 	}
 	tlog.Logf(t, "get response from loki, query=%s, total=%d", q, total)
 	return total, nil
+}
+
+// QueryLogLinesFromLoki queries matching log lines from loki.
+func QueryLogLinesFromLoki(t *testing.T, c client.Client, keyValues map[string]string, match string) ([]string, error) {
+	lokiResponse, _, err := queryLoki(t, c, keyValues, match)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := make([]string, 0)
+	for _, res := range lokiResponse.Data.Result {
+		for _, value := range res.Values {
+			pair, ok := value.([]interface{})
+			if !ok || len(pair) < 2 {
+				continue
+			}
+
+			line, ok := pair[1].(string)
+			if !ok {
+				continue
+			}
+			lines = append(lines, line)
+		}
+	}
+
+	return lines, nil
 }
 
 type LokiQueryResponse struct {

@@ -78,7 +78,7 @@ jobs:
         run: cd test/benchmark && zip -r benchmark_report.zip benchmark_report
 
       - name: Upload Benchmark Report
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: benchmark_report
           path: test/benchmark/benchmark_report.zip
@@ -118,6 +118,9 @@ jobs:
         run: make image.multiarch.setup image.push.multiarch TAG=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway
 
       - name: Generate Release Artifacts
+        # rc.0 tags ship no release notes, so generate-artifacts would fail on the missing file.
+        # These artifacts only feed the GitHub Release upload below, which is also skipped for rc.0.
+        if: ${{ !contains(github.ref, '-rc.0') }}
         run: IMAGE_PULL_POLICY=IfNotPresent make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
       - name: Build and Push EG Release Helm Chart
@@ -142,6 +145,7 @@ jobs:
           cd release-artifacts && unzip benchmark_report.zip
 
       - name: Package EG multiarch binaries
+        if: ${{ !contains(github.ref, '-rc.0') }}
         run: |
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_amd64.tar.gz bin/linux/amd64/envoy-gateway
           tar -zcvf envoy-gateway_${{ env.release_tag }}_linux_arm64.tar.gz bin/linux/arm64/envoy-gateway
@@ -155,7 +159,7 @@ jobs:
 
       - name: Upload Release Manifests
         if: ${{ !contains(github.ref, '-rc.0') }}
-        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
+        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
           files: |
             release-artifacts/install.yaml

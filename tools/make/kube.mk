@@ -261,7 +261,7 @@ experimental-conformance: create-cluster kube-install-image kube-deploy run-expe
 benchmark: create-cluster kube-install-image kube-deploy-for-benchmark-test run-benchmark delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway benchmark test, and clean up.
 
 .PHONY: resilience
-resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
+resilience: create-cluster kube-install-image kube-install-examples-image kube-deploy install-eg-addons enable-simple-extension-server enable-multiple-extension-managers run-resilience delete-cluster ## Create a kind cluster, deploy EG into it, run Envoy Gateway resilience test, and clean up.
 
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy \
@@ -282,6 +282,15 @@ enable-simple-extension-server:
 	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-simple-extension-server" "envoy-gateway-system"
 	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+
+.PHONY: enable-multiple-extension-managers
+enable-multiple-extension-managers:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/simple-extension-server/multiple-extension-managers.yaml
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-a" "envoy-gateway-system"
+	tools/hack/deployment-exists.sh "app.kubernetes.io/name=gateway-ext-server-b" "envoy-gateway-system"
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-a --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/gateway-ext-server-b --for=condition=Available
 
 .PHONY: e2e-prepare
 e2e-prepare: prepare-ip-family ## Prepare the environment for running e2e tests
@@ -379,10 +388,11 @@ run-conformance: prepare-ip-family ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) $(E2E_REDIRECT)
 else
-	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
+	cd test && go test $(CONFORMANCE_TEST_ARGS) ./conformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway $(CONFORMANCE_STATIC_ADDR_ARGS) --run-test $(CONFORMANCE_RUN_TEST) $(E2E_REDIRECT)
 endif
 
 CONFORMANCE_REPORT_PATH ?=
@@ -392,12 +402,13 @@ run-experimental-conformance: prepare-ip-family ## Run Experimental Gateway API 
 	@$(LOG_TARGET)
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f test/config/gatewayclass.yaml
+	$(eval CONFORMANCE_STATIC_ADDR_ARGS := $(shell tools/hack/get-static-address-args.sh $(IP_FAMILY)))
 ifeq ($(CONFORMANCE_RUN_TEST),)
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \
 		--organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest \
 		--report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md \
 		--mode="$(KUBE_DEPLOY_PROFILE)" --version=$(TAG) \
-		--cleanup-base-resources=$(E2E_CLEANUP)
+		--cleanup-base-resources=$(E2E_CLEANUP) $(CONFORMANCE_STATIC_ADDR_ARGS)
 else
     # we didn't care about output when running single test
 	cd test && go test $(EXPERIMENTAL_CONFORMANCE_TEST_ARGS) ./conformance -run TestExperimentalConformance $(E2E_TEST_SUITE_ARGS) --gateway-class=envoy-gateway \

@@ -219,5 +219,5 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
-[design documentation]: /contributions/design/extending-envoy-gateway
+[design documentation]: /community/design/extending-envoy-gateway
 [SecurityPolicy]: /latest/api/extension_types/#securitypolicy

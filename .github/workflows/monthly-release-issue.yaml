@@ -16,94 +16,71 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - name: Calculate current release month and versions
-        id: release_info
+      - name: Collect supported versions from hugo.toml
+        id: versions
         run: |
-          # Get current date
-          CURRENT_MONTH=$(date +%m)
-          CURRENT_YEAR=$(date +%Y)
+          TODAY=$(date +%Y-%m-%d)
 
-          # Get current month name
-          MONTH_NAME=$(date +%B)
-
-          # Read current version from VERSION file
-          CURRENT_VERSION=$(cat VERSION | tr -d 'v' | tr -d '\n')
-
-          # Parse version (assuming format X.Y.Z)
-          MAJOR=$(echo $CURRENT_VERSION | cut -d. -f1)
-          MINOR=$(echo $CURRENT_VERSION | cut -d. -f2)
-          PATCH=$(echo $CURRENT_VERSION | cut -d. -f3)
-
-          # Calculate N version (current minor version)
-          N_VERSION="v${MAJOR}.${MINOR}"
-
-          # Calculate N-1 version (previous minor version)
-          if [ $MINOR -gt 0 ]; then
-            N_MINUS_1_MINOR=$((MINOR - 1))
-            N_MINUS_1_VERSION="v${MAJOR}.${N_MINUS_1_MINOR}"
-          else
-            # If minor is 0, go to previous major version
-            if [ $MAJOR -gt 0 ]; then
-              N_MINUS_1_MAJOR=$((MAJOR - 1))
-              N_MINUS_1_VERSION="v${N_MINUS_1_MAJOR}.0"
-            else
-              N_MINUS_1_VERSION="v0.0"
+          # Extract version/eol pairs from hugo.toml, skipping "latest"
+          ACTIVE_VERSIONS=()
+          VERSION=""
+          VERSION_RE='version[[:space:]]*=[[:space:]]*"([^"]+)"'
+          EOL_RE='eol[[:space:]]*=[[:space:]]*"([^"]+)"'
+          while IFS= read -r line; do
+            if [[ "$line" =~ $VERSION_RE ]]; then
+              VERSION="${BASH_REMATCH[1]}"
             fi
-          fi
+            if [[ "$line" =~ $EOL_RE ]]; then
+              EOL="${BASH_REMATCH[1]}"
+              if [[ "$VERSION" != "latest" && ! "$EOL" < "$TODAY" ]]; then
+                ACTIVE_VERSIONS+=("$VERSION")
+              fi
+              VERSION=""
+            fi
+          done < site/hugo.toml
 
-          echo "month=${CURRENT_MONTH}" >> $GITHUB_OUTPUT
-          echo "year=${CURRENT_YEAR}" >> $GITHUB_OUTPUT
-          echo "month_name=${MONTH_NAME}" >> $GITHUB_OUTPUT
-          echo "n_version=${N_VERSION}" >> $GITHUB_OUTPUT
-          echo "n_minus_1_version=${N_MINUS_1_VERSION}" >> $GITHUB_OUTPUT
+          printf '%s\n' "Supported versions (EOL on or after ${TODAY}):" "${ACTIVE_VERSIONS[@]}"
+
+          # Export as JSON array for the matrix
+          JSON=$(printf '%s\n' "${ACTIVE_VERSIONS[@]}" | jq -R . | jq -sc .)
+          echo "matrix=${JSON}" >> $GITHUB_OUTPUT
+          echo "month_name=$(date +%B)" >> $GITHUB_OUTPUT
+          echo "year=$(date +%Y)" >> $GITHUB_OUTPUT
 
       - name: Read issue template
         id: template
         run: |
-          # Read the template file and skip the YAML front matter
           TEMPLATE_CONTENT=$(awk '/^---$/,/^---$/{if (!/^---$/) next} /^---$/{p++; next} p==2' .github/ISSUE_TEMPLATE/release.md)
 
-          # Save to output using multiline format
           {
             echo 'content<<EOF'
             echo "$TEMPLATE_CONTENT"
             echo 'EOF'
           } >> $GITHUB_OUTPUT
 
-      - name: Create release issue for N version
+      - name: Create release issues for supported versions
         env:
           GH_TOKEN: ${{ github.token }}
+          TEMPLATE_CONTENT: ${{ steps.template.outputs.content }}
         run: |
-          MONTH_NAME="${{ steps.release_info.outputs.month_name }}"
-          YEAR="${{ steps.release_info.outputs.year }}"
-          N_VERSION="${{ steps.release_info.outputs.n_version }}"
-          TEMPLATE_CONTENT="${{ steps.template.outputs.content }}"
+          MONTH_NAME="${{ steps.versions.outputs.month_name }}"
+          YEAR="${{ steps.versions.outputs.year }}"
+          VERSIONS='${{ steps.versions.outputs.matrix }}'
 
-          gh issue create \
-            --title "Patch Release ${N_VERSION}.x for ${MONTH_NAME} ${YEAR}" \
-            --label "release-process" \
-            --body "## Patch Release Checklist for ${N_VERSION}.x (${MONTH_NAME} ${YEAR})
+          for VERSION in $(echo "$VERSIONS" | jq -r '.[]'); do
+            echo "Creating release issue for ${VERSION}.x ..."
+            BODY="## Patch Release Checklist for ${VERSION}.x (${MONTH_NAME} ${YEAR})
 
           ${TEMPLATE_CONTENT}
 
           ---
           *This issue was automatically created by the monthly release workflow.*"
 
-      - name: Create release issue for N-1 version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          MONTH_NAME="${{ steps.release_info.outputs.month_name }}"
-          YEAR="${{ steps.release_info.outputs.year }}"
-          N_MINUS_1_VERSION="${{ steps.release_info.outputs.n_minus_1_version }}"
-          TEMPLATE_CONTENT="${{ steps.template.outputs.content }}"
+            # Replace placeholder version with the actual release version
+            BODY="${BODY//v1.x.x/${VERSION}.x}"
 
-          gh issue create \
-            --title "Patch Release ${N_MINUS_1_VERSION}.x for ${MONTH_NAME} ${YEAR}" \
-            --label "release-process" \
-            --body "## Patch Release Checklist for ${N_MINUS_1_VERSION}.x (${MONTH_NAME} ${YEAR})
-
-          ${TEMPLATE_CONTENT}
-
-          ---
-          *This issue was automatically created by the monthly release workflow.*"
+            gh issue create \
+              --title "Patch Release ${VERSION}.x for ${MONTH_NAME} ${YEAR}" \
+              --label "release-process" \
+              --body "$BODY"
+          done

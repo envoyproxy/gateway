@@ -225,7 +225,7 @@ func (m *MultiStatusError) Reason() gwapiv1.RouteConditionReason {
 		reasonList = append(reasonList, reason)
 	}
 	sort.Strings(reasonList)
-	return gwapiv1.RouteConditionReason(strings.Join(reasonList, ", "))
+	return gwapiv1.RouteConditionReason(strings.Join(reasonList, ","))
 }
 
 func (m *MultiStatusError) Type() gwapiv1.RouteConditionType {

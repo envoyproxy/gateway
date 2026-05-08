@@ -31,21 +31,22 @@ func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 	var additions []metav1.Condition
 	for i := range updates {
 		updates[i].Message = truncateConditionMessage(updates[i].Message)
+		update := updates[i]
 		add := true
 		for j := range conditions {
-			if conditions[j].Type == updates[i].Type {
+			if conditions[j].Type == update.Type {
 				add = false
-				if !reflect.DeepEqual(conditions[j], updates[i]) {
-					conditions[j].Status = updates[i].Status
-					conditions[j].Reason = updates[i].Reason
-					conditions[j].Message = updates[i].Message
-					conditions[j].ObservedGeneration = updates[i].ObservedGeneration
+				if !reflect.DeepEqual(conditions[j], update) {
+					conditions[j].Status = update.Status
+					conditions[j].Reason = update.Reason
+					conditions[j].Message = update.Message
+					conditions[j].ObservedGeneration = update.ObservedGeneration
 					break
 				}
 			}
 		}
 		if add {
-			additions = append(additions, updates[i])
+			additions = append(additions, update)
 		}
 	}
 	conditions = append(conditions, additions...)

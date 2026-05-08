@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	"k8s.io/utils/ptr"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -54,7 +53,7 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to false",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(false)}},
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(false)}},
 				},
 			},
 			want: nil,
@@ -63,7 +62,7 @@ func TestBuildHashPolicy(t *testing.T) {
 			name: "ConsistentHash with SourceIP set to true",
 			httpRoute: &ir.HTTPRoute{
 				Traffic: &ir.TrafficFeatures{
-					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: ptr.To(true)}},
+					LoadBalancer: &ir.LoadBalancer{ConsistentHash: &ir.ConsistentHash{SourceIP: new(true)}},
 				},
 			},
 			want: []*routev3.RouteAction_HashPolicy{
@@ -284,12 +283,12 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 		},
 		{
 			name:                     "explicit true",
-			appendXForwardedHost:     ptr.To(true),
+			appendXForwardedHost:     new(true),
 			wantAppendXForwardedHost: true,
 		},
 		{
 			name:                     "explicit false",
-			appendXForwardedHost:     ptr.To(false),
+			appendXForwardedHost:     new(false),
 			wantAppendXForwardedHost: false,
 		},
 	}
@@ -298,7 +297,7 @@ func TestBuildXdsURLRewriteAction_AppendXForwardedHost(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			urlRewrite := &ir.URLRewrite{
 				Host: &ir.HTTPHostModifier{
-					Name: ptr.To("rewritten.example.com"),
+					Name: new("rewritten.example.com"),
 				},
 				AppendXForwardedHost: tt.appendXForwardedHost,
 			}

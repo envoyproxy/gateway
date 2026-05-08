@@ -335,7 +335,7 @@ $ curl -v http://${GATEWAY_HOST}/example  -H "Host: www.example.com"   --user 'u
 
 
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
-[design documentation]: /contributions/design/extending-envoy-gateway
+[design documentation]: /community/design/extending-envoy-gateway
 [CVE-2026-22771]: https://github.com/envoyproxy/gateway/security/advisories/GHSA-xrwg-mqj6-6m22
 [RBAC]: https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 [command line options]: ../operations/customize-envoyproxy/#customize-envoyproxy-command-line-options

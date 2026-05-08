@@ -174,6 +174,7 @@ func (o *OIDCTestClient) Send(req *http.Request, followRedirect bool) (*http.Res
 		}
 		return http.ErrUseLastResponse
 	}
+	// #nosec G704 - This is a test client; URLs are constructed from test fixtures, not user input
 	return o.http.Do(req)
 }
 
