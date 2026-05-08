@@ -9,14 +9,12 @@ import (
 	"context"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	grpcExtension "github.com/envoyproxy/gateway/internal/extension"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/proto/remoteinfra"
 	"google.golang.org/grpc"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
-	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 const grpcServiceName = "envoygateway.remoteinfra.EnvoyGatewayRemoteInfrastructureProvider"
@@ -94,23 +92,15 @@ func (i *InfraClientImpl) getClientConnCache(ctx context.Context) (*grpc.ClientC
 }
 
 // newRemoteInfraClient returns a new Manager
-func newRemoteInfraClient(cfg *config.Server, inK8s bool) (InfraClient, error) {
-	var cli k8scli.Client
-	var err error
-	if inK8s {
-		cli, err = k8scli.New(k8sclicfg.GetConfigOrDie(), k8scli.Options{Scheme: envoygateway.GetScheme()})
-		if err != nil {
-			return nil, err
-		}
-	}
+func newRemoteInfraClient(cfg *config.Server, k8sClient k8scli.Client) (InfraClient, error) {
 	extensionCfg := cfg.EnvoyGateway.Provider.Custom.Infrastructure.Remote.Service
 	cfg.Logger.Info("extensionCfg", "config", extensionCfg)
 	c := &InfraClientImpl{
-		k8sClient:     cli,
+		k8sClient:     k8sClient,
 		remoteService: extensionCfg,
 	}
 
-	err = c.getImplementationClient(context.Background())
+	err := c.getImplementationClient(context.Background())
 	if err != nil {
 		return nil, err
 	}

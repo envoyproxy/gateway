@@ -8,6 +8,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -25,10 +26,10 @@ type Infra struct {
 }
 
 // NewInfra returns a new Infra.
-func NewInfra(cfg *config.Server, errors message.RunnerErrorNotifier) (*Infra, error) {
+func NewInfra(cfg *config.Server, k8sClient client.Client, errors message.RunnerErrorNotifier) (*Infra, error) {
 	// We initialize the client here, that way if the remote connection is misconfigured, then the pod
 	// crashes rather than silently failing when infrastructure changes happen.
-	infraClient, err := newRemoteInfraClient(cfg, cfg.EnvoyGateway.Provider.IsRunningOnKubernetes())
+	infraClient, err := newRemoteInfraClient(cfg, k8sClient)
 	if err != nil {
 		if infraClient != nil {
 			_ = infraClient.Close()
