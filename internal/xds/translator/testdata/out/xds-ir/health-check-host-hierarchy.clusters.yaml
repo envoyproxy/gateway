@@ -18,6 +18,7 @@
     timeout: 2s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: btp-host-route-dest
     endpoints:
@@ -64,6 +65,7 @@
     timeout: 2s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: backend-host-route-dest
     endpoints:
@@ -112,6 +114,7 @@
     timeout: 2s
     unhealthyThreshold: 3
   ignoreHealthOnHostRemoval: true
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: route-host-route-dest
     endpoints:

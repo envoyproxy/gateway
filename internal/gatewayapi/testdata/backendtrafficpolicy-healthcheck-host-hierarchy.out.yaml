@@ -306,7 +306,8 @@ infraIR:
   envoy-gateway/gateway:
     proxy:
       listeners:
-      - name: envoy-gateway/gateway/http
+      - address: null
+        name: envoy-gateway/gateway/http
         ports:
         - containerPort: 10080
           name: http-80
@@ -352,6 +353,7 @@ xdsIR:
       externalPort: 80
       hostnames:
       - '*'
+      isHTTP2: false
       metadata:
         kind: Gateway
         name: gateway
