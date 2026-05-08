@@ -2145,7 +2145,7 @@ func (t *Translator) serviceEndpointHostname(service *corev1.Service, endpointHo
 		if service == nil || service.Name == "" || service.Namespace == "" {
 			return nil
 		}
-		return ptr.To(fmt.Sprintf("%s.%s.svc.%s", service.Name, service.Namespace, t.dnsDomain()))
+		return new(fmt.Sprintf("%s.%s.svc.%s", service.Name, service.Namespace, t.dnsDomain()))
 	case egv1a1.BackendEndpointHostnameTypeStatic:
 		if endpointHostname.Hostname == nil || *endpointHostname.Hostname == "" {
 			return nil

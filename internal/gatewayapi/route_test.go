@@ -14,7 +14,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -531,9 +530,9 @@ func TestServiceEndpointHostname(t *testing.T) {
 				},
 			}},
 			Ports: []discoveryv1.EndpointPort{{
-			Name:     new("http"),
-			Protocol: new(corev1.ProtocolTCP),
-			Port:     new(int32(8080)),
+				Name:     new("http"),
+				Protocol: new(corev1.ProtocolTCP),
+				Port:     new(int32(8080)),
 			}},
 		}}
 
@@ -546,7 +545,7 @@ func TestServiceEndpointHostname(t *testing.T) {
 	t.Run("cluster ip endpoint uses resolved hostname", func(t *testing.T) {
 		translator := &Translator{}
 		port := int32(8080)
-		portNum := gwapiv1.PortNumber(port)
+		portNum := port
 		backendRef := gwapiv1.BackendObjectReference{
 			Name: "service-1",
 			Port: &portNum,

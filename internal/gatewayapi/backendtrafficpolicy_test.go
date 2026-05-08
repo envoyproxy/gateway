@@ -18,8 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"k8s.io/utils/ptr"
-
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -1853,14 +1851,14 @@ func TestBTPEndpointHostnameIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("HTTPRoute"),
 									Name:  gwapiv1.ObjectName("route-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("rule-0")),
+								SectionName: new(gwapiv1.SectionName("rule-0")),
 							},
 						},
 						EndpointHostname: none,
 					},
 				},
 			},
-			routeRuleName: ptr.To(gwapiv1.SectionName("rule-0")),
+			routeRuleName: new(gwapiv1.SectionName("rule-0")),
 			expected:      none,
 		},
 		{
@@ -1891,14 +1889,14 @@ func TestBTPEndpointHostnameIndex(t *testing.T) {
 									Kind:  gwapiv1.Kind("Gateway"),
 									Name:  gwapiv1.ObjectName("gateway-1"),
 								},
-								SectionName: ptr.To(gwapiv1.SectionName("http")),
+								SectionName: new(gwapiv1.SectionName("http")),
 							},
 						},
 						EndpointHostname: kubernetesService,
 					},
 				},
 			},
-			listenerName: ptr.To(gwapiv1.SectionName("http")),
+			listenerName: new(gwapiv1.SectionName("http")),
 			expected:     kubernetesService,
 		},
 	}

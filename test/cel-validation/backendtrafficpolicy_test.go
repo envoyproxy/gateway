@@ -17,7 +17,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -3407,7 +3406,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					EndpointHostname: &egv1a1.BackendEndpointHostname{
 						Type:     egv1a1.BackendEndpointHostnameTypeStatic,
-						Hostname: ptr.To("custom-static.example.com"),
+						Hostname: new("custom-static.example.com"),
 					},
 				}
 			},
@@ -3440,7 +3439,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					EndpointHostname: &egv1a1.BackendEndpointHostname{
 						Type:     egv1a1.BackendEndpointHostnameTypeNone,
-						Hostname: ptr.To("custom-static.example.com"),
+						Hostname: new("custom-static.example.com"),
 					},
 				}
 			},
@@ -3457,7 +3456,7 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					},
 					EndpointHostname: &egv1a1.BackendEndpointHostname{
 						Type:     egv1a1.BackendEndpointHostnameTypeKubernetesService,
-						Hostname: ptr.To("custom-static.example.com"),
+						Hostname: new("custom-static.example.com"),
 					},
 				}
 			},
