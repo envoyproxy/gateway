@@ -65,11 +65,8 @@ func newManagerForCustom(ctx context.Context, cfg *config.Server, logger logging
 	case egv1a1.InfrastructureProviderTypeHost:
 		return host.NewInfra(ctx, cfg, logger, errors)
 	case egv1a1.InfrastructureProviderTypeRemote:
-		return remote.NewInfra(cfg, errors)
+		return remote.NewInfra(cfg, cfg.KubernetesClient.Get(), errors)
 	default:
 		return nil, fmt.Errorf("unsupported provider type: %s", infra.Type)
 	}
-}
-func newManagerForKubernetes(cfg *config.Server, errors message.RunnerErrorNotifier) (Manager, error) {
-	return kubernetes.NewInfra(nil, cfg, errors), nil
 }
