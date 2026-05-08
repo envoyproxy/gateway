@@ -18,6 +18,7 @@ bug fixes: |
 
 # Enhancements that improve performance.
 performance improvements: |
+  Enabled deferred creation stats to reduce CPU usage and memory cycles when creating stats, more info could be found https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#config-bootstrap-v3-bootstrap-deferredstatoptions.
 
 # Deprecated features or APIs.
 deprecations: |

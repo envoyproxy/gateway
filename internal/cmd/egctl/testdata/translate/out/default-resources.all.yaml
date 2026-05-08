@@ -23,6 +23,8 @@ envoyProxyForGatewayClass:
         node:
           locality:
             zone: $(ENVOY_SERVICE_ZONE)
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         stats_config:
           use_all_default_tags: true
           stats_tags:
@@ -568,6 +570,8 @@ xds:
               portValue: 19000
         clusterManager:
           localClusterName: local_cluster
+        deferredStatOptions:
+          enableDeferredCreationStats: true
         dynamicResources:
           adsConfig:
             apiType: DELTA_GRPC
