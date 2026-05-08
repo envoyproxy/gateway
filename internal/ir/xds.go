@@ -69,7 +69,6 @@ var (
 	ErrHealthCheckUnhealthyThresholdInvalid     = errors.New("field HealthCheck.UnhealthyThreshold should be greater than 0")
 	ErrHealthCheckHealthyThresholdInvalid       = errors.New("field HealthCheck.HealthyThreshold should be greater than 0")
 	ErrHealthCheckerInvalid                     = errors.New("health checker setting is invalid, only one health checker can be set")
-	ErrHCHTTPHostInvalid                        = errors.New("field HTTPHealthChecker.Host should be specified")
 	ErrHCHTTPPathInvalid                        = errors.New("field HTTPHealthChecker.Path should be specified")
 	ErrHCHTTPMethodInvalid                      = errors.New("only one of the GET, HEAD, POST, DELETE, OPTIONS, TRACE, PATCH of HTTPHealthChecker.Method could be set")
 	ErrHCHTTPExpectedStatusesInvalid            = errors.New("field HTTPHealthChecker.ExpectedStatuses should be specified")
@@ -3196,12 +3195,6 @@ type ActiveHealthCheck struct {
 	Overrides *HealthCheckOverrides `json:"overrides,omitempty" yaml:"overrides,omitempty"`
 }
 
-func (h *HealthCheck) SetHTTPHostIfAbsent(host string) {
-	if h != nil && h.Active != nil && h.Active.HTTP != nil && h.Active.HTTP.Host == "" {
-		h.Active.HTTP.Host = host
-	}
-}
-
 // Validate the fields within the HealthCheck structure.
 func (h *HealthCheck) Validate() error {
 	var errs error
@@ -3295,9 +3288,6 @@ type HTTPHealthChecker struct {
 // Validate the fields within the HTTPHealthChecker structure.
 func (c *HTTPHealthChecker) Validate() error {
 	var errs error
-	if c.Host == "" {
-		errs = errors.Join(errs, ErrHCHTTPHostInvalid)
-	}
 	if c.Path == "" {
 		errs = errors.Join(errs, ErrHCHTTPPathInvalid)
 	}

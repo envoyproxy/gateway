@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
+  Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
 
 # Enhancements that improve performance.
 performance improvements: |
@@ -25,4 +26,4 @@ Other changes: |
   The maximum number of rules in a RateLimit policy is increased from 128 to 256.
   The maximum number of JWT providers allowed in `SecurityPolicy.spec.jwt.providers` is increased from 4 to 16.
   Added `runner_event_total` metric to track update and delete events in infrastructure and gateway API runners for improved observability.
-
+  Added common Helm labels to Envoy Gateway RBAC resources.
