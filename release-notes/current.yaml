@@ -12,6 +12,7 @@ new features: |
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
+  Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
 
 # Enhancements that improve performance.
 performance improvements: |

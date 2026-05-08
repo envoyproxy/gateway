@@ -69,6 +69,7 @@ type xdsClusterArgs struct {
 	proxyProtocol     *ir.ProxyProtocol
 	circuitBreaker    *ir.CircuitBreaker
 	healthCheck       *ir.HealthCheck
+	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
 	timeout           *ir.Timeout
@@ -455,7 +456,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
+		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -575,7 +576,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) []*corev3.HealthCheck {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -594,7 +595,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	switch {
 	case healthcheck.HTTP != nil:
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
-			Host: healthcheck.HTTP.Host,
+			Host: httpHealthCheckHost(healthcheck.HTTP, routeHostname),
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {
@@ -626,6 +627,13 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		}
 	}
 	return []*corev3.HealthCheck{hc}
+}
+
+func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
+	if healthcheck.Host != "" {
+		return healthcheck.Host
+	}
+	return routeHostname
 }
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
@@ -1005,10 +1013,9 @@ func getHealthCheckOverridesPort(hc *ir.HealthCheck) *uint32 {
 }
 
 func getHealthCheckOverridesHostname(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) string {
-	// If Active Health Check has an explicit hostname override, it will be used on Cluster.
-	// Otherwise, if the endpoint has a hostname, set the hostname on the EndpointHealthCheckConfig
-	// so that Envoy can use it for health checking.
-	// Note: The "*" wildcard is not an explicit user-provided hostname
+	// If active HTTP health check has an explicit hostname override, keep that
+	// cluster-level host. Route hostname is only a default, so Backend endpoint
+	// hostname can still override it through EndpointHealthCheckConfig.
 	if hc.Active.HTTP != nil && hc.Active.HTTP.Host != "" && hc.Active.HTTP.Host != "*" {
 		return ""
 	}
@@ -1417,6 +1424,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(settings),
+		routeHostname:     httpRoute.Hostname,
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
