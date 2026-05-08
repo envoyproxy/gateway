@@ -1421,9 +1421,14 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 
 func Test_buildContextExtensions(t *testing.T) {
 	policyNs := "default"
+	defaultOwner := &egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{Namespace: policyNs},
+	}
 	tests := []struct {
 		name              string
 		contextExtensions []*egv1a1.ContextExtension
+		owners            *securityPolicyOwners
+		defaultOwner      *egv1a1.SecurityPolicy
 		translatorContext *TranslatorContext
 		want              []*ir.ContextExtention
 		wantErr           bool
@@ -1431,11 +1436,13 @@ func Test_buildContextExtensions(t *testing.T) {
 		{
 			name:              "Nil",
 			contextExtensions: nil,
+			owners:            &securityPolicyOwners{},
 			want:              nil,
 		},
 		{
 			name:              "Empty",
 			contextExtensions: []*egv1a1.ContextExtension{},
+			owners:            &securityPolicyOwners{},
 			want:              nil,
 		},
 		{
@@ -1443,11 +1450,13 @@ func Test_buildContextExtensions(t *testing.T) {
 			contextExtensions: []*egv1a1.ContextExtension{
 				{Name: "foo", Value: new("bar")},
 			},
-			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+			owners: &securityPolicyOwners{},
+			want:   []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name:              "TypeValueEmpty",
 			contextExtensions: []*egv1a1.ContextExtension{{Name: "foo"}},
+			owners:            &securityPolicyOwners{},
 			want:              []*ir.ContextExtention{{Name: "foo", Value: nil}},
 		},
 		{
@@ -1459,13 +1468,15 @@ func Test_buildContextExtensions(t *testing.T) {
 					Value: new("bar"),
 				},
 			},
-			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+			owners: &securityPolicyOwners{},
+			want:   []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
 		},
 		{
 			name: "TypeValueRefNil",
 			contextExtensions: []*egv1a1.ContextExtension{
 				{Name: "foo", Type: egv1a1.ContextExtensionValueTypeValueRef},
 			},
+			owners:  &securityPolicyOwners{},
 			wantErr: true,
 		},
 		{
@@ -1481,6 +1492,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:            &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{},
 			wantErr:           true,
 		},
@@ -1497,6 +1509,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
 					{Namespace: policyNs, Name: "test-cm"}: {},
@@ -1517,6 +1530,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
 					{Namespace: policyNs, Name: "test-cm"}: {
@@ -1525,6 +1539,56 @@ func Test_buildContextExtensions(t *testing.T) {
 				},
 			},
 			want: []*ir.ContextExtention{{Name: "foo", Value: ir.PrivateBytes("bar")}},
+		},
+		{
+			name: "TypeValueRefUsesPerKeyOwnerNamespace",
+			contextExtensions: []*egv1a1.ContextExtension{
+				{
+					Name: "parent-only",
+					Type: egv1a1.ContextExtensionValueTypeValueRef,
+					ValueRef: &egv1a1.LocalObjectKeyReference{
+						LocalObjectReference: gwapiv1.LocalObjectReference{
+							Kind: resource.KindConfigMap,
+							Name: "parent-cm",
+						},
+						Key: "test-key",
+					},
+				},
+				{
+					Name: "route-only",
+					Type: egv1a1.ContextExtensionValueTypeValueRef,
+					ValueRef: &egv1a1.LocalObjectKeyReference{
+						LocalObjectReference: gwapiv1.LocalObjectReference{
+							Kind: resource.KindConfigMap,
+							Name: "route-cm",
+						},
+						Key: "test-key",
+					},
+				},
+			},
+			owners: &securityPolicyOwners{
+				extAuthContextExtensions: map[string]*egv1a1.SecurityPolicy{
+					"parent-only": {ObjectMeta: metav1.ObjectMeta{Namespace: "parent-ns"}},
+					"route-only":  {ObjectMeta: metav1.ObjectMeta{Namespace: "route-ns"}},
+				},
+			},
+			defaultOwner: &egv1a1.SecurityPolicy{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default-ns"},
+			},
+			translatorContext: &TranslatorContext{
+				ConfigMapMap: map[types.NamespacedName]*corev1.ConfigMap{
+					{Namespace: "parent-ns", Name: "parent-cm"}: {
+						Data: map[string]string{"test-key": "parent-bar"},
+					},
+					{Namespace: "route-ns", Name: "route-cm"}: {
+						Data: map[string]string{"test-key": "route-bar"},
+					},
+				},
+			},
+			want: []*ir.ContextExtention{
+				{Name: "parent-only", Value: ir.PrivateBytes("parent-bar")},
+				{Name: "route-only", Value: ir.PrivateBytes("route-bar")},
+			},
 		},
 		{
 			name: "TypeValueRefSecretNotFound",
@@ -1539,6 +1603,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:            &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{},
 			wantErr:           true,
 		},
@@ -1555,6 +1620,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				SecretMap: map[types.NamespacedName]*corev1.Secret{
 					{Namespace: policyNs, Name: "test-secret"}: {},
@@ -1575,6 +1641,7 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners: &securityPolicyOwners{},
 			translatorContext: &TranslatorContext{
 				SecretMap: map[types.NamespacedName]*corev1.Secret{
 					{Namespace: policyNs, Name: "test-secret"}: {
@@ -1597,13 +1664,18 @@ func Test_buildContextExtensions(t *testing.T) {
 					Key: "test-key",
 				},
 			}},
+			owners:  &securityPolicyOwners{},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			translator := &Translator{TranslatorContext: tt.translatorContext}
-			got, err := translator.buildContextExtensions(tt.contextExtensions, policyNs)
+			owner := tt.defaultOwner
+			if owner == nil {
+				owner = defaultOwner
+			}
+			got, err := translator.buildContextExtensions(tt.contextExtensions, tt.owners, owner)
 			if tt.wantErr {
 				require.Error(t, err)
 				require.Nil(t, got)
@@ -1834,7 +1906,7 @@ func TestMergeSecurityPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
+			got, _, err := mergeSecurityPolicy(tt.routePolicy, tt.parentPolicy)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("mergeSecurityPolicy() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1849,4 +1921,143 @@ func TestMergeSecurityPolicy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_securityPolicyOwnerChoose(t *testing.T) {
+	t.Run("route policy overrides parent for the same owner fields", func(t *testing.T) {
+		parentPolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
+			Spec: egv1a1.SecurityPolicySpec{
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "parent-users"},
+				},
+				APIKeyAuth: &egv1a1.APIKeyAuth{
+					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "parent-cred"}},
+				},
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{{Name: new("parent-rule")}},
+				},
+				ExtAuth: &egv1a1.ExtAuth{
+					HTTP: &egv1a1.HTTPExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-http-backend-refs"},
+							}},
+						},
+					},
+					ContextExtensions: []*egv1a1.ContextExtension{
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("parent-shared")},
+						{Name: "parent-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("parent-only")},
+					},
+				},
+				OIDC: &egv1a1.OIDC{
+					ClientSecret: gwapiv1.SecretObjectReference{Name: "parent-client-secret"},
+					ClientIDRef:  &gwapiv1.SecretObjectReference{Name: "parent-client-id"},
+					Provider: egv1a1.OIDCProvider{
+						Issuer: "https://parent.example.com",
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-oidc-provider"},
+							}},
+						},
+					},
+				},
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "parent-jwt-provider"}},
+				},
+			},
+		}
+
+		routePolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				BasicAuth: &egv1a1.BasicAuth{
+					Users: gwapiv1.SecretObjectReference{Name: "route-users"},
+				},
+				APIKeyAuth: &egv1a1.APIKeyAuth{
+					CredentialRefs: []gwapiv1.SecretObjectReference{{Name: "route-cred"}},
+				},
+				Authorization: &egv1a1.Authorization{
+					Rules: []egv1a1.AuthorizationRule{{Name: new("route-rule")}},
+				},
+				ExtAuth: &egv1a1.ExtAuth{
+					HTTP: &egv1a1.HTTPExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "route-http-backend-refs"},
+							}},
+						},
+					},
+					ContextExtensions: []*egv1a1.ContextExtension{
+						{Name: "shared", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("route-shared")},
+						{Name: "route-only", Type: egv1a1.ContextExtensionValueTypeValue, Value: new("route-only")},
+					},
+				},
+				OIDC: &egv1a1.OIDC{
+					ClientSecret: gwapiv1.SecretObjectReference{Name: "route-client-secret"},
+					ClientIDRef:  &gwapiv1.SecretObjectReference{Name: "route-client-id"},
+					Provider: egv1a1.OIDCProvider{
+						Issuer: "https://route.example.com",
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "route-oidc-provider"},
+							}},
+						},
+					},
+				},
+				JWT: &egv1a1.JWT{
+					Providers: []egv1a1.JWTProvider{{Name: "route-jwt-provider"}},
+				},
+			},
+		}
+
+		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+		require.NotNil(t, owners)
+
+		assert.Same(t, routePolicy, owners.basicAuth)
+		assert.Same(t, routePolicy, owners.apiKeyAuthCredentialRefs)
+		assert.Same(t, routePolicy, owners.authorizationRules)
+		assert.Same(t, routePolicy, owners.extAuth)
+		assert.Same(t, routePolicy, owners.extAuthBackendRefs)
+		assert.Same(t, routePolicy, owners.oidc)
+		assert.Same(t, routePolicy, owners.oidcClientIDRef)
+		assert.Same(t, routePolicy, owners.oidcClientSecret)
+		assert.Same(t, routePolicy, owners.oidcProviderBackendRefs)
+		assert.Same(t, routePolicy, owners.jwtProviders)
+		assert.Same(t, routePolicy, owners.extAuthContextExtensions["shared"])
+		assert.Same(t, routePolicy, owners.extAuthContextExtensions["route-only"])
+		assert.Same(t, parentPolicy, owners.extAuthContextExtensions["parent-only"])
+	})
+
+	t.Run("uses parent owner for grpc backend fields when route does not set them", func(t *testing.T) {
+		parentPolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "parent", Namespace: "parent-ns"},
+			Spec: egv1a1.SecurityPolicySpec{
+				MergeType: new(egv1a1.StrategicMerge),
+				ExtAuth: &egv1a1.ExtAuth{
+					GRPC: &egv1a1.GRPCExtAuthService{
+						BackendCluster: egv1a1.BackendCluster{
+							BackendRefs: []egv1a1.BackendRef{{
+								BackendObjectReference: gwapiv1.BackendObjectReference{Name: "parent-grpc-backend-refs"},
+							}},
+						},
+					},
+				},
+			},
+		}
+
+		routePolicy := &egv1a1.SecurityPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "route-ns"},
+			Spec:       egv1a1.SecurityPolicySpec{MergeType: new(egv1a1.StrategicMerge)},
+		}
+
+		_, owners, err := mergeSecurityPolicy(routePolicy, parentPolicy)
+		require.NoError(t, err)
+		require.NotNil(t, owners)
+
+		assert.Same(t, parentPolicy, owners.extAuth)
+		assert.Same(t, parentPolicy, owners.extAuthBackendRefs)
+	})
 }

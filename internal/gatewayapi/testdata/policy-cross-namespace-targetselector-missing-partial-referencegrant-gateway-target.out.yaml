@@ -27,19 +27,6 @@ backendTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    - ancestorRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: denied-gateway
-        namespace: policy-target-b
-      conditions:
-      - lastTransitionTime: null
-        message: Target Gateway policy-target-b/denied-gateway is not permitted by
-          any ReferenceGrant.
-        reason: RefNotPermitted
-        status: "False"
-        type: Accepted
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

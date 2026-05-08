@@ -60,6 +60,12 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 rules:
 - apiGroups:
   - ""
@@ -182,6 +188,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -490,7 +502,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 ---
 # Source: gateway-helm/templates/certgen-rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -506,7 +518,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 rules:
 - apiGroups:
   - ""
@@ -531,7 +543,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
   annotations:
     "helm.sh/hook": pre-install, pre-upgrade
-    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD.
+    "helm.sh/hook-weight": "-1"   # Ensure rbac is created before the certgen job when using ArgoCD or Flux.
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
