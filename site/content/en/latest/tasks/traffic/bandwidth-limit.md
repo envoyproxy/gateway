@@ -34,26 +34,6 @@ The following example limits inbound request traffic for an HTTPRoute to **10 Ki
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: bandwidth-limit-route
-spec:
-  parentRefs:
-  - name: eg
-  hostnames:
-  - "www.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -62,7 +42,7 @@ spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: bandwidth-limit-route
+    name: backend
   bandwidthLimit:
     request:
       limit:
@@ -77,26 +57,6 @@ Save and apply the following resources to your cluster:
 
 ```yaml
 ---
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: bandwidth-limit-route
-spec:
-  parentRefs:
-  - name: eg
-  hostnames:
-  - "www.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
----
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -105,7 +65,7 @@ spec:
   targetRefs:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
-    name: bandwidth-limit-route
+    name: backend
   bandwidthLimit:
     request:
       limit:
