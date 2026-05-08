@@ -2449,6 +2449,296 @@ func securityPolicySpecWithOIDCIssuer(issuer string) egv1a1.SecurityPolicySpec {
 	}
 }
 
+func TestSecurityPolicyClientCert(t *testing.T) {
+	ctx := context.Background()
+	baseSP := egv1a1.SecurityPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "sp",
+			Namespace: metav1.NamespaceDefault,
+		},
+		Spec: egv1a1.SecurityPolicySpec{},
+	}
+
+	cases := []struct {
+		desc         string
+		mutate       func(sp *egv1a1.SecurityPolicy)
+		mutateStatus func(sp *egv1a1.SecurityPolicy)
+		wantErrors   []string
+	}{
+		{
+			desc: "valid subject-only clientCert principal",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										Subject: &egv1a1.StringMatch{
+											Value: "CN=test",
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid uris-only clientCert principal",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										SubjectAltNames: &egv1a1.SubjectAltNames{
+											URIs: []egv1a1.StringMatch{
+												{Value: "spiffe://test"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "valid subject and uris clientCert principal",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										Subject: &egv1a1.StringMatch{
+											Value: "CN=test",
+										},
+										SubjectAltNames: &egv1a1.SubjectAltNames{
+											URIs: []egv1a1.StringMatch{
+												{Value: "spiffe://test"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "invalid clientCert principal with neither subject nor subjectAltNames",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"at least one of subject or subjectAltNames"},
+		},
+		{
+			desc: "invalid clientCert principal with emailAddresses",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										SubjectAltNames: &egv1a1.SubjectAltNames{
+											EmailAddresses: []egv1a1.StringMatch{
+												{Value: "user@example.com"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"emailAddresses is not supported"},
+		},
+		{
+			desc: "invalid clientCert principal with ipAddresses",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										SubjectAltNames: &egv1a1.SubjectAltNames{
+											IPAddresses: []egv1a1.StringMatch{
+												{Value: "192.0.2.1"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"ipAddresses is not supported"},
+		},
+		{
+			desc: "invalid clientCert principal with otherNames",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetSelectors: []egv1a1.TargetSelector{
+							{
+								Group: new(gwapiv1.Group("gateway.networking.k8s.io")),
+								Kind:  "HTTPRoute",
+								MatchLabels: map[string]string{
+									"eg/namespace": "reference-apps",
+								},
+							},
+						},
+					},
+					Authorization: &egv1a1.Authorization{
+						Rules: []egv1a1.AuthorizationRule{
+							{
+								Action: egv1a1.AuthorizationActionAllow,
+								Principal: egv1a1.Principal{
+									ClientCert: &egv1a1.ClientCertPrincipal{
+										SubjectAltNames: &egv1a1.SubjectAltNames{
+											OtherNames: []egv1a1.OtherSANMatch{
+												{Oid: "1.2.3.4", StringMatch: egv1a1.StringMatch{Value: "test"}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"otherNames is not supported"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.desc, func(t *testing.T) {
+			sp := baseSP.DeepCopy()
+			sp.Name = fmt.Sprintf("sp-%v", time.Now().UnixNano())
+
+			if tc.mutate != nil {
+				tc.mutate(sp)
+			}
+			err := c.Create(ctx, sp)
+
+			if tc.mutateStatus != nil {
+				tc.mutateStatus(sp)
+				err = c.Status().Update(ctx, sp)
+			}
+
+			if (len(tc.wantErrors) != 0) != (err != nil) {
+				t.Fatalf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;want error=%v", err, tc.wantErrors)
+			}
+
+			var missingErrorStrings []string
+			for _, wantError := range tc.wantErrors {
+				if !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(wantError)) {
+					missingErrorStrings = append(missingErrorStrings, wantError)
+				}
+			}
+			if len(missingErrorStrings) != 0 {
+				t.Errorf("Unexpected response while creating SecurityPolicy; got err=\n%v\n;missing strings within error=%q", err, missingErrorStrings)
+			}
+		})
+	}
+}
+
 func TestSecurityPolicyOIDCCookieNames(t *testing.T) {
 	ctx := context.Background()
 	baseSP := egv1a1.SecurityPolicy{

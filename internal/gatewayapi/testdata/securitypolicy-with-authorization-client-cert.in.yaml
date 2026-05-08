@@ -1,0 +1,180 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-3
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/baz"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-4
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/qux"
+      backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway  # Targets gateway; applies to httproute-1 (URI SANs)
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: "allow-spiffe-uri-san"
+        action: Allow
+        principal:
+          clientCert:
+            subjectAltNames:
+              uris:
+              - type: Exact
+                value: "spiffe://trust-domain/ns/client-ns/sa/client-sa"
+              - type: Exact
+                value: "spiffe://trust-domain/ns/other-ns/sa/other-sa"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-2  # DNS SAN (single)
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: "allow-dns-san"
+        action: Allow
+        principal:
+          clientCert:
+            subjectAltNames:
+              dnsNames:
+              - type: Exact
+                value: "client.example.com"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-3  # DNS SANs (multiple)
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-3
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: "allow-multi-dns-san"
+        action: Allow
+        principal:
+          clientCert:
+            subjectAltNames:
+              dnsNames:
+              - type: Exact
+                value: "client.example.com"
+              - type: Exact
+                value: "client2.example.com"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-httproute-4  # Subject DN
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-4
+    authorization:
+      defaultAction: Deny
+      rules:
+      - name: "allow-subject-dn"
+        action: Allow
+        principal:
+          clientCert:
+            subject:
+              type: Exact
+              value: "CN=allowed-client,O=Envoy Gateway Tests"
