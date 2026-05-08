@@ -59,6 +59,10 @@ type LocalDynamicModuleSource struct {
 }
 
 // RemoteDynamicModuleSource defines a dynamic module fetched from a remote HTTP source.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.retry) || !has(self.retry.perRetry) || !has(self.retry.perRetry.timeout)",message="retry.perRetry.timeout is not supported when fetching a remote dynamic module."
+// +kubebuilder:validation:XValidation:rule="!has(self.retry) || !has(self.retry.retryOn) || !has(self.retry.retryOn.httpStatusCodes)",message="retry.retryOn.httpStatusCodes is not supported when fetching a remote dynamic module."
+// +kubebuilder:validation:XValidation:rule="!has(self.retry) || !has(self.retry.numAttemptsPerPriority)",message="retry.numAttemptsPerPriority is not supported when fetching a remote dynamic module."
 type RemoteDynamicModuleSource struct {
 	// URL is the HTTP or HTTPS URL of the dynamic module shared library (.so file).
 	//
@@ -71,6 +75,28 @@ type RemoteDynamicModuleSource struct {
 	//
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	SHA256 string `json:"sha256"`
+
+	// BackendRefs optionally references Backend resources representing the
+	// module source. Attach a BackendTLSPolicy to these BackendRefs to provide
+	// a custom CA bundle for validating the HTTPS connection. When unset, Envoy
+	// fetches the module using its system trust bundle.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	BackendRefs []BackendRef `json:"backendRefs,omitempty"`
+
+	// Retry configures retries when fetching the module. Only NumRetries,
+	// RetryOn.Triggers, and PerRetry.BackOff are honored; other sub-fields are
+	// rejected by validation since the underlying Envoy data-source proto does
+	// not support them.
+	//
+	// +optional
+	Retry *Retry `json:"retry,omitempty"`
+
+	// Timeout is the request timeout used when fetching the module.
+	//
+	// +optional
+	Timeout *Timeout `json:"timeout,omitempty"`
 }
 
 // DynamicModuleEntry defines a dynamic module that is registered and allowed

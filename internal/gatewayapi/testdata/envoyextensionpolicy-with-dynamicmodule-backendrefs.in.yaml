@@ -1,0 +1,115 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: proxy-config
+  spec:
+    dynamicModules:
+    - name: remote-auth-module
+      source:
+        type: Remote
+        remote:
+          url: https://modules.example.com/libremote_auth.so
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          backendRefs:
+          - name: backend-modules
+            kind: Backend
+            group: gateway.envoyproxy.io
+            namespace: envoy-gateway
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    dynamicModule:
+    - name: remote-auth-module
+      filterName: remote-auth-check
+backends:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: Backend
+  metadata:
+    name: backend-modules
+    namespace: envoy-gateway
+  spec:
+    endpoints:
+    - fqdn:
+        hostname: modules.example.com
+        port: 443
+backendTLSPolicies:
+- apiVersion: gateway.networking.k8s.io/v1alpha3
+  kind: BackendTLSPolicy
+  metadata:
+    name: backend-modules-tls
+    namespace: envoy-gateway
+  spec:
+    targetRefs:
+    - group: gateway.envoyproxy.io
+      kind: Backend
+      name: backend-modules
+    validation:
+      caCertificateRefs:
+      - name: ca-cert
+        group: ""
+        kind: ConfigMap
+      hostname: modules.example.com
+configMaps:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: ca-cert
+    namespace: envoy-gateway
+  data:
+    ca.crt: |
+      -----BEGIN CERTIFICATE-----
+      MIIDQzCCAiugAwIBAgIULdSyhRwAgvZmyEXM1lEjGB+sgpAwDQYJKoZIhvcNAQEL
+      BQAwGjEYMBYGA1UEAwwPZXhhbXBsZS1yb290LWNhMB4XDTI0MDkxMDE1MDg0MloX
+      DTM0MDkwODE1MDg0MlowGjEYMBYGA1UEAwwPZXhhbXBsZS1yb290LWNhMIIBIjAN
+      BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAylV4ie/fimkRaVrnJVLR4hi+T9p4
+      -----END CERTIFICATE-----

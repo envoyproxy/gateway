@@ -560,7 +560,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForRoute(
 		}
 
 		var dynamicModules []ir.DynamicModule
-		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gtwCtx.envoyProxy); dynamicModuleError != nil {
+		if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gtwCtx.envoyProxy, resources, gtwCtx); dynamicModuleError != nil {
 			dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 			errs = errors.Join(errs, dynamicModuleError)
 		}
@@ -656,7 +656,7 @@ func (t *Translator) translateEnvoyExtensionPolicyForGateway(
 		luaError = perr.WithMessage(luaError, "Lua")
 		errs = errors.Join(errs, luaError)
 	}
-	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gateway.envoyProxy); dynamicModuleError != nil {
+	if dynamicModules, dynamicModuleError = t.buildDynamicModules(policy, gateway.envoyProxy, resources, gateway); dynamicModuleError != nil {
 		dynamicModuleError = perr.WithMessage(dynamicModuleError, "DynamicModule")
 		errs = errors.Join(errs, dynamicModuleError)
 	}
@@ -1200,6 +1200,8 @@ func irConfigNameForDynamicModule(policy *egv1a1.EnvoyExtensionPolicy, index int
 func (t *Translator) buildDynamicModules(
 	policy *egv1a1.EnvoyExtensionPolicy,
 	envoyProxy *egv1a1.EnvoyProxy,
+	resources *resource.Resources,
+	gtwCtx *GatewayContext,
 ) ([]ir.DynamicModule, error) {
 	var errs error
 
@@ -1257,10 +1259,44 @@ func (t *Translator) buildDynamicModules(
 				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has invalid remote source URL %q: %w", dm.Name, entry.Source.Remote.URL, err))
 				continue
 			}
-			dmIR.Remote = &ir.RemoteDynamicModuleSource{
+
+			remoteIR := &ir.RemoteDynamicModuleSource{
 				URL:    entry.Source.Remote.URL,
 				SHA256: entry.Source.Remote.SHA256,
 			}
+
+			if len(entry.Source.Remote.BackendRefs) > 0 {
+				// BackendRefs are declared on the EnvoyProxy registry entry, so
+				// resolve them with envoyProxy as the owner: the BackendRef
+				// namespace fallback and ReferenceGrant context both come from
+				// the EnvoyProxy, not the consuming EnvoyExtensionPolicy.
+				if envoyProxy == nil {
+					errs = errors.Join(errs, fmt.Errorf("dynamic module %q has backendRefs but no EnvoyProxy owner is available", dm.Name))
+					continue
+				}
+				protocol := dynamicModuleProtocol(entry.Source.Remote.URL)
+				rd, rdErr := t.translateExtServiceBackendRefs(
+					envoyProxy, entry.Source.Remote.BackendRefs, protocol, resources, gtwCtx, "dynamicmodule-"+entry.Name, idx)
+				if rdErr != nil {
+					errs = errors.Join(errs, fmt.Errorf("dynamic module %q backendRefs: %w", dm.Name, rdErr))
+					continue
+				}
+				remoteIR.Destination = rd
+			}
+
+			if entry.Source.Remote.Retry != nil || entry.Source.Remote.Timeout != nil {
+				traffic, trafficErr := translateTrafficFeatures(&egv1a1.ClusterSettings{
+					Retry:   entry.Source.Remote.Retry,
+					Timeout: entry.Source.Remote.Timeout,
+				})
+				if trafficErr != nil {
+					errs = errors.Join(errs, fmt.Errorf("dynamic module %q traffic settings: %w", dm.Name, trafficErr))
+					continue
+				}
+				remoteIR.Traffic = traffic
+			}
+
+			dmIR.Remote = remoteIR
 		case egv1a1.LocalDynamicModuleSourceType:
 			if entry.Source.Local == nil {
 				errs = errors.Join(errs, fmt.Errorf("dynamic module %q has no local source configured", dm.Name))
@@ -1276,6 +1312,15 @@ func (t *Translator) buildDynamicModules(
 	}
 
 	return dmIRList, errs
+}
+
+// dynamicModuleProtocol returns the IR protocol implied by the scheme of a
+// remote dynamic module URL. URL scheme has already been validated as http(s).
+func dynamicModuleProtocol(rawURL string) ir.AppProtocol {
+	if u, err := url.Parse(rawURL); err == nil && u.Scheme == "https" {
+		return ir.HTTPS
+	}
+	return ir.HTTP
 }
 
 // envoyExtensionPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.

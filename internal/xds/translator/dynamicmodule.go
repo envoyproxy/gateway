@@ -122,24 +122,37 @@ func dynamicModuleConfig(dm *ir.DynamicModule) (*dmfilterv3.DynamicModuleFilter,
 
 func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) {
 	if dm.Remote != nil {
-		uc, err := url2Cluster(dm.Remote.URL)
+		clusterName, err := dynamicModuleClusterName(dm.Remote)
 		if err != nil {
 			return nil, err
 		}
 
-		return &corev3.AsyncDataSource{
-			Specifier: &corev3.AsyncDataSource_Remote{
-				Remote: &corev3.RemoteDataSource{
-					HttpUri: &corev3.HttpUri{
-						Uri: dm.Remote.URL,
-						HttpUpstreamType: &corev3.HttpUri_Cluster{
-							Cluster: uc.name,
-						},
-						Timeout: durationpb.New(defaultExtServiceRequestTimeout),
-					},
-					Sha256: dm.Remote.SHA256,
+		timeout := durationpb.New(defaultExtServiceRequestTimeout)
+		if t := dm.Remote.Traffic; t != nil && t.Timeout != nil && t.Timeout.HTTP != nil && t.Timeout.HTTP.RequestTimeout != nil {
+			timeout = durationpb.New(t.Timeout.HTTP.RequestTimeout.Duration)
+		}
+
+		remote := &corev3.RemoteDataSource{
+			HttpUri: &corev3.HttpUri{
+				Uri: dm.Remote.URL,
+				HttpUpstreamType: &corev3.HttpUri_Cluster{
+					Cluster: clusterName,
 				},
+				Timeout: timeout,
 			},
+			Sha256: dm.Remote.SHA256,
+		}
+
+		if dm.Remote.Traffic != nil && dm.Remote.Traffic.Retry != nil {
+			rp, err := buildNonRouteRetryPolicy(dm.Remote.Traffic.Retry)
+			if err != nil {
+				return nil, err
+			}
+			remote.RetryPolicy = rp
+		}
+
+		return &corev3.AsyncDataSource{
+			Specifier: &corev3.AsyncDataSource_Remote{Remote: remote},
 		}, nil
 	}
 
@@ -152,6 +165,20 @@ func dynamicModuleSource(dm *ir.DynamicModule) (*corev3.AsyncDataSource, error) 
 			},
 		},
 	}, nil
+}
+
+// dynamicModuleClusterName returns the cluster name to use for fetching a remote
+// dynamic module. When the user supplied BackendRefs (resolved into Destination),
+// that cluster name is used; otherwise the cluster is synthesized from URL.
+func dynamicModuleClusterName(remote *ir.RemoteDynamicModuleSource) (string, error) {
+	if remote.Destination != nil && len(remote.Destination.Settings) > 0 {
+		return remote.Destination.Name, nil
+	}
+	uc, err := url2Cluster(remote.URL)
+	if err != nil {
+		return "", err
+	}
+	return uc.name, nil
 }
 
 // routeContainsDynamicModule returns true if DynamicModules exist for the provided route.
@@ -179,7 +206,17 @@ func (*dynamicModule) patchResources(tCtx *types.ResourceVersionTable, routes []
 				continue
 			}
 
-			if err := addClusterFromURL(dm.Remote.URL, nil, tCtx); err != nil {
+			if dm.Remote.Destination != nil && len(dm.Remote.Destination.Settings) > 0 {
+				if err := createExtServiceXDSCluster(dm.Remote.Destination, dm.Remote.Traffic, tCtx); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				if err := processClientCertificates(tCtx, dm.Remote.Destination.Settings); err != nil {
+					errs = errors.Join(errs, err)
+				}
+				continue
+			}
+
+			if err := addClusterFromURL(dm.Remote.URL, dm.Remote.Traffic, tCtx); err != nil {
 				errs = errors.Join(errs, err)
 			}
 		}

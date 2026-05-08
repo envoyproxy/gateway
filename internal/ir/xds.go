@@ -3765,6 +3765,15 @@ type RemoteDynamicModuleSource struct {
 
 	// SHA256 is the checksum used by Envoy to verify the downloaded module.
 	SHA256 string `json:"sha256"`
+
+	// Destination is resolved from the user-supplied BackendRefs and carries
+	// the cluster settings (including TLS from any attached BackendTLSPolicy)
+	// used to fetch the module. When nil, the cluster is synthesized from URL
+	// with system trust.
+	Destination *RouteDestination `json:"destination,omitempty"`
+
+	// Traffic carries retry and timeout settings for the fetch.
+	Traffic *TrafficFeatures `json:"traffic,omitempty"`
 }
 
 // DestinationFilters contains HTTP filters that will be used with the DestinationSetting.

@@ -354,11 +354,260 @@ spec:
                             Remote specifies a module fetched from a remote source.
                             The module binary is downloaded and cached by Envoy.
                           properties:
+                            backendRefs:
+                              description: |-
+                                BackendRefs optionally references Backend resources representing the
+                                module source. Attach a BackendTLSPolicy to these BackendRefs to provide
+                                a custom CA bundle for validating the HTTPS connection. When unset, Envoy
+                                fetches the module using its system trust bundle.
+                              items:
+                                description: BackendRef defines how an ObjectReference
+                                  that is specific to BackendRef.
+                                properties:
+                                  fallback:
+                                    description: |-
+                                      Fallback indicates whether the backend is designated as a fallback.
+                                      Multiple fallback backends can be configured.
+                                      It is highly recommended to configure active or passive health checks to ensure that failover can be detected
+                                      when the active backends become unhealthy and to automatically readjust once the primary backends are healthy again.
+                                      The overprovisioning factor is set to 1.4, meaning the fallback backends will only start receiving traffic when
+                                      the health of the active backends falls below 72%.
+                                    type: boolean
+                                  group:
+                                    default: ""
+                                    description: |-
+                                      Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                      When unspecified or empty string, core API group is inferred.
+                                    maxLength: 253
+                                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                    type: string
+                                  kind:
+                                    default: Service
+                                    description: |-
+                                      Kind is the Kubernetes resource kind of the referent. For example
+                                      "Service".
+
+                                      Defaults to "Service" when not specified.
+
+                                      ExternalName services can refer to CNAME DNS records that may live
+                                      outside of the cluster and as such are difficult to reason about in
+                                      terms of conformance. They also may not be safe to forward to (see
+                                      CVE-2021-25740 for more information). Implementations SHOULD NOT
+                                      support ExternalName Services.
+
+                                      Support: Core (Services with a type other than ExternalName)
+
+                                      Support: Implementation-specific (Services with type ExternalName)
+                                    maxLength: 63
+                                    minLength: 1
+                                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referent.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the backend. When unspecified, the local
+                                      namespace is inferred.
+
+                                      Note that when a namespace different than the local namespace is specified,
+                                      a ReferenceGrant object is required in the referent namespace to allow that
+                                      namespace's owner to accept the reference. See the ReferenceGrant
+                                      documentation for details.
+
+                                      Support: Core
+                                    maxLength: 63
+                                    minLength: 1
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                    type: string
+                                  port:
+                                    description: |-
+                                      Port specifies the destination port number to use for this resource.
+                                      Port is required when the referent is a Kubernetes Service. In this
+                                      case, the port number is the service port number, not the target port.
+                                      For other resources, destination port might be derived from the referent
+                                      resource or this field.
+                                    format: int32
+                                    maximum: 65535
+                                    minimum: 1
+                                    type: integer
+                                  weight:
+                                    default: 1
+                                    description: |-
+                                      Weight specifies the proportion of requests forwarded to the referenced
+                                      backend. This is computed as weight/(sum of all weights in this
+                                      BackendRefs list). For non-zero values, there may be some epsilon from
+                                      the exact proportion defined here depending on the precision an
+                                      implementation supports. Weight is not a percentage and the sum of
+                                      weights does not need to equal 100.
+
+                                      If only one backend is specified and it has a weight greater than 0, 100%
+                                      of the traffic is forwarded to that backend. If weight is set to 0, no
+                                      traffic should be forwarded for this entry. If unspecified, weight
+                                      defaults to 1.
+
+                                      Support for this field varies based on the context where used.
+                                    format: int32
+                                    maximum: 1000000
+                                    minimum: 0
+                                    type: integer
+                                required:
+                                - name
+                                type: object
+                                x-kubernetes-validations:
+                                - message: Must have port for Service reference
+                                  rule: '(size(self.group) == 0 && self.kind == ''Service'')
+                                    ? has(self.port) : true'
+                              maxItems: 16
+                              type: array
+                            retry:
+                              description: |-
+                                Retry configures retries when fetching the module. Only NumRetries,
+                                RetryOn.Triggers, and PerRetry.BackOff are honored; other sub-fields are
+                                rejected by validation since the underlying Envoy data-source proto does
+                                not support them.
+                              properties:
+                                numAttemptsPerPriority:
+                                  description: |-
+                                    NumAttemptsPerPriority defines the number of requests (initial attempt + retries)
+                                    that should be sent to the same priority before switching to a different one.
+                                    If not specified or set to 0, all requests are sent to the highest priority that is healthy.
+                                  format: int32
+                                  type: integer
+                                numRetries:
+                                  default: 2
+                                  description: NumRetries is the number of retries
+                                    to be attempted. Defaults to 2.
+                                  format: int32
+                                  minimum: 0
+                                  type: integer
+                                perRetry:
+                                  description: PerRetry is the retry policy to be
+                                    applied per retry attempt.
+                                  properties:
+                                    backOff:
+                                      description: |-
+                                        Backoff is the backoff policy to be applied per retry attempt. gateway uses a fully jittered exponential
+                                        back-off algorithm for retries. For additional details,
+                                        see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#config-http-filters-router-x-envoy-max-retries
+                                      properties:
+                                        baseInterval:
+                                          description: BaseInterval is the base interval
+                                            between retries.
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                        maxInterval:
+                                          description: |-
+                                            MaxInterval is the maximum interval between retries. This parameter is optional, but must be greater than or equal to the base_interval if set.
+                                            The default is 10 times the base_interval
+                                          pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                          type: string
+                                      type: object
+                                    timeout:
+                                      description: Timeout is the timeout per retry
+                                        attempt.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                  type: object
+                                retryOn:
+                                  description: |-
+                                    RetryOn specifies the retry trigger condition.
+
+                                    If not specified, the default is to retry on connect-failure,refused-stream,unavailable,cancelled,retriable-status-codes(503).
+                                  properties:
+                                    httpStatusCodes:
+                                      description: |-
+                                        HttpStatusCodes specifies the http status codes to be retried.
+                                        The retriable-status-codes trigger must also be configured for these status codes to trigger a retry.
+                                      items:
+                                        description: HTTPStatus defines the http status
+                                          code.
+                                        maximum: 599
+                                        minimum: 100
+                                        type: integer
+                                      type: array
+                                    triggers:
+                                      description: Triggers specifies the retry trigger
+                                        condition(Http/Grpc).
+                                      items:
+                                        description: TriggerEnum specifies the conditions
+                                          that trigger retries.
+                                        enum:
+                                        - 5xx
+                                        - gateway-error
+                                        - reset
+                                        - reset-before-request
+                                        - connect-failure
+                                        - retriable-4xx
+                                        - refused-stream
+                                        - retriable-status-codes
+                                        - cancelled
+                                        - deadline-exceeded
+                                        - internal
+                                        - resource-exhausted
+                                        - unavailable
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
                             sha256:
                               description: SHA256 checksum that Envoy will use to
                                 verify the downloaded module binary.
                               pattern: ^[a-f0-9]{64}$
                               type: string
+                            timeout:
+                              description: Timeout is the request timeout used when
+                                fetching the module.
+                              properties:
+                                http:
+                                  description: Timeout settings for HTTP.
+                                  properties:
+                                    connectionIdleTimeout:
+                                      description: |-
+                                        The idle timeout for an HTTP connection. Idle time is defined as a period in which there are no active requests in the connection.
+                                        Default: 1 hour.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                    maxConnectionDuration:
+                                      description: |-
+                                        The maximum duration of an HTTP connection.
+                                        Default: unlimited.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                    maxStreamDuration:
+                                      description: |-
+                                        MaxStreamDuration is the maximum duration for a stream to complete. This timeout measures the time
+                                        from when the request is sent until the response stream is fully consumed and does not apply to
+                                        non-streaming requests.
+                                        When set to "0s", no max duration is applied and streams can run indefinitely.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                    requestTimeout:
+                                      description: RequestTimeout is the time until
+                                        which entire response is received from the
+                                        upstream.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                    streamIdleTimeout:
+                                      description: |2-
+                                         The stream idle timeout defines the amount of time a stream can exist without any upstream or downstream activity.
+                                         If not specified, StreamIdleTimeout is inherited from the listener-level setting, which can be configured via ClientTrafficPolicy.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                  type: object
+                                tcp:
+                                  description: Timeout settings for TCP.
+                                  properties:
+                                    connectTimeout:
+                                      description: |-
+                                        The timeout for network connection establishment, including TCP and TLS handshakes.
+                                        Default: 10 seconds.
+                                      pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                                      type: string
+                                  type: object
+                              type: object
                             url:
                               description: URL is the HTTP or HTTPS URL of the dynamic
                                 module shared library (.so file).
@@ -370,6 +619,18 @@ spec:
                           - sha256
                           - url
                           type: object
+                          x-kubernetes-validations:
+                          - message: retry.perRetry.timeout is not supported when
+                              fetching a remote dynamic module.
+                            rule: '!has(self.retry) || !has(self.retry.perRetry) ||
+                              !has(self.retry.perRetry.timeout)'
+                          - message: retry.retryOn.httpStatusCodes is not supported
+                              when fetching a remote dynamic module.
+                            rule: '!has(self.retry) || !has(self.retry.retryOn) ||
+                              !has(self.retry.retryOn.httpStatusCodes)'
+                          - message: retry.numAttemptsPerPriority is not supported
+                              when fetching a remote dynamic module.
+                            rule: '!has(self.retry) || !has(self.retry.numAttemptsPerPriority)'
                         type:
                           default: Local
                           description: |-

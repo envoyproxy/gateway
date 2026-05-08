@@ -7,11 +7,14 @@ package translator
 
 import (
 	"testing"
+	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func TestDynamicModuleSource(t *testing.T) {
@@ -125,3 +128,156 @@ func TestDynamicModuleSource(t *testing.T) {
 		})
 	}
 }
+
+// TestDynamicModuleSourceRetryAndTimeout verifies that retry and timeout
+// settings on a remote dynamic module flow into the resulting AsyncDataSource.
+func TestDynamicModuleSourceRetryAndTimeout(t *testing.T) {
+	numRetries := uint32(3)
+	dm := ir.DynamicModule{
+		Remote: &ir.RemoteDynamicModuleSource{
+			URL:    "https://modules.example.com/libremote_auth.so",
+			SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+			Traffic: &ir.TrafficFeatures{
+				Retry: &ir.Retry{
+					NumRetries: &numRetries,
+					RetryOn: &ir.RetryOn{
+						Triggers: []ir.TriggerEnum{ir.Error5XX, ir.ConnectFailure},
+					},
+					PerRetry: &ir.PerRetryPolicy{
+						BackOff: &ir.BackOffPolicy{
+							BaseInterval: &metav1.Duration{Duration: 1 * time.Second},
+							MaxInterval:  &metav1.Duration{Duration: 5 * time.Second},
+						},
+					},
+				},
+				Timeout: &ir.Timeout{
+					HTTP: &ir.HTTPTimeout{
+						RequestTimeout: &metav1.Duration{Duration: 30 * time.Second},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := dynamicModuleSource(&dm)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+
+	remote, ok := got.Specifier.(*corev3.AsyncDataSource_Remote)
+	require.True(t, ok)
+
+	require.Equal(t, 30*time.Second, remote.Remote.HttpUri.Timeout.AsDuration())
+
+	require.NotNil(t, remote.Remote.RetryPolicy)
+	require.Equal(t, uint32(3), remote.Remote.RetryPolicy.NumRetries.GetValue())
+	require.Equal(t, 1*time.Second, remote.Remote.RetryPolicy.RetryBackOff.BaseInterval.AsDuration())
+	require.Equal(t, 5*time.Second, remote.Remote.RetryPolicy.RetryBackOff.MaxInterval.AsDuration())
+	require.NotEmpty(t, remote.Remote.RetryPolicy.RetryOn)
+}
+
+// TestDynamicModuleSourceTimeoutFallsBackToDefault verifies that when no
+// timeout is configured, the AsyncDataSource still receives the package
+// default timeout rather than zero.
+func TestDynamicModuleSourceTimeoutFallsBackToDefault(t *testing.T) {
+	dm := ir.DynamicModule{
+		Remote: &ir.RemoteDynamicModuleSource{
+			URL:    "https://modules.example.com/libremote_auth.so",
+			SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+		},
+	}
+	got, err := dynamicModuleSource(&dm)
+	require.NoError(t, err)
+	remote, ok := got.Specifier.(*corev3.AsyncDataSource_Remote)
+	require.True(t, ok)
+	require.Equal(t, defaultExtServiceRequestTimeout, remote.Remote.HttpUri.Timeout.AsDuration())
+}
+
+// TestDynamicModuleSourceWithDestination verifies that when a remote dynamic
+// module has a resolved Destination (from BackendRefs), the AsyncDataSource
+// references the destination's cluster name rather than a URL-synthesized one.
+func TestDynamicModuleSourceWithDestination(t *testing.T) {
+	dm := ir.DynamicModule{
+		Remote: &ir.RemoteDynamicModuleSource{
+			URL:    "https://modules.example.com/libremote_auth.so",
+			SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+			Destination: &ir.RouteDestination{
+				Name: "envoyextensionpolicy/default/policy/dynamic-module/0",
+				Settings: []*ir.DestinationSetting{
+					{
+						Name:        "envoyextensionpolicy/default/policy/dynamic-module/0/backend/0",
+						Weight:      ptrTo(uint32(1)),
+						AddressType: ptrTo(ir.FQDN),
+						Protocol:    ir.HTTPS,
+						Endpoints:   []*ir.DestinationEndpoint{{Host: "modules.example.com", Port: 443}},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := dynamicModuleSource(&dm)
+	require.NoError(t, err)
+	remote, ok := got.Specifier.(*corev3.AsyncDataSource_Remote)
+	require.True(t, ok)
+	clusterSpec, ok := remote.Remote.HttpUri.HttpUpstreamType.(*corev3.HttpUri_Cluster)
+	require.True(t, ok)
+	require.Equal(t, "envoyextensionpolicy/default/policy/dynamic-module/0", clusterSpec.Cluster)
+}
+
+// TestDynamicModulePatchResourcesUsesDestinationCluster verifies that
+// patchResources creates a cluster from the resolved Destination (carrying
+// BackendTLSPolicy-derived TLS) when one is set, instead of synthesizing
+// a default-trust cluster from the URL. The transport socket on the resulting
+// cluster must reflect the destination's TLS config rather than the
+// system-trust default that addClusterFromURL would have produced.
+func TestDynamicModulePatchResourcesUsesDestinationCluster(t *testing.T) {
+	tCtx := &types.ResourceVersionTable{XdsResources: types.XdsResources{}}
+	dmFilter := &dynamicModule{}
+
+	sni := "modules.example.com"
+	tlsConfig := &ir.TLSUpstreamConfig{
+		SNI: &sni,
+		CACertificate: &ir.TLSCACertificate{
+			Name:        "ca",
+			Certificate: []byte("dummy-ca-pem"),
+		},
+	}
+
+	routes := []*ir.HTTPRoute{
+		{
+			EnvoyExtensions: &ir.EnvoyExtensionFeatures{
+				DynamicModules: []ir.DynamicModule{
+					{
+						Name:       "envoyextensionpolicy/default/policy/dynamic-module/0",
+						FilterName: "test_filter",
+						Remote: &ir.RemoteDynamicModuleSource{
+							URL:    "https://modules.example.com/libremote_auth.so",
+							SHA256: "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+							Destination: &ir.RouteDestination{
+								Name: "envoyextensionpolicy/default/policy/dynamic-module/0",
+								Settings: []*ir.DestinationSetting{
+									{
+										Name:        "envoyextensionpolicy/default/policy/dynamic-module/0/backend/0",
+										Weight:      ptrTo(uint32(1)),
+										AddressType: ptrTo(ir.FQDN),
+										Protocol:    ir.HTTPS,
+										Endpoints:   []*ir.DestinationEndpoint{{Host: "modules.example.com", Port: 443}},
+										TLS:         tlsConfig,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, dmFilter.patchResources(tCtx, routes))
+
+	cluster := findXdsCluster(tCtx, "envoyextensionpolicy/default/policy/dynamic-module/0")
+	require.NotNil(t, cluster, "expected cluster derived from Destination, not from URL")
+	require.NotNil(t, cluster.TransportSocket, "expected TLS transport socket from BackendTLSPolicy-derived destination")
+}
+
+func ptrTo[T any](v T) *T { return &v }

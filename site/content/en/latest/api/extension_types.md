@@ -439,6 +439,7 @@ _Appears in:_
 - [OIDCProvider](#oidcprovider)
 - [OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)
 - [ProxyOpenTelemetrySink](#proxyopentelemetrysink)
+- [RemoteDynamicModuleSource](#remotedynamicmodulesource)
 - [RemoteJWKS](#remotejwks)
 - [TracingProvider](#tracingprovider)
 
@@ -5384,6 +5385,9 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `url` | _string_ |  true  |  | URL is the HTTP or HTTPS URL of the dynamic module shared library (.so file). |
 | `sha256` | _string_ |  true  |  | SHA256 checksum that Envoy will use to verify the downloaded module binary. |
+| `backendRefs` | _[BackendRef](#backendref) array_ |  false  |  | BackendRefs optionally references Backend resources representing the<br />module source. Attach a BackendTLSPolicy to these BackendRefs to provide<br />a custom CA bundle for validating the HTTPS connection. When unset, Envoy<br />fetches the module using its system trust bundle. |
+| `retry` | _[Retry](#retry)_ |  false  |  | Retry configures retries when fetching the module. Only NumRetries,<br />RetryOn.Triggers, and PerRetry.BackOff are honored; other sub-fields are<br />rejected by validation since the underlying Envoy data-source proto does<br />not support them. |
+| `timeout` | _[Timeout](#timeout)_ |  false  |  | Timeout is the request timeout used when fetching the module. |
 
 
 #### RemoteJWKS
@@ -5577,6 +5581,7 @@ Retry defines the retry strategy to be applied.
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
+- [RemoteDynamicModuleSource](#remotedynamicmodulesource)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
@@ -6226,6 +6231,7 @@ Timeout defines configuration for timeouts related to connections.
 _Appears in:_
 - [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClusterSettings](#clustersettings)
+- [RemoteDynamicModuleSource](#remotedynamicmodulesource)
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |

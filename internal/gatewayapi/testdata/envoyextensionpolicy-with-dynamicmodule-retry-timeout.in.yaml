@@ -1,0 +1,81 @@
+envoyProxiesForGateways:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    namespace: envoy-gateway
+    name: proxy-config
+  spec:
+    dynamicModules:
+    - name: remote-auth-module
+      source:
+        type: Remote
+        remote:
+          url: https://modules.example.com/libremote_auth.so
+          sha256: abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+          retry:
+            numRetries: 3
+            retryOn:
+              triggers:
+              - 5xx
+              - connect-failure
+            perRetry:
+              backOff:
+                baseInterval: 1s
+                maxInterval: 5s
+          timeout:
+            http:
+              requestTimeout: 30s
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    infrastructure:
+      parametersRef:
+        group: gateway.envoyproxy.io
+        kind: EnvoyProxy
+        name: proxy-config
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+envoyextensionpolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyExtensionPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+    dynamicModule:
+    - name: remote-auth-module
+      filterName: remote-auth-check
