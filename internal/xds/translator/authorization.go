@@ -21,6 +21,7 @@ import (
 	rbacv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/rbac/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	networkinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/network/v3"
+	sslinput "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/common_inputs/ssl/v3"
 	ipmatcherv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/ip/v3"
 	metadatav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/matching/input_matchers/metadata/v3"
 	envoymatcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
@@ -278,6 +279,13 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 			}
 		}
 
+		var clientCertPredicates []*matcherv3.Matcher_MatcherList_Predicate
+		if rule.Principal.ClientCert != nil {
+			if clientCertPredicates, err = buildClientCertPredicate(rule.Principal.ClientCert); err != nil {
+				return nil, err
+			}
+		}
+
 		// AND all the predicates together.
 		var allPredicates []*matcherv3.Matcher_MatcherList_Predicate
 		if methodPredicate != nil {
@@ -297,6 +305,7 @@ func buildRBACPerRoute(authorization *ir.Authorization) (*rbacv3.RBACPerRoute, e
 		}
 		allPredicates = append(allPredicates, jwtPredicate...)
 		allPredicates = append(allPredicates, headerPredicate...)
+		allPredicates = append(allPredicates, clientCertPredicates...)
 
 		switch {
 		case len(allPredicates) > 1:
@@ -939,4 +948,172 @@ func wrapPredicateWithNot(predicate *matcherv3.Matcher_MatcherList_Predicate, in
 			NotMatcher: predicate,
 		},
 	}
+}
+
+// buildClientCertPredicate constructs match predicates against the validated
+// peer client certificate (mTLS) for SecurityPolicy authorization.
+//
+// Supports Subject DN matching (via SubjectInput), URI SAN matching (via UriSanInput),
+// and DNS SAN matching (via DnsSanInput). Subject (if set) is AND-combined with the SAN
+// group, and every configured URI and DNS name OR-combines into that single SAN group.
+// So a config setting Subject, uris, and dnsNames lowers to:
+//
+//	AND(Subject, OR(uris..., dnsNames...))
+//
+// and the peer cert must satisfy the Subject match AND at least one of the listed URI
+// or DNS identities.
+//
+// URI and DNS SANs are grouped under one OR rather than AND-combined across types:
+// SPIFFE/workload certs carry identity in a URI SAN and traditional service certs in a
+// DNS SAN, and a single cert rarely carries both. Grouping them means "match any of the
+// accepted URI or DNS identities", which is the useful semantic when a rule lists the
+// identities that should be allowed regardless of SAN type.
+//
+// EmailAddresses, IPAddresses, and OtherNames have no native Envoy input and return
+// an error if set.
+func buildClientCertPredicate(clientCert *egv1a1.ClientCertPrincipal) ([]*matcherv3.Matcher_MatcherList_Predicate, error) {
+	var predicates []*matcherv3.Matcher_MatcherList_Predicate
+
+	// Build Subject DN predicate first.
+	if clientCert.Subject != nil {
+		subjectInputAny, err := proto.ToAnyWithValidation(&sslinput.SubjectInput{})
+		if err != nil {
+			return nil, err
+		}
+		stringMatcher, err := buildXdsStringMatcherFromEG(clientCert.Subject)
+		if err != nil {
+			return nil, err
+		}
+		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+				SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+					Input: &cncfv3.TypedExtensionConfig{
+						Name:        "client_cert_subject",
+						TypedConfig: subjectInputAny,
+					},
+					Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+						ValueMatch: stringMatcher,
+					},
+				},
+			},
+		})
+	}
+
+	san := clientCert.SubjectAltNames
+	if san == nil {
+		return predicates, nil
+	}
+	if len(san.EmailAddresses) > 0 || len(san.IPAddresses) > 0 || len(san.OtherNames) > 0 {
+		return nil, errors.New("clientCert.subjectAltNames currently only supports uris and dnsNames; emailAddresses/ipAddresses/otherNames are not yet supported")
+	}
+	if len(san.URIs) == 0 && len(san.DNSNames) == 0 {
+		return predicates, nil
+	}
+
+	// Collect every URI and DNS SAN match into a single group. They OR-combine:
+	// any accepted URI or DNS identity satisfies the SAN check.
+	sanPredicates := make([]*matcherv3.Matcher_MatcherList_Predicate, 0, len(san.URIs)+len(san.DNSNames))
+
+	// URI SAN alternatives.
+	if len(san.URIs) > 0 {
+		uriSanInputAny, err := proto.ToAnyWithValidation(&sslinput.UriSanInput{})
+		if err != nil {
+			return nil, err
+		}
+		for i := range san.URIs {
+			stringMatcher, err := buildXdsStringMatcherFromEG(&san.URIs[i])
+			if err != nil {
+				return nil, err
+			}
+			sanPredicates = append(sanPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+					SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+						Input: &cncfv3.TypedExtensionConfig{
+							Name:        "client_cert_uri_san",
+							TypedConfig: uriSanInputAny,
+						},
+						Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+							ValueMatch: stringMatcher,
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// DNS SAN alternatives.
+	if len(san.DNSNames) > 0 {
+		dnsSanInputAny, err := proto.ToAnyWithValidation(&sslinput.DnsSanInput{})
+		if err != nil {
+			return nil, err
+		}
+		for i := range san.DNSNames {
+			stringMatcher, err := buildXdsStringMatcherFromEG(&san.DNSNames[i])
+			if err != nil {
+				return nil, err
+			}
+			sanPredicates = append(sanPredicates, &matcherv3.Matcher_MatcherList_Predicate{
+				MatchType: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_{
+					SinglePredicate: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate{
+						Input: &cncfv3.TypedExtensionConfig{
+							Name:        "client_cert_dns_san",
+							TypedConfig: dnsSanInputAny,
+						},
+						Matcher: &matcherv3.Matcher_MatcherList_Predicate_SinglePredicate_ValueMatch{
+							ValueMatch: stringMatcher,
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// A lone SAN alternative needs no OR wrapper; multiple alternatives (URI, DNS, or a
+	// mix) OR together into one predicate that is AND-combined with Subject.
+	if len(sanPredicates) == 1 {
+		predicates = append(predicates, sanPredicates[0])
+	} else {
+		predicates = append(predicates, &matcherv3.Matcher_MatcherList_Predicate{
+			MatchType: &matcherv3.Matcher_MatcherList_Predicate_OrMatcher{
+				OrMatcher: &matcherv3.Matcher_MatcherList_Predicate_PredicateList{
+					Predicate: sanPredicates,
+				},
+			},
+		})
+	}
+
+	return predicates, nil
+}
+
+// buildXdsStringMatcherFromEG converts an EG egv1a1.StringMatch (Type+Value)
+// into a cncf/xds matcherv3.StringMatcher used by the unified matcher pipeline.
+func buildXdsStringMatcherFromEG(sm *egv1a1.StringMatch) (*matcherv3.StringMatcher, error) {
+	matchType := egv1a1.StringMatchExact
+	if sm.Type != nil {
+		matchType = *sm.Type
+	}
+	switch matchType {
+	case egv1a1.StringMatchExact:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Exact{Exact: sm.Value},
+		}, nil
+	case egv1a1.StringMatchPrefix:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Prefix{Prefix: sm.Value},
+		}, nil
+	case egv1a1.StringMatchSuffix:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Suffix{Suffix: sm.Value},
+		}, nil
+	case egv1a1.StringMatchRegularExpression:
+		return &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+				SafeRegex: &matcherv3.RegexMatcher{
+					Regex:      sm.Value,
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{}},
+				},
+			},
+		}, nil
+	}
+	return nil, fmt.Errorf("unsupported StringMatch type: %q", matchType)
 }

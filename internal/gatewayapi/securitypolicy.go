@@ -974,9 +974,12 @@ func validateSecurityPolicy(p *egv1a1.SecurityPolicy) error {
 // validateSecurityPolicyForTCP ensures SecurityPolicy usage on TCP is compatible.
 //
 // TCP supports Authorization with ClientCIDRs ONLY.
-// - Principals.JWT      => invalid (HTTP-only)
-// - Principals.Headers  => invalid (HTTP-only)
-// - Empty/no Authorization is allowed and results in no-op on TCP.
+//   - Principals.JWT       => invalid (HTTP-only)
+//   - Principals.Headers   => invalid (HTTP-only)
+//   - Principals.ClientCert => invalid (HTTP-only; mTLS validation results
+//     are not surfaced to TCP-route-scoped policies in EG today)
+//   - Empty/no Authorization is allowed and results in no-op on TCP.
+//
 // Returns an error when any HTTP-only field is present or CIDRs are invalid.
 func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 	if p.Spec.CORS != nil || p.Spec.CSRF != nil || p.Spec.JWT != nil || p.Spec.OIDC != nil || p.Spec.APIKeyAuth != nil || p.Spec.BasicAuth != nil || p.Spec.ExtAuth != nil {
@@ -998,6 +1001,9 @@ func validateSecurityPolicyForTCP(p *egv1a1.SecurityPolicy) error {
 		}
 		if len(rule.Principal.Headers) > 0 {
 			return fmt.Errorf("rule %d: headers not supported for TCP", i)
+		}
+		if rule.Principal.ClientCert != nil {
+			return fmt.Errorf("rule %d: clientCert not supported for TCP", i)
 		}
 		if len(rule.Principal.ClientIPGeoLocations) > 0 {
 			return fmt.Errorf("rule %d: clientIPGeoLocations not supported for TCP", i)
@@ -3063,6 +3069,8 @@ func (t *Translator) buildAuthorization(
 		if err := validateAuthorizationOperation(rule.Operation); err != nil {
 			return nil, fmt.Errorf("unable to translate authorization rule: %w", err)
 		}
+
+		irPrincipal.ClientCert = rule.Principal.ClientCert
 
 		var name string
 		if rule.Name != nil && *rule.Name != "" {
