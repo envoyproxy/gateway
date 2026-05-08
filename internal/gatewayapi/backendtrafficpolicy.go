@@ -820,9 +820,6 @@ func (t *Translator) applyTrafficFeatureToRoute(route RouteContext,
 					r.Traffic.Timeout = localTo
 				}
 
-				// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-				r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
-
 				if policy.Spec.UseClientProtocol != nil {
 					r.UseClientProtocol = policy.Spec.UseClientProtocol
 				}
@@ -1102,9 +1099,6 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(
 			if localTo, err := buildClusterSettingsTimeout(&policy.Spec.ClusterSettings); err == nil {
 				r.Traffic.Timeout = localTo
 			}
-
-			// Update the Host field in HealthCheck, now that we have access to the Route Hostname.
-			r.Traffic.HealthCheck.SetHTTPHostIfAbsent(r.Hostname)
 
 			if policy.Spec.UseClientProtocol != nil {
 				r.UseClientProtocol = policy.Spec.UseClientProtocol

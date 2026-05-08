@@ -67,6 +67,7 @@ type xdsClusterArgs struct {
 	proxyProtocol     *ir.ProxyProtocol
 	circuitBreaker    *ir.CircuitBreaker
 	healthCheck       *ir.HealthCheck
+	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
 	timeout           *ir.Timeout
@@ -449,7 +450,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
+		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -570,7 +571,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) []*corev3.HealthCheck {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -589,7 +590,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	switch {
 	case healthcheck.HTTP != nil:
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
-			Host: healthcheck.HTTP.Host,
+			Host: httpHealthCheckHost(healthcheck.HTTP, routeHostname),
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {
@@ -620,6 +621,13 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		}
 	}
 	return []*corev3.HealthCheck{hc}
+}
+
+func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
+	if healthcheck.Host != "" {
+		return healthcheck.Host
+	}
+	return routeHostname
 }
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
@@ -1295,6 +1303,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(settings),
+		routeHostname:     httpRoute.Hostname,
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,

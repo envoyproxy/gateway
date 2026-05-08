@@ -30,6 +30,7 @@ bug fixes: |
   Fixed gateway-helm RBAC in GatewayNamespace mode with explicit `watch.namespaces` list by adding controller-namespace secret read permissions to infra-manager.
   Fixed a control plane panic caused by concurrent Status mutation racing with the watchable Map coalesce goroutine.
   Fixed status conditions not being updated when a route is rejected due to multiple errors.
+  Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
 
 # Enhancements that improve performance.
 performance improvements: |

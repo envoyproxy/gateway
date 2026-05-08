@@ -1666,7 +1666,7 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
-			name: "http-health-check: invalid host",
+			name: "http-health-check: empty host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
@@ -1682,7 +1682,6 @@ func TestValidateHealthCheck(t *testing.T) {
 				&OutlierDetection{},
 				ptr.To[uint32](10),
 			},
-			want: ErrHCHTTPHostInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",
