@@ -128,12 +128,12 @@ listenerSets:
   status:
     conditions:
     - lastTransitionTime: null
-      message: All listeners are invalid
+      message: No listeners are accepted
       reason: ListenersNotValid
       status: "False"
       type: Accepted
     - lastTransitionTime: null
-      message: All listeners are invalid
+      message: No listeners are programmed
       reason: ListenersNotValid
       status: "False"
       type: Programmed
