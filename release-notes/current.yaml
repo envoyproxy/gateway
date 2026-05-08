@@ -9,6 +9,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  EnvoyExtensionPolicy dynamic modules now support `backendRefs`, `retry`, and `timeout` on remote sources. `backendRefs` (with optional `BackendTLSPolicy`) enables fetching modules from private registries with custom CA validation or mTLS, while `retry` and `timeout` control fetch behavior on transient failures.
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
