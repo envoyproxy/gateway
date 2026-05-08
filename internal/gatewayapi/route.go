@@ -1327,17 +1327,12 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	return hasHostnameIntersection
 }
 
-func buildResourceMetadata(obj client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
-	kind := obj.GetObjectKind().GroupVersionKind().Kind
-	if _, ok := obj.(*corev1.Service); ok && kind == "" {
-		kind = resource.KindService
-	}
-
+func buildResourceMetadata(resource client.Object, sectionName *gwapiv1.SectionName) *ir.ResourceMetadata {
 	metadata := &ir.ResourceMetadata{
-		Kind:        kind,
-		Name:        obj.GetName(),
-		Namespace:   obj.GetNamespace(),
-		Annotations: ir.MapToSlice(filterEGPrefix(obj.GetAnnotations())),
+		Kind:        resource.GetObjectKind().GroupVersionKind().Kind,
+		Name:        resource.GetName(),
+		Namespace:   resource.GetNamespace(),
+		Annotations: ir.MapToSlice(filterEGPrefix(resource.GetAnnotations())),
 	}
 	if sectionName != nil {
 		metadata.SectionName = string(*sectionName)

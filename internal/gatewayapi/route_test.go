@@ -452,17 +452,6 @@ func TestIsServiceHeadless(t *testing.T) {
 }
 
 func TestServiceEndpointHostname(t *testing.T) {
-	t.Run("build metadata infers service kind from typed object", func(t *testing.T) {
-		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default"}}
-
-		metadata := buildResourceMetadata(service, new(gwapiv1.SectionName("8080")))
-
-		require.Equal(t, resource.KindService, metadata.Kind)
-		require.Equal(t, "service-1", metadata.Name)
-		require.Equal(t, "default", metadata.Namespace)
-		require.Equal(t, "8080", metadata.SectionName)
-	})
-
 	t.Run("nil setting returns nil", func(t *testing.T) {
 		translator := &Translator{}
 		service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "service-1", Namespace: "default"}}
