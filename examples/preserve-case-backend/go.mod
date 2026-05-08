@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway-preserve-case-backend
 
-go 1.25.9
+go 1.25.10
 
 require github.com/valyala/fasthttp v1.69.0
 
