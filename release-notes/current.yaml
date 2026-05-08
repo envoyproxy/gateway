@@ -14,9 +14,11 @@ bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
   Fixed ListenerSet and its listeners incorrectly setting `Accepted: False` for InvalidCertificateRef and RefNotPermitted, inconsistent with Gateway behavior and the Gateway API spec.
   Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
+  Fixed HTTPS listeners with overlapping hostnames but disjoint certificate SANs to preserve HTTP/2 ALPN by default.
 
 # Enhancements that improve performance.
 performance improvements: |
+  Enabled deferred stat creation to reduce CPU and memory overhead by creating only the subset of metrics that are actually used at runtime, instead of eagerly initializing all possible stats. More information can be found in the Envoy deferred stat creation [documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#config-bootstrap-v3-bootstrap-deferredstatoptions).
 
 # Deprecated features or APIs.
 deprecations: |
