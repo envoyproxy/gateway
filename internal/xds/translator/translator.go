@@ -13,7 +13,6 @@ import (
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -452,7 +451,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		// Create a route config if we have not found one yet
-		xdsRouteCfg = findXdsRouteConfig(tCtx, routeCfgName)
+		xdsRouteCfg = nil
+		if r, ok := tCtx.FindXdsResource(resourcev3.RouteType, routeCfgName); ok {
+			xdsRouteCfg, _ = r.(*routev3.RouteConfiguration)
+		}
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				IgnorePortInHostMatching: true,
@@ -853,7 +855,7 @@ func (t *Translator) processTCPListenerXdsTranslation(
 		// This is needed because Envoy requires a filter chain to be present in the listener, otherwise it will reject the listener and report a warning
 		if len(tcpListener.Routes) == 0 {
 			// Reuse shared EmptyCluster across all listeners without routes
-			if findXdsCluster(tCtx, emptyClusterName) == nil {
+			if _, ok := tCtx.FindXdsResource(resourcev3.ClusterType, emptyClusterName); !ok {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -922,7 +924,7 @@ func (t *Translator) processUDPListenerXdsTranslation(
 			}
 
 			// Add empty cluster for UDP listener which have no Route, when empty cluster is not found.
-			if findXdsCluster(tCtx, emptyClusterName) == nil {
+			if _, ok := tCtx.FindXdsResource(resourcev3.ClusterType, emptyClusterName); !ok {
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, emptyRouteCluster); err != nil {
 					errs = errors.Join(errs, err)
 				}
@@ -994,70 +996,6 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 	return nil
 }
 
-// findXdsListener finds a xds listener with the same name and returns nil if there is no match.
-func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.Listener {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
-		return nil
-	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener, ok := r.(*listenerv3.Listener)
-		if ok && listener.Name == name {
-			return listener
-		}
-	}
-
-	return nil
-}
-
-// findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
-func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
-		return nil
-	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
-		route, ok := r.(*routev3.RouteConfiguration)
-		if ok && route.Name == name {
-			return route
-		}
-	}
-
-	return nil
-}
-
-// findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
-func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
-		return nil
-	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster, ok := r.(*clusterv3.Cluster)
-		if ok && cluster.Name == name {
-			return cluster
-		}
-	}
-
-	return nil
-}
-
-// findXdsEndpoint finds a xds endpoint with the same cluster name, and returns nil if there is no match.
-func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.ClusterLoadAssignment {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
-		return nil
-	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
-		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
-		if ok && endpoint.ClusterName == name {
-			return endpoint
-		}
-	}
-
-	return nil
-}
-
 // processXdsCluster processes xds cluster with args per route.
 func processXdsCluster(tCtx *types.ResourceVersionTable,
 	name string,
@@ -1069,27 +1007,11 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 	return addXdsCluster(tCtx, route.asClusterArgs(name, settings, extras, metadata))
 }
 
-// findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
-func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
-		return nil
-	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
-		secret, ok := r.(*tlsv3.Secret)
-		if ok && secret.Name == name {
-			return secret
-		}
-	}
-
-	return nil
-}
-
 // addXdsSecret adds a xds secret with args.
 // If the secret already exists, it skips adding the secret and returns nil
 func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error {
 	// Return early if secret with the same name exists
-	if c := findXdsSecret(tCtx, secret.Name); c != nil {
+	if _, ok := tCtx.FindXdsResource(resourcev3.SecretType, secret.Name); ok {
 		return nil
 	}
 
@@ -1103,10 +1025,9 @@ func addXdsSecret(tCtx *types.ResourceVersionTable, secret *tlsv3.Secret) error 
 // If the cluster already exists, it skips adding the cluster and returns nil.
 func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
 	// Return early if cluster with the same name exists.
-	// All the current callers can all safely assume the xdsClusterArgs is the same for the clusters with the same name.
-	// If this assumption changes, the callers should call findXdsCluster first to check if the cluster already exists
-	// before calling addXdsCluster.
-	if c := findXdsCluster(tCtx, args.name); c != nil {
+	// All the current callers can safely assume the xdsClusterArgs is the same for the clusters with the same name.
+	// If this assumption changes, callers should look up the cluster via tCtx.FindXdsResource before calling addXdsCluster.
+	if _, ok := tCtx.FindXdsResource(resourcev3.ClusterType, args.name); ok {
 		return nil
 	}
 

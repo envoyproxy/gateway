@@ -17,6 +17,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
 )
@@ -476,7 +477,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.NoError(t, err)
-			diff := cmp.Diff(tc.tableOut, tc.tableIn, protocmp.Transform())
+			diff := cmp.Diff(tc.tableOut, tc.tableIn, protocmp.Transform(), cmpopts.IgnoreUnexported(ResourceVersionTable{}))
 			require.Empty(t, diff)
 		})
 	}

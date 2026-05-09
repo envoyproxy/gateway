@@ -19,6 +19,7 @@ bug fixes: |
 # Enhancements that improve performance.
 performance improvements: |
   Enabled deferred stat creation to reduce CPU and memory overhead by creating only the subset of metrics that are actually used at runtime, instead of eagerly initializing all possible stats. More information can be found in the Envoy deferred stat creation [documentation](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#config-bootstrap-v3-bootstrap-deferredstatoptions).
+  Indexed xDS resources by name in the translator so resource lookup during translation is O(1) instead of an O(N) linear scan. Reduces the cost of cluster, secret, listener, route, and endpoint dedup checks on every add.
 
 # Deprecated features or APIs.
 deprecations: |

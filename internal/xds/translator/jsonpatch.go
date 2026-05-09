@@ -203,24 +203,8 @@ var (
 // TODO: return multiple resources
 func findXdsResource(tCtx *types.ResourceVersionTable, p *ir.JSONPatchConfig) (cachetypes.Resource, error) {
 	switch p.Type {
-	case resourcev3.ListenerType:
-		if r := findXdsListener(tCtx, p.Name); r != nil {
-			return r, nil
-		}
-	case resourcev3.RouteType:
-		if r := findXdsRouteConfig(tCtx, p.Name); r != nil {
-			return r, nil
-		}
-	case resourcev3.ClusterType:
-		if r := findXdsCluster(tCtx, p.Name); r != nil {
-			return r, nil
-		}
-	case resourcev3.EndpointType:
-		if r := findXdsEndpoint(tCtx, p.Name); r != nil {
-			return r, nil
-		}
-	case resourcev3.SecretType:
-		if r := findXdsSecret(tCtx, p.Name); r != nil {
+	case resourcev3.ListenerType, resourcev3.RouteType, resourcev3.ClusterType, resourcev3.EndpointType, resourcev3.SecretType:
+		if r, ok := tCtx.FindXdsResource(p.Type, p.Name); ok {
 			return r, nil
 		}
 	default:

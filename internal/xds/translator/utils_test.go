@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -128,7 +130,9 @@ func TestAddClusterFromURLWithTraffic(t *testing.T) {
 	err := addClusterFromURL("https://example.com/jwks.json", traffic, tCtx)
 	require.NoError(t, err)
 
-	cluster := findXdsCluster(tCtx, "example_com_443")
-	require.NotNil(t, cluster)
+	r, ok := tCtx.FindXdsResource(resourcev3.ClusterType, "example_com_443")
+	require.True(t, ok)
+	cluster, ok := r.(*clusterv3.Cluster)
+	require.True(t, ok)
 	require.Equal(t, durationpb.New(2*time.Second), cluster.ConnectTimeout)
 }
