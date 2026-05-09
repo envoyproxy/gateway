@@ -508,14 +508,14 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 			if gateway1.Name == gateway2.Name &&
 				gateway1.Namespace == gateway2.Namespace {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s.",
 					overlappingListeners[i].hostname1,
 					overlappingListeners[i].hostname2,
 					overlappingListeners[i].listener2,
 				)
 			} else {
 				message = fmt.Sprintf(
-					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s. ALPN will default to HTTP/1.1 to prevent HTTP/2 connection coalescing, unless explicitly configured via ClientTrafficPolicy",
+					"The hostname %s overlaps with the hostname %s in listener %s of gateway %s.",
 					overlappingListeners[i].hostname1,
 					overlappingListeners[i].hostname2,
 					overlappingListeners[i].listener2,
@@ -529,9 +529,6 @@ func checkOverlappingHostnames(httpsListeners []*ListenerContext) {
 				gwapiv1.ListenerReasonOverlappingHostnames,
 				message,
 			)
-			if listener.httpIR != nil {
-				listener.httpIR.TLSOverlaps = true
-			}
 		}
 	}
 }

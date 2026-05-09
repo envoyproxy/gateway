@@ -177,8 +177,9 @@ const (
 
 // HTTPActiveHealthChecker defines the settings of http health check.
 type HTTPActiveHealthChecker struct {
-	// Hostname defines the HTTP host that will be requested during health checking.
-	// Default: HTTPRoute or GRPCRoute hostname.
+	// Hostname defines the HTTP Host header used for active HTTP health checks.
+	// Host selection uses this order: this field, the associated Backend endpoint
+	// hostname if available, then the effective Route hostname.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
