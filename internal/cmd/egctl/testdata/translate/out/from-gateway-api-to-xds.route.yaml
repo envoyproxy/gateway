@@ -5,6 +5,35 @@ xds:
     - routeConfig:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
+        name: default/eg/grpc
+        virtualHosts:
+        - domains:
+          - www.grpc-example.com
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Gateway
+                  name: eg
+                  namespace: default
+                  sectionName: grpc
+          name: default/eg/grpc/www_grpc-example_com
+          routes:
+          - match:
+              path: /com.example.Things/DoThing
+            metadata:
+              filterMetadata:
+                envoy-gateway:
+                  resources:
+                  - kind: GRPCRoute
+                    name: backend
+                    namespace: default
+            name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
+            route:
+              cluster: grpcroute/default/backend/rule/0
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
         name: default/eg/http
         virtualHosts:
         - domains:
@@ -33,32 +62,3 @@ xds:
               cluster: httproute/default/backend/rule/0
               upgradeConfigs:
               - upgradeType: websocket
-    - routeConfig:
-        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
-        ignorePortInHostMatching: true
-        name: default/eg/grpc
-        virtualHosts:
-        - domains:
-          - www.grpc-example.com
-          metadata:
-            filterMetadata:
-              envoy-gateway:
-                resources:
-                - kind: Gateway
-                  name: eg
-                  namespace: default
-                  sectionName: grpc
-          name: default/eg/grpc/www_grpc-example_com
-          routes:
-          - match:
-              path: /com.example.Things/DoThing
-            metadata:
-              filterMetadata:
-                envoy-gateway:
-                  resources:
-                  - kind: GRPCRoute
-                    name: backend
-                    namespace: default
-            name: grpcroute/default/backend/rule/0/match/0/www_grpc-example_com
-            route:
-              cluster: grpcroute/default/backend/rule/0

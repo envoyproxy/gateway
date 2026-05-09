@@ -21,6 +21,16 @@
   name: first-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
+- loadAssignment:
+    clusterName: mock-extension-injected-cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: exampleservice.examplenamespace.svc.cluster.local
+              portValue: 5000
+  name: mock-extension-injected-cluster
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -44,13 +54,3 @@
   name: second-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- loadAssignment:
-    clusterName: mock-extension-injected-cluster
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: exampleservice.examplenamespace.svc.cluster.local
-              portValue: 5000
-  name: mock-extension-injected-cluster

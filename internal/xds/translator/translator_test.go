@@ -185,10 +185,13 @@ func TestTranslateXds(t *testing.T) {
 				return
 			}
 
-			listeners := tCtx.XdsResources[resourcev3.ListenerType]
-			routes := tCtx.XdsResources[resourcev3.RouteType]
-			clusters := tCtx.XdsResources[resourcev3.ClusterType]
-			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+			// Sorted so the YAML dumps compare against golden files deterministically.
+			// TODO: move this canonicalization into a test-only helper so the
+			// production code paths can drop the sort.
+			listeners := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.ListenerType])
+			routes := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.RouteType])
+			clusters := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.ClusterType])
+			endpoints := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.EndpointType])
 			if test.OverrideTestData() {
 				keep.Insert(inputFileName + ".listeners.yaml")
 				keep.Insert(inputFileName + ".routes.yaml")
@@ -204,8 +207,9 @@ func TestTranslateXds(t *testing.T) {
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
-			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
-			if ok && len(secrets) > 0 {
+			secretsByName, ok := tCtx.XdsResources[resourcev3.SecretType]
+			if ok && len(secretsByName) > 0 {
+				secrets := xtypes.FlattenToSlice(secretsByName)
 				if test.OverrideTestData() {
 					keep.Insert(inputFileName + ".secrets.yaml")
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", inputFileName+".secrets.yaml")))
@@ -396,10 +400,13 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-			listeners := tCtx.XdsResources[resourcev3.ListenerType]
-			routes := tCtx.XdsResources[resourcev3.RouteType]
-			clusters := tCtx.XdsResources[resourcev3.ClusterType]
-			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+			// Sorted so the YAML dumps compare against golden files deterministically.
+			// TODO: move this canonicalization into a test-only helper so the
+			// production code paths can drop the sort.
+			listeners := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.ListenerType])
+			routes := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.RouteType])
+			clusters := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.ClusterType])
+			endpoints := xtypes.FlattenToSlice(tCtx.XdsResources[resourcev3.EndpointType])
 			if test.OverrideTestData() {
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".listeners.yaml")))
 				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".routes.yaml")))
@@ -411,8 +418,9 @@ func TestTranslateXdsWithExtensionErrorsWhenFailOpen(t *testing.T) {
 			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 			require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", inputFileName+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 
-			secrets, ok := tCtx.XdsResources[resourcev3.SecretType]
+			secretsByName, ok := tCtx.XdsResources[resourcev3.SecretType]
 			if ok {
+				secrets := xtypes.FlattenToSlice(secretsByName)
 				if test.OverrideTestData() {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", inputFileName+".secrets.yaml")))
 				}

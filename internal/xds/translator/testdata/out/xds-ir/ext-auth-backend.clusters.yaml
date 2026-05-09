@@ -69,6 +69,42 @@
   type: EDS
 - circuitBreakers:
     thresholds:
+    - maxConnections: 30001
+      maxPendingRequests: 1024
+      maxRequests: 1022
+      maxRetries: 1023
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  dnsRefreshRate: 30s
+  ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: primary.foo.com
+              portValue: 80
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+- circuitBreakers:
+    thresholds:
     - maxRetries: 1024
   commonLbConfig: {}
   connectTimeout: 10s
@@ -142,39 +178,3 @@
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
-- circuitBreakers:
-    thresholds:
-    - maxConnections: 30001
-      maxPendingRequests: 1024
-      maxRequests: 1022
-      maxRetries: 1023
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
-  ignoreHealthOnHostRemoval: true
-  loadAssignment:
-    clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: primary.foo.com
-              portValue: 80
-        loadBalancingWeight: 1
-      loadBalancingWeight: 1
-      locality:
-        region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-  perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  type: STRICT_DNS

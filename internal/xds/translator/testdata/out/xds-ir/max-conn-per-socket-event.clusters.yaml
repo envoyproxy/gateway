@@ -31,7 +31,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: max-accept-disabled
+    serviceName: max-accept-default
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -41,7 +41,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: max-accept-disabled
+  name: max-accept-default
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: max-accept-default
+    serviceName: max-accept-disabled
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -64,6 +64,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: max-accept-default
+  name: max-accept-disabled
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -77,7 +77,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: securitypolicy/default/policy-for-http-route-1/default/http-backend
+    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -87,7 +87,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-http-route-1/default/http-backend
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -100,7 +100,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+    serviceName: securitypolicy/default/policy-for-http-route-1/default/http-backend
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -110,6 +110,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  name: securitypolicy/default/policy-for-http-route-1/default/http-backend
   perConnectionBufferLimitBytes: 32768
   type: EDS

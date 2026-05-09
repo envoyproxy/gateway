@@ -54,7 +54,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tls-route-dest
+    serviceName: tcp-route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -64,7 +64,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: tls-route-dest
+  name: tcp-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -77,7 +77,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-dest
+    serviceName: tls-route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -87,6 +87,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: tcp-route-dest
+  name: tls-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

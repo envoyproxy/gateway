@@ -8,7 +8,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-www.test.com-dest
+    serviceName: "192_168_1_250_8080"
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -18,8 +18,17 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: first-route-www.test.com-dest
+  name: "192_168_1_250_8080"
   perConnectionBufferLimitBytes: 32768
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+      sni: 192.168.1.250
   type: EDS
 - circuitBreakers:
     thresholds:
@@ -31,7 +40,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-www.test.com-dest
+    serviceName: first-route-www.test.com-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -41,7 +50,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: second-route-www.test.com-dest
+  name: first-route-www.test.com-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -87,7 +96,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: "192_168_1_250_8080"
+    serviceName: second-route-www.test.com-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -97,15 +106,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: "192_168_1_250_8080"
+  name: second-route-www.test.com-dest
   perConnectionBufferLimitBytes: 32768
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContext:
-          trustedCa:
-            filename: /etc/ssl/certs/ca-certificates.crt
-      sni: 192.168.1.250
   type: EDS

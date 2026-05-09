@@ -104,18 +104,18 @@ func TestProcessExtensionPostTranslationHookConfig(t *testing.T) {
 
 			// Create test resource table with sample resources
 			tCtx := &types.ResourceVersionTable{
-				XdsResources: map[string][]resourceTypes.Resource{
+				XdsResources: map[string]map[string]resourceTypes.Resource{
 					resourcev3.ClusterType: {
-						&clusterv3.Cluster{Name: "test-cluster"},
+						"test-cluster": &clusterv3.Cluster{Name: "test-cluster"},
 					},
 					resourcev3.SecretType: {
-						&tlsv3.Secret{Name: "test-secret"},
+						"test-secret": &tlsv3.Secret{Name: "test-secret"},
 					},
 					resourcev3.ListenerType: {
-						&listenerv3.Listener{Name: "test-listener"},
+						"test-listener": &listenerv3.Listener{Name: "test-listener"},
 					},
 					resourcev3.RouteType: {
-						&routev3.RouteConfiguration{Name: "test-route"},
+						"test-route": &routev3.RouteConfiguration{Name: "test-route"},
 					},
 				},
 			}

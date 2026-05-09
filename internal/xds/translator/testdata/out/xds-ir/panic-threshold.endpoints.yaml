@@ -1,3 +1,15 @@
+- clusterName: fifth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fifth-route-dest/backend/0
 - clusterName: first-route-dest
   endpoints:
   - lbEndpoints:
@@ -10,6 +22,18 @@
     loadBalancingWeight: 1
     locality:
       region: first-route-dest/backend/0
+- clusterName: fourth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fourth-route-dest/backend/0
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
@@ -34,27 +58,3 @@
     loadBalancingWeight: 1
     locality:
       region: third-route-dest/backend/0
-- clusterName: fourth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: fourth-route-dest/backend/0
-- clusterName: fifth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: fifth-route-dest/backend/0

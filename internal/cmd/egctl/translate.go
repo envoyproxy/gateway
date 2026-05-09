@@ -488,8 +488,13 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 		globalConfigs.Configs = append(globalConfigs.Configs, configs)
 	}
 
+	// FlattenToSlice returns name-sorted slices: this output is consumed by
+	// humans (egctl dumps) and by golden-file tests, both of which need a stable
+	// ordering. The sort cost is irrelevant on a one-shot CLI invocation.
+	// TODO: tests should not rely on the runtime sort — use a test-side
+	// canonicalizer so the production path can drop the sort if needed.
 	// construct endpoints config
-	endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+	endpoints := xds_types.FlattenToSlice(tCtx.XdsResources[resourcev3.EndpointType])
 	for _, endpoint := range endpoints {
 		c, err := anypb.New(endpoint)
 		if err != nil {
@@ -507,7 +512,7 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 	}
 
 	// construct clusters config
-	clusters := tCtx.XdsResources[resourcev3.ClusterType]
+	clusters := xds_types.FlattenToSlice(tCtx.XdsResources[resourcev3.ClusterType])
 	for _, cluster := range clusters {
 		c, err := anypb.New(cluster)
 		if err != nil {
@@ -525,7 +530,7 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 	}
 
 	// construct listeners config
-	listeners := tCtx.XdsResources[resourcev3.ListenerType]
+	listeners := xds_types.FlattenToSlice(tCtx.XdsResources[resourcev3.ListenerType])
 	for _, listener := range listeners {
 		l, err := anypb.New(listener)
 		if err != nil {
@@ -545,7 +550,7 @@ func constructConfigDump(resources *resource.Resources, tCtx *xds_types.Resource
 	}
 
 	// construct routes config
-	routes := tCtx.XdsResources[resourcev3.RouteType]
+	routes := xds_types.FlattenToSlice(tCtx.XdsResources[resourcev3.RouteType])
 	for _, route := range routes {
 		r, err := anypb.New(route)
 		if err != nil {

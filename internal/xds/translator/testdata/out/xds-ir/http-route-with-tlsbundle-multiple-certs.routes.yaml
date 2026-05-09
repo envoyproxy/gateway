@@ -1,18 +1,4 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-btls/http
-  virtualHosts:
-  - domains:
-    - '*'
-    name: envoy-gateway/gateway-btls/http/*
-    routes:
-    - match:
-        path: /exact
-      name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
-      route:
-        cluster: httproute/envoy-gateway/httproute-btls/rule/0
-        upgradeConfigs:
-        - upgradeType: websocket
-- ignorePortInHostMatching: true
   name: envoy-gateway/gateway-btls-2/http
   virtualHosts:
   - domains:
@@ -24,5 +10,19 @@
       name: httproute/envoy-gateway/httproute-btls-2/rule/0/match/0/*
       route:
         cluster: httproute/envoy-gateway/httproute-btls-2/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: envoy-gateway/gateway-btls/http
+  virtualHosts:
+  - domains:
+    - '*'
+    name: envoy-gateway/gateway-btls/http/*
+    routes:
+    - match:
+        path: /exact
+      name: httproute/envoy-gateway/httproute-btls/rule/0/match/0/*
+      route:
+        cluster: httproute/envoy-gateway/httproute-btls/rule/0
         upgradeConfigs:
         - upgradeType: websocket

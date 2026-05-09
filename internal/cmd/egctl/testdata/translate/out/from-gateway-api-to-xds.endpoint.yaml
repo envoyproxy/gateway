@@ -4,28 +4,6 @@ xds:
     dynamicEndpointConfigs:
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: httproute/default/backend/rule/0
-        endpoints:
-        - lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.1.1.1
-                  portValue: 3000
-            loadBalancingWeight: 1
-          loadBalancingWeight: 1
-          locality:
-            region: httproute/default/backend/rule/0/backend/0
-          metadata:
-            filterMetadata:
-              envoy-gateway:
-                resources:
-                - kind: Service
-                  name: backend
-                  namespace: default
-                  sectionName: "3000"
-    - endpointConfig:
-        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
         clusterName: grpcroute/default/backend/rule/0
         endpoints:
         - lbEndpoints:
@@ -46,6 +24,28 @@ xds:
                   name: backend
                   namespace: default
                   sectionName: "9000"
+    - endpointConfig:
+        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+        clusterName: httproute/default/backend/rule/0
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.1.1.1
+                  portValue: 3000
+            loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality:
+            region: httproute/default/backend/rule/0/backend/0
+          metadata:
+            filterMetadata:
+              envoy-gateway:
+                resources:
+                - kind: Service
+                  name: backend
+                  namespace: default
+                  sectionName: "3000"
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
         clusterName: tcproute/default/backend/rule/-1

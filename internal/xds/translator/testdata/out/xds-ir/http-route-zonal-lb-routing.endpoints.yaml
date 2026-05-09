@@ -1,4 +1,4 @@
-- clusterName: route-with-settings-preferlocal-dest
+- clusterName: route-with-lb-and-settings-preferlocal-dest/backend/0
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -38,7 +38,7 @@
       loadBalancingWeight: 1
     locality:
       zone: us-east-1b
-- clusterName: route-with-lb-and-settings-preferlocal-dest/backend/0
+- clusterName: route-with-settings-preferlocal-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

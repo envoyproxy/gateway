@@ -22,6 +22,18 @@
     loadBalancingWeight: 1
     locality:
       region: httproute/default/httproute-2/rule/0/backend/0
+- clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 7.7.7.9
+            portValue: 80
+      loadBalancingWeight: 1
+    loadBalancingWeight: 50
+    locality:
+      region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0
 - clusterName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   endpoints:
   - lbEndpoints:
@@ -44,15 +56,3 @@
     loadBalancingWeight: 99
     locality:
       region: securitypolicy/default/policy-for-http-route-1/default/grpc-backend/backend/1
-- clusterName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 7.7.7.9
-            portValue: 80
-      loadBalancingWeight: 1
-    loadBalancingWeight: 50
-    locality:
-      region: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend/backend/0

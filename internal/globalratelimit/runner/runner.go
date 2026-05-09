@@ -128,18 +128,25 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	}
 }
 
-func buildXDSResourceFromCache(rateLimitConfigsCache map[string][]cachetype.Resource) types.XdsResources {
-	xdsResourcesToUpdate := types.XdsResources{}
-	for _, xdsR := range rateLimitConfigsCache {
-		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = append(xdsResourcesToUpdate[resourcev3.RateLimitConfigType], xdsR...)
+func buildXDSResourceFromCache(rateLimitConfigsCache map[string]map[string]cachetype.Resource) types.XdsResources {
+	merged := make(map[string]cachetype.Resource)
+	for _, byName := range rateLimitConfigsCache {
+		for name, r := range byName {
+			merged[name] = r
+		}
 	}
 
+	xdsResourcesToUpdate := types.XdsResources{}
+	if len(merged) > 0 {
+		xdsResourcesToUpdate[resourcev3.RateLimitConfigType] = merged
+	}
 	return xdsResourcesToUpdate
 }
 
 func (r *Runner) translateFromSubscription(ctx context.Context, c <-chan watchable.Snapshot[string, *message.XdsIRWithContext]) {
 	// rateLimitConfigsCache is a cache of the rate limit config, which is keyed by the xdsIR key.
-	rateLimitConfigsCache := map[string][]cachetype.Resource{}
+	// The inner map keys resources by their RateLimitConfig name (matching the XdsResources shape).
+	rateLimitConfigsCache := map[string]map[string]cachetype.Resource{}
 
 	message.HandleSubscription(
 		r.Logger,
@@ -228,7 +235,9 @@ func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources
 	}
 	r.snapshotVersion++
 
-	snapshot, err := cachev3.NewSnapshot(fmt.Sprintf("%d", r.snapshotVersion), resource)
+	// FlattenToTypeWiseSlices sorts by name; not required by go-control-plane but keeps
+	// the snapshot deterministic for debug logs and version diffs.
+	snapshot, err := cachev3.NewSnapshot(fmt.Sprintf("%d", r.snapshotVersion), types.FlattenToTypeWiseSlices(resource))
 	if err != nil {
 		return fmt.Errorf("failed to generate a config snapshot: %w", err)
 	}

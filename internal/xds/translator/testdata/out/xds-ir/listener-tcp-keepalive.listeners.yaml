@@ -41,6 +41,29 @@
 - address:
     socketAddress:
       address: '::'
+      portValue: 10083
+  filterChains:
+  - filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tcp-route-dest
+        statPrefix: tcp-10083
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: fourth-listener
+  perConnectionBufferLimitBytes: 32768
+  socketOptions:
+  - description: socket option to enable tcp keep alive
+    intValue: "1"
+    level: "1"
+    name: "9"
+  - description: socket option for keep alive probes
+    intValue: "10"
+    level: "6"
+    name: "6"
+- address:
+    socketAddress:
+      address: '::'
       portValue: 10081
   defaultFilterChain:
     filters:
@@ -116,26 +139,3 @@
     intValue: "1"
     level: "1"
     name: "9"
-- address:
-    socketAddress:
-      address: '::'
-      portValue: 10083
-  filterChains:
-  - filters:
-    - name: envoy.filters.network.tcp_proxy
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tcp-route-dest
-        statPrefix: tcp-10083
-  maxConnectionsToAcceptPerSocketEvent: 1
-  name: fourth-listener
-  perConnectionBufferLimitBytes: 32768
-  socketOptions:
-  - description: socket option to enable tcp keep alive
-    intValue: "1"
-    level: "1"
-    name: "9"
-  - description: socket option for keep alive probes
-    intValue: "10"
-    level: "6"
-    name: "6"

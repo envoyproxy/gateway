@@ -66,13 +66,10 @@ func sdsClusterNameFromURL(url string) string {
 func createSDSCluster(tCtx *types.ResourceVersionTable, sdsURL string) error {
 	clusterName := sdsClusterNameFromURL(sdsURL)
 
-	// Check if cluster already exists
-	if tCtx.XdsResources[resourcev3.ClusterType] != nil {
-		for _, resource := range tCtx.XdsResources[resourcev3.ClusterType] {
-			if c, ok := resource.(*cluster.Cluster); ok && c.Name == clusterName {
-				// Cluster already exists
-				return nil
-			}
+	// Check if cluster already exists.
+	if r, ok := tCtx.XdsResources[resourcev3.ClusterType][clusterName]; ok {
+		if _, ok := r.(*cluster.Cluster); ok {
+			return nil
 		}
 	}
 

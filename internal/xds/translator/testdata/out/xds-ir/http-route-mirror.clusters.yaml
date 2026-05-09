@@ -8,7 +8,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: route-dest
+    serviceName: mirror-route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -18,7 +18,7 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: route-dest
+  name: mirror-route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -31,7 +31,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: mirror-route-dest
+    serviceName: route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -41,6 +41,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: mirror-route-dest
+  name: route-dest
   perConnectionBufferLimitBytes: 32768
   type: EDS

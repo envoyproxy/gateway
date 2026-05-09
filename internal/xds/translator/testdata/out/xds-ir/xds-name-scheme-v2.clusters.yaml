@@ -31,6 +31,36 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: httproute/default/httproute-1/rule/0
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  metadata:
+    filterMetadata:
+      envoy-gateway:
+        resources:
+        - kind: HTTPRoute
+          name: httproute-1
+          namespace: default
+  name: httproute/default/httproute-1/rule/0
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
     serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
@@ -54,7 +84,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: httproute/default/httproute-1/rule/0
+    serviceName: tcproute/default/tcproute
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
     policies:
@@ -68,10 +98,10 @@
     filterMetadata:
       envoy-gateway:
         resources:
-        - kind: HTTPRoute
-          name: httproute-1
+        - kind: TCPRoute
+          name: tcproute-1
           namespace: default
-  name: httproute/default/httproute-1/rule/0
+  name: tcproute/default/tcproute
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -125,36 +155,6 @@
           localityLbConfig:
             localityWeightedLbConfig: {}
   name: tlsroute/default/tlsroute-2/rule/-1
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: tcproute/default/tcproute
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  metadata:
-    filterMetadata:
-      envoy-gateway:
-        resources:
-        - kind: TCPRoute
-          name: tcproute-1
-          namespace: default
-  name: tcproute/default/tcproute
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:

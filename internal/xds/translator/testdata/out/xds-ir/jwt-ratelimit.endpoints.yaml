@@ -1,3 +1,15 @@
+- clusterName: "192_168_1_250_443"
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 192.168.1.250
+            portValue: 443
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: 192_168_1_250_443/backend/-1
 - clusterName: first-route-dest
   endpoints:
   - lbEndpoints:
@@ -34,15 +46,3 @@
     loadBalancingWeight: 1
     locality:
       region: third-route-dest/backend/0
-- clusterName: "192_168_1_250_443"
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 192.168.1.250
-            portValue: 443
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: 192_168_1_250_443/backend/-1

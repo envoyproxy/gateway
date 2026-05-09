@@ -13,17 +13,17 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: sample-request-id-extension-listener
+  name: pack-and-sample-request-id-extension-listener
   virtualHosts:
   - domains:
     - '*'
-    name: sample-request-id-extension-listener/*
+    name: pack-and-sample-request-id-extension-listener/*
     routes:
     - match:
         prefix: /
-      name: second-route
+      name: fourth-route
       route:
-        cluster: second-route-dest
+        cluster: fourth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
@@ -41,16 +41,16 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: pack-and-sample-request-id-extension-listener
+  name: sample-request-id-extension-listener
   virtualHosts:
   - domains:
     - '*'
-    name: pack-and-sample-request-id-extension-listener/*
+    name: sample-request-id-extension-listener/*
     routes:
     - match:
         prefix: /
-      name: fourth-route
+      name: second-route
       route:
-        cluster: fourth-route-dest
+        cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket

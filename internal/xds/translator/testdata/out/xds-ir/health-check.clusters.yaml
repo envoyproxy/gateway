@@ -8,6 +8,43 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: fifth-route-dest
+  healthChecks:
+  - grpcHealthCheck:
+      serviceName: my-service
+    healthyThreshold: 3
+    interval: 5s
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: fifth-route-dest
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
     serviceName: first-route-dest
   healthChecks:
   - healthyThreshold: 1
@@ -42,6 +79,48 @@
     enforcingConsecutiveGatewayFailure: 100
     interval: 2s
     maxEjectionPercent: 100
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: fourth-route-dest
+  healthChecks:
+  - healthyThreshold: 3
+    interval: 5s
+    tcpHealthCheck:
+      receive:
+      - binary: cG9uZw==
+      send:
+        binary: cGluZw==
+    timeout: 1s
+    unhealthyThreshold: 3
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: fourth-route-dest
+  outlierDetection:
+    baseEjectionTime: 180s
+    consecutive5xx: 5
+    consecutiveGatewayFailure: 0
+    consecutiveLocalOriginFailure: 5
+    enforcingConsecutiveGatewayFailure: 100
+    interval: 1s
+    maxEjectionPercent: 90
+    splitExternalLocalOriginErrors: true
   perConnectionBufferLimitBytes: 32768
   type: EDS
 - circuitBreakers:
@@ -134,82 +213,3 @@
     maxEjectionPercent: 100
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: fourth-route-dest
-  healthChecks:
-  - healthyThreshold: 3
-    interval: 5s
-    tcpHealthCheck:
-      receive:
-      - binary: cG9uZw==
-      send:
-        binary: cGluZw==
-    timeout: 1s
-    unhealthyThreshold: 3
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  name: fourth-route-dest
-  outlierDetection:
-    baseEjectionTime: 180s
-    consecutive5xx: 5
-    consecutiveGatewayFailure: 0
-    consecutiveLocalOriginFailure: 5
-    enforcingConsecutiveGatewayFailure: 100
-    interval: 1s
-    maxEjectionPercent: 90
-    splitExternalLocalOriginErrors: true
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: fifth-route-dest
-  healthChecks:
-  - grpcHealthCheck:
-      serviceName: my-service
-    healthyThreshold: 3
-    interval: 5s
-    timeout: 1s
-    unhealthyThreshold: 3
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  name: fifth-route-dest
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536

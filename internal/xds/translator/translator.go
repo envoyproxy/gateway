@@ -978,7 +978,7 @@ func processServiceCluster(tCtx *types.ResourceVersionTable, xdsIR *ir.Xds) erro
 func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
 	protocol corev3.SocketAddress_Protocol,
 ) *listenerv3.Listener {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
+	if tCtx == nil {
 		return nil
 	}
 
@@ -996,65 +996,54 @@ func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string,
 
 // findXdsListener finds a xds listener with the same name and returns nil if there is no match.
 func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.Listener {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
-		listener, ok := r.(*listenerv3.Listener)
-		if ok && listener.Name == name {
-			return listener
+	if r, ok := tCtx.XdsResources[resourcev3.ListenerType][name]; ok {
+		if l, ok := r.(*listenerv3.Listener); ok {
+			return l
 		}
 	}
-
 	return nil
 }
 
 // findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
 func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
-		route, ok := r.(*routev3.RouteConfiguration)
-		if ok && route.Name == name {
-			return route
+	if r, ok := tCtx.XdsResources[resourcev3.RouteType][name]; ok {
+		if rc, ok := r.(*routev3.RouteConfiguration); ok {
+			return rc
 		}
 	}
-
 	return nil
 }
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
 func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
-		cluster, ok := r.(*clusterv3.Cluster)
-		if ok && cluster.Name == name {
-			return cluster
+	if r, ok := tCtx.XdsResources[resourcev3.ClusterType][name]; ok {
+		if c, ok := r.(*clusterv3.Cluster); ok {
+			return c
 		}
 	}
-
 	return nil
 }
 
 // findXdsEndpoint finds a xds endpoint with the same cluster name, and returns nil if there is no match.
+// The endpoint's key in the table is its ClusterName, matching how AddXdsResource stores it.
 func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.ClusterLoadAssignment {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.EndpointType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.EndpointType] {
-		endpoint, ok := r.(*endpointv3.ClusterLoadAssignment)
-		if ok && endpoint.ClusterName == name {
-			return endpoint
+	if r, ok := tCtx.XdsResources[resourcev3.EndpointType][name]; ok {
+		if e, ok := r.(*endpointv3.ClusterLoadAssignment); ok {
+			return e
 		}
 	}
-
 	return nil
 }
 
@@ -1071,17 +1060,14 @@ func processXdsCluster(tCtx *types.ResourceVersionTable,
 
 // findXdsSecret finds a xds secret with the same name, and returns nil if there is no match.
 func findXdsSecret(tCtx *types.ResourceVersionTable, name string) *tlsv3.Secret {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.SecretType] == nil {
+	if tCtx == nil {
 		return nil
 	}
-
-	for _, r := range tCtx.XdsResources[resourcev3.SecretType] {
-		secret, ok := r.(*tlsv3.Secret)
-		if ok && secret.Name == name {
-			return secret
+	if r, ok := tCtx.XdsResources[resourcev3.SecretType][name]; ok {
+		if s, ok := r.(*tlsv3.Secret); ok {
+			return s
 		}
 	}
-
 	return nil
 }
 

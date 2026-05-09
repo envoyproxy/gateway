@@ -1,17 +1,8 @@
-- ignorePortInHostMatching: true
-  name: test-listener-modify
-  virtualHosts:
-  - domains:
-    - '*'
-    name: test-listener-modify/*
-    routes:
-    - match:
-        prefix: /
-      name: test-route-modify
-      route:
-        cluster: test-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
+- name: extension-injected-route
+  responseHeadersToAdd:
+  - header:
+      key: x-extension-injected
+      value: route
 - ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
@@ -26,8 +17,17 @@
         cluster: second-route-dest
         upgradeConfigs:
         - upgradeType: websocket
-- name: extension-injected-route
-  responseHeadersToAdd:
-  - header:
-      key: x-extension-injected
-      value: route
+- ignorePortInHostMatching: true
+  name: test-listener-modify
+  virtualHosts:
+  - domains:
+    - '*'
+    name: test-listener-modify/*
+    routes:
+    - match:
+        prefix: /
+      name: test-route-modify
+      route:
+        cluster: test-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket

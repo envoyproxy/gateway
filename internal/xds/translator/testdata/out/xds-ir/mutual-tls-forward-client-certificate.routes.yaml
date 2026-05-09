@@ -1,4 +1,18 @@
 - ignorePortInHostMatching: true
+  name: fifth-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: fifth-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: fifth-route
+      route:
+        cluster: fifth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
   name: first-listener
   virtualHosts:
   - domains:
@@ -10,6 +24,20 @@
       name: first-route
       route:
         cluster: first-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
+  name: fourth-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: fourth-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
@@ -38,33 +66,5 @@
       name: third-route
       route:
         cluster: third-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: fourth-listener
-  virtualHosts:
-  - domains:
-    - '*'
-    name: fourth-listener/*
-    routes:
-    - match:
-        prefix: /
-      name: fourth-route
-      route:
-        cluster: fourth-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: fifth-listener
-  virtualHosts:
-  - domains:
-    - '*'
-    name: fifth-listener/*
-    routes:
-    - match:
-        prefix: /
-      name: fifth-route
-      route:
-        cluster: fifth-route-dest
         upgradeConfigs:
         - upgradeType: websocket

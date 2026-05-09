@@ -220,7 +220,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "inject-new-cluster",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{},
+					resourcev3.ClusterType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ClusterType,
@@ -238,7 +238,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{testCluster},
+					resourcev3.ClusterType: map[string]types.Resource{"test-cluster": testCluster},
 				},
 			},
 		},
@@ -246,7 +246,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "replace-cluster",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{testCluster},
+					resourcev3.ClusterType: map[string]types.Resource{"test-cluster": testCluster},
 				},
 			},
 			typeIn:     resourcev3.ClusterType,
@@ -264,7 +264,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{updatedCluster},
+					resourcev3.ClusterType: map[string]types.Resource{"test-cluster": updatedCluster},
 				},
 			},
 		},
@@ -272,7 +272,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "inject-new-endpoint",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{},
+					resourcev3.EndpointType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.EndpointType,
@@ -290,7 +290,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{testEndpoint},
+					resourcev3.EndpointType: map[string]types.Resource{"test-cluster": testEndpoint},
 				},
 			},
 		},
@@ -298,7 +298,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "replace-endpoint",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{testEndpoint},
+					resourcev3.EndpointType: map[string]types.Resource{"test-cluster": testEndpoint},
 				},
 			},
 			typeIn:     resourcev3.EndpointType,
@@ -316,7 +316,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{updatedEndpoint},
+					resourcev3.EndpointType: map[string]types.Resource{"test-cluster": updatedEndpoint},
 				},
 			},
 		},
@@ -324,7 +324,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "inject-new-listener",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{},
+					resourcev3.ListenerType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
@@ -342,7 +342,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: map[string]types.Resource{"test-listener": testListener},
 				},
 			},
 		},
@@ -350,7 +350,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "replace-listener",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: map[string]types.Resource{"test-listener": testListener},
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
@@ -368,7 +368,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{updatedListener},
+					resourcev3.ListenerType: map[string]types.Resource{"test-listener": updatedListener},
 				},
 			},
 		},
@@ -392,7 +392,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{testCluster},
+					resourcev3.ClusterType: map[string]types.Resource{"test-cluster": testCluster},
 				},
 			},
 		},
@@ -414,7 +414,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{testCluster},
+					resourcev3.ClusterType: map[string]types.Resource{"test-cluster": testCluster},
 				},
 			},
 		},
@@ -422,7 +422,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "inject-route-config",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.RouteType: []types.Resource{},
+					resourcev3.RouteType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.RouteType,
@@ -440,7 +440,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.RouteType: []types.Resource{testRouteConfig},
+					resourcev3.RouteType: map[string]types.Resource{"test-route-config": testRouteConfig},
 				},
 			},
 		},
@@ -448,7 +448,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "new-secret",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.SecretType: []types.Resource{},
+					resourcev3.SecretType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.SecretType,
@@ -466,7 +466,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.SecretType: []types.Resource{testSecret},
+					resourcev3.SecretType: map[string]types.Resource{"example-secret": testSecret},
 				},
 			},
 		},
@@ -606,7 +606,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "inject-invalid-listener",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{},
+					resourcev3.ListenerType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
@@ -624,7 +624,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: map[string]types.Resource{"test-listener": testListener},
 				},
 			},
 		},
@@ -632,7 +632,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "inject-invalid-route-config",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.RouteType: []types.Resource{},
+					resourcev3.RouteType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.RouteType,
@@ -654,7 +654,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "inject-invalid-cluster",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{},
+					resourcev3.ClusterType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ClusterType,
@@ -676,7 +676,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "cast-cluster-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{},
+					resourcev3.ClusterType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ClusterType,
@@ -698,7 +698,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "cast-listener-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{},
+					resourcev3.ListenerType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
@@ -720,7 +720,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "cast-route-config-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.RouteType: []types.Resource{},
+					resourcev3.RouteType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.RouteType,
@@ -742,7 +742,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "cast-secret-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.SecretType: []types.Resource{},
+					resourcev3.SecretType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.SecretType,
@@ -764,7 +764,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "invalid-secret",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.SecretType: []types.Resource{},
+					resourcev3.SecretType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.SecretType,
@@ -786,7 +786,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "inject-invalid-endpoint",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{},
+					resourcev3.EndpointType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.EndpointType,
@@ -808,7 +808,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			name: "cast-endpoint-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.EndpointType: []types.Resource{},
+					resourcev3.EndpointType: map[string]types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.EndpointType,

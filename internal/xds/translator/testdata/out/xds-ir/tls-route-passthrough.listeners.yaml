@@ -1,28 +1,6 @@
 - address:
     socketAddress:
       address: '::'
-      portValue: 10080
-  filterChains:
-  - filterChainMatch:
-      serverNames:
-      - foo.com
-    filters:
-    - name: envoy.filters.network.tcp_proxy
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tls-passthrough-foo-dest
-        statPrefix: tls-passthrough-10080
-    name: tls-route-passthrough-foo
-  listenerFilters:
-  - name: envoy.filters.listener.tls_inspector
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  maxConnectionsToAcceptPerSocketEvent: 1
-  name: tls-passthrough-foo
-  perConnectionBufferLimitBytes: 32768
-- address:
-    socketAddress:
-      address: '::'
       portValue: 10081
   filterChains:
   - filterChainMatch:
@@ -41,4 +19,26 @@
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   maxConnectionsToAcceptPerSocketEvent: 1
   name: tls-passthrough-bar
+  perConnectionBufferLimitBytes: 32768
+- address:
+    socketAddress:
+      address: '::'
+      portValue: 10080
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: tls-passthrough-foo-dest
+        statPrefix: tls-passthrough-10080
+    name: tls-route-passthrough-foo
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  maxConnectionsToAcceptPerSocketEvent: 1
+  name: tls-passthrough-foo
   perConnectionBufferLimitBytes: 32768

@@ -238,29 +238,33 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	var oldListeners []*listenerv3.Listener
 	var oldRoutes []*routev3.RouteConfiguration
 
+	// FlattenToSlice returns name-sorted slices: the PostTranslateModifyHook is
+	// a public extension contract, and giving extensions a deterministic ordering
+	// (rather than Go's randomized map iteration) avoids surprising third-party
+	// hooks that may diff against their previous input.
 	if includeClusters {
-		clusters := tCtx.XdsResources[resourcev3.ClusterType]
+		clusters := types.FlattenToSlice(tCtx.XdsResources[resourcev3.ClusterType])
 		oldClusters = make([]*clusterv3.Cluster, len(clusters))
 		for idx, cluster := range clusters {
 			oldClusters[idx] = cluster.(*clusterv3.Cluster)
 		}
 	}
 	if includeSecrets {
-		secrets := tCtx.XdsResources[resourcev3.SecretType]
+		secrets := types.FlattenToSlice(tCtx.XdsResources[resourcev3.SecretType])
 		oldSecrets = make([]*tlsv3.Secret, len(secrets))
 		for idx, secret := range secrets {
 			oldSecrets[idx] = secret.(*tlsv3.Secret)
 		}
 	}
 	if includeListeners {
-		listeners := tCtx.XdsResources[resourcev3.ListenerType]
+		listeners := types.FlattenToSlice(tCtx.XdsResources[resourcev3.ListenerType])
 		oldListeners = make([]*listenerv3.Listener, len(listeners))
 		for idx, listener := range listeners {
 			oldListeners[idx] = listener.(*listenerv3.Listener)
 		}
 	}
 	if includeRoutes {
-		routes := tCtx.XdsResources[resourcev3.RouteType]
+		routes := types.FlattenToSlice(tCtx.XdsResources[resourcev3.RouteType])
 		oldRoutes = make([]*routev3.RouteConfiguration, len(routes))
 		for idx, route := range routes {
 			oldRoutes[idx] = route.(*routev3.RouteConfiguration)

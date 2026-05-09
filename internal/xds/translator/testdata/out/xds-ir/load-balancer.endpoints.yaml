@@ -1,87 +1,3 @@
-- clusterName: first-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: first-route-dest/backend/0
-- clusterName: second-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: second-route-dest/backend/0
-- clusterName: third-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: third-route-dest/backend/0
-- clusterName: fourth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: fourth-route-dest/backend/0
-- clusterName: fifth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: fifth-route-dest/backend/0
-- clusterName: sixth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: sixth-route-dest/backend/0
-- clusterName: seventh-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: seventh-route-dest/backend/0
 - clusterName: eighth-route-dest
   endpoints:
   - lbEndpoints:
@@ -94,30 +10,6 @@
     loadBalancingWeight: 1
     locality:
       region: eighth-route-dest/backend/0
-- clusterName: ninth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: ninth-route-dest/backend/0
-- clusterName: tenth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: tenth-route-dest/backend/0
 - clusterName: eleventh-route-dest
   endpoints:
   - lbEndpoints:
@@ -130,42 +22,6 @@
     loadBalancingWeight: 1
     locality:
       region: eleventh-route-dest/backend/0
-- clusterName: twelfth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: twelfth-route-dest/backend/0
-- clusterName: thirteen-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: thirteen-route-dest/backend/0
-- clusterName: fourteenth-route-dest
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 1.2.3.4
-            portValue: 50000
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: fourteenth-route-dest/backend/0
 - clusterName: fifteenth-route-dest
   endpoints:
   - lbEndpoints:
@@ -178,7 +34,7 @@
     loadBalancingWeight: 1
     locality:
       region: fifteenth-route-dest/backend/0
-- clusterName: sixteenth-route-dest
+- clusterName: fifth-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -189,7 +45,67 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: sixteenth-route-dest/backend/0
+      region: fifth-route-dest/backend/0
+- clusterName: first-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: first-route-dest/backend/0
+- clusterName: fourteenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fourteenth-route-dest/backend/0
+- clusterName: fourth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: fourth-route-dest/backend/0
+- clusterName: ninth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: ninth-route-dest/backend/0
+- clusterName: second-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: second-route-dest/backend/0
 - clusterName: seventeenth-route-dest
   endpoints:
   - lbEndpoints:
@@ -202,3 +118,87 @@
     loadBalancingWeight: 1
     locality:
       region: seventeenth-route-dest/backend/0
+- clusterName: seventh-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: seventh-route-dest/backend/0
+- clusterName: sixteenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: sixteenth-route-dest/backend/0
+- clusterName: sixth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: sixth-route-dest/backend/0
+- clusterName: tenth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: tenth-route-dest/backend/0
+- clusterName: third-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: third-route-dest/backend/0
+- clusterName: thirteen-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: thirteen-route-dest/backend/0
+- clusterName: twelfth-route-dest
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: twelfth-route-dest/backend/0

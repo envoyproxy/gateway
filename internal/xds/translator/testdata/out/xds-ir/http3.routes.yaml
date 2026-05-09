@@ -1,5 +1,37 @@
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/https-wildcard
+  name: envoy-gateway/gateway-1/https-bar
+  virtualHosts:
+  - domains:
+    - bar.example.com
+    metadata:
+      filterMetadata:
+        envoy-gateway:
+          resources:
+          - kind: Gateway
+            name: gateway-1
+            namespace: envoy-gateway
+            sectionName: https-bar
+    name: envoy-gateway/gateway-1/https-bar/bar_example_com
+    routes:
+    - match:
+        prefix: /
+      metadata:
+        filterMetadata:
+          envoy-gateway:
+            resources:
+            - kind: HTTPRoute
+              name: httproute-1
+              namespace: default
+      name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: alt-svc
+          value: h3=":443"; ma=86400
+      route:
+        cluster: httproute/default/httproute-1/rule/0
+        upgradeConfigs:
+        - upgradeType: websocket
 - ignorePortInHostMatching: true
   name: envoy-gateway/gateway-1/https-foo
   virtualHosts:
@@ -35,36 +67,4 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
-  name: envoy-gateway/gateway-1/https-bar
-  virtualHosts:
-  - domains:
-    - bar.example.com
-    metadata:
-      filterMetadata:
-        envoy-gateway:
-          resources:
-          - kind: Gateway
-            name: gateway-1
-            namespace: envoy-gateway
-            sectionName: https-bar
-    name: envoy-gateway/gateway-1/https-bar/bar_example_com
-    routes:
-    - match:
-        prefix: /
-      metadata:
-        filterMetadata:
-          envoy-gateway:
-            resources:
-            - kind: HTTPRoute
-              name: httproute-1
-              namespace: default
-      name: httproute/default/httproute-1/rule/0/match/0/bar_example_com
-      responseHeadersToAdd:
-      - append: true
-        header:
-          key: alt-svc
-          value: h3=":443"; ma=86400
-      route:
-        cluster: httproute/default/httproute-1/rule/0
-        upgradeConfigs:
-        - upgradeType: websocket
+  name: envoy-gateway/gateway-1/https-wildcard

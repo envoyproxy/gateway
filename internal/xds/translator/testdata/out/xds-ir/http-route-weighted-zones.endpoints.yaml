@@ -1,3 +1,47 @@
+- clusterName: route-with-weighted-zones-backend-utilization-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 5.6.7.8
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 80
+    locality:
+      zone: us-east-1a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 6.7.8.9
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      zone: us-east-1b
+- clusterName: route-with-weighted-zones-maglev-dest/backend/0
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.1
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 80
+    locality:
+      zone: us-west-2a
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 10.0.0.2
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 20
+    locality:
+      zone: us-west-2b
 - clusterName: route-with-weighted-zones-roundrobin-dest/backend/0
   endpoints:
   - lbEndpoints:
@@ -36,47 +80,3 @@
     loadBalancingWeight: 1
     locality:
       zone: us-east-1c
-- clusterName: route-with-weighted-zones-maglev-dest/backend/0
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 10.0.0.1
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 80
-    locality:
-      zone: us-west-2a
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 10.0.0.2
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 20
-    locality:
-      zone: us-west-2b
-- clusterName: route-with-weighted-zones-backend-utilization-dest/backend/0
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 5.6.7.8
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 80
-    locality:
-      zone: us-east-1a
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 6.7.8.9
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 20
-    locality:
-      zone: us-east-1b

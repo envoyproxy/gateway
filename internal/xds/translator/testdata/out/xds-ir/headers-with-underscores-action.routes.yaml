@@ -13,6 +13,20 @@
         upgradeConfigs:
         - upgradeType: websocket
 - ignorePortInHostMatching: true
+  name: fourth-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: fourth-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: fourth-route
+      route:
+        cluster: fourth-route-dest
+        upgradeConfigs:
+        - upgradeType: websocket
+- ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
   - domains:
@@ -38,19 +52,5 @@
       name: third-route
       route:
         cluster: third-route-dest
-        upgradeConfigs:
-        - upgradeType: websocket
-- ignorePortInHostMatching: true
-  name: fourth-listener
-  virtualHosts:
-  - domains:
-    - '*'
-    name: fourth-listener/*
-    routes:
-    - match:
-        prefix: /
-      name: fourth-route
-      route:
-        cluster: fourth-route-dest
         upgradeConfigs:
         - upgradeType: websocket

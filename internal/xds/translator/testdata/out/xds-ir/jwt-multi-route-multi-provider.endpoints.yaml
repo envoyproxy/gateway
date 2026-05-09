@@ -1,3 +1,15 @@
+- clusterName: "192_168_1_250_8080"
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 192.168.1.250
+            portValue: 8080
+      loadBalancingWeight: 1
+    loadBalancingWeight: 1
+    locality:
+      region: 192_168_1_250_8080/backend/-1
 - clusterName: first-route-www.test.com-dest
   endpoints:
   - lbEndpoints:
@@ -22,15 +34,3 @@
     loadBalancingWeight: 1
     locality:
       region: second-route-www.test.com-dest/backend/0
-- clusterName: "192_168_1_250_8080"
-  endpoints:
-  - lbEndpoints:
-    - endpoint:
-        address:
-          socketAddress:
-            address: 192.168.1.250
-            portValue: 8080
-      loadBalancingWeight: 1
-    loadBalancingWeight: 1
-    locality:
-      region: 192_168_1_250_8080/backend/-1

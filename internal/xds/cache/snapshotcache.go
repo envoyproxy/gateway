@@ -91,10 +91,15 @@ func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 		version = s.newSnapshotVersion()
 	}
 
-	// Create a snapshot with all xDS resources.
+	// go-control-plane wants map[Type][]Resource, so flatten the name-indexed map
+	// at the boundary. Sorting by name here is incidental — go-control-plane keys
+	// resources by name internally — but it keeps debug dumps and snapshot diffs
+	// deterministic across runs.
+	// TODO: switch to an unsorted flatten if the per-snapshot sort cost shows up
+	// in a profile; correctness does not depend on it.
 	snapshot, err := cachev3.NewSnapshot(
 		version,
-		resources,
+		types.FlattenToTypeWiseSlices(resources),
 	)
 	if err != nil {
 		xdsSnapshotCreateTotal.WithFailure(metrics.ReasonError).Increment()

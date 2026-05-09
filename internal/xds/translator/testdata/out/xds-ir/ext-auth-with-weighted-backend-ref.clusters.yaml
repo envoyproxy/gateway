@@ -54,6 +54,29 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  ignoreHealthOnHostRemoval: true
+  loadBalancingPolicy:
+    policies:
+    - typedExtensionConfig:
+        name: envoy.load_balancing_policies.least_request
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
+          localityLbConfig:
+            localityWeightedLbConfig: {}
+  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- circuitBreakers:
+    thresholds:
+    - maxRetries: 1024
+  commonLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_PREFERRED
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
     serviceName: securitypolicy/default/policy-for-http-route-1/default/grpc-backend
   ignoreHealthOnHostRemoval: true
   loadBalancingPolicy:
@@ -74,26 +97,3 @@
         http2ProtocolOptions:
           initialConnectionWindowSize: 1048576
           initialStreamWindowSize: 65536
-- circuitBreakers:
-    thresholds:
-    - maxRetries: 1024
-  commonLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-  ignoreHealthOnHostRemoval: true
-  loadBalancingPolicy:
-    policies:
-    - typedExtensionConfig:
-        name: envoy.load_balancing_policies.least_request
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
-          localityLbConfig:
-            localityWeightedLbConfig: {}
-  name: securitypolicy/default/policy-for-gateway-1/envoy-gateway/http-backend
-  perConnectionBufferLimitBytes: 32768
-  type: EDS

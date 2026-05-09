@@ -27,12 +27,21 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: second-route-dest
+  dnsRefreshRate: 30s
   ignoreHealthOnHostRemoval: true
+  loadAssignment:
+    clusterName: oauth_bar_com_443
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: oauth.bar.com
+              portValue: 443
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality:
+        region: oauth_bar_com_443/backend/-1
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -41,9 +50,19 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: second-route-dest
+  name: oauth_bar_com_443
   perConnectionBufferLimitBytes: 32768
-  type: EDS
+  respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+      sni: oauth.bar.com
+  type: STRICT_DNS
 - circuitBreakers:
     thresholds:
     - maxRetries: 1024
@@ -92,21 +111,12 @@
   commonLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_PREFERRED
-  dnsRefreshRate: 30s
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: second-route-dest
   ignoreHealthOnHostRemoval: true
-  loadAssignment:
-    clusterName: oauth_bar_com_443
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: oauth.bar.com
-              portValue: 443
-        loadBalancingWeight: 1
-      loadBalancingWeight: 1
-      locality:
-        region: oauth_bar_com_443/backend/-1
   loadBalancingPolicy:
     policies:
     - typedExtensionConfig:
@@ -115,16 +125,6 @@
           '@type': type.googleapis.com/envoy.extensions.load_balancing_policies.least_request.v3.LeastRequest
           localityLbConfig:
             localityWeightedLbConfig: {}
-  name: oauth_bar_com_443
+  name: second-route-dest
   perConnectionBufferLimitBytes: 32768
-  respectDnsTtl: true
-  transportSocket:
-    name: envoy.transport_sockets.tls
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-      commonTlsContext:
-        validationContext:
-          trustedCa:
-            filename: /etc/ssl/certs/ca-certificates.crt
-      sni: oauth.bar.com
-  type: STRICT_DNS
+  type: EDS
