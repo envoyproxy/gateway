@@ -1,3 +1,3 @@
 module github.com/envoyproxy/static-file-server
 
-go 1.26.2
+go 1.26.3
