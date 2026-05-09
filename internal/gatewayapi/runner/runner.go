@@ -166,7 +166,7 @@ func (r *Runner) startWasmCache(ctx context.Context) {
 	}
 	r.wasmCache = wasm.NewHTTPServerWithFileCache(
 		// HTTP server options
-		wasm.SeverOptions{
+		wasm.ServerOptions{
 			Salt:      salt,
 			TLSConfig: tlsConfig,
 		},

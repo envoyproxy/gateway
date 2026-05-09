@@ -71,13 +71,15 @@ func (t *Translator) ProcessClientTrafficPolicies(
 		gatewayMap[key] = &policyGatewayTargetContext{GatewayContext: gw}
 	}
 
+	policyCopies := clientTrafficPolicyCopiesWithStatusDeepCopy(clientTrafficPolicies)
+
 	handledPolicies := make(map[types.NamespacedName]*egv1a1.ClientTrafficPolicy)
 	// Translate
 	// 1. First translate Policies with a sectionName set
 	// 2. Then loop again and translate the policies without a sectionName
 	// TODO: Import sort order to ensure policy with same section always appear
 	// before policy with no section so below loops can be flattened into 1.
-	for _, currPolicy := range clientTrafficPolicies {
+	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		// This loop only handles policies that target a specific section. When
 		// targeting a policy with a selector, it's not possible to specify a SectionName
@@ -87,7 +89,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 			if hasSectionName(&currTarget) {
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					handledPolicies[policyName] = policy
 					res = append(res, policy)
 				}
@@ -174,7 +176,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 	}
 
 	// Policy with no section set (targeting all sections)
-	for _, currPolicy := range clientTrafficPolicies {
+	for i, currPolicy := range clientTrafficPolicies {
 		policyName := utils.NamespacedName(currPolicy)
 		targetRefs := getPolicyTargetRefs(currPolicy.Spec.PolicyTargetReferences, gateways, currPolicy.Namespace)
 		for _, currTarget := range targetRefs {
@@ -182,7 +184,7 @@ func (t *Translator) ProcessClientTrafficPolicies(
 
 				policy, found := handledPolicies[policyName]
 				if !found {
-					policy = currPolicy
+					policy = policyCopies[i]
 					res = append(res, policy)
 					handledPolicies[policyName] = policy
 				}
@@ -1221,4 +1223,16 @@ func translateHeaderModifier(headerModifier *egv1a1.HTTPHeaderFilter, modType st
 	}
 
 	return addRequestHeaders, removeRequestHeaders, removeRequestHeadersOnMatch, errs
+}
+
+// clientTrafficPolicyCopiesWithStatusDeepCopy returns shallow copies with deep-copied Status fields.
+// Status is mutated during translation and shares a pointer with the watchable coalesce goroutine.
+func clientTrafficPolicyCopiesWithStatusDeepCopy(policies []*egv1a1.ClientTrafficPolicy) []*egv1a1.ClientTrafficPolicy {
+	copies := make([]*egv1a1.ClientTrafficPolicy, len(policies))
+	for i, p := range policies {
+		out := *p
+		p.Status.DeepCopyInto(&out.Status)
+		copies[i] = &out
+	}
+	return copies
 }

@@ -21573,8 +21573,9 @@ spec:
                             type: array
                           hostname:
                             description: |-
-                              Hostname defines the HTTP host that will be requested during health checking.
-                              Default: HTTPRoute or GRPCRoute hostname.
+                              Hostname defines the HTTP Host header used for active HTTP health checks.
+                              Host selection uses this order: this field, the associated Backend endpoint
+                              hostname if available, then the effective Route hostname.
                             maxLength: 253
                             minLength: 1
                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -26515,8 +26516,9 @@ spec:
                                       type: array
                                     hostname:
                                       description: |-
-                                        Hostname defines the HTTP host that will be requested during health checking.
-                                        Default: HTTPRoute or GRPCRoute hostname.
+                                        Hostname defines the HTTP Host header used for active HTTP health checks.
+                                        Host selection uses this order: this field, the associated Backend endpoint
+                                        hostname if available, then the effective Route hostname.
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -40237,8 +40239,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -41489,8 +41492,9 @@ spec:
                                                         type: array
                                                       hostname:
                                                         description: |-
-                                                          Hostname defines the HTTP host that will be requested during health checking.
-                                                          Default: HTTPRoute or GRPCRoute hostname.
+                                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                          Host selection uses this order: this field, the associated Backend endpoint
+                                                          hostname if available, then the effective Route hostname.
                                                         maxLength: 253
                                                         minLength: 1
                                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -42911,8 +42915,9 @@ spec:
                                                   type: array
                                                 hostname:
                                                   description: |-
-                                                    Hostname defines the HTTP host that will be requested during health checking.
-                                                    Default: HTTPRoute or GRPCRoute hostname.
+                                                    Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                    Host selection uses this order: this field, the associated Backend endpoint
+                                                    hostname if available, then the effective Route hostname.
                                                   maxLength: 253
                                                   minLength: 1
                                                   pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -44238,8 +44243,9 @@ spec:
                                             type: array
                                           hostname:
                                             description: |-
-                                              Hostname defines the HTTP host that will be requested during health checking.
-                                              Default: HTTPRoute or GRPCRoute hostname.
+                                              Hostname defines the HTTP Host header used for active HTTP health checks.
+                                              Host selection uses this order: this field, the associated Backend endpoint
+                                              hostname if available, then the effective Route hostname.
                                             maxLength: 253
                                             minLength: 1
                                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -46912,8 +46918,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -48052,8 +48059,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -49393,8 +49401,9 @@ spec:
                                               type: array
                                             hostname:
                                               description: |-
-                                                Hostname defines the HTTP host that will be requested during health checking.
-                                                Default: HTTPRoute or GRPCRoute hostname.
+                                                Hostname defines the HTTP Host header used for active HTTP health checks.
+                                                Host selection uses this order: this field, the associated Backend endpoint
+                                                hostname if available, then the effective Route hostname.
                                               maxLength: 253
                                               minLength: 1
                                               pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -50812,8 +50821,9 @@ spec:
                                         type: array
                                       hostname:
                                         description: |-
-                                          Hostname defines the HTTP host that will be requested during health checking.
-                                          Default: HTTPRoute or GRPCRoute hostname.
+                                          Hostname defines the HTTP Host header used for active HTTP health checks.
+                                          Host selection uses this order: this field, the associated Backend endpoint
+                                          hostname if available, then the effective Route hostname.
                                         maxLength: 253
                                         minLength: 1
                                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$

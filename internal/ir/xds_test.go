@@ -1107,6 +1107,95 @@ func TestRouteDestination_NeedsClusterPerSetting(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "cluster per setting mixed upstream protocol requirements",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.1",
+								Port: 8080,
+							},
+						},
+						AddressType:        ptr.To(IP),
+						Protocol:           HTTP,
+						ForceHTTP1Upstream: true,
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.2",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+						Protocol:    HTTP2,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "single cluster compatible websocket and http backends",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.1",
+								Port: 8080,
+							},
+						},
+						AddressType:        ptr.To(IP),
+						Protocol:           HTTP,
+						ForceHTTP1Upstream: true,
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.2",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+						Protocol:    HTTP,
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "single cluster compatible http2 and grpc backends",
+			input: RouteDestination{
+				Name: "valid hostname",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.1",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+						Protocol:    HTTP2,
+					},
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.0.1.2",
+								Port: 8080,
+							},
+						},
+						AddressType: ptr.To(IP),
+						Protocol:    GRPC,
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -1577,7 +1666,7 @@ func TestValidateHealthCheck(t *testing.T) {
 			want: ErrHealthCheckHealthyThresholdInvalid,
 		},
 		{
-			name: "http-health-check: invalid host",
+			name: "http-health-check: empty host",
 			input: HealthCheck{
 				&ActiveHealthCheck{
 					Timeout:            MetaV1DurationPtr(time.Second),
@@ -1593,7 +1682,6 @@ func TestValidateHealthCheck(t *testing.T) {
 				&OutlierDetection{},
 				ptr.To[uint32](10),
 			},
-			want: ErrHCHTTPHostInvalid,
 		},
 		{
 			name: "http-health-check: invalid path",

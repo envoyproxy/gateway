@@ -67,6 +67,7 @@ type xdsClusterArgs struct {
 	proxyProtocol     *ir.ProxyProtocol
 	circuitBreaker    *ir.CircuitBreaker
 	healthCheck       *ir.HealthCheck
+	routeHostname     string
 	http1Settings     *ir.HTTP1Settings
 	http2Settings     *ir.HTTP2Settings
 	timeout           *ir.Timeout
@@ -246,11 +247,15 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	// influence transport socket specific settings
 	requiresAutoHTTPConfig := len(args.settings) > 0
 	requiresHTTP2Options := false
+	forceHTTP1UpstreamProtocol := false
 	hasLiteralSNI := false
 	for _, ds := range args.settings {
 		if ds.Protocol == ir.GRPC ||
 			ds.Protocol == ir.HTTP2 {
 			requiresHTTP2Options = true
+		}
+		if ds.ForceHTTP1Upstream {
+			forceHTTP1UpstreamProtocol = true
 		}
 
 		if ds.Protocol == ir.TCP {
@@ -315,7 +320,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	// build common, HTTP/1 and HTTP/2  protocol options for cluster
-	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI)
+	epo, secrets, err := buildTypedExtensionProtocolOptions(args, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol)
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +450,7 @@ func buildXdsCluster(args *xdsClusterArgs) (*buildClusterResult, error) {
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Active != nil {
-		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active)
+		cluster.HealthChecks = buildXdsHealthCheck(args.healthCheck.Active, args.routeHostname)
 	}
 
 	if args.healthCheck != nil && args.healthCheck.Passive != nil {
@@ -566,7 +571,7 @@ func buildZoneAwareLbConfig(preferLocal *ir.PreferLocalZone) *commonv3.LocalityL
 	return lbConfig
 }
 
-func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthCheck {
+func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck, routeHostname string) []*corev3.HealthCheck {
 	hc := &corev3.HealthCheck{
 		Timeout:  durationpb.New(healthcheck.Timeout.Duration),
 		Interval: durationpb.New(healthcheck.Interval.Duration),
@@ -585,7 +590,7 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 	switch {
 	case healthcheck.HTTP != nil:
 		httpChecker := &corev3.HealthCheck_HttpHealthCheck{
-			Host: healthcheck.HTTP.Host,
+			Host: httpHealthCheckHost(healthcheck.HTTP, routeHostname),
 			Path: healthcheck.HTTP.Path,
 		}
 		if healthcheck.HTTP.Method != nil {
@@ -616,6 +621,13 @@ func buildXdsHealthCheck(healthcheck *ir.ActiveHealthCheck) []*corev3.HealthChec
 		}
 	}
 	return []*corev3.HealthCheck{hc}
+}
+
+func httpHealthCheckHost(healthcheck *ir.HTTPHealthChecker, routeHostname string) string {
+	if healthcheck.Host != "" {
+		return healthcheck.Host
+	}
+	return routeHostname
 }
 
 func buildXdsOutlierDetection(outlierDetection *ir.OutlierDetection) *clusterv3.OutlierDetection {
@@ -899,7 +911,7 @@ func buildHealthCheckConfig(hc *ir.HealthCheck, ep *ir.DestinationEndpoint) *end
 	}
 }
 
-func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
+func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPConfig, requiresHTTP2Options, requiresAutoSNI, forceHTTP1UpstreamProtocol bool) (map[string]*anypb.Any, []*tlsv3.Secret, error) {
 	requiresCommonHTTPOptions := (args.timeout != nil && args.timeout.HTTP != nil &&
 		(args.timeout.HTTP.MaxConnectionDuration != nil || args.timeout.HTTP.ConnectionIdleTimeout != nil)) ||
 		(args.circuitBreaker != nil && args.circuitBreaker.MaxRequestsPerConnection != nil)
@@ -910,7 +922,7 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	requiresHTTPFilters := len(args.settings) > 0 && args.settings[0].Filters != nil && args.settings[0].Filters.CredentialInjection != nil
 
 	requiredHTTPProtocolOptions := args.useClientProtocol || requiresAutoHTTPConfig ||
-		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI
+		requiresCommonHTTPOptions || requiresHTTP1Options || requiresHTTP2Options || requiresHTTPFilters || requiresAutoSNI || forceHTTP1UpstreamProtocol
 
 	if !requiredHTTPProtocolOptions {
 		return nil, nil, nil
@@ -940,11 +952,21 @@ func buildTypedExtensionProtocolOptions(args *xdsClusterArgs, requiresAutoHTTPCo
 	// If translation requires HTTP2 enablement or HTTP1 trailers, set appropriate setting
 	// Default to http1 otherwise
 	switch {
+	// If useClientProtocol is set, force Envoy to use the same protocol upstream as downstream, regardless of other settings.
 	case args.useClientProtocol:
 		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_UseDownstreamProtocolConfig{
 			UseDownstreamProtocolConfig: &httpv3.HttpProtocolOptions_UseDownstreamHttpConfig{
 				HttpProtocolOptions:  http1Opts,
 				Http2ProtocolOptions: http2Opts,
+			},
+		}
+	// If forceHTTP1UpstreamProtocol is set, force Envoy to use HTTP1 upstream regardless of other settings.
+	case forceHTTP1UpstreamProtocol:
+		protocolOptions.UpstreamProtocolOptions = &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_HttpProtocolOptions{
+					HttpProtocolOptions: http1Opts,
+				},
 			},
 		}
 	case requiresHTTP2Options:
@@ -1281,6 +1303,7 @@ func (httpRoute *HTTPRouteTranslator) asClusterArgs(name string,
 		settings:          settings,
 		tSocket:           nil,
 		endpointType:      buildEndpointType(settings),
+		routeHostname:     httpRoute.Hostname,
 		metrics:           extra.metrics,
 		http1Settings:     extra.http1Settings,
 		http2Settings:     extra.http2Settings,
