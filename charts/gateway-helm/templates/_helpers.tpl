@@ -139,7 +139,7 @@ The name of the Envoy Ratelimit image.
 {{-   $repositoryTag := $imageParts._1 -}}
 {{-   $repositoryParts := splitn ":" 2 $repositoryTag -}}
 {{-   $repositoryName := $repositoryParts._0 -}}
-{{-   $imageTag := default "fe26676d" $repositoryParts._1 -}}
+{{-   $imageTag := default "ff287602" $repositoryParts._1 -}}
 {{-   printf "%s/%s:%s" $registryName $repositoryName $imageTag -}}
 {{- end -}}
 
