@@ -199,7 +199,9 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 	cfg := &httpgeoipv3.Geoip{
 		Provider: provider,
 	}
-	// irListener.ClientIPDetection should never be nil since we've already verified it in the Gateway API translator, just a sanity check
+	// When ClientIPDetection is nil, leave both xff_config and custom_header_config
+	// unset so that Envoy uses its documented default — the downstream connection
+	// source address — to determine the client IP for geolocation lookups.
 	if irListener.ClientIPDetection != nil {
 		switch {
 		case irListener.ClientIPDetection.CustomHeader != nil:

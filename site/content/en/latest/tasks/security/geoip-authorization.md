@@ -254,7 +254,10 @@ kubectl get securitypolicy/authorization-geoip-anonymous -o yaml
 
 ### Enable client IP detection
 
-GeoIP authorization depends on Envoy Gateway correctly detecting the client IP address. Without `ClientTrafficPolicy.spec.clientIPDetection`, the `clientIPGeoLocations` match will not work as intended.
+The geoip filter resolves the client IP in one of two ways:
+
+1. **From a header** — set `ClientTrafficPolicy.spec.clientIPDetection` to use `X-Forwarded-For` (with `numTrustedHops`) or a custom header.
+2. **From the connection** — omit `ClientTrafficPolicy.spec.clientIPDetection`. The geoip filter falls back to Envoy's default: the downstream TCP connection source address. Use this when a transparent L4 load balancer preserves the original client address (e.g. AWS NLB with `target-type: instance` + `externalTrafficPolicy: Local`, Azure Standard Load Balancer).
 
 The following `ClientTrafficPolicy` tells Envoy Gateway to use the `X-Forwarded-For` header and trust one upstream hop:
 
