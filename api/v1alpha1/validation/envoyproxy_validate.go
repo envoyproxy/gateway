@@ -89,14 +89,30 @@ func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, validateServiceErrs...)
 			}
 		case egv1a1.EnvoyProxyProviderTypeHost:
-			if spec.Provider.Host == nil {
-				errs = append(errs, fmt.Errorf("field 'host' should be specified when provider type is 'Host'"))
+			if err := validateHostProvider(spec.Provider.Host); err != nil {
+				errs = append(errs, err)
 			}
 		default:
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 		}
 	}
 	return errs
+}
+
+func validateHostProvider(host *egv1a1.EnvoyProxyHostProvider) error {
+	if host == nil {
+		return errors.New("field 'host' should be specified when provider type is 'Host'")
+	}
+	if host.EnvoyVersion != nil && host.EnvoyPath != nil {
+		return errors.New("only one of envoyVersion or envoyPath can be specified")
+	}
+	if host.EnvoyPath != nil && *host.EnvoyPath == "" {
+		return errors.New("envoyPath must be at least 1 character long")
+	}
+	if host.EnvoyVersion != nil && *host.EnvoyVersion == "" {
+		return errors.New("envoyVersion must be at least 1 character long")
+	}
+	return nil
 }
 
 func validateDeployment(spec *egv1a1.EnvoyProxySpec) []error {

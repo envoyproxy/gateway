@@ -56,6 +56,49 @@ func TestEnvoyProxyProvider(t *testing.T) {
 			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\", \"Host\""},
 		},
 		{
+			desc: "host provider with envoy path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{
+							EnvoyPath: new("/usr/local/bin/envoy"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "host provider with empty envoy path",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{
+							EnvoyPath: new(""),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"should be at least 1 chars long"},
+		},
+		{
+			desc: "host provider with envoy path and version",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{
+							EnvoyPath:    new("/usr/local/bin/envoy"),
+							EnvoyVersion: new("1.2.3"),
+						},
+					},
+				}
+			},
+			wantErrors: []string{"only one of envoyVersion or envoyPath can be specified"},
+		},
+		{
 			desc: "invalid service type",
 			mutate: func(envoy *egv1a1.EnvoyProxy) {
 				envoy.Spec = egv1a1.EnvoyProxySpec{

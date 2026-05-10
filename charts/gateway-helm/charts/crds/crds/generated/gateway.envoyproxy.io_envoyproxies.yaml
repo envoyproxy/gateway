@@ -782,12 +782,22 @@ spec:
                       If unspecified and type is "Host", default settings for the custom provider
                       are applied.
                     properties:
+                      envoyPath:
+                        description: |-
+                          EnvoyPath is the path to a local Envoy binary to run instead of the
+                          default managed version. Use this to test pre-release or custom-built
+                          Envoy binaries in standalone mode.
+                        minLength: 1
+                        type: string
                       envoyVersion:
                         description: |-
                           EnvoyVersion is the version of Envoy to use. If unspecified, the version
                           against which Envoy Gateway is built will be used.
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: only one of envoyVersion or envoyPath can be specified
+                      rule: '!(has(self.envoyVersion) && has(self.envoyPath))'
                   kubernetes:
                     description: |-
                       Kubernetes defines the desired state of the Kubernetes resource provider.

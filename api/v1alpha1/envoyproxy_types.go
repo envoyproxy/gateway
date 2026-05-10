@@ -547,6 +547,8 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyServiceAccount *KubernetesServiceAccountSpec `json:"envoyServiceAccount,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!(has(self.envoyVersion) && has(self.envoyPath))",message="only one of envoyVersion or envoyPath can be specified"
+//
 // EnvoyProxyHostProvider defines configuration for the "Host" resource provider.
 type EnvoyProxyHostProvider struct {
 	// EnvoyVersion is the version of Envoy to use. If unspecified, the version
@@ -554,6 +556,14 @@ type EnvoyProxyHostProvider struct {
 	//
 	// +optional
 	EnvoyVersion *string `json:"envoyVersion,omitempty"`
+
+	// EnvoyPath is the path to a local Envoy binary to run instead of the
+	// default managed version. Use this to test pre-release or custom-built
+	// Envoy binaries in standalone mode.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	EnvoyPath *string `json:"envoyPath,omitempty"`
 }
 
 type KubernetesServiceAccountSpec struct {

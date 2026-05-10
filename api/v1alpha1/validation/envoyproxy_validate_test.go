@@ -90,6 +90,24 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "valid custom provider with envoy path",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.EnvoyProxyProviderTypeHost,
+						Host: &egv1a1.EnvoyProxyHostProvider{
+							EnvoyPath: new("/usr/local/bin/envoy"),
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "nil envoy service",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -836,6 +854,70 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateHostProvider(t *testing.T) {
+	testCases := []struct {
+		name        string
+		host        *egv1a1.EnvoyProxyHostProvider
+		expectedErr string
+	}{
+		{
+			name:        "nil host",
+			host:        nil,
+			expectedErr: "field 'host' should be specified when provider type is 'Host'",
+		},
+		{
+			name: "empty host",
+			host: &egv1a1.EnvoyProxyHostProvider{},
+		},
+		{
+			name: "valid envoy path",
+			host: &egv1a1.EnvoyProxyHostProvider{
+				EnvoyPath: new("/usr/local/bin/envoy"),
+			},
+		},
+		{
+			name: "empty envoy path",
+			host: &egv1a1.EnvoyProxyHostProvider{
+				EnvoyPath: new(""),
+			},
+			expectedErr: "envoyPath must be at least 1 character long",
+		},
+		{
+			name: "empty envoy version",
+			host: &egv1a1.EnvoyProxyHostProvider{
+				EnvoyVersion: new(""),
+			},
+			expectedErr: "envoyVersion must be at least 1 character long",
+		},
+		{
+			name: "envoy version and path",
+			host: &egv1a1.EnvoyProxyHostProvider{
+				EnvoyVersion: new("1.2.3"),
+				EnvoyPath:    new("/usr/local/bin/envoy"),
+			},
+			expectedErr: "only one of envoyVersion or envoyPath can be specified",
+		},
+		{
+			name: "empty envoy version and path",
+			host: &egv1a1.EnvoyProxyHostProvider{
+				EnvoyVersion: new(""),
+				EnvoyPath:    new(""),
+			},
+			expectedErr: "only one of envoyVersion or envoyPath can be specified",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateHostProvider(tc.host)
+			if tc.expectedErr != "" {
+				require.EqualError(t, err, tc.expectedErr)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

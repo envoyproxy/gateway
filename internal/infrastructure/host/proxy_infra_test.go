@@ -8,6 +8,7 @@ package host
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -65,9 +66,9 @@ func newMockInfra(t *testing.T, cfg *config.Server) *Infra {
 		Stdout:        io.Discard,
 		Stderr:        io.Discard,
 		envoyRunner: func(ctx context.Context, _ []string, _ ...func_e_api.RunOption) error {
-			// Block until context is cancelled (mimics real Envoy blocking)
 			<-ctx.Done()
-			return ctx.Err()
+			// func-e returns nil on context cancellation (clean shutdown).
+			return nil
 		},
 		errors: message.RunnerErrorNotifier{RunnerName: t.Name(), RunnerErrors: &message.RunnerErrors{}},
 	}
@@ -80,33 +81,53 @@ func TestInfra_CreateOrUpdateProxyInfra(t *testing.T) {
 	require.NoError(t, err)
 	infra := newMockInfra(t, cfg)
 
-	t.Run("create new proxy", func(t *testing.T) {
-		infraIR := &ir.Infra{
-			Proxy: &ir.ProxyInfra{
-				Name:      "test-proxy",
-				Namespace: "default",
-				Config: &egv1a1.EnvoyProxy{
-					Spec: egv1a1.EnvoyProxySpec{
-						Logging: egv1a1.ProxyLogging{
-							Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
-								egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+	createCases := []struct {
+		name     string
+		provider *egv1a1.EnvoyProxyProvider
+	}{
+		{
+			name: "default provider",
+		},
+		{
+			name: "host provider with envoy path",
+			provider: &egv1a1.EnvoyProxyProvider{
+				Type: egv1a1.EnvoyProxyProviderTypeHost,
+				Host: &egv1a1.EnvoyProxyHostProvider{
+					EnvoyPath: new("/usr/local/bin/envoy"),
+				},
+			},
+		},
+	}
+	for _, tc := range createCases {
+		t.Run(tc.name, func(t *testing.T) {
+			proxyName := "test-" + tc.name
+			infraIR := &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      proxyName,
+					Namespace: "default",
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: tc.provider,
+							Logging: egv1a1.ProxyLogging{
+								Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
+									egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+								},
 							},
 						},
 					},
 				},
-			},
-		}
+			}
 
-		hashedName := utils.GetHashedName("test-proxy", 64)
-		t.Cleanup(func() { infra.stopEnvoy(hashedName) })
+			hashedName := utils.GetHashedName(proxyName, 64)
+			t.Cleanup(func() { infra.stopEnvoy(hashedName) })
 
-		err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
-		require.NoError(t, err)
+			err := infra.CreateOrUpdateProxyInfra(t.Context(), infraIR)
+			require.NoError(t, err)
 
-		// Verify proxy context was stored
-		_, loaded := infra.proxyContextMap.Load(hashedName)
-		require.True(t, loaded, "proxy should be loaded after creation")
-	})
+			_, loaded := infra.proxyContextMap.Load(hashedName)
+			require.True(t, loaded, "proxy should be loaded after creation")
+		})
+	}
 
 	t.Run("idempotent - proxy already exists", func(t *testing.T) {
 		infraIR := &ir.Infra{
@@ -322,7 +343,7 @@ func TestInfra_runEnvoy_integration(t *testing.T) {
 		"--config-yaml",
 		"admin: {address: {socket_address: {address: '127.0.0.1', port_value: 0}}}",
 	}
-	i.runEnvoy(t.Context(), "", "test", args)
+	i.runEnvoy(t.Context(), func_e_api.EnvoyVersion(""), "test", args)
 	_, ok := i.proxyContextMap.Load("test")
 	require.True(t, ok, "expected proxy context to be stored")
 
@@ -363,6 +384,42 @@ func TestInfra_runEnvoy_integration(t *testing.T) {
 	})
 }
 
+func TestInfra_runEnvoy_RemovesProxyOnRunnerExit(t *testing.T) {
+	cfg, err := config.New(io.Discard, io.Discard)
+	require.NoError(t, err)
+	infra := newMockInfra(t, cfg)
+
+	name := "test"
+	boom := errors.New("boom")
+	infra.envoyRunner = func(context.Context, []string, ...func_e_api.RunOption) error {
+		return boom
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+		infra.runEnvoy(t.Context(), func_e_api.EnvoyVersion(""), name, []string{"--version"})
+		synctest.Wait()
+
+		_, ok := infra.proxyContextMap.Load(name)
+		require.False(t, ok, "proxy should be removed after runner exits")
+
+		got, ok := infra.errors.RunnerErrors.Load(t.Name())
+		require.True(t, ok, "runner error should be stored")
+		require.ErrorIs(t, got, boom)
+
+		infra.envoyRunner = func(ctx context.Context, _ []string, _ ...func_e_api.RunOption) error {
+			<-ctx.Done()
+			// func-e returns nil on context cancellation (clean shutdown).
+			return nil
+		}
+		infra.runEnvoy(t.Context(), func_e_api.EnvoyVersion(""), name, []string{"--version"})
+		synctest.Wait()
+
+		_, ok = infra.proxyContextMap.Load(name)
+		require.True(t, ok, "proxy should be restartable after runner exit")
+		infra.stopEnvoy(name)
+	})
+}
+
 func TestInfra_StopStartCycle(t *testing.T) {
 	cfg, err := config.New(io.Discard, io.Discard)
 	require.NoError(t, err)
@@ -375,7 +432,7 @@ func TestInfra_StopStartCycle(t *testing.T) {
 		for i := range 5 {
 			go func(id int) {
 				name := utils.GetHashedName(fmt.Sprintf("test-%d", id), 64)
-				infra.runEnvoy(t.Context(), "", name, []string{"--version"})
+				infra.runEnvoy(t.Context(), func_e_api.EnvoyVersion(""), name, []string{"--version"})
 				_, ok := infra.proxyContextMap.Load(name)
 				require.True(t, ok, "expected proxy context to be stored")
 
@@ -397,7 +454,7 @@ func TestInfra_Close(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		for id := range 5 {
 			name := utils.GetHashedName(fmt.Sprintf("proxy-%d", id), 64)
-			infra.runEnvoy(t.Context(), "", name, []string{"--version"})
+			infra.runEnvoy(t.Context(), func_e_api.EnvoyVersion(""), name, []string{"--version"})
 		}
 
 		// Verify all proxies are running

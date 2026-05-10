@@ -2144,6 +2144,7 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `envoyVersion` | _string_ |  false  |  | EnvoyVersion is the version of Envoy to use. If unspecified, the version<br />against which Envoy Gateway is built will be used. |
+| `envoyPath` | _string_ |  false  |  | EnvoyPath is the path to a local Envoy binary to run instead of the<br />default managed version. Use this to test pre-release or custom-built<br />Envoy binaries in standalone mode. |
 
 
 #### EnvoyProxyKubernetesProvider

@@ -101,23 +101,32 @@ func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) e
 	if err != nil {
 		return err
 	}
-	i.runEnvoy(ctx, i.getEnvoyVersion(proxyConfig), proxyName, args)
+	var envoyOpt func_e_api.RunOption
+	if path := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyHostProvider().GetEnvoyPath(); path != "" {
+		envoyOpt = func_e_api.EnvoyPath(path)
+	} else {
+		envoyOpt = func_e_api.EnvoyVersion(i.getEnvoyVersion(proxyConfig))
+	}
+	i.runEnvoy(ctx, envoyOpt, proxyName, args)
 	return nil
 }
 
 // runEnvoy runs the Envoy process with the given arguments and name in a separate goroutine.
-func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []string) {
+func (i *Infra) runEnvoy(ctx context.Context, envoyOpt func_e_api.RunOption, name string, args []string) {
 	// #nosec G118 - cancel is stored in proxyContextMap and called later to stop the Envoy process
 	pCtx, cancel := context.WithCancel(ctx)
 	exit := make(chan struct{}, 1)
-	i.proxyContextMap.Store(name, &proxyContext{cancel: cancel, exit: exit})
+	proxyCtx := &proxyContext{cancel: cancel, exit: exit}
+	i.proxyContextMap.Store(name, proxyCtx)
 	go func() {
 		// Run blocks until pCtx is done or the process exits where the latter doesn't happen when
 		// Envoy successfully starts up. So, this will not return until pCtx is done in practice.
 		defer func() {
+			// So failed starts don't prevent retries on the same name.
+			i.proxyContextMap.CompareAndDelete(name, proxyCtx)
 			exit <- struct{}{}
 		}()
-		err := i.envoyRunner(pCtx, args,
+		options := []func_e_api.RunOption{
 			func_e_api.ConfigHome(i.Paths.ConfigHome),
 			func_e_api.DataHome(i.Paths.DataHome),
 			func_e_api.StateHome(i.Paths.StateHome),
@@ -125,7 +134,9 @@ func (i *Infra) runEnvoy(ctx context.Context, envoyVersion, name string, args []
 			func_e_api.Out(i.Stdout),
 			func_e_api.EnvoyOut(i.Stdout),
 			func_e_api.EnvoyErr(i.Stderr),
-			func_e_api.EnvoyVersion(envoyVersion))
+			envoyOpt,
+		}
+		err := i.envoyRunner(pCtx, args, options...)
 		if err != nil {
 			i.Logger.Error(err, "failed to run envoy")
 			// If the Envoy process fails to start, notify an unrecoverable error so that the main control
@@ -160,8 +171,6 @@ func (i *Infra) stopEnvoy(proxyName string) {
 
 // getEnvoyVersion returns the version of Envoy to use.
 func (i *Infra) getEnvoyVersion(proxyConfig *egv1a1.EnvoyProxy) string {
-	// Note these helper functions gracefully handle nil pointer dereferencing, so it's safe to
-	// chain method calls.
 	version := proxyConfig.GetEnvoyProxyProvider().GetEnvoyProxyHostProvider().GetEnvoyVersion()
 	if version == "" {
 		// If the version is not explicitly set, use the default version EG is built with.

@@ -136,6 +136,14 @@ func (e *EnvoyProxyHostProvider) GetEnvoyVersion() string {
 	return *e.EnvoyVersion
 }
 
+// GetEnvoyPath returns the path to the Envoy binary to use.
+func (e *EnvoyProxyHostProvider) GetEnvoyPath() string {
+	if e == nil || e.EnvoyPath == nil {
+		return ""
+	}
+	return *e.EnvoyPath
+}
+
 // DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
 // If unspecified, defaults to "warn". When specified, all other logging components are ignored.
 func (logging *ProxyLogging) DefaultEnvoyProxyLoggingLevel() LogLevel {

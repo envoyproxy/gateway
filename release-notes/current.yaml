@@ -9,6 +9,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added envoyPath to the Host infrastructure provider, allowing standalone deployments to run a custom or pre-release Envoy binary.
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
