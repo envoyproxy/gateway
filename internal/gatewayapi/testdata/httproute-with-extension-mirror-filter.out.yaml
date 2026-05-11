@@ -214,7 +214,6 @@ xdsIR:
           namespace: default
         mirrors:
         - clusterHeader: x-shadow-cluster
-          disableShadowHostSuffixAppend: false
           percentage: 50
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:

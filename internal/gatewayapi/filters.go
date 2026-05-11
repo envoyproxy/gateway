@@ -77,6 +77,9 @@ var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 // Gateway API HTTPHeaderName intentionally does not.
 var mirrorClusterHeaderNameRegexp = regexp.MustCompile("^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$|^:[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$")
 
+// Visible-ASCII without spaces, matching the CRD pattern on hostRewriteLiteral.
+var mirrorHostRewriteLiteralRegexp = regexp.MustCompile(`^[!-~]+$`)
+
 const (
 	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
 	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
@@ -85,15 +88,20 @@ const (
 )
 
 type requestMirrorFilterConfig struct {
-	BackendRef                      *gwapiv1.BackendObjectReference
-	ClusterHeader                   *string
-	Percent                         *int32
-	Fraction                        *gwapiv1.Fraction
-	TraceSampled                    *bool
-	DisableShadowHostSuffixAppend   *bool
-	RequestHeadersMutations         *egv1a1.HTTPHeaderFilter
-	HostRewriteLiteral              *string
-	InvalidFilterKindForStatusError string
+	BackendRef                    *gwapiv1.BackendObjectReference
+	ClusterHeader                 *string
+	Percent                       *int32
+	Fraction                      *gwapiv1.Fraction
+	TraceSampled                  *bool
+	DisableShadowHostSuffixAppend *bool
+	RequestHeadersMutations       *egv1a1.HTTPHeaderFilter
+	HostRewriteLiteral            *string
+	// ExtensionRefKind, when non-empty, identifies the extension-ref kind that
+	// owns this mirror filter. Errors are then reported via
+	// processInvalidHTTPFilter against that kind. Empty means the call came
+	// from the core Gateway API mirror filter and errors flow through
+	// status.NewRouteStatusError.
+	ExtensionRefKind string
 }
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
@@ -1003,22 +1011,18 @@ func (t *Translator) processExtensionRefHTTPFilter(filterIdx int, extFilter *gwa
 				}
 
 				if hrf.Spec.RequestMirror != nil {
-					disableShadowHostSuffixAppend := hrf.Spec.RequestMirror.DisableShadowHostSuffixAppend
-					if disableShadowHostSuffixAppend == nil {
-						disableShadowHostSuffixAppend = ptr.To(false)
-					}
 					if err := t.processRequestMirrorFilterConfig(
 						filterIdx,
 						requestMirrorFilterConfig{
-							BackendRef:                      hrf.Spec.RequestMirror.BackendRef,
-							ClusterHeader:                   hrf.Spec.RequestMirror.ClusterHeader,
-							Percent:                         hrf.Spec.RequestMirror.Percent,
-							Fraction:                        hrf.Spec.RequestMirror.Fraction,
-							TraceSampled:                    hrf.Spec.RequestMirror.TraceSampled,
-							DisableShadowHostSuffixAppend:   disableShadowHostSuffixAppend,
-							RequestHeadersMutations:         hrf.Spec.RequestMirror.RequestHeadersMutations,
-							HostRewriteLiteral:              hrf.Spec.RequestMirror.HostRewriteLiteral,
-							InvalidFilterKindForStatusError: string(extFilter.Kind),
+							BackendRef:                    hrf.Spec.RequestMirror.BackendRef,
+							ClusterHeader:                 hrf.Spec.RequestMirror.ClusterHeader,
+							Percent:                       hrf.Spec.RequestMirror.Percent,
+							Fraction:                      hrf.Spec.RequestMirror.Fraction,
+							TraceSampled:                  hrf.Spec.RequestMirror.TraceSampled,
+							DisableShadowHostSuffixAppend: hrf.Spec.RequestMirror.DisableShadowHostSuffixAppend,
+							RequestHeadersMutations:       hrf.Spec.RequestMirror.RequestHeadersMutations,
+							HostRewriteLiteral:            hrf.Spec.RequestMirror.HostRewriteLiteral,
+							ExtensionRefKind:              string(extFilter.Kind),
 						},
 						filterContext,
 						resources,
@@ -1176,14 +1180,13 @@ func (t *Translator) processRequestMirrorFilterConfig(
 		percent = new(float32(*p))
 	}
 
+	// Run our stricter Host/pseudo-header pass first; translateHeaderModifier
+	// below applies the Gateway API rule (rejects "/" and ":") but does not
+	// reject the Host header, which Envoy disallows in mirror header mutations.
+	// The early return prevents double-reporting headers that also violate the
+	// Gateway API rule.
 	if headerErr := validateMirrorRequestHeaderMutations(mirrorFilter.RequestHeadersMutations); headerErr != nil {
-		if mirrorFilter.InvalidFilterKindForStatusError != "" {
-			return t.processInvalidHTTPFilter(mirrorFilter.InvalidFilterKindForStatusError, filterContext, headerErr)
-		}
-		return status.NewRouteStatusError(
-			headerErr,
-			gwapiv1.RouteReasonUnsupportedValue,
-		).WithType(gwapiv1.RouteConditionAccepted)
+		return mirrorFilter.statusError(t, filterContext, headerErr)
 	}
 
 	addHeaders, removeHeaders, removeHeadersOnMatch, headerErr := translateHeaderModifier(
@@ -1191,13 +1194,7 @@ func (t *Translator) processRequestMirrorFilterConfig(
 		"RequestMirror requestHeadersMutations",
 	)
 	if headerErr != nil {
-		if mirrorFilter.InvalidFilterKindForStatusError != "" {
-			return t.processInvalidHTTPFilter(mirrorFilter.InvalidFilterKindForStatusError, filterContext, headerErr)
-		}
-		return status.NewRouteStatusError(
-			headerErr,
-			gwapiv1.RouteReasonUnsupportedValue,
-		).WithType(gwapiv1.RouteConditionAccepted)
+		return mirrorFilter.statusError(t, filterContext, headerErr)
 	}
 
 	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{
@@ -1212,6 +1209,20 @@ func (t *Translator) processRequestMirrorFilterConfig(
 		HostRewriteLiteral:            mirrorFilter.HostRewriteLiteral,
 	})
 	return nil
+}
+
+// statusError routes errors through processInvalidHTTPFilter when the mirror
+// filter came from an extension ref (so the status is attached to the
+// extension filter kind), and falls back to a route-level Accepted=False
+// otherwise.
+func (c *requestMirrorFilterConfig) statusError(t *Translator, filterContext *HTTPFiltersContext, err error) status.Error {
+	if c.ExtensionRefKind != "" {
+		return t.processInvalidHTTPFilter(c.ExtensionRefKind, filterContext, err)
+	}
+	return status.NewRouteStatusError(
+		err,
+		gwapiv1.RouteReasonUnsupportedValue,
+	).WithType(gwapiv1.RouteConditionAccepted)
 }
 
 func validateMirrorClusterHeader(value string) error {
@@ -1234,10 +1245,8 @@ func validateMirrorHostRewriteLiteral(value string) error {
 	if len(value) > mirrorHostRewriteLiteralMaxLength {
 		return fmt.Errorf("RequestMirror filter hostRewriteLiteral must be no more than %d characters", mirrorHostRewriteLiteralMaxLength)
 	}
-	for _, r := range value {
-		if r < '!' || r > '~' {
-			return errors.New("RequestMirror filter hostRewriteLiteral must contain only visible ASCII characters without spaces")
-		}
+	if !mirrorHostRewriteLiteralRegexp.MatchString(value) {
+		return errors.New("RequestMirror filter hostRewriteLiteral must contain only visible ASCII characters without spaces")
 	}
 	return nil
 }
@@ -1270,6 +1279,12 @@ func validateMirrorRequestHeaderMutations(headerModifier *egv1a1.HTTPHeaderFilte
 	}
 	for _, header := range headerModifier.Remove {
 		validateHeader("remove", header)
+	}
+	// Match values can target pseudo-headers or Host indirectly, so apply the
+	// same restriction to the matcher value regardless of match type. A Prefix
+	// like ":" or a Suffix of "host" would otherwise bypass the guards above.
+	for _, match := range headerModifier.RemoveOnMatch {
+		validateHeader("removeOnMatch", match.Value)
 	}
 
 	return errs

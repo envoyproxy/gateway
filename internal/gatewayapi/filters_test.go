@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -141,6 +142,38 @@ func TestValidateMirrorRequestHeaderMutations(t *testing.T) {
 				Remove: []string{":authority"},
 			},
 			wantErr: "headers with a '/' or ':' character",
+		},
+		{
+			name: "removeOnMatch exact host",
+			filter: &egv1a1.HTTPHeaderFilter{
+				RemoveOnMatch: []egv1a1.StringMatch{
+					{Value: "Host"},
+				},
+			},
+			wantErr: "To modify the Host header use hostRewriteLiteral",
+		},
+		{
+			name: "removeOnMatch prefix pseudo-header",
+			filter: &egv1a1.HTTPHeaderFilter{
+				RemoveOnMatch: []egv1a1.StringMatch{
+					{
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
+						Value: ":",
+					},
+				},
+			},
+			wantErr: "headers with a '/' or ':' character",
+		},
+		{
+			name: "removeOnMatch safe prefix",
+			filter: &egv1a1.HTTPHeaderFilter{
+				RemoveOnMatch: []egv1a1.StringMatch{
+					{
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
+						Value: "x-shadow-",
+					},
+				},
+			},
 		},
 	}
 
