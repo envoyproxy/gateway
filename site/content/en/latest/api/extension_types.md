@@ -883,7 +883,7 @@ _Appears in:_
 
 ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 
-Exactly one of XForwardedFor, CustomHeader, or DownstreamRemoteAddress must be set.
+Exactly one of XForwardedFor, CustomHeader, or DirectRemoteAddress must be set.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
@@ -892,7 +892,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  |  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
-| `downstreamRemoteAddress` | _[DownstreamRemoteAddressSettings](#downstreamremoteaddresssettings)_ |  false  |  | DownstreamRemoteAddress configures the geoip filter to use the downstream connection<br />source address (the TCP peer of the connection terminated by Envoy) as the client IP.<br />Use this in L4-transparent topologies where a load balancer preserves the original<br />client source IP at TCP level and does not populate XFF or a custom header — for<br />example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or<br />Azure Standard Load Balancer.<br />Mutually exclusive with XForwardedFor and CustomHeader. |
+| `directRemoteAddress` | _[DirectRemoteAddressSettings](#downstreamremoteaddresssettings)_ |  false  |  | DirectRemoteAddress configures the geoip filter to use the downstream connection<br />source address (the TCP peer of the connection terminated by Envoy) as the client IP.<br />Use this in L4-transparent topologies where a load balancer preserves the original<br />client source IP at TCP level and does not populate XFF or a custom header — for<br />example, AWS NLB with target-type=instance + externalTrafficPolicy=Local, or<br />Azure Standard Load Balancer.<br />Mutually exclusive with XForwardedFor and CustomHeader. |
 
 
 #### ClientIPGeoLocation
@@ -1430,11 +1430,11 @@ _Appears in:_
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
 
 
-#### DownstreamRemoteAddressSettings
+#### DirectRemoteAddressSettings
 
 
 
-DownstreamRemoteAddressSettings configures client IP detection from the downstream
+DirectRemoteAddressSettings configures client IP detection from the downstream
 connection source address. It currently has no fields; its presence opts the listener
 into using the TCP peer address as the client IP.
 

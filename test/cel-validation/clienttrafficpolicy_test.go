@@ -241,7 +241,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
+				": exactly one of xForwardedFor, customHeader, or directRemoteAddress must be set",
 			},
 		},
 		{
@@ -262,11 +262,11 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
+				": exactly one of xForwardedFor, customHeader, or directRemoteAddress must be set",
 			},
 		},
 		{
-			desc: "clientIPDetection downstreamRemoteAddress accepted",
+			desc: "clientIPDetection directRemoteAddress accepted",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -279,14 +279,14 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
-						DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+						DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
 					},
 				}
 			},
 			wantErrors: []string{},
 		},
 		{
-			desc: "clientIPDetection xForwardedFor and downstreamRemoteAddress set",
+			desc: "clientIPDetection xForwardedFor and directRemoteAddress set",
 			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
 				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
 					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
@@ -302,13 +302,13 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 						XForwardedFor: &egv1a1.XForwardedForSettings{
 							NumTrustedHops: new(uint32(1)),
 						},
-						DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+						DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
 					},
 				}
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
+				": exactly one of xForwardedFor, customHeader, or directRemoteAddress must be set",
 			},
 		},
 		{

@@ -1,7 +1,7 @@
 http:
 - address: 0.0.0.0
   clientIPDetection:
-    downstreamRemoteAddress: {}
+    directRemoteAddress: {}
   geoIPProvider:
     maxMind:
       anonymousIpDbPath: /db/GeoIP2-Anonymous-IP.mmdb

@@ -38,7 +38,7 @@ const (
 	descriptorKeyMaskedRemoteAddress               = "masked_remote_address"
 	descriptorKeyRemoteAddress                     = "remote_address"
 	descriptorValueInvertPrefix                    = "invert:"
-	downstreamRemoteAddressWithoutPortCelFormatter = "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
+	directRemoteAddressWithoutPortCelFormatter = "%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -536,7 +536,7 @@ func buildDistinctCIDRMatchRateLimitAction(cidrMatch *ir.CIDRMatch, descriptorKe
 		ActionSpecifier: &routev3.RateLimit_Action_RemoteAddressMatch_{
 			RemoteAddressMatch: &routev3.RateLimit_Action_RemoteAddressMatch{
 				DescriptorKey:   descriptorKey,
-				DescriptorValue: downstreamRemoteAddressWithoutPortCelFormatter, // CEL formatter to get source IP
+				DescriptorValue: directRemoteAddressWithoutPortCelFormatter, // CEL formatter to get source IP
 				AddressMatcher:  buildCIDRRateLimitActionAddressMatcher(cidrMatch.AddressPrefix(), cidrMatch.MaskLen, cidrMatch.Invert),
 			},
 		},

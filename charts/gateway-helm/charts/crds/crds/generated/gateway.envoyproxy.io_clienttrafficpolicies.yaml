@@ -76,9 +76,9 @@ spec:
                     required:
                     - name
                     type: object
-                  downstreamRemoteAddress:
+                  directRemoteAddress:
                     description: |-
-                      DownstreamRemoteAddress configures the geoip filter to use the downstream connection
+                      DirectRemoteAddress configures the geoip filter to use the downstream connection
                       source address (the TCP peer of the connection terminated by Envoy) as the client IP.
 
                       Use this in L4-transparent topologies where a load balancer preserves the original
@@ -142,9 +142,9 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress
+                - message: exactly one of xForwardedFor, customHeader, or directRemoteAddress
                     must be set
-                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x,
+                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.directRemoteAddress)].filter(x,
                     x).size() == 1'
               connection:
                 description: Connection includes client connection settings.
