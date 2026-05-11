@@ -150,7 +150,6 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
-      kubernetes: {}
     logging:
       level:
         default: info
