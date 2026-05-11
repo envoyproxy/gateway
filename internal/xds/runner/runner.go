@@ -195,14 +195,15 @@ func (r *Runner) Start(ctx context.Context) error {
 			saAudience,
 		)
 
-		creds, err := credentials.NewServerTLSFromFile(xdsTLSCertFilepath, xdsTLSKeyFilepath)
+		// Re-read the cert from disk on every handshake, mirroring the default mode above.
+		serverTLSConfig, err := crypto.LoadServerTLSConfig(xdsTLSCertFilepath, xdsTLSKeyFilepath)
 		if err != nil {
-			return fmt.Errorf("failed to create TLS credentials: %w", err)
+			return fmt.Errorf("failed to load server TLS config: %w", err)
 		}
 
 		grpcOpts = append([]grpc.ServerOption{}, baseKeepaliveOptions...)
 		grpcOpts = append(grpcOpts,
-			grpc.Creds(creds),
+			grpc.Creds(credentials.NewTLS(serverTLSConfig)),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
 		)
 	}
