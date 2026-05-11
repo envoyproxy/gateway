@@ -81,6 +81,7 @@ var (
 	ErrBothNumTrustedHopsAndTrustedCIDRsInvalid = errors.New("only one of ClientIPDetection.XForwardedFor.NumTrustedHops and ClientIPDetection.XForwardedFor.TrustedCIDRs must be set")
 	ErrPanicThresholdInvalid                    = errors.New("PanicThreshold value is outside of 0-100 range")
 	ErrCredentialInjectionCredentialEmpty       = errors.New("field CredentialInjection.Credential must be specified")
+	ErrMirrorPolicyTargetEmpty                  = errors.New("mirror policy must specify Destination or ClusterHeader")
 
 	redacted = []byte("[redacted]")
 )
@@ -1832,6 +1833,16 @@ func (h *HTTPRoute) Validate() error {
 	}
 	if h.Mirrors != nil {
 		for _, mirror := range h.Mirrors {
+			if mirror == nil {
+				errs = errors.Join(errs, ErrMirrorPolicyTargetEmpty)
+				continue
+			}
+			if mirror.Destination == nil {
+				if mirror.ClusterHeader == nil {
+					errs = errors.Join(errs, ErrMirrorPolicyTargetEmpty)
+				}
+				continue
+			}
 			if err := mirror.Destination.Validate(); err != nil {
 				errs = errors.Join(errs, err)
 			}

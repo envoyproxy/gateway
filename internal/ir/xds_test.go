@@ -930,6 +930,36 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: requestMirrorFilter,
 			want:  nil,
 		},
+		{
+			name: "mirror-filter-cluster-header",
+			input: HTTPRoute{
+				Name:     "mirrorfilter",
+				Hostname: "*",
+				PathMatch: &StringMatch{
+					Exact: new("mirrorfilter"),
+				},
+				Mirrors: []*MirrorPolicy{
+					{
+						ClusterHeader: new("x-shadow-cluster"),
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "mirror-filter-missing-target",
+			input: HTTPRoute{
+				Name:     "mirrorfilter",
+				Hostname: "*",
+				PathMatch: &StringMatch{
+					Exact: new("mirrorfilter"),
+				},
+				Mirrors: []*MirrorPolicy{
+					{},
+				},
+			},
+			want: []error{ErrMirrorPolicyTargetEmpty},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
