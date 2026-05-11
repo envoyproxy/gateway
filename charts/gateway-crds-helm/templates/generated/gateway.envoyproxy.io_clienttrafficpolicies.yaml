@@ -143,10 +143,10 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: only one of xForwardedFor, customHeader, or downstreamRemoteAddress
-                    may be set
+                - message: exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress
+                    must be set
                   rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x,
-                    x).size() <= 1'
+                    x).size() == 1'
               connection:
                 description: Connection includes client connection settings.
                 properties:

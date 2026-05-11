@@ -883,7 +883,7 @@ _Appears in:_
 
 ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 
-Exactly one of XForwardedFor, CustomHeader, or DownstreamRemoteAddress should be set.
+Exactly one of XForwardedFor, CustomHeader, or DownstreamRemoteAddress must be set.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)

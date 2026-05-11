@@ -1354,6 +1354,27 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
 		},
 		{
+			name:          "empty client ip detection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{},
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,downstreamRemoteAddress}",
+		},
+		{
+			name:          "multiple client ip detection modes rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				CustomHeader:            &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+			},
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,downstreamRemoteAddress}",
+		},
+		{
 			name:          "downstream remote address accepted",
 			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{

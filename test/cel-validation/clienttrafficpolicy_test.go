@@ -241,7 +241,28 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": only one of xForwardedFor, customHeader, or downstreamRemoteAddress may be set",
+				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
+			},
+		},
+		{
+			desc: "clientIPDetection empty object rejected",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{},
+				}
+			},
+			wantErrors: []string{
+				"spec.clientIPDetection: Invalid value:",
+				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
 			},
 		},
 		{
@@ -287,7 +308,7 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": only one of xForwardedFor, customHeader, or downstreamRemoteAddress may be set",
+				": exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set",
 			},
 		},
 		{
