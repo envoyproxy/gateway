@@ -241,7 +241,53 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			},
 			wantErrors: []string{
 				"spec.clientIPDetection: Invalid value:",
-				": customHeader cannot be used in conjunction with xForwardedFor",
+				": only one of xForwardedFor, customHeader, or downstreamRemoteAddress may be set",
+			},
+		},
+		{
+			desc: "clientIPDetection downstreamRemoteAddress accepted",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "clientIPDetection xForwardedFor and downstreamRemoteAddress set",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					PolicyTargetReferences: egv1a1.PolicyTargetReferences{
+						TargetRef: &gwapiv1.LocalPolicyTargetReferenceWithSectionName{
+							LocalPolicyTargetReference: gwapiv1.LocalPolicyTargetReference{
+								Group: gwapiv1.Group("gateway.networking.k8s.io"),
+								Kind:  gwapiv1.Kind("Gateway"),
+								Name:  gwapiv1.ObjectName("eg"),
+							},
+						},
+					},
+					ClientIPDetection: &egv1a1.ClientIPDetectionSettings{
+						XForwardedFor: &egv1a1.XForwardedForSettings{
+							NumTrustedHops: new(uint32(1)),
+						},
+						DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.clientIPDetection: Invalid value:",
+				": only one of xForwardedFor, customHeader, or downstreamRemoteAddress may be set",
 			},
 		},
 		{

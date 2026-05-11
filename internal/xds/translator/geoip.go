@@ -199,9 +199,10 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 	cfg := &httpgeoipv3.Geoip{
 		Provider: provider,
 	}
-	// When ClientIPDetection is nil, leave both xff_config and custom_header_config
-	// unset so that Envoy uses its documented default — the downstream connection
-	// source address — to determine the client IP for geolocation lookups.
+	// ClientIPDetection selects the geoip filter's IP source. Note: when
+	// DownstreamRemoteAddress is set, both xff_config and custom_header_config
+	// are intentionally left unset so that Envoy uses its documented default —
+	// the immediate downstream connection source address.
 	if irListener.ClientIPDetection != nil {
 		switch {
 		case irListener.ClientIPDetection.CustomHeader != nil:
@@ -212,6 +213,9 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 			cfg.XffConfig = &httpgeoipv3.Geoip_XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(irListener.ClientIPDetection),
 			}
+		case irListener.ClientIPDetection.DownstreamRemoteAddress != nil:
+			// No xff_config or custom_header_config: Envoy falls back to the
+			// downstream connection source address.
 		}
 	}
 

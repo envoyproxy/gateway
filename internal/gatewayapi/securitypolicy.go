@@ -2507,13 +2507,11 @@ func validateAuthorizationGeoIP(
 	envoyProxy *egv1a1.EnvoyProxy,
 	clientIPDetection *ir.ClientIPDetectionSettings,
 ) (*ir.GeoIPProvider, error) {
-	// When clientIPDetection is nil, the geoip filter will be emitted without
-	// xff_config or custom_header_config. Envoy then falls back to its documented
-	// default: the immediate downstream connection source address. This is the
-	// correct client IP in L4-transparent topologies (e.g. AWS NLB with
-	// target-type=instance + externalTrafficPolicy=Local, Azure Standard LB).
-	if clientIPDetection != nil &&
-		clientIPDetection.XForwardedFor != nil &&
+	if clientIPDetection == nil {
+		return nil, errors.New("authorization clientIPGeoLocations requires ClientTrafficPolicy.spec.clientIPDetection to be configured")
+	}
+
+	if clientIPDetection.XForwardedFor != nil &&
 		len(clientIPDetection.XForwardedFor.TrustedCIDRs) > 0 {
 		return nil, errors.New("authorization clientIPGeoLocations does not support ClientIPDetection.XForwardedFor.TrustedCIDRs")
 	}
