@@ -1388,11 +1388,22 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 			wantErr:           "requires EnvoyProxy.spec.geoIP.provider to be configured",
 		},
 		{
-			name:          "missing client ip detection accepted (defaults to downstream connection source address)",
+			name:          "missing client ip detection rejected",
 			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
 			}),
+			wantErr: "requires ClientTrafficPolicy.spec.clientIPDetection to be configured",
+		},
+		{
+			name:          "downstream remote address accepted",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{
+				DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+			},
 			wantProvider: true,
 		},
 		{
