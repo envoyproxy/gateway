@@ -1369,13 +1369,13 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{
-				CustomHeader:            &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+				CustomHeader:        &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
 				DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
 			},
 			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}",
 		},
 		{
-			name:          "downstream remote address accepted",
+			name:          "direct remote address accepted",
 			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
 			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
 				CountryDBSource: countryDB,
