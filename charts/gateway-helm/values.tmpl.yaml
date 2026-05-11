@@ -85,6 +85,9 @@ deployment:
     #       claimName: envoy-gateway-wasm-cache
     strategy: {}
     wasmCacheVolume: {}
+    # Kubernetes best practice for controllers: use a startupProbe with a generous
+    # failure threshold to avoid premature liveness/readiness failures during initialization.
+    # Ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-startup-probes
     startupProbe:
       httpGet:
         path: /healthz
