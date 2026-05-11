@@ -281,8 +281,8 @@ const (
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
-// Exactly one of XForwardedFor, CustomHeader, or DownstreamRemoteAddress should be set.
-// +kubebuilder:validation:XValidation:rule="[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x, x).size() <= 1",message="only one of xForwardedFor, customHeader, or downstreamRemoteAddress may be set"
+// Exactly one of XForwardedFor, CustomHeader, or DownstreamRemoteAddress must be set.
+// +kubebuilder:validation:XValidation:rule="[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x, x).size() == 1",message="exactly one of xForwardedFor, customHeader, or downstreamRemoteAddress must be set"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
