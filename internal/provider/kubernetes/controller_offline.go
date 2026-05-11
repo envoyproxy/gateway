@@ -190,6 +190,7 @@ func newOfflineGatewayAPIClient(extensionPolicies []schema.GroupVersionKind) cli
 		WithIndex(&egv1a1.Backend{}, clusterTrustBundleBackendIndex, clusterTrustBundleBackendIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, configMapHTTPRouteFilterIndex, configMapRouteFilterIndexFunc).
 		WithIndex(&egv1a1.HTTPRouteFilter{}, secretHTTPRouteFilterIndex, secretRouteFilterIndexFunc).
+		WithIndex(&egv1a1.HTTPRouteFilter{}, backendHTTPRouteFilterIndex, backendHTTPRouteFilterIndexFunc).
 		WithIndex(&gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, getReferenceGrantIndexerFunc).
 		Build()
 }

@@ -410,6 +410,11 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 				if !resourceMap.allAssociatedHTTPRouteExtensionFilters.Has(key) {
 					r.processRouteFilterConfigMapRef(ctx, httpFilter, resourceMap, resourceTree)
 					r.processRouteFilterSecretRef(ctx, httpFilter, resourceMap, resourceTree)
+					if err := r.processHTTPRouteFilterBackendRefs(ctx, httpFilter, httpRoute, resourceMap, resourceTree); err != nil {
+						r.log.Error(err,
+							"failed to process BackendRef for HTTPRouteFilter",
+							"httpRoute", httpRoute, "httpRouteFilter", httpFilter)
+					}
 					resourceMap.allAssociatedHTTPRouteExtensionFilters.Insert(key)
 					resourceTree.HTTPRouteFilters = append(resourceTree.HTTPRouteFilters, httpFilter)
 				}
@@ -427,6 +432,41 @@ func (r *gatewayAPIReconciler) processHTTPRouteFilter(
 		}
 	}
 	return nil
+}
+
+func (r *gatewayAPIReconciler) processHTTPRouteFilterBackendRefs(
+	ctx context.Context,
+	httpFilter *egv1a1.HTTPRouteFilter,
+	httpRoute *gwapiv1.HTTPRoute,
+	resourceMap *resourceMappings,
+	resourceTree *resource.Resources,
+) error {
+	if httpFilter.Spec.RequestMirror == nil || httpFilter.Spec.RequestMirror.BackendRef == nil {
+		return nil
+	}
+
+	weight := int32(1)
+	mirrorBackendRef := gwapiv1.BackendRef{
+		BackendObjectReference: *httpFilter.Spec.RequestMirror.BackendRef,
+		Weight:                 &weight,
+	}
+
+	mirrorBackendRefKind := gatewayapi.KindDerefOr(mirrorBackendRef.Kind, resource.KindService)
+	if !r.isCustomBackendResource(mirrorBackendRef.Group, mirrorBackendRefKind) {
+		if err := validateBackendRef(&mirrorBackendRef); err != nil {
+			return fmt.Errorf("invalid backendRef for HTTPRouteFilter requestMirror filter: %w", err)
+		}
+	}
+
+	return r.processBackendRef(
+		ctx,
+		resourceMap,
+		resourceTree,
+		resource.KindHTTPRoute,
+		httpRoute.Namespace,
+		httpRoute.Name,
+		mirrorBackendRef.BackendObjectReference,
+	)
 }
 
 // processTCPRoute processes a single TCPRoute, performing namespace label checks,

@@ -3049,6 +3049,7 @@ multiple values for a header must use RFC 7230 header value formatting,
 separating each value with a comma.
 
 _Appears in:_
+- [HTTPRequestMirrorFilter](#httprequestmirrorfilter)
 - [HeaderSettings](#headersettings)
 
 | Field | Type | Required | Default | Description |
@@ -3119,6 +3120,29 @@ _Appears in:_
 | `ReplaceRegexMatch` | RegexHTTPPathModifier This type of modifier indicates that the portions of the path that match the specified<br /> regex would be substituted with the specified substitution value<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/type/matcher/v3/regex.proto#type-matcher-v3-regexmatchandsubstitute<br /> | 
 
 
+#### HTTPRequestMirrorFilter
+
+
+
+HTTPRequestMirrorFilter defines request mirroring configuration for an
+HTTPRouteFilter. It extends Gateway API request mirroring with Envoy-specific
+mirror policy options.
+
+_Appears in:_
+- [HTTPRouteFilterSpec](#httproutefilterspec)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `backendRef` | _[BackendObjectReference](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#backendobjectreference)_ |  false  |  | BackendRef references a resource where mirrored requests are sent. |
+| `clusterHeader` | _string_ |  false  |  | ClusterHeader is the request header used to determine the target cluster<br />for mirrored requests. Envoy uses only the first value for this header. |
+| `percent` | _integer_ |  false  |  | Percent represents the percentage of requests that should be mirrored.<br />Its minimum value is 0 and its maximum value is 100.<br />Only one of Fraction or Percent may be specified. If neither field is<br />specified, 100% of requests will be mirrored. |
+| `fraction` | _[Fraction](https://gateway-api.sigs.k8s.io/reference/1.5/spec/#fraction)_ |  false  |  | Fraction represents the fraction of requests that should be mirrored.<br />Only one of Fraction or Percent may be specified. If neither field is<br />specified, 100% of requests will be mirrored. |
+| `traceSampled` | _boolean_ |  false  |  | TraceSampled specifies whether the trace span for the mirrored request<br />should be sampled. If not set, Envoy inherits the parent span sampling<br />decision. |
+| `disableShadowHostSuffixAppend` | _boolean_ |  false  |  | DisableShadowHostSuffixAppend disables appending the "-shadow" suffix to<br />the mirrored Host header. |
+| `requestHeadersMutations` | _[HTTPHeaderFilter](#httpheaderfilter)_ |  false  |  | RequestHeadersMutations defines header mutations applied to each mirrored<br />request. |
+| `hostRewriteLiteral` | _string_ |  false  |  | HostRewriteLiteral rewrites the Host header during mirroring. |
+
+
 #### HTTPRouteFilter
 
 
@@ -3150,6 +3174,7 @@ _Appears in:_
 | `urlRewrite` | _[HTTPURLRewriteFilter](#httpurlrewritefilter)_ |  false  |  |  |
 | `directResponse` | _[HTTPDirectResponseFilter](#httpdirectresponsefilter)_ |  false  |  |  |
 | `credentialInjection` | _[HTTPCredentialInjectionFilter](#httpcredentialinjectionfilter)_ |  false  |  |  |
+| `requestMirror` | _[HTTPRequestMirrorFilter](#httprequestmirrorfilter)_ |  false  |  |  |
 | `matches` | _[HTTPRouteMatchFilter](#httproutematchfilter) array_ |  false  |  | Matches defines additional matching criteria for the HTTPRoute rule.<br />As with HTTPRouteRule.Matches, the rule is matched if any one match applies.<br />When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the<br />effective matching is the logical AND of the two sets. |
 
 

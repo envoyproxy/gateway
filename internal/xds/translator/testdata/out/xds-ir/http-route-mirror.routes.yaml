@@ -16,5 +16,32 @@
           runtimeFraction:
             defaultValue:
               numerator: 100
+        - clusterHeader: x-shadow-cluster
+          disableShadowHostSuffixAppend: true
+          hostRewriteLiteral: shadow.example.com
+          requestHeadersMutations:
+          - append:
+              header:
+                key: x-mirror-added
+                value: "true"
+          - append:
+              appendAction: OVERWRITE_IF_EXISTS_OR_ADD
+              header:
+                key: x-mirror-set
+                value: shadow
+          - append:
+              appendAction: ADD_IF_ABSENT
+              header:
+                key: x-mirror-if-absent
+                value: fallback
+          - remove: x-mirror-remove
+          - removeOnMatch:
+              keyMatcher:
+                prefix: x-shadow-
+          runtimeFraction:
+            defaultValue:
+              denominator: MILLION
+              numerator: 250000
+          traceSampled: false
         upgradeConfigs:
         - upgradeType: websocket

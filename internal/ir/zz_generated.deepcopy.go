@@ -3191,9 +3191,52 @@ func (in *MirrorPolicy) DeepCopyInto(out *MirrorPolicy) {
 		*out = new(RouteDestination)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ClusterHeader != nil {
+		in, out := &in.ClusterHeader, &out.ClusterHeader
+		*out = new(string)
+		**out = **in
+	}
 	if in.Percentage != nil {
 		in, out := &in.Percentage, &out.Percentage
 		*out = new(float32)
+		**out = **in
+	}
+	if in.TraceSampled != nil {
+		in, out := &in.TraceSampled, &out.TraceSampled
+		*out = new(bool)
+		**out = **in
+	}
+	if in.DisableShadowHostSuffixAppend != nil {
+		in, out := &in.DisableShadowHostSuffixAppend, &out.DisableShadowHostSuffixAppend
+		*out = new(bool)
+		**out = **in
+	}
+	if in.AddRequestHeaders != nil {
+		in, out := &in.AddRequestHeaders, &out.AddRequestHeaders
+		*out = make([]AddHeader, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if in.RemoveRequestHeaders != nil {
+		in, out := &in.RemoveRequestHeaders, &out.RemoveRequestHeaders
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.RemoveRequestHeadersOnMatch != nil {
+		in, out := &in.RemoveRequestHeadersOnMatch, &out.RemoveRequestHeadersOnMatch
+		*out = make([]*StringMatch, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(StringMatch)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.HostRewriteLiteral != nil {
+		in, out := &in.HostRewriteLiteral, &out.HostRewriteLiteral
+		*out = new(string)
 		**out = **in
 	}
 }

@@ -627,14 +627,37 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 	var xdsMirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
 
 	for _, policy := range mirrorPolicies {
-		if mp := mirrorPercentByPolicy(policy); mp != nil && policy.Destination != nil {
-			xdsMirrorPolicies = append(xdsMirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-				Cluster:         policy.Destination.Name,
-				RuntimeFraction: mp,
-				// We don't need to append the shadow host suffix as the mirror policy already uses a different cluster which is enough to distinguish the mirrored traffic
-				DisableShadowHostSuffixAppend: true,
-			})
+		mp := mirrorPercentByPolicy(policy)
+		if mp == nil {
+			continue
 		}
+		xdsMirrorPolicy := &routev3.RouteAction_RequestMirrorPolicy{
+			RuntimeFraction: mp,
+		}
+		switch {
+		case policy.Destination != nil:
+			xdsMirrorPolicy.Cluster = policy.Destination.Name
+		case policy.ClusterHeader != nil:
+			xdsMirrorPolicy.ClusterHeader = *policy.ClusterHeader
+		default:
+			continue
+		}
+		if policy.TraceSampled != nil {
+			xdsMirrorPolicy.TraceSampled = wrapperspb.Bool(*policy.TraceSampled)
+		}
+		if len(policy.AddRequestHeaders) > 0 || len(policy.RemoveRequestHeaders) > 0 || len(policy.RemoveRequestHeadersOnMatch) > 0 {
+			xdsMirrorPolicy.RequestHeadersMutations = buildHeaderMutationRules(policy.AddRequestHeaders, policy.RemoveRequestHeaders, policy.RemoveRequestHeadersOnMatch)
+		}
+		if policy.HostRewriteLiteral != nil {
+			xdsMirrorPolicy.HostRewriteLiteral = *policy.HostRewriteLiteral
+			xdsMirrorPolicy.DisableShadowHostSuffixAppend = true
+		} else if policy.DisableShadowHostSuffixAppend != nil {
+			xdsMirrorPolicy.DisableShadowHostSuffixAppend = *policy.DisableShadowHostSuffixAppend
+		} else if policy.Destination != nil {
+			// Preserve the historical IR behavior for backendRef mirror destinations.
+			xdsMirrorPolicy.DisableShadowHostSuffixAppend = true
+		}
+		xdsMirrorPolicies = append(xdsMirrorPolicies, xdsMirrorPolicy)
 	}
 
 	return xdsMirrorPolicies

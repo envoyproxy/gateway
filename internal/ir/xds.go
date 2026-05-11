@@ -1755,11 +1755,25 @@ type GRPCSuccessCriteria struct {
 // +kubebuilder:object:generate=true
 type MirrorPolicy struct {
 	// Destination defines the target where the request will be mirrored.
-	Destination *RouteDestination `json:"destination" yaml:"destination"`
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
+	// ClusterHeader defines the request header used to determine the target cluster.
+	ClusterHeader *string `json:"clusterHeader,omitempty" yaml:"clusterHeader,omitempty"`
 	// Percentage of the traffic to be mirrored by the `destination` field.
 	// When absent, all the traffic (100%) will be mirrored.
 	// Values are in the range of [0.0, 100.0].
 	Percentage *float32 `json:"percentage,omitempty" yaml:"percentage,omitempty"`
+	// TraceSampled configures whether the trace span for the mirrored request should be sampled.
+	TraceSampled *bool `json:"traceSampled,omitempty" yaml:"traceSampled,omitempty"`
+	// DisableShadowHostSuffixAppend disables appending the "-shadow" suffix to the mirrored Host header.
+	DisableShadowHostSuffixAppend *bool `json:"disableShadowHostSuffixAppend,omitempty" yaml:"disableShadowHostSuffixAppend,omitempty"`
+	// AddRequestHeaders defines header/value sets to be added to mirrored requests.
+	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
+	// RemoveRequestHeaders defines a list of headers to be removed from mirrored requests.
+	RemoveRequestHeaders []string `json:"removeRequestHeaders,omitempty" yaml:"removeRequestHeaders,omitempty"`
+	// RemoveRequestHeadersOnMatch defines header name matchers that would remove headers from mirrored requests.
+	RemoveRequestHeadersOnMatch []*StringMatch `json:"removeRequestHeadersOnMatch,omitempty" yaml:"removeRequestHeadersOnMatch,omitempty"`
+	// HostRewriteLiteral rewrites the Host header during mirroring.
+	HostRewriteLiteral *string `json:"hostRewriteLiteral,omitempty" yaml:"hostRewriteLiteral,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure

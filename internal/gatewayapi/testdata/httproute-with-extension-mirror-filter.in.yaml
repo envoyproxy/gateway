@@ -1,0 +1,109 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: "*.envoyproxy.io"
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-filter
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/header"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: HTTPRouteFilter
+          name: mirror-cluster-header
+httpFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: mirror-filter
+  spec:
+    requestMirror:
+      backendRef:
+        kind: Service
+        name: service-1
+        port: 8080
+      fraction:
+        numerator: 1
+        denominator: 4
+      traceSampled: false
+      disableShadowHostSuffixAppend: false
+      requestHeadersMutations:
+        add:
+        - name: x-mirror-added
+          value: "true"
+        set:
+        - name: x-mirror-set
+          value: shadow
+        addIfAbsent:
+        - name: x-mirror-if-absent
+          value: fallback
+        remove:
+        - x-mirror-remove
+        removeOnMatch:
+        - type: Prefix
+          value: x-shadow-
+      hostRewriteLiteral: shadow.example.com
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: HTTPRouteFilter
+  metadata:
+    namespace: default
+    name: mirror-cluster-header
+  spec:
+    requestMirror:
+      clusterHeader: x-shadow-cluster
+      percent: 50

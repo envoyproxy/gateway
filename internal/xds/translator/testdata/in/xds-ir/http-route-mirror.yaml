@@ -24,3 +24,26 @@ http:
         - endpoints:
           - host: "2.3.4.5"
           name: "mirror-route-dest/backend/0"
+    - clusterHeader: "x-shadow-cluster"
+      percentage: 25
+      traceSampled: false
+      disableShadowHostSuffixAppend: false
+      addRequestHeaders:
+      - name: "x-mirror-added"
+        value:
+        - "true"
+        append: true
+      - name: "x-mirror-set"
+        value:
+        - "shadow"
+        append: false
+      - name: "x-mirror-if-absent"
+        value:
+        - "fallback"
+        addIfAbsent: true
+      removeRequestHeaders:
+      - "x-mirror-remove"
+      removeRequestHeadersOnMatch:
+      - distinct: false
+        prefix: "x-shadow-"
+      hostRewriteLiteral: "shadow.example.com"

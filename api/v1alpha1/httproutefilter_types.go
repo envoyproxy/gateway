@@ -44,6 +44,8 @@ type HTTPRouteFilterSpec struct {
 	DirectResponse *HTTPDirectResponseFilter `json:"directResponse,omitempty"`
 	// +optional
 	CredentialInjection *HTTPCredentialInjectionFilter `json:"credentialInjection,omitempty"`
+	// +optional
+	RequestMirror *HTTPRequestMirrorFilter `json:"requestMirror,omitempty"`
 	// Matches defines additional matching criteria for the HTTPRoute rule.
 	// As with HTTPRouteRule.Matches, the rule is matched if any one match applies.
 	// When both HTTPRouteRule.Matches and HTTPRouteFilter.Matches are set, the
@@ -52,6 +54,75 @@ type HTTPRouteFilterSpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	Matches []HTTPRouteMatchFilter `json:"matches,omitempty"`
+}
+
+// HTTPRequestMirrorFilter defines request mirroring configuration for an
+// HTTPRouteFilter. It extends Gateway API request mirroring with Envoy-specific
+// mirror policy options.
+//
+// +kubebuilder:validation:XValidation:message="backendRef or clusterHeader must be specified",rule="has(self.backendRef) || has(self.clusterHeader)"
+// +kubebuilder:validation:XValidation:message="backendRef and clusterHeader cannot both be specified",rule="!(has(self.backendRef) && has(self.clusterHeader))"
+// +kubebuilder:validation:XValidation:message="only one of percent or fraction can be specified",rule="!(has(self.percent) && has(self.fraction))"
+type HTTPRequestMirrorFilter struct {
+	// BackendRef references a resource where mirrored requests are sent.
+	//
+	// +optional
+	BackendRef *gwapiv1.BackendObjectReference `json:"backendRef,omitempty"`
+
+	// ClusterHeader is the request header used to determine the target cluster
+	// for mirrored requests. Envoy uses only the first value for this header.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^:?[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$`
+	ClusterHeader *string `json:"clusterHeader,omitempty"`
+
+	// Percent represents the percentage of requests that should be mirrored.
+	// Its minimum value is 0 and its maximum value is 100.
+	//
+	// Only one of Fraction or Percent may be specified. If neither field is
+	// specified, 100% of requests will be mirrored.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	Percent *int32 `json:"percent,omitempty"`
+
+	// Fraction represents the fraction of requests that should be mirrored.
+	//
+	// Only one of Fraction or Percent may be specified. If neither field is
+	// specified, 100% of requests will be mirrored.
+	//
+	// +optional
+	Fraction *gwapiv1.Fraction `json:"fraction,omitempty"`
+
+	// TraceSampled specifies whether the trace span for the mirrored request
+	// should be sampled. If not set, Envoy inherits the parent span sampling
+	// decision.
+	//
+	// +optional
+	TraceSampled *bool `json:"traceSampled,omitempty"`
+
+	// DisableShadowHostSuffixAppend disables appending the "-shadow" suffix to
+	// the mirrored Host header.
+	//
+	// +optional
+	DisableShadowHostSuffixAppend *bool `json:"disableShadowHostSuffixAppend,omitempty"`
+
+	// RequestHeadersMutations defines header mutations applied to each mirrored
+	// request.
+	//
+	// +optional
+	RequestHeadersMutations *HTTPHeaderFilter `json:"requestHeadersMutations,omitempty"`
+
+	// HostRewriteLiteral rewrites the Host header during mirroring.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[!-~]+$`
+	HostRewriteLiteral *string `json:"hostRewriteLiteral,omitempty"`
 }
 
 // HTTPURLRewriteFilter define rewrites of HTTP URL components such as path and host

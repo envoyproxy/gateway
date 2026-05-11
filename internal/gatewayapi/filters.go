@@ -73,10 +73,28 @@ type HTTPFilterIR struct {
 // Header value pattern according to RFC 7230
 var HeaderValueRegexp = regexp.MustCompile(`^[!-~]+([\t ]?[!-~]+)*$`)
 
+// Envoy allows pseudo-headers such as :authority for cluster_header, while
+// Gateway API HTTPHeaderName intentionally does not.
+var mirrorClusterHeaderNameRegexp = regexp.MustCompile("^[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$|^:[A-Za-z0-9!#$%&'*+\\-.^_`|~]+$")
+
 const (
 	requestMirrorDirectResponseConflictMsg = "RequestMirror filter cannot be used when the rule also configures a DirectResponse filter"
 	requestMirrorRedirectConflictMsg       = "RequestMirror filter cannot be used when the rule also configures a RequestRedirect filter"
+	mirrorHeaderNameMaxLength              = 256
+	mirrorHostRewriteLiteralMaxLength      = 255
 )
+
+type requestMirrorFilterConfig struct {
+	BackendRef                      *gwapiv1.BackendObjectReference
+	ClusterHeader                   *string
+	Percent                         *int32
+	Fraction                        *gwapiv1.Fraction
+	TraceSampled                    *bool
+	DisableShadowHostSuffixAppend   *bool
+	RequestHeadersMutations         *egv1a1.HTTPHeaderFilter
+	HostRewriteLiteral              *string
+	InvalidFilterKindForStatusError string
+}
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(
@@ -129,7 +147,7 @@ func (t *Translator) ProcessHTTPFilters(
 		case gwapiv1.HTTPRouteFilterCORS:
 			t.processCORSFilter(filter.CORS, httpFiltersContext)
 		case gwapiv1.HTTPRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(i, filter.ExtensionRef, httpFiltersContext, resources); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -202,7 +220,7 @@ func (t *Translator) ProcessGRPCFilters(
 				errs.Add(err)
 			}
 		case gwapiv1.GRPCRouteFilterExtensionRef:
-			if err := t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources); err != nil {
+			if err := t.processExtensionRefHTTPFilter(i, filter.ExtensionRef, httpFiltersContext, resources); err != nil {
 				errs.Add(err)
 			}
 		default:
@@ -797,7 +815,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	return nil
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error {
+func (t *Translator) processExtensionRefHTTPFilter(filterIdx int, extFilter *gwapiv1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *resource.Resources) status.Error {
 	// Make sure the config actually exists.
 	if extFilter == nil {
 		return nil
@@ -983,6 +1001,31 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 					}
 					filterContext.CredentialInjection = injection
 				}
+
+				if hrf.Spec.RequestMirror != nil {
+					disableShadowHostSuffixAppend := hrf.Spec.RequestMirror.DisableShadowHostSuffixAppend
+					if disableShadowHostSuffixAppend == nil {
+						disableShadowHostSuffixAppend = ptr.To(false)
+					}
+					if err := t.processRequestMirrorFilterConfig(
+						filterIdx,
+						requestMirrorFilterConfig{
+							BackendRef:                      hrf.Spec.RequestMirror.BackendRef,
+							ClusterHeader:                   hrf.Spec.RequestMirror.ClusterHeader,
+							Percent:                         hrf.Spec.RequestMirror.Percent,
+							Fraction:                        hrf.Spec.RequestMirror.Fraction,
+							TraceSampled:                    hrf.Spec.RequestMirror.TraceSampled,
+							DisableShadowHostSuffixAppend:   disableShadowHostSuffixAppend,
+							RequestHeadersMutations:         hrf.Spec.RequestMirror.RequestHeadersMutations,
+							HostRewriteLiteral:              hrf.Spec.RequestMirror.HostRewriteLiteral,
+							InvalidFilterKindForStatusError: string(extFilter.Kind),
+						},
+						filterContext,
+						resources,
+					); err != nil {
+						return err
+					}
+				}
 			}
 		}
 		if !found {
@@ -1033,46 +1076,97 @@ func (t *Translator) processRequestMirrorFilter(
 		return nil
 	}
 
+	return t.processRequestMirrorFilterConfig(
+		filterIdx,
+		requestMirrorFilterConfig{
+			BackendRef: &mirrorFilter.BackendRef,
+			Percent:    mirrorFilter.Percent,
+			Fraction:   mirrorFilter.Fraction,
+		},
+		filterContext,
+		resources,
+	)
+}
+
+func (t *Translator) processRequestMirrorFilterConfig(
+	filterIdx int,
+	mirrorFilter requestMirrorFilterConfig,
+	filterContext *HTTPFiltersContext,
+	resources *resource.Resources,
+) (err status.Error) {
+	if mirrorFilter.BackendRef == nil && mirrorFilter.ClusterHeader == nil {
+		return status.NewRouteStatusError(
+			errors.New("RequestMirror filter must specify backendRef or clusterHeader"),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+	if mirrorFilter.BackendRef != nil && mirrorFilter.ClusterHeader != nil {
+		return status.NewRouteStatusError(
+			errors.New("RequestMirror filter cannot specify both backendRef and clusterHeader"),
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+	if mirrorFilter.ClusterHeader != nil {
+		if err := validateMirrorClusterHeader(*mirrorFilter.ClusterHeader); err != nil {
+			return status.NewRouteStatusError(
+				err,
+				gwapiv1.RouteReasonUnsupportedValue,
+			).WithType(gwapiv1.RouteConditionAccepted)
+		}
+	}
+	if mirrorFilter.HostRewriteLiteral != nil {
+		if err := validateMirrorHostRewriteLiteral(*mirrorFilter.HostRewriteLiteral); err != nil {
+			return status.NewRouteStatusError(
+				err,
+				gwapiv1.RouteReasonUnsupportedValue,
+			).WithType(gwapiv1.RouteConditionAccepted)
+		}
+	}
+
 	// Get the route type from the filter context to determine the correct BackendRef type
 	routeType := filterContext.Route.GetRouteType()
-	weight := int32(1)
-	mirrorBackend := mirrorFilter.BackendRef
-
-	// Create a DirectBackendRef for the mirror backend (no filters needed)
-	mirrorBackendRef := DirectBackendRef{
-		BackendRef: &gwapiv1.BackendRef{
-			BackendObjectReference: mirrorBackend,
-			Weight:                 &weight,
-		},
-	}
-
-	// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
 	filterNs := filterContext.Route.GetNamespace()
-	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
-	err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
-		resources, serviceNamespace, routeType)
-	if err != nil {
-		return status.NewRouteStatusError(
-			fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
-	}
 
-	destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
-	settingName := irDestinationSettingName(destName, -1 /*unused*/)
-	ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
-	if err != nil {
-		// Gateway API conformance: When backendRef Service exists but has no endpoints,
-		// the ResolvedRefs condition should NOT be set to False.
-		// so we return the custom condition error to handle this case and set the status in the caller function.
-		if err.Reason() == status.RouteReasonEndpointsNotFound {
-			return status.NewRouteStatusError(
-				fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(status.RouteConditionBackendsAvailable)
+	var routeDst *ir.RouteDestination
+	if mirrorFilter.BackendRef != nil {
+		weight := int32(1)
+		mirrorBackend := *mirrorFilter.BackendRef
+
+		// Create a DirectBackendRef for the mirror backend (no filters needed)
+		mirrorBackendRef := DirectBackendRef{
+			BackendRef: &gwapiv1.BackendRef{
+				BackendObjectReference: mirrorBackend,
+				Weight:                 &weight,
+			},
 		}
-		return err
-	}
 
-	routeDst := &ir.RouteDestination{
-		Name:     destName,
-		Settings: []*ir.DestinationSetting{ds},
+		// This sets the status on the Route, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+		serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
+		err = t.validateBackendRef(mirrorBackendRef, filterContext.Route,
+			resources, serviceNamespace, routeType)
+		if err != nil {
+			return status.NewRouteStatusError(
+				fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(gwapiv1.RouteConditionResolvedRefs)
+		}
+
+		destName := fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx)
+		settingName := irDestinationSettingName(destName, -1 /*unused*/)
+		ds, _, err := t.processDestination(settingName, mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources, nil)
+		if err != nil {
+			// Gateway API conformance: When backendRef Service exists but has no endpoints,
+			// the ResolvedRefs condition should NOT be set to False.
+			// so we return the custom condition error to handle this case and set the status in the caller function.
+			if err.Reason() == status.RouteReasonEndpointsNotFound {
+				return status.NewRouteStatusError(
+					fmt.Errorf("failed to validate the RequestMirror filter: %w", err), err.Reason()).WithType(status.RouteConditionBackendsAvailable)
+			}
+			return err
+		}
+
+		routeDst = &ir.RouteDestination{
+			Name:     destName,
+			Settings: []*ir.DestinationSetting{ds},
+		}
 	}
 
 	var percent *float32
@@ -1082,8 +1176,103 @@ func (t *Translator) processRequestMirrorFilter(
 		percent = new(float32(*p))
 	}
 
-	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{Destination: routeDst, Percentage: percent})
+	if headerErr := validateMirrorRequestHeaderMutations(mirrorFilter.RequestHeadersMutations); headerErr != nil {
+		if mirrorFilter.InvalidFilterKindForStatusError != "" {
+			return t.processInvalidHTTPFilter(mirrorFilter.InvalidFilterKindForStatusError, filterContext, headerErr)
+		}
+		return status.NewRouteStatusError(
+			headerErr,
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+
+	addHeaders, removeHeaders, removeHeadersOnMatch, headerErr := translateHeaderModifier(
+		mirrorFilter.RequestHeadersMutations,
+		"RequestMirror requestHeadersMutations",
+	)
+	if headerErr != nil {
+		if mirrorFilter.InvalidFilterKindForStatusError != "" {
+			return t.processInvalidHTTPFilter(mirrorFilter.InvalidFilterKindForStatusError, filterContext, headerErr)
+		}
+		return status.NewRouteStatusError(
+			headerErr,
+			gwapiv1.RouteReasonUnsupportedValue,
+		).WithType(gwapiv1.RouteConditionAccepted)
+	}
+
+	filterContext.Mirrors = append(filterContext.Mirrors, &ir.MirrorPolicy{
+		Destination:                   routeDst,
+		ClusterHeader:                 mirrorFilter.ClusterHeader,
+		Percentage:                    percent,
+		TraceSampled:                  mirrorFilter.TraceSampled,
+		DisableShadowHostSuffixAppend: mirrorFilter.DisableShadowHostSuffixAppend,
+		AddRequestHeaders:             addHeaders,
+		RemoveRequestHeaders:          removeHeaders,
+		RemoveRequestHeadersOnMatch:   removeHeadersOnMatch,
+		HostRewriteLiteral:            mirrorFilter.HostRewriteLiteral,
+	})
 	return nil
+}
+
+func validateMirrorClusterHeader(value string) error {
+	if value == "" {
+		return errors.New("RequestMirror filter clusterHeader must not be empty")
+	}
+	if len(value) > mirrorHeaderNameMaxLength {
+		return fmt.Errorf("RequestMirror filter clusterHeader must be no more than %d characters", mirrorHeaderNameMaxLength)
+	}
+	if !mirrorClusterHeaderNameRegexp.MatchString(value) {
+		return errors.New("RequestMirror filter clusterHeader must be a valid HTTP header name or pseudo-header name")
+	}
+	return nil
+}
+
+func validateMirrorHostRewriteLiteral(value string) error {
+	if value == "" {
+		return errors.New("RequestMirror filter hostRewriteLiteral must not be empty")
+	}
+	if len(value) > mirrorHostRewriteLiteralMaxLength {
+		return fmt.Errorf("RequestMirror filter hostRewriteLiteral must be no more than %d characters", mirrorHostRewriteLiteralMaxLength)
+	}
+	for _, r := range value {
+		if r < '!' || r > '~' {
+			return errors.New("RequestMirror filter hostRewriteLiteral must contain only visible ASCII characters without spaces")
+		}
+	}
+	return nil
+}
+
+func validateMirrorRequestHeaderMutations(headerModifier *egv1a1.HTTPHeaderFilter) error {
+	if headerModifier == nil {
+		return nil
+	}
+
+	var errs error
+	validateHeader := func(action, header string) {
+		if header == "" {
+			return
+		}
+		if !isModifiableHeader(header) {
+			errs = errors.Join(errs, fmt.Errorf(
+				"RequestMirror requestHeadersMutations cannot %s the Host header or headers with a '/' or ':' character in them. Header: %q. To modify the Host header use hostRewriteLiteral",
+				action, header))
+		}
+	}
+
+	for _, header := range headerModifier.Add {
+		validateHeader("add", string(header.Name))
+	}
+	for _, header := range headerModifier.Set {
+		validateHeader("set", string(header.Name))
+	}
+	for _, header := range headerModifier.AddIfAbsent {
+		validateHeader("addIfAbsent", string(header.Name))
+	}
+	for _, header := range headerModifier.Remove {
+		validateHeader("remove", header)
+	}
+
+	return errs
 }
 
 func (t *Translator) processCORSFilter(

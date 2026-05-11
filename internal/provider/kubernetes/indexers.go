@@ -41,6 +41,7 @@ const (
 	backendTLSRouteIndex             = "backendTLSRouteIndex"
 	backendTCPRouteIndex             = "backendTCPRouteIndex"
 	backendUDPRouteIndex             = "backendUDPRouteIndex"
+	backendHTTPRouteFilterIndex      = "backendHTTPRouteFilterIndex"
 	secretSecurityPolicyIndex        = "secretSecurityPolicyIndex"
 	backendSecurityPolicyIndex       = "backendSecurityPolicyIndex"
 	configMapSecurityPolicyIndex     = "configMapSecurityPolicyIndex"
@@ -1127,6 +1128,11 @@ func addRouteFilterIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.HTTPRouteFilter{},
+		backendHTTPRouteFilterIndex, backendHTTPRouteFilterIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1161,6 +1167,26 @@ func secretRouteFilterIndexFunc(rawObj client.Object) []string {
 	}
 
 	return secretReferences
+}
+
+func backendHTTPRouteFilterIndexFunc(rawObj client.Object) []string {
+	filter := rawObj.(*egv1a1.HTTPRouteFilter)
+	if filter.Spec.RequestMirror == nil || filter.Spec.RequestMirror.BackendRef == nil {
+		return nil
+	}
+
+	backendRef := filter.Spec.RequestMirror.BackendRef
+	if backendRef.Kind == nil || string(*backendRef.Kind) == resource.KindService ||
+		string(*backendRef.Kind) == resource.KindServiceImport || string(*backendRef.Kind) == egv1a1.KindBackend {
+		return []string{
+			types.NamespacedName{
+				Namespace: gatewayapi.NamespaceDerefOr(backendRef.Namespace, filter.Namespace),
+				Name:      string(backendRef.Name),
+			}.String(),
+		}
+	}
+
+	return nil
 }
 
 // addBtlsIndexers adds indexing on BackendTLSPolicy, for ConfigMap and Secret objects that are
