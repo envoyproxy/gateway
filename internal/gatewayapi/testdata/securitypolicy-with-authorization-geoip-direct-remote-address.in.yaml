@@ -67,14 +67,14 @@ clientTrafficPolicies:
   kind: ClientTrafficPolicy
   metadata:
     namespace: envoy-gateway
-    name: enable-downstream-remote-address-detection
+    name: enable-direct-remote-address-detection
   spec:
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: gateway-1
     clientIPDetection:
-      downstreamRemoteAddress: {}
+      directRemoteAddress: {}
 securityPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy

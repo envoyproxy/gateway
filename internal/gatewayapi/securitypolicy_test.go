@@ -1402,7 +1402,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{},
-			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,downstreamRemoteAddress}",
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}",
 		},
 		{
 			name:          "multiple client ip detection modes rejected",
@@ -1412,9 +1412,9 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{
 				CustomHeader:            &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
-				DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+				DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
 			},
-			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,downstreamRemoteAddress}",
+			wantErr: "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.{xForwardedFor,customHeader,directRemoteAddress}",
 		},
 		{
 			name:          "downstream remote address accepted",
@@ -1423,7 +1423,7 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				CountryDBSource: countryDB,
 			}),
 			clientIPDetection: &ir.ClientIPDetectionSettings{
-				DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+				DirectRemoteAddress: &egv1a1.DirectRemoteAddressSettings{},
 			},
 			wantProvider: true,
 		},

@@ -200,7 +200,7 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 		Provider: provider,
 	}
 	// ClientIPDetection selects the geoip filter's IP source. Note: when
-	// DownstreamRemoteAddress is set, both xff_config and custom_header_config
+	// DirectRemoteAddress is set, both xff_config and custom_header_config
 	// are intentionally left unset so that Envoy uses its documented default —
 	// the immediate downstream connection source address.
 	if irListener.ClientIPDetection != nil {
@@ -213,7 +213,7 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 			cfg.XffConfig = &httpgeoipv3.Geoip_XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(irListener.ClientIPDetection),
 			}
-		case irListener.ClientIPDetection.DownstreamRemoteAddress != nil:
+		case irListener.ClientIPDetection.DirectRemoteAddress != nil:
 			// No xff_config or custom_header_config: Envoy falls back to the
 			// downstream connection source address.
 		}

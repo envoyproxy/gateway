@@ -2,11 +2,11 @@ clientTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: ClientTrafficPolicy
   metadata:
-    name: enable-downstream-remote-address-detection
+    name: enable-direct-remote-address-detection
     namespace: envoy-gateway
   spec:
     clientIPDetection:
-      downstreamRemoteAddress: {}
+      directRemoteAddress: {}
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
@@ -25,6 +25,36 @@ clientTrafficPolicies:
         status: "True"
         type: Accepted
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+envoyProxyForGatewayClass:
+  apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: EnvoyProxy
+  metadata:
+    name: geoip-proxy
+    namespace: envoy-gateway
+  spec:
+    geoIP:
+      provider:
+        maxMind:
+          anonymousIpDbSource:
+            local:
+              path: /db/GeoIP2-Anonymous-IP.mmdb
+          cityDbSource:
+            local:
+              path: /db/GeoLite2-City.mmdb
+        type: MaxMind
+    logging: {}
+  status:
+    ancestors:
+    - ancestorRef:
+        group: gateway.networking.k8s.io
+        kind: GatewayClass
+        name: envoy-gateway-class
+      conditions:
+      - lastTransitionTime: null
+        message: EnvoyProxy has been accepted.
+        reason: Accepted
+        status: "True"
+        type: Accepted
 gatewayClass:
   apiVersion: gateway.networking.k8s.io/v1
   kind: GatewayClass
@@ -143,7 +173,18 @@ infraIR:
                     path: /db/GeoLite2-City.mmdb
               type: MaxMind
           logging: {}
-        status: {}
+        status:
+          ancestors:
+          - ancestorRef:
+              group: gateway.networking.k8s.io
+              kind: GatewayClass
+              name: envoy-gateway-class
+            conditions:
+            - lastTransitionTime: null
+              message: EnvoyProxy has been accepted.
+              reason: Accepted
+              status: "True"
+              type: Accepted
       listeners:
       - name: envoy-gateway/gateway-1/http
         ports:
@@ -226,7 +267,7 @@ xdsIR:
     http:
     - address: 0.0.0.0
       clientIPDetection:
-        downstreamRemoteAddress: {}
+        directRemoteAddress: {}
       externalPort: 80
       geoIPProvider:
         maxMind:
