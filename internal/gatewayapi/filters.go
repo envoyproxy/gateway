@@ -1013,7 +1013,7 @@ func (t *Translator) processExtensionRefHTTPFilter(filterIdx int, extFilter *gwa
 				if hrf.Spec.RequestMirror != nil {
 					if err := t.processRequestMirrorFilterConfig(
 						filterIdx,
-						requestMirrorFilterConfig{
+						&requestMirrorFilterConfig{
 							BackendRef:                    hrf.Spec.RequestMirror.BackendRef,
 							ClusterHeader:                 hrf.Spec.RequestMirror.ClusterHeader,
 							Percent:                       hrf.Spec.RequestMirror.Percent,
@@ -1082,7 +1082,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 	return t.processRequestMirrorFilterConfig(
 		filterIdx,
-		requestMirrorFilterConfig{
+		&requestMirrorFilterConfig{
 			BackendRef: &mirrorFilter.BackendRef,
 			Percent:    mirrorFilter.Percent,
 			Fraction:   mirrorFilter.Fraction,
@@ -1094,7 +1094,7 @@ func (t *Translator) processRequestMirrorFilter(
 
 func (t *Translator) processRequestMirrorFilterConfig(
 	filterIdx int,
-	mirrorFilter requestMirrorFilterConfig,
+	mirrorFilter *requestMirrorFilterConfig,
 	filterContext *HTTPFiltersContext,
 	resources *resource.Resources,
 ) (err status.Error) {

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -157,7 +156,7 @@ func TestValidateMirrorRequestHeaderMutations(t *testing.T) {
 			filter: &egv1a1.HTTPHeaderFilter{
 				RemoveOnMatch: []egv1a1.StringMatch{
 					{
-						Type:  ptr.To(egv1a1.StringMatchPrefix),
+						Type:  new(egv1a1.StringMatchPrefix),
 						Value: ":",
 					},
 				},
@@ -169,7 +168,7 @@ func TestValidateMirrorRequestHeaderMutations(t *testing.T) {
 			filter: &egv1a1.HTTPHeaderFilter{
 				RemoveOnMatch: []egv1a1.StringMatch{
 					{
-						Type:  ptr.To(egv1a1.StringMatchPrefix),
+						Type:  new(egv1a1.StringMatchPrefix),
 						Value: "x-shadow-",
 					},
 				},

@@ -49814,6 +49814,385 @@ spec:
                   type: object
                 maxItems: 8
                 type: array
+              requestMirror:
+                description: |-
+                  HTTPRequestMirrorFilter defines request mirroring configuration for an
+                  HTTPRouteFilter. It extends Gateway API request mirroring with Envoy-specific
+                  mirror policy options.
+                properties:
+                  backendRef:
+                    description: BackendRef references a resource where mirrored requests
+                      are sent.
+                    properties:
+                      group:
+                        default: ""
+                        description: |-
+                          Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                          When unspecified or empty string, core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Service
+                        description: |-
+                          Kind is the Kubernetes resource kind of the referent. For example
+                          "Service".
+
+                          Defaults to "Service" when not specified.
+
+                          ExternalName services can refer to CNAME DNS records that may live
+                          outside of the cluster and as such are difficult to reason about in
+                          terms of conformance. They also may not be safe to forward to (see
+                          CVE-2021-25740 for more information). Implementations SHOULD NOT
+                          support ExternalName Services.
+
+                          Support: Core (Services with a type other than ExternalName)
+
+                          Support: Implementation-specific (Services with type ExternalName)
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the backend. When unspecified, the local
+                          namespace is inferred.
+
+                          Note that when a namespace different than the local namespace is specified,
+                          a ReferenceGrant object is required in the referent namespace to allow that
+                          namespace's owner to accept the reference. See the ReferenceGrant
+                          documentation for details.
+
+                          Support: Core
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                      port:
+                        description: |-
+                          Port specifies the destination port number to use for this resource.
+                          Port is required when the referent is a Kubernetes Service. In this
+                          case, the port number is the service port number, not the target port.
+                          For other resources, destination port might be derived from the referent
+                          resource or this field.
+                        format: int32
+                        maximum: 65535
+                        minimum: 1
+                        type: integer
+                    required:
+                    - name
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Must have port for Service reference
+                      rule: '(size(self.group) == 0 && self.kind == ''Service'') ?
+                        has(self.port) : true'
+                  clusterHeader:
+                    description: |-
+                      ClusterHeader is the request header used to determine the target cluster
+                      for mirrored requests. Envoy uses only the first value for this header.
+                    maxLength: 256
+                    minLength: 1
+                    pattern: ^:?[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                    type: string
+                  disableShadowHostSuffixAppend:
+                    description: |-
+                      DisableShadowHostSuffixAppend disables appending the "-shadow" suffix to
+                      the mirrored Host header.
+                    type: boolean
+                  fraction:
+                    description: |-
+                      Fraction represents the fraction of requests that should be mirrored.
+
+                      Only one of Fraction or Percent may be specified. If neither field is
+                      specified, 100% of requests will be mirrored.
+                    properties:
+                      denominator:
+                        default: 100
+                        format: int32
+                        minimum: 1
+                        type: integer
+                      numerator:
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    required:
+                    - numerator
+                    type: object
+                    x-kubernetes-validations:
+                    - message: numerator must be less than or equal to denominator
+                      rule: self.numerator <= self.denominator
+                  hostRewriteLiteral:
+                    description: HostRewriteLiteral rewrites the Host header during
+                      mirroring.
+                    maxLength: 255
+                    minLength: 1
+                    pattern: ^[!-~]+$
+                    type: string
+                  percent:
+                    description: |-
+                      Percent represents the percentage of requests that should be mirrored.
+                      Its minimum value is 0 and its maximum value is 100.
+
+                      Only one of Fraction or Percent may be specified. If neither field is
+                      specified, 100% of requests will be mirrored.
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  requestHeadersMutations:
+                    description: |-
+                      RequestHeadersMutations defines header mutations applied to each mirrored
+                      request.
+                    properties:
+                      add:
+                        description: |-
+                          Add adds the given header(s) (name, value) to the request
+                          before the action. It appends to any existing values associated
+                          with the header name.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            add:
+                            - name: "my-header"
+                              value: "bar,baz"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo,bar,baz
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      addIfAbsent:
+                        description: |-
+                          AddIfAbsent adds the given header(s) (name, value) to the request/response
+                          only if the header does not already exist. Unlike Add which appends to
+                          existing values, this is a no-op if the header is already present.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            addIfAbsent:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      remove:
+                        description: |-
+                          Remove the given header(s) from the HTTP request before the action. The
+                          value of Remove is a list of HTTP header names. Note that the header
+                          names are case-insensitive (see
+                          https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header1: foo
+                            my-header2: bar
+                            my-header3: baz
+
+                          Config:
+                            remove: ["my-header1", "my-header3"]
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header2: bar
+                        items:
+                          type: string
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-type: set
+                      removeOnMatch:
+                        description: |-
+                          RemoveOnMatch removes headers whose names match the specified string matchers.
+                          Matching is performed on the header name (case-insensitive).
+                        items:
+                          description: |-
+                            StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be used by other EG APIs
+                            that need to match against a string.
+                          properties:
+                            type:
+                              default: Exact
+                              description: Type specifies how to match against a string.
+                              enum:
+                              - Exact
+                              - Prefix
+                              - Suffix
+                              - RegularExpression
+                              type: string
+                            value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
+                              type: string
+                          required:
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                      set:
+                        description: |-
+                          Set overwrites the request with the given header (name, value)
+                          before the action.
+
+                          Input:
+                            GET /foo HTTP/1.1
+                            my-header: foo
+
+                          Config:
+                            set:
+                            - name: "my-header"
+                              value: "bar"
+
+                          Output:
+                            GET /foo HTTP/1.1
+                            my-header: bar
+                        items:
+                          description: HTTPHeader represents an HTTP Header name and
+                            value as defined by RFC 7230.
+                          properties:
+                            name:
+                              description: |-
+                                Name is the name of the HTTP Header to be matched. Name matching MUST be
+                                case-insensitive. (See https://tools.ietf.org/html/rfc7230#section-3.2).
+
+                                If multiple entries specify equivalent header names, the first entry with
+                                an equivalent name MUST be considered for a match. Subsequent entries
+                                with an equivalent header name MUST be ignored. Due to the
+                                case-insensitivity of header names, "foo" and "Foo" are considered
+                                equivalent.
+                              maxLength: 256
+                              minLength: 1
+                              pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
+                              type: string
+                            value:
+                              description: |-
+                                Value is the value of HTTP Header to be matched.
+                                <gateway:experimental:description>
+                                Must consist of printable US-ASCII characters, optionally separated
+                                by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                </gateway:experimental:description>
+
+                                <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
+                              maxLength: 4096
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        maxItems: 64
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                    type: object
+                  traceSampled:
+                    description: |-
+                      TraceSampled specifies whether the trace span for the mirrored request
+                      should be sampled. If not set, Envoy inherits the parent span sampling
+                      decision.
+                    type: boolean
+                type: object
+                x-kubernetes-validations:
+                - message: backendRef or clusterHeader must be specified
+                  rule: has(self.backendRef) || has(self.clusterHeader)
+                - message: backendRef and clusterHeader cannot both be specified
+                  rule: '!(has(self.backendRef) && has(self.clusterHeader))'
+                - message: only one of percent or fraction can be specified
+                  rule: '!(has(self.percent) && has(self.fraction))'
               urlRewrite:
                 description: HTTPURLRewriteFilter define rewrites of HTTP URL components
                   such as path and host

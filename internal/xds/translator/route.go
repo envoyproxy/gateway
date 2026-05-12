@@ -648,12 +648,13 @@ func buildXdsRequestMirrorPolicies(mirrorPolicies []*ir.MirrorPolicy) []*routev3
 		if len(policy.AddRequestHeaders) > 0 || len(policy.RemoveRequestHeaders) > 0 || len(policy.RemoveRequestHeadersOnMatch) > 0 {
 			xdsMirrorPolicy.RequestHeadersMutations = buildHeaderMutationRules(policy.AddRequestHeaders, policy.RemoveRequestHeaders, policy.RemoveRequestHeadersOnMatch)
 		}
-		if policy.HostRewriteLiteral != nil {
+		switch {
+		case policy.HostRewriteLiteral != nil:
 			xdsMirrorPolicy.HostRewriteLiteral = *policy.HostRewriteLiteral
 			xdsMirrorPolicy.DisableShadowHostSuffixAppend = true
-		} else if policy.DisableShadowHostSuffixAppend != nil {
+		case policy.DisableShadowHostSuffixAppend != nil:
 			xdsMirrorPolicy.DisableShadowHostSuffixAppend = *policy.DisableShadowHostSuffixAppend
-		} else if policy.Destination != nil {
+		case policy.Destination != nil:
 			// Preserve the historical IR behavior for backendRef mirror destinations.
 			xdsMirrorPolicy.DisableShadowHostSuffixAppend = true
 		}
