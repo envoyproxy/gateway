@@ -1275,6 +1275,13 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 	customHeaderDetection := &ir.ClientIPDetectionSettings{
 		CustomHeader: &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
 	}
+	downstreamDetection := &ir.ClientIPDetectionSettings{
+		DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+	}
+	multiModeDetection := &ir.ClientIPDetectionSettings{
+		CustomHeader:            &egv1a1.CustomHeaderExtensionSettings{Name: "x-real-client-ip"},
+		DownstreamRemoteAddress: &egv1a1.DownstreamRemoteAddressSettings{},
+	}
 
 	tests := []struct {
 		name              string
@@ -1320,6 +1327,33 @@ func Test_validateAuthorizationGeoIPForHTTP(t *testing.T) {
 				},
 			},
 			wantErr: "does not support ClientIPDetection.XForwardedFor.TrustedCIDRs",
+		},
+		{
+			name:          "downstreamRemoteAddress accepted",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: downstreamDetection,
+			wantProvider:      true,
+		},
+		{
+			name:          "multiple detection modes rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: multiModeDetection,
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.xForwardedFor, customHeader or downstreamRemoteAddress",
+		},
+		{
+			name:          "empty clientIPDetection rejected",
+			authorization: newAuthorization(egv1a1.ClientIPGeoLocation{Country: new("US")}),
+			envoyProxy: newEnvoyProxy(&egv1a1.GeoIPMaxMind{
+				CountryDBSource: countryDB,
+			}),
+			clientIPDetection: &ir.ClientIPDetectionSettings{},
+			wantErr:           "requires exactly one of ClientTrafficPolicy.spec.clientIPDetection.xForwardedFor, customHeader or downstreamRemoteAddress",
 		},
 		{
 			name:          "region requires city database",
