@@ -15,6 +15,7 @@ bug fixes: |
   Fixed ListenerSet and its listeners incorrectly setting `Accepted: False` for InvalidCertificateRef and RefNotPermitted, inconsistent with Gateway behavior and the Gateway API spec.
   Fixed active HTTP health checks to use Backend endpoint hostnames before falling back to the effective Route hostname.
   Fixed HTTPS listeners with overlapping hostnames but disjoint certificate SANs to preserve HTTP/2 ALPN by default.
+  Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
 
 # Enhancements that improve performance.
 performance improvements: |
