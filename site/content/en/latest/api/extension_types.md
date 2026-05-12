@@ -889,6 +889,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `xForwardedFor` | _[XForwardedForSettings](#xforwardedforsettings)_ |  false  |  | XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address. |
 | `customHeader` | _[CustomHeaderExtensionSettings](#customheaderextensionsettings)_ |  false  |  | CustomHeader provides configuration for determining the client IP address for a request based on<br />a trusted custom HTTP header. This uses the custom_header original IP detection extension.<br />Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/http/original_ip_detection/custom_header/v3/custom_header.proto<br />for more details. |
+| `downstreamRemoteAddress` | _[DownstreamRemoteAddressSettings](#downstreamremoteaddresssettings)_ |  false  |  | DownstreamRemoteAddress selects the immediate downstream connection source address<br />(the TCP peer) as the client-IP source. Use this in L4-transparent topologies where<br />the TCP peer is the real client IP (e.g., AWS NLB with target-type instance and<br />externalTrafficPolicy: Local, Azure Standard Load Balancer). When set, Envoy Gateway<br />emits the GeoIP filter without xff_config or custom_header_config so Envoy uses its<br />native default IP source. |
 
 
 #### ClientIPGeoLocation
@@ -1424,6 +1425,19 @@ _Appears in:_
 | `IPv4Preferred` | IPv4PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv4 family and fallback<br />to a lookup for addresses in the IPv6 family.<br /> | 
 | `IPv6Preferred` | IPv6PreferredDNSLookupFamily means the DNS resolver will first perform a lookup for addresses in the IPv6 family and fallback<br />to a lookup for addresses in the IPv4 family.<br /> | 
 | `IPv4AndIPv6` | IPv4AndIPv6DNSLookupFamily mean the DNS resolver will perform a lookup for both IPv4 and IPv6 families, and return all resolved<br />addresses. When this is used, Happy Eyeballs will be enabled for upstream connections.<br /> | 
+
+
+#### DownstreamRemoteAddressSettings
+
+
+
+DownstreamRemoteAddressSettings selects the downstream connection source address
+(the immediate TCP peer) as the client-IP source. It carries no fields; presence
+is the signal.
+
+_Appears in:_
+- [ClientIPDetectionSettings](#clientipdetectionsettings)
+
 
 
 #### DynamicModule

@@ -77,6 +77,15 @@ spec:
                     required:
                     - name
                     type: object
+                  downstreamRemoteAddress:
+                    description: |-
+                      DownstreamRemoteAddress selects the immediate downstream connection source address
+                      (the TCP peer) as the client-IP source. Use this in L4-transparent topologies where
+                      the TCP peer is the real client IP (e.g., AWS NLB with target-type instance and
+                      externalTrafficPolicy: Local, Azure Standard Load Balancer). When set, Envoy Gateway
+                      emits the GeoIP filter without xff_config or custom_header_config so Envoy uses its
+                      native default IP source.
+                    type: object
                   xForwardedFor:
                     description: XForwardedForSettings provides configuration for
                       using X-Forwarded-For headers for determining the client IP
@@ -123,8 +132,10 @@ spec:
                         || (!has(self.numTrustedHops) && has(self.trustedCIDRs))
                 type: object
                 x-kubernetes-validations:
-                - message: customHeader cannot be used in conjunction with xForwardedFor
-                  rule: '!(has(self.xForwardedFor) && has(self.customHeader))'
+                - message: only one of xForwardedFor, customHeader or downstreamRemoteAddress
+                    may be set
+                  rule: '[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x,
+                    x).size() <= 1'
               connection:
                 description: Connection includes client connection settings.
                 properties:

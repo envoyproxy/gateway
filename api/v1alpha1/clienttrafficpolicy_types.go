@@ -281,7 +281,7 @@ const (
 
 // ClientIPDetectionSettings provides configuration for determining the original client IP address for requests.
 //
-// +kubebuilder:validation:XValidation:rule="!(has(self.xForwardedFor) && has(self.customHeader))",message="customHeader cannot be used in conjunction with xForwardedFor"
+// +kubebuilder:validation:XValidation:rule="[has(self.xForwardedFor), has(self.customHeader), has(self.downstreamRemoteAddress)].filter(x, x).size() <= 1",message="only one of xForwardedFor, customHeader or downstreamRemoteAddress may be set"
 type ClientIPDetectionSettings struct {
 	// XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 	//
@@ -294,7 +294,21 @@ type ClientIPDetectionSettings struct {
 	//
 	// +optional
 	CustomHeader *CustomHeaderExtensionSettings `json:"customHeader,omitempty"`
+	// DownstreamRemoteAddress selects the immediate downstream connection source address
+	// (the TCP peer) as the client-IP source. Use this in L4-transparent topologies where
+	// the TCP peer is the real client IP (e.g., AWS NLB with target-type instance and
+	// externalTrafficPolicy: Local, Azure Standard Load Balancer). When set, Envoy Gateway
+	// emits the GeoIP filter without xff_config or custom_header_config so Envoy uses its
+	// native default IP source.
+	//
+	// +optional
+	DownstreamRemoteAddress *DownstreamRemoteAddressSettings `json:"downstreamRemoteAddress,omitempty"`
 }
+
+// DownstreamRemoteAddressSettings selects the downstream connection source address
+// (the immediate TCP peer) as the client-IP source. It carries no fields; presence
+// is the signal.
+type DownstreamRemoteAddressSettings struct{}
 
 // XForwardedForSettings provides configuration for using X-Forwarded-For headers for determining the client IP address.
 // Refer to https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
