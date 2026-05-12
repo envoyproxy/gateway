@@ -210,6 +210,10 @@ func buildHCMGeoIPFilter(irListener *ir.HTTPListener, requirements geoIPFieldReq
 			cfg.XffConfig = &httpgeoipv3.Geoip_XffConfig{
 				XffNumTrustedHops: xffNumTrustedHops(irListener.ClientIPDetection),
 			}
+		case irListener.ClientIPDetection.DownstreamRemoteAddress != nil:
+			// Leave XffConfig and CustomHeaderConfig unset; Envoy falls back to the
+			// downstream connection source address (TCP peer), per
+			// envoy.extensions.filters.http.geoip.v3.Geoip.
 		}
 	}
 
