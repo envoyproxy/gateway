@@ -3090,6 +3090,7 @@ _Appears in:_
 | ----- | ----------- |
 | `Header` | HeaderHTTPHostnameModifier indicates that the Host header value would be replaced with the value of the header specified in header.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-header<br /> | 
 | `Backend` | BackendHTTPHostnameModifier indicates that the Host header value would be replaced by the DNS name of the backend if it exists.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-auto-host-rewrite<br /> | 
+| `PathRegex` | PathRegexHTTPHostnameModifier indicates that the Host header value would be rewritten by applying a regex<br />match and substitution to the request path.<br />https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-field-config-route-v3-routeaction-host-rewrite-path-regex<br /> | 
 
 
 #### HTTPPathModifier
@@ -3361,6 +3362,21 @@ _Appears in:_
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
 | `path` | _string_ |  true  |  | Path specifies the HTTP path to match on for health check requests. |
+
+
+#### HostnamePathRegexRewrite
+
+
+
+HostnamePathRegexRewrite defines a hostname rewrite computed from the request path using regex.
+
+_Appears in:_
+- [HTTPHostnameModifier](#httphostnamemodifier)
+
+| Field | Type | Required | Default | Description |
+| ---   | ---  | ---      | ---     | ---         |
+| `pattern` | _string_ |  true  |  | Pattern matches a regular expression against the value of the HTTP Path. The regex string must<br />adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. |
+| `substitution` | _string_ |  true  |  | Substitution is an expression that replaces the matched portion. The expression may include numbered<br />capture groups that adhere to syntax documented in https://github.com/google/re2/wiki/Syntax.<br />The resulting value is used as the upstream Host header and should be constrained to a valid<br />DNS hostname by using explicit regex capture groups in Pattern. |
 
 
 #### IPEndpoint
