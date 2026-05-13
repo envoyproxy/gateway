@@ -43,7 +43,7 @@
     "rtlcss": "^4.3.0"
   },
   "optionalDependencies": {
-    "npm-check-updates": "^22.1.0"
+    "npm-check-updates": "^22.2.0"
   },
   "private": true,
   "prettier": {
