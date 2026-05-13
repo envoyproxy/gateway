@@ -93,6 +93,7 @@ bug fixes: |
   Removed the spurious cross-namespace policy-attachment warning condition when a ReferenceGrant is missing (#8901).
   Fixed an invalid first listener winning hostname/protocol precedence and causing a later valid listener on the same hostname/port to be marked HostnameConflict (#8577).
   Increased `RateLimitSelectCondition.headers` MaxItems from 16 to 64, matching the existing `HTTPHeaderFilter` pattern (#8906).
+  Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
 
 # Enhancements that improve performance.
 performance improvements: |

@@ -10,7 +10,6 @@ security updates: |
 new features: |
 
 bug fixes: |
-  Fixed Gateway getting stuck at `Programmed=False` after its LoadBalancer Service IP was restored, by ignoring `LastTransitionTime` when comparing status conditions.
 
 # Enhancements that improve performance.
 performance improvements: |
