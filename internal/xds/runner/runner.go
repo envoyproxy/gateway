@@ -200,6 +200,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		grpcOpts = append(grpcOpts,
 			grpc.Creds(creds),
 			grpc.StreamInterceptor(jwtInterceptor.Stream()),
+			grpc.UnaryInterceptor(jwtInterceptor.Unary()),
 		)
 	}
 
