@@ -1,0 +1,85 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-path-prefix
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /auth-path-prefix
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-with-authorization-path-regex-invert
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: same-namespace
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /auth-path-invert
+    backendRefs:
+    - name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-path-prefix
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-path-prefix
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow-public-prefix"
+      action: Allow
+      operation:
+        path:
+          type: PathPrefix
+          value: /auth-path-prefix/public
+      principal:
+        headers:
+        - name: x-user-id
+          values:
+          - john
+          - alice
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: authorization-path-regex-invert
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-with-authorization-path-regex-invert
+  authorization:
+    defaultAction: Deny
+    rules:
+    - name: "allow-non-secret"
+      action: Allow
+      operation:
+        path:
+          type: RegularExpression
+          value: "^/auth-path-invert/secret/.*"
+          invert: true
+      principal:
+        headers:
+        - name: x-role
+          values:
+          - admin

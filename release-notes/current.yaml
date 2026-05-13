@@ -9,6 +9,7 @@ security updates: |
 
 # New features or capabilities added in this release.
 new features: |
+  Added support for authorization path match.
 
 bug fixes: |
   Fixed SecurityPolicy merge using the wrong policy as the owner for resource references and IR generation.
