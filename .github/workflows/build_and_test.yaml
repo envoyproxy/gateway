@@ -157,32 +157,32 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
           gwapiChannel: standard
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
           gwapiChannel: experimental
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
           gwapiChannel: experimental
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           gwapiChannel: experimental
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
           gwapiChannel: experimental
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
           gwapiChannel: experimental
@@ -223,26 +223,26 @@ jobs:
       fail-fast: false
       matrix:
         target:
-        - version: v1.32.11
+        - version: v1.33.12
           ipFamily: ipv4
           profile: default
-        - version: v1.33.7
+        - version: v1.34.8
           ipFamily: ipv4
           profile: default
-        - version: v1.34.3
+        - version: v1.35.5
           ipFamily: ipv6  # only run ipv6 test on this version to save time
           profile: default
         # TODO: this's IPv4 first, need a way to test IPv6 first.
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: default
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: dual  # only run dual test on latest version to save time
           profile: gateway-namespace-mode
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: xds-name-scheme-v2
-        - version: v1.35.0
+        - version: v1.36.1
           ipFamily: ipv4
           profile: watch-namespaces
 
