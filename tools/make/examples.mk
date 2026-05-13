@@ -1,4 +1,14 @@
-EXAMPLE_APPS := simple-extension-server extension-server envoy-ext-auth grpc-ext-proc preserve-case-backend static-file-server dynamic-module-test backend-utilization
+EXAMPLE_APPS := \
+	simple-extension-server \
+	extension-server \
+	envoy-ext-auth \
+	grpc-ext-proc \
+	preserve-case-backend \
+	static-file-server \
+	dynamic-module-test \
+	backend-utilization \
+	sds-server
+
 EXAMPLE_IMAGE_PREFIX ?= envoyproxy/gateway-
 EXAMPLE_TAG ?= latest
 
