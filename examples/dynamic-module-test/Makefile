@@ -2,7 +2,7 @@
 IMAGE_PREFIX ?= envoyproxy/gateway-
 APP_NAME ?= dynamic-module-test
 TAG ?= latest
-ENVOY_VERSION ?= dev
+ENVOY_VERSION ?= v1.38.0
 
 .PHONY: docker-buildx
 docker-buildx:
