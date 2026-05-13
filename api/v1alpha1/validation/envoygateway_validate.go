@@ -39,8 +39,14 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 		if err := validateEnvoyGatewayKubernetesProvider(eg.Provider.Kubernetes); err != nil {
 			return err
 		}
+		if err := validateEnvoyGatewayKubernetesRateLimit(eg.RateLimit); err != nil {
+			return err
+		}
 	case egv1a1.ProviderTypeCustom:
 		if err := validateEnvoyGatewayCustomProvider(eg.Provider.Custom); err != nil {
+			return err
+		}
+		if err := validateEnvoyGatewayCustomRateLimit(eg.RateLimit); err != nil {
 			return err
 		}
 	default:
@@ -48,10 +54,6 @@ func ValidateEnvoyGateway(eg *egv1a1.EnvoyGateway) error {
 	}
 
 	if err := validateEnvoyGatewayLogging(eg.Logging); err != nil {
-		return err
-	}
-
-	if err := validateEnvoyGatewayRateLimit(eg.RateLimit); err != nil {
 		return err
 	}
 
@@ -210,7 +212,7 @@ func validateEnvoyGatewayLogging(logging *egv1a1.EnvoyGatewayLogging) error {
 	return nil
 }
 
-func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
+func validateEnvoyGatewayKubernetesRateLimit(rateLimit *egv1a1.RateLimit) error {
 	if rateLimit == nil {
 		return nil
 	}
@@ -225,6 +227,20 @@ func validateEnvoyGatewayRateLimit(rateLimit *egv1a1.RateLimit) error {
 		if _, err := url.Parse(host); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
+	}
+	return nil
+}
+
+func validateEnvoyGatewayCustomRateLimit(rateLimit *egv1a1.RateLimit) error {
+	if rateLimit == nil {
+		return nil
+	}
+	if rateLimit.URL == nil {
+		return fmt.Errorf("empty ratelimit url settings")
+	}
+	_, err := url.Parse(*rateLimit.URL)
+	if err != nil {
+		return fmt.Errorf("unknown ratelimit url format: %w", err)
 	}
 	return nil
 }

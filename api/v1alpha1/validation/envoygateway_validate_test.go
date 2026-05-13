@@ -339,6 +339,83 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			expect: true,
 		},
 		{
+			name: "happy ratelimit for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type:   egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new("grpc://cool-rate-limiter.com:50051"),
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "malformed ratelimit url for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type:   egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						URL: new(":foo"),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "missing ratelimit url for custom provider",
+			eg: &egv1a1.EnvoyGateway{
+				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+					Gateway: egv1a1.DefaultGateway(),
+					Provider: new(egv1a1.EnvoyGatewayProvider{
+						Type: egv1a1.ProviderTypeCustom,
+						Custom: new(egv1a1.EnvoyGatewayCustomProvider{
+							Resource: egv1a1.EnvoyGatewayResourceProvider{
+								Type: egv1a1.ResourceProviderTypeKubernetes,
+							},
+							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
+								Type:   egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+							}),
+						}),
+					}),
+					RateLimit: &egv1a1.RateLimit{
+						Backend: egv1a1.RateLimitDatabaseBackend{
+							Type: egv1a1.RedisBackendType,
+							Redis: &egv1a1.RateLimitRedisSettings{
+								URL: "node-0:6376,node-1:6376,node-2:6376",
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
 			name: "happy extension settings",
 			eg: &egv1a1.EnvoyGateway{
 				EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
