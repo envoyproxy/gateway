@@ -6,7 +6,7 @@ This is a simple gRPC server that implements the Envoy Secret Discovery Service 
 
 The SDS server provides TLS certificates and validation contexts to Envoy proxies dynamically. This example implementation:
 
-- Generates self-signed certificates on startup
+- Loads certificates from file system or generates self-signed certificates for testing
 - Serves secrets via the SDS gRPC protocol
 - Supports both dedicated SDS and ADS (Aggregated Discovery Service)
 - Provides two types of secrets:
@@ -36,21 +36,30 @@ Start the SDS server:
 ```
 
 Options:
-- `-port <port>`: gRPC port for SDS server (default: 18001)
-- `-node <nodeID>`: Node ID for envoy client (default: "sds-test-node")
-- `-cn <commonName>`: Common Name for the generated certificate (default: "sds-test.example.com")
-- `-dns <dnsNames>`: Comma-separated list of DNS names for the certificate (default: "sds-test.example.com,*.example.com,localhost")
+- `-socket <path>`: Unix domain socket path for SDS server (default: /tmp/sds.sock)
+- `-port <port>`: gRPC port for TCP mode (default: 18001, ignored when socket is used)
+- `-cert <path>`: Path to TLS certificate file in PEM format
+- `-key <path>`: Path to TLS private key file in PEM format
+- `-ca <path>`: Path to CA certificate file in PEM format (optional)
 
-Example:
+> **Note:** The SDS server listens on a Unix domain socket by default and automatically serves secrets to any Envoy node that connects, regardless of node ID.
+
+Example with certificate files:
 
 ```bash
-./sds-server -port 18001 -node my-envoy-node -cn myapp.example.com -dns "myapp.example.com,*.myapp.example.com,localhost"
+./sds-server -socket /var/run/sds/sds.sock -cert /path/to/cert.pem -key /path/to/key.pem -ca /path/to/ca.pem
+```
+
+Example without certificate files (generates self-signed cert for testing):
+
+```bash
+./sds-server -socket /tmp/sds.sock
 ```
 
 Or with the Makefile:
 
 ```bash
-make run PORT=18001 NODE_ID=my-envoy-node COMMON_NAME=myapp.example.com DNS_NAMES="myapp.example.com,*.myapp.example.com,localhost"
+make run SOCKET=/tmp/sds.sock
 ```
 
 ## Testing with Envoy
@@ -155,7 +164,7 @@ docker build -t sds-server:latest .
 Run the container:
 
 ```bash
-docker run -p 18001:18001 sds-server:latest
+docker run -p 18001:180Loads certificates from files or generates self-signed certificate for testing
 ```
 
 ## Architecture
@@ -173,7 +182,8 @@ The server implements the following flow:
 ## Features
 
 - ✅ SDS v3 API support
-- ✅ Self-signed certificate generation with configurable Common Name and DNS names
+- ✅ Load certificates from file system (PEM format)
+- ✅ Fallback to self-signed certificate generation for testing
 - ✅ Snapshot cache for secrets
 - ✅ gRPC keepalive configuration
 - ✅ Request/response logging
@@ -182,12 +192,13 @@ The server implements the following flow:
 
 ## Notes
 
-- The server generates a new certificate on each startup
-- The certificate is valid for 1 year
-- Certificate Common Name and DNS names (SANs) are configurable via command-line flags
-- Default DNS names include: `sds-test.example.com`, `*.example.com`, and `localhost`
+- The server can load certificates from file system or generate self-signed certificates
+- When loading from files, certificates must be in PEM format
+- If no certificate files are provided, a self-signed certificate is generated automatically for testing
+- The self-signed certificate is valid for 1 year with CN=sds-test.example.com
+- Default DNS names for self-signed cert: `sds-test.example.com`, `*.example.com`, and `localhost`
 - The certificate always includes IP address `127.0.0.1`
-- In production, you should load certificates from secure storage (e.g., Kubernetes secrets, HashiCorp Vault)
+- In production, you should provide real certificates via `-cert`, `-key`, and `-ca` flags
 
 ## References
 

@@ -3,10 +3,7 @@ IMAGE_PREFIX ?= envoyproxy/gateway-
 APP_NAME ?= sds-server
 TAG ?= latest
 GO_LDFLAGS ?=
-PORT ?= 18001
-NODE_ID ?= sds-test-node
-COMMON_NAME ?= sds-test.example.com
-DNS_NAMES ?= sds-test.example.com,*.example.com,localhost
+SOCKET ?= /tmp/sds.sock
 
 .PHONY: build
 build:
@@ -14,7 +11,7 @@ build:
 
 .PHONY: run
 run: build
-	./$(APP_NAME) -port $(PORT) -node $(NODE_ID) -cn $(COMMON_NAME) -dns $(DNS_NAMES)
+	./$(APP_NAME) -socket $(SOCKET)
 
 .PHONY: test
 test:
@@ -35,7 +32,7 @@ docker-buildx:
 
 .PHONY: docker-run
 docker-run:
-	docker run -p $(PORT):$(PORT) $(IMAGE_PREFIX)$(APP_NAME):$(TAG) -port $(PORT) -node $(NODE_ID) -cn $(COMMON_NAME) -dns $(DNS_NAMES)
+	docker run -v /tmp:/tmp $(IMAGE_PREFIX)$(APP_NAME):$(TAG) -socket /tmp/sds.sock
 
 .PHONY: help
 help:
@@ -49,8 +46,5 @@ help:
 	@echo "  docker-run    - Run Docker container"
 	@echo ""
 	@echo "Variables:"
-	@echo "  PORT          - SDS server port (default: 18001)"
-	@echo "  NODE_ID       - Envoy node ID (default: sds-test-node)"
-	@echo "  COMMON_NAME   - Certificate Common Name (default: sds-test.example.com)"
-	@echo "  DNS_NAMES     - Comma-separated DNS names (default: sds-test.example.com,*.example.com,localhost)"
+	@echo "  SOCKET        - Unix domain socket path (default: /tmp/sds.sock)"
 	@echo "  TAG           - Docker image tag (default: latest)"

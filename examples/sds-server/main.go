@@ -17,7 +17,7 @@ import (
 	"log"
 	"math/big"
 	"net"
-	"strings"
+	"os"
 	"time"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -36,22 +36,17 @@ import (
 const (
 	// Default listening port for the SDS server
 	defaultPort = 18001
-	// Default node ID
-	defaultNodeID = "sds-test-node"
-	// Default common name
-	defaultCommonName = "sds-test.example.com"
-	// Default DNS names
-	defaultDNSNames = "sds-test.example.com,*.example.com,localhost"
 	// Secret names
 	tlsCertSecretName    = "server_cert"
 	validationSecretName = "validation_context"
 )
 
 var (
-	port       = flag.Int("port", defaultPort, "gRPC port for SDS server")
-	nodeID     = flag.String("node", defaultNodeID, "Node ID for envoy")
-	commonName = flag.String("cn", defaultCommonName, "Common Name for the certificate")
-	dnsNames   = flag.String("dns", defaultDNSNames, "Comma-separated list of DNS names for the certificate")
+	port       = flag.Int("port", defaultPort, "gRPC port for SDS server (ignored if socket is set)")
+	socketPath = flag.String("socket", "", "Unix domain socket path for SDS server")
+	certFile   = flag.String("cert", "", "Path to TLS certificate file (PEM format)")
+	keyFile    = flag.String("key", "", "Path to TLS private key file (PEM format)")
+	caFile     = flag.String("ca", "", "Path to CA certificate file (PEM format, optional)")
 )
 
 // callbacks implements the go-control-plane callbacks interface
@@ -59,6 +54,8 @@ type callbacks struct {
 	signal   chan struct{}
 	fetches  int
 	requests int
+	cache    cachev3.SnapshotCache
+	snapshot cachev3.ResourceSnapshot
 }
 
 func (cb *callbacks) Report() {
@@ -78,6 +75,15 @@ func (cb *callbacks) OnStreamRequest(id int64, req *discovery.DiscoveryRequest) 
 	cb.requests++
 	log.Printf("Stream request: id=%d version=%s resources=%v type=%s\n",
 		id, req.VersionInfo, req.ResourceNames, req.TypeUrl)
+
+	// Automatically set snapshot for any node that connects
+	if req.Node != nil && req.Node.Id != "" {
+		if err := cb.cache.SetSnapshot(context.Background(), req.Node.Id, cb.snapshot); err != nil {
+			log.Printf("Failed to set snapshot for node %s: %v", req.Node.Id, err)
+		} else {
+			log.Printf("Set snapshot for node: %s", req.Node.Id)
+		}
+	}
 	return nil
 }
 
@@ -118,8 +124,40 @@ func (cb *callbacks) OnStreamDeltaResponse(id int64, req *discovery.DeltaDiscove
 	log.Printf("Delta stream response: id=%d type=%s\n", id, resp.TypeUrl)
 }
 
-// generateSelfSignedCert generates a self-signed certificate and private key
-func generateSelfSignedCert(cn string, dnsNames []string) (certPEM, keyPEM []byte, err error) {
+// loadCertificateFromFile loads a certificate from a PEM file
+func loadCertificateFromFile(filePath string) ([]byte, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read certificate file %s: %w", filePath, err)
+	}
+
+	// Verify it's valid PEM
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from %s", filePath)
+	}
+
+	return data, nil
+}
+
+// loadPrivateKeyFromFile loads a private key from a PEM file
+func loadPrivateKeyFromFile(filePath string) ([]byte, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key file %s: %w", filePath, err)
+	}
+
+	// Verify it's valid PEM
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from %s", filePath)
+	}
+
+	return data, nil
+}
+
+// generateSelfSignedCert generates a self-signed certificate and private key for testing
+func generateSelfSignedCert() (certPEM, keyPEM []byte, err error) {
 	// Generate RSA key
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -139,14 +177,14 @@ func generateSelfSignedCert(cn string, dnsNames []string) (certPEM, keyPEM []byt
 		SerialNumber: serialNumber,
 		Subject: pkix.Name{
 			Organization: []string{"Envoy Gateway Test"},
-			CommonName:   cn,
+			CommonName:   "sds-test.example.com",
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		DNSNames:              dnsNames,
+		DNSNames:              []string{"sds-test.example.com", "*.example.com", "localhost"},
 		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
@@ -213,14 +251,8 @@ func createValidationContextSecret(name string, caPEM []byte) (*auth.Secret, err
 }
 
 // makeSnapshot creates a snapshot with secrets
-func makeSnapshot(version string, cn string, dnsNames []string) (cachev3.ResourceSnapshot, error) {
-	// Generate a self-signed certificate
-	certPEM, keyPEM, err := generateSelfSignedCert(cn, dnsNames)
-	if err != nil {
-		return &cachev3.Snapshot{}, fmt.Errorf("failed to generate certificate: %w", err)
-	}
-
-	log.Printf("Generated certificate for CN=%s, DNS names=%v", cn, dnsNames)
+func makeSnapshot(version string, certPEM, keyPEM, caPEM []byte) (cachev3.ResourceSnapshot, error) {
+	log.Printf("Creating snapshot with provided certificates")
 
 	// Create TLS certificate secret
 	tlsSecret, err := createTLSCertificateSecret(tlsCertSecretName, certPEM, keyPEM)
@@ -228,16 +260,20 @@ func makeSnapshot(version string, cn string, dnsNames []string) (cachev3.Resourc
 		return &cachev3.Snapshot{}, fmt.Errorf("failed to create TLS secret: %w", err)
 	}
 
-	// Create validation context secret (using the same cert as CA for testing)
-	validationSecret, err := createValidationContextSecret(validationSecretName, certPEM)
-	if err != nil {
-		return &cachev3.Snapshot{}, fmt.Errorf("failed to create validation secret: %w", err)
-	}
-
-	// Marshal secrets to Any
 	tlsSecretAny, err := anypb.New(tlsSecret)
 	if err != nil {
 		return &cachev3.Snapshot{}, fmt.Errorf("failed to marshal TLS secret: %w", err)
+	}
+
+	// Use CA if provided, otherwise use cert as CA
+	if len(caPEM) == 0 {
+		caPEM = certPEM
+	}
+
+	// Create validation context secret
+	validationSecret, err := createValidationContextSecret(validationSecretName, caPEM)
+	if err != nil {
+		return &cachev3.Snapshot{}, fmt.Errorf("failed to create validation secret: %w", err)
 	}
 
 	validationSecretAny, err := anypb.New(validationSecret)
@@ -274,45 +310,65 @@ func makeSnapshot(version string, cn string, dnsNames []string) (cachev3.Resourc
 }
 
 func main() {
+	log.Printf("Starting Envoy SDS server")
 	flag.Parse()
 
-	// Parse DNS names from comma-separated string
-	dnsNamesList := []string{}
-	if *dnsNames != "" {
-		for _, name := range strings.Split(*dnsNames, ",") {
-			name = strings.TrimSpace(name)
-			if name != "" {
-				dnsNamesList = append(dnsNamesList, name)
+	var certPEM, keyPEM, caPEM []byte
+	var err error
+
+	// Load certificates from files or generate self-signed for testing
+	if *certFile != "" && *keyFile != "" {
+		log.Printf("Loading certificate from files: cert=%s, key=%s", *certFile, *keyFile)
+
+		certPEM, err = loadCertificateFromFile(*certFile)
+		if err != nil {
+			log.Fatalf("Failed to load certificate: %v", err)
+		}
+
+		keyPEM, err = loadPrivateKeyFromFile(*keyFile)
+		if err != nil {
+			log.Fatalf("Failed to load private key: %v", err)
+		}
+
+		// Load CA certificate if provided
+		if *caFile != "" {
+			log.Printf("Loading CA certificate from: %s", *caFile)
+			caPEM, err = loadCertificateFromFile(*caFile)
+			if err != nil {
+				log.Fatalf("Failed to load CA certificate: %v", err)
 			}
 		}
-	}
 
-	log.Printf("Starting Envoy SDS server on port %d", *port)
-	log.Printf("Certificate CN: %s", *commonName)
-	log.Printf("Certificate DNS names: %v", dnsNamesList)
+		log.Printf("Successfully loaded certificates from file system")
+	} else {
+		log.Printf("No certificate files provided, generating self-signed certificate for testing")
+		certPEM, keyPEM, err = generateSelfSignedCert()
+		if err != nil {
+			log.Fatalf("Failed to generate self-signed certificate: %v", err)
+		}
+		log.Printf("Generated self-signed certificate for CN=sds-test.example.com")
+	}
 
 	// Create a cache
 	cache := cachev3.NewSnapshotCache(false, cachev3.IDHash{}, nil)
 
 	// Create snapshot with secrets
-	snapshot, err := makeSnapshot("v1", *commonName, dnsNamesList)
+	snapshot, err := makeSnapshot("v1", certPEM, keyPEM, caPEM)
 	if err != nil {
 		log.Fatalf("Failed to create snapshot: %v", err)
 	}
 
-	// Set snapshot for the node
-	if err := cache.SetSnapshot(context.Background(), *nodeID, snapshot); err != nil {
-		log.Fatalf("Failed to set snapshot: %v", err)
-	}
-
 	log.Printf("Snapshot created with version v1")
 	log.Printf("Available secrets: %s, %s", tlsCertSecretName, validationSecretName)
+	log.Printf("SDS server will serve secrets to any connecting node")
 
-	// Create callbacks
+	// Create callbacks with cache and snapshot
 	cb := &callbacks{
 		signal:   make(chan struct{}),
 		fetches:  0,
 		requests: 0,
+		cache:    cache,
+		snapshot: snapshot,
 	}
 
 	// Create xDS server
@@ -324,8 +380,7 @@ func main() {
 	grpcOptions = append(grpcOptions,
 		grpc.MaxConcurrentStreams(1000),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Time:    30 * time.Second,
-			Timeout: 5 * time.Second,
+			Time: 5 * time.Second,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			MinTime:             5 * time.Second,
@@ -340,15 +395,36 @@ func main() {
 	// Also register ADS for clients that use it
 	discovery.RegisterAggregatedDiscoveryServiceServer(grpcServer, srv)
 
-	// Listen and serve
-	addr := fmt.Sprintf(":%d", *port)
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		log.Fatalf("Failed to listen on %s: %v", addr, err)
+	var lis net.Listener
+	if *socketPath != "" {
+		// Listen and serve on Unix domain socket
+		// Remove existing socket file if it exists
+		if err := os.RemoveAll(*socketPath); err != nil {
+			log.Printf("Warning: failed to remove existing socket: %v", err)
+		}
+
+		lis, err = net.Listen("unix", *socketPath)
+		if err != nil {
+			log.Fatalf("Failed to listen on socket %s: %v", *socketPath, err)
+		}
+
+		// Ensure socket has proper permissions
+		if err := os.Chmod(*socketPath, 0666); err != nil {
+			log.Printf("Warning: failed to chmod socket: %v", err)
+		}
+
+		log.Printf("SDS server listening on Unix socket: %s", *socketPath)
+	} else {
+		// Listen and serve on TCP
+		addr := fmt.Sprintf(":%d", *port)
+		lis, err = net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("Failed to listen on %s: %v", addr, err)
+		}
+
+		log.Printf("SDS server listening on %s", addr)
 	}
 
-	log.Printf("SDS server listening on %s", addr)
-	log.Printf("Node ID: %s", *nodeID)
 	log.Println("Ready to serve SDS requests")
 
 	if err := grpcServer.Serve(lis); err != nil {

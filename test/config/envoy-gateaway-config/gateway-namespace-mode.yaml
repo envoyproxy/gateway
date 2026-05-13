@@ -17,6 +17,7 @@ data:
     extensionApis:
       enableEnvoyPatchPolicy: true
       enableBackend: true
+      enableSDSSecretRef: true
     gatewayAPI:
       enabled: [XListenerSet]
     rateLimit:
