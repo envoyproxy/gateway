@@ -4,7 +4,7 @@ date: May 8, 2026
 breaking changes: |
   The DirectResponse body in HTTPFilter now supports Envoy command operators for dynamic content. Existing configurations including the template syntax (%) will be interpolated.
   The `0s` timeout in SecurityPolicy is now treated as infinite timeout instead of immediate timeout.
-  `SamplingFraction` behavior changed from raw fraction to percentage ratio. This will lead to 100x more sampling than before. E.g. `numerator: 100` used to result in 1% sampling rate, now will result in 100% sampling.
+  Fixed EnvoyProxy `samplingFraction` translation to convert the Gateway API fraction into Envoy's percentage-based `random_sampling` field. Existing `samplingFraction` configs will sample 100x more than in previous releases.
   The controller now uses production logging encoder config by default, which provides better output when using JSON encoder.
   SecurityPolicy OIDC now generates a single native `envoy.filters.http.oauth2` HTTP filter in the HCM filter chain and moves route-specific OAuth2 configuration to route `typed_per_filter_config`. This can break existing EnvoyPatchPolicies and extension managers that depend on the previous per-route OAuth2 filter instances or on the old OAuth2 filter configuration shape in the HCM filter chain.
   Merged SecurityPolicy IR/xDS resource names (OIDC, BasicAuth, ExtAuth, JWT) now derive from the policy that contributes the field (parent or route) rather than always using the route-level policy. EnvoyPatchPolicy users who reference those generated names must update their patch targets.
