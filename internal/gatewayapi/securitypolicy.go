@@ -2443,6 +2443,10 @@ func (t *Translator) buildAuthorization(
 		rule := &authorization.Rules[i]
 		irPrincipal := ir.Principal{}
 
+		if rule.CEL != nil {
+			return nil, fmt.Errorf("authorization rule %d: CEL authorization is not implemented", i)
+		}
+
 		for _, cidr := range rule.Principal.ClientCIDRs {
 			cidrMatch, err := parseCIDR(string(cidr))
 			if err != nil {
