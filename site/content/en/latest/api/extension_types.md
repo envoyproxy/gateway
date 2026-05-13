@@ -2942,7 +2942,7 @@ _Appears in:_
 
 | Field | Type | Required | Default | Description |
 | ---   | ---  | ---      | ---     | ---         |
-| `hostname` | _string_ |  false  |  | Hostname defines the HTTP host that will be requested during health checking.<br />Default: HTTPRoute or GRPCRoute hostname. |
+| `hostname` | _string_ |  false  |  | Hostname defines the HTTP Host header used for active HTTP health checks.<br />Host selection uses this order: this field, the associated Backend endpoint<br />hostname if available, then the effective Route hostname. |
 | `path` | _string_ |  true  |  | Path defines the HTTP path that will be requested during health checking. |
 | `method` | _string_ |  false  |  | Method defines the HTTP method used for health checking.<br />Defaults to GET |
 | `expectedStatuses` | _[HTTPStatus](#httpstatus) array_ |  false  |  | ExpectedStatuses defines a list of HTTP response statuses considered healthy.<br />Defaults to 200 only |
@@ -6197,7 +6197,7 @@ _Appears in:_
 | ---   | ---  | ---      | ---     | ---         |
 | `group` | _[Group](#group)_ |  true  | gateway.networking.k8s.io | Group is the group that this selector targets. Defaults to gateway.networking.k8s.io |
 | `kind` | _[Kind](#kind)_ |  true  |  | Kind is the resource kind that this selector targets. |
-| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway. |
+| `namespaces` | _[TargetSelectorNamespaces](#targetselectornamespaces)_ |  false  |  | Namespaces determines which namespaces are considered for target selection.<br />If unspecified, only targets in the same namespace as this policy are considered.<br />When specified, the effective set of namespaces is always constrained to the<br />namespaces watched by Envoy Gateway.<br />Selecting targets across namespaces requires a ReferenceGrant in the target<br />namespace that allows this policy kind to reference the selected target kind.<br />Cross-namespace targets without a matching ReferenceGrant are ignored. |
 | `matchLabels` | _object (keys:string, values:string)_ |  false  |  | MatchLabels are the set of label selectors for identifying the targeted resource. |
 | `matchExpressions` | _[LabelSelectorRequirement](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#labelselectorrequirement-v1-meta) array_ |  false  |  | MatchExpressions is a list of label selector requirements. The requirements are ANDed. |
 

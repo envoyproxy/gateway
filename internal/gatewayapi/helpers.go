@@ -27,7 +27,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi/resource"
-	"github.com/envoyproxy/gateway/internal/gatewayapi/status"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils"
 )
@@ -767,11 +766,6 @@ type policyTargetReferenceWithSectionName struct {
 	SectionName *gwapiv1.SectionName `json:"sectionName,omitempty"`
 }
 
-type policySelectedTarget[T client.Object] struct {
-	Target T
-	Ref    policyTargetReferenceWithSectionName
-}
-
 func isRouteRule(target policyTargetReferenceWithSectionName) bool {
 	// If the target is not a gateway and the section name is not nil, then it's a route rule.
 	return target.Kind != resource.KindGateway && target.SectionName != nil
@@ -899,7 +893,7 @@ func isCrossNamespaceReferencePermitted(
 	return false
 }
 
-// resolvePolicyTargetsFromSelectors returns a list of policy target refs that are allowed and denied by the policy's TargetSelectors.
+// resolvePolicyTargetsFromSelectors returns policy target refs allowed by the policy's TargetSelectors.
 func resolvePolicyTargetsFromSelectors[T client.Object](
 	targetSelectors []egv1a1.TargetSelector,
 	potentialTargets []T,
@@ -908,9 +902,9 @@ func resolvePolicyTargetsFromSelectors[T client.Object](
 	policyKind string,
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
-) (allowed, denied []policySelectedTarget[T]) {
+) []targetRefWithTimestamp {
 	allowedDedup := sets.New[targetRefWithTimestamp]()
-	deniedDedup := sets.New[policyTargetReferenceWithSectionName]()
+	targetRefs := make([]targetRefWithTimestamp, 0)
 	for _, currSelector := range targetSelectors {
 		labelSelector := selectorFromTargetSelector(currSelector)
 		for _, obj := range potentialTargets {
@@ -952,14 +946,6 @@ func resolvePolicyTargetsFromSelectors[T client.Object](
 				},
 				referenceGrants,
 			) {
-				if deniedDedup.Has(ref) {
-					continue
-				}
-				deniedDedup.Insert(ref)
-				denied = append(denied, policySelectedTarget[T]{
-					Target: obj,
-					Ref:    ref,
-				})
 				continue
 			}
 
@@ -971,14 +957,11 @@ func resolvePolicyTargetsFromSelectors[T client.Object](
 				continue
 			}
 			allowedDedup.Insert(targetRef)
-			allowed = append(allowed, policySelectedTarget[T]{
-				Target: obj,
-				Ref:    ref,
-			})
+			targetRefs = append(targetRefs, targetRef)
 		}
 	}
 
-	return allowed, denied
+	return targetRefs
 }
 
 // resolvePolicyTargetsFromReferences returns a list of policy target refs specified in the policy's TargetRefs, with the namespace field populated.
@@ -1007,23 +990,16 @@ func resolvePolicyTargetsFromReferences(
 }
 
 // composePolicyTargetRefs combines the allowed target refs derived from the selectors and the plain target refs specified in the policy.
-func composePolicyTargetRefs[T client.Object](
-	matches []policySelectedTarget[T],
+func composePolicyTargetRefs(
+	selectorTargetRefs []targetRefWithTimestamp,
 	plainTargetRefs []policyTargetReferenceWithSectionName,
 ) []policyTargetReferenceWithSectionName {
 	// First add the target refs derived from the selectors, sorted by the creation timestamp of the matched objects.
-	selectorsList := make([]targetRefWithTimestamp, 0, len(matches))
-	for _, match := range matches {
-		selectorsList = append(selectorsList, targetRefWithTimestamp{
-			CreationTimestamp:                    match.Target.GetCreationTimestamp(),
-			policyTargetReferenceWithSectionName: match.Ref,
-		})
-	}
-	slices.SortFunc(selectorsList, func(i, j targetRefWithTimestamp) int {
+	slices.SortFunc(selectorTargetRefs, func(i, j targetRefWithTimestamp) int {
 		return i.CreationTimestamp.Compare(j.CreationTimestamp.Time)
 	})
-	ret := make([]policyTargetReferenceWithSectionName, len(selectorsList))
-	for i, v := range selectorsList {
+	ret := make([]policyTargetReferenceWithSectionName, len(selectorTargetRefs))
+	for i, v := range selectorTargetRefs {
 		ret[i] = v.policyTargetReferenceWithSectionName
 	}
 
@@ -1051,7 +1027,7 @@ func resolvePolicyTargets[T client.Object](
 	policyNamespace string,
 	namespaceLookup func(string) *corev1.Namespace,
 ) []policyTargetReferenceWithSectionName {
-	allowed, _ := resolvePolicyTargetsFromSelectors(
+	selectorTargetRefs := resolvePolicyTargetsFromSelectors(
 		targetRefs.TargetSelectors,
 		potentialTargets,
 		referenceGrants,
@@ -1060,77 +1036,7 @@ func resolvePolicyTargets[T client.Object](
 		policyNamespace,
 		namespaceLookup)
 	plainTargetRefs := resolvePolicyTargetsFromReferences(targetRefs, policyNamespace)
-	return composePolicyTargetRefs(allowed, plainTargetRefs)
-}
-
-func setPolicyTargetRefNotPermittedStatus[T client.Object](
-	policyStatus *gwapiv1.PolicyStatus,
-	denied []policySelectedTarget[T],
-	controllerName string,
-	generation int64,
-) {
-	for _, deniedMatch := range denied {
-		msg := fmt.Sprintf(
-			"Target %s %s/%s is not permitted by any ReferenceGrant.",
-			deniedMatch.Target.GetObjectKind().GroupVersionKind().Kind,
-			deniedMatch.Target.GetNamespace(),
-			deniedMatch.Target.GetName(),
-		)
-
-		switch obj := any(deniedMatch.Target).(type) {
-		case *GatewayContext:
-			ancestorRef := getAncestorRefForPolicy(utils.NamespacedName(obj), nil)
-			setPolicyTargetRefNotPermittedStatusForAncestor(policyStatus, &ancestorRef, controllerName, generation, msg)
-		case RouteContext:
-			parentRefs := GetManagedParentReferences(obj)
-			ancestorRefs := make([]*gwapiv1.ParentReference, 0, len(parentRefs))
-			for _, p := range parentRefs {
-				if p.Kind != nil && *p.Kind != resource.KindGateway {
-					continue
-				}
-				namespace := obj.GetNamespace()
-				if p.Namespace != nil {
-					namespace = string(*p.Namespace)
-				}
-				ancestorRef := getAncestorRefForPolicy(types.NamespacedName{
-					Name:      string(p.Name),
-					Namespace: namespace,
-				}, p.SectionName)
-				ancestorRefs = append(ancestorRefs, &ancestorRef)
-			}
-			for _, ancestorRef := range ancestorRefs {
-				setPolicyTargetRefNotPermittedStatusForAncestor(policyStatus, ancestorRef, controllerName, generation, msg)
-			}
-		}
-	}
-}
-
-func setPolicyTargetRefNotPermittedStatusForAncestor(
-	policyStatus *gwapiv1.PolicyStatus,
-	ancestorRef *gwapiv1.ParentReference,
-	controllerName string,
-	generation int64,
-	message string,
-) {
-	// If an ancestor has at least one effective target: Accepted=True,
-	// If some targets under that same ancestor were skipped due to missing ReferenceGrant: add Warning=True, reason RefNotPermitted.
-	if status.IsPolicyAncestorAccepted(policyStatus, ancestorRef, controllerName) {
-		status.SetWarningForPolicyAncestor(
-			policyStatus,
-			ancestorRef,
-			controllerName,
-			egv1a1.PolicyReasonRefNotPermitted,
-			message,
-			generation,
-		)
-		return
-	}
-
-	// If an ancestor has no effective target due to all targets being skipped by missing ReferenceGrant, the policy should be Rejected with reason RefNotPermitted.
-	status.SetResolveErrorForPolicyAncestor(policyStatus, ancestorRef, controllerName, generation, &status.PolicyResolveError{
-		Reason:  egv1a1.PolicyReasonRefNotPermitted,
-		Message: message,
-	})
+	return composePolicyTargetRefs(selectorTargetRefs, plainTargetRefs)
 }
 
 // legacy function to get policy target refs without considering cross-namespace policy attachment.

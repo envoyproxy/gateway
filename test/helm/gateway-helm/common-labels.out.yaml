@@ -66,6 +66,16 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: gateway-helm-envoy-gateway-role
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: custom-instance-name
+    app.kubernetes.io/name: custom-gateway-name
+    my-commonlabel-1: example-1
+    my-commonlabel-2: example-2
 rules:
 - apiGroups:
   - ""
@@ -199,6 +209,16 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: gateway-helm-envoy-gateway-rolebinding
+  labels:
+    helm.sh/chart: gateway-helm-v0.0.0-latest
+    app.kubernetes.io/name: gateway-helm
+    app.kubernetes.io/instance: gateway-helm
+    app.kubernetes.io/version: "latest"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: custom-instance-name
+    app.kubernetes.io/name: custom-gateway-name
+    my-commonlabel-1: example-1
+    my-commonlabel-2: example-2
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
