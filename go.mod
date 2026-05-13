@@ -38,7 +38,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
-	github.com/tetratelabs/func-e v1.4.0
+	github.com/tetratelabs/func-e v1.5.0
 	github.com/tsaarni/certyaml v0.11.0
 	github.com/yuin/gopher-lua v1.1.2
 	go.opentelemetry.io/otel v1.43.0
@@ -241,7 +241,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
 	github.com/tsaarni/x500dn v1.1.0 // indirect
-	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/ulikunitz/lz v0.6.11 // indirect
+	github.com/ulikunitz/xz/v2 v2.0.0-dev.4 // indirect
 	github.com/vbatts/tar-split v0.12.2 // indirect
 	github.com/vishvananda/netlink v1.3.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
