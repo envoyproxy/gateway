@@ -211,7 +211,7 @@ spec:
                             no match.
 
                             Examples:
-                            `request.method == 'POST'`
+                            `request.headers['x-tenant'] == 'team-a'`
                             `request.method == 'POST' && request.path.startsWith('/admin')`
                           maxLength: 4096
                           minLength: 1
