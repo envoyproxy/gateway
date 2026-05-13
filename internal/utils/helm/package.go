@@ -183,10 +183,6 @@ func (pt *PackageTool) loadChart(opts *PackageOptions) (*chart.Chart, error) {
 // extractCRDs Extract the CRDs part of the chart and its sub-charts
 func (pt *PackageTool) extractCRDs(ch *chart.Chart) ([]*resource.Info, error) {
 	allCRDs := ch.CRDObjects()
-	for _, dep := range ch.Dependencies() {
-		allCRDs = append(allCRDs, dep.CRDObjects()...)
-	}
-
 	crdResInfo := make([]*resource.Info, 0, len(allCRDs))
 
 	for _, crd := range allCRDs {
