@@ -101,8 +101,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 			gwXdsIR, ok = xdsIR[irKey]
 			if !ok {
-				var message string
-				message = fmt.Sprintf("Target to %s %s/%s does not exist.", targetKind, policy.Namespace, refName)
+				message := fmt.Sprintf("Target to %s %s/%s does not exist.", targetKind, policy.Namespace, refName)
 				resolveErr = &status.PolicyResolveError{
 					Reason:  egv1a1.PolicyReasonInvalid,
 					Message: message,
