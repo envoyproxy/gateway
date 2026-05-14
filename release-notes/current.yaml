@@ -11,6 +11,7 @@ security updates: |
 new features: |
 
 bug fixes: |
+  Fixed controller panic when processing backend tls settings.
 
 # Enhancements that improve performance.
 performance improvements: |
