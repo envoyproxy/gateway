@@ -493,7 +493,7 @@ type EnvoyProxyProvider struct {
 	// are applied.
 	//
 	// +optional
-	Remote *EnvoyProxyHostProvider `json:"remote,omitempty"`
+	Remote *EnvoyProxyRemoteProvider `json:"remote,omitempty"`
 }
 
 // ShutdownConfig defines configuration for graceful envoy shutdown process.
