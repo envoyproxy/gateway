@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 
@@ -41,9 +40,7 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.APIVersion == "" {
 		e.APIVersion = GroupVersion.String()
 	}
-	fmt.Println("Before Setting defaults")
 	if e.Provider == nil {
-		fmt.Println("Setting default Provider values.")
 		e.Provider = DefaultEnvoyGatewayProvider()
 	}
 
@@ -343,11 +340,11 @@ func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
 // GetEnvoyGatewayKubeProvider returns the EnvoyGatewayKubernetesProvider of Provider or
 // a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
 // type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
-// This is specifically for Kubernetes Infrastructure. -- TODO FIX!(ztn)
 func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	if !r.IsRunningOnKubernetes() {
 		return nil
 	}
+
 	if r.Kubernetes == nil {
 		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
 		if r.Kubernetes.LeaderElection == nil {
@@ -420,7 +417,6 @@ func (r *EnvoyGatewayProvider) GetKubernetesConfiguration() EnvoyGatewayKubernet
 	if r.Type == ProviderTypeCustom && r.Custom != nil && r.Custom.Resource.Type == ResourceProviderTypeKubernetes {
 		return r.Custom.Resource.Kubernetes.EnvoyGatewayKubernetesConfiguration
 	}
-	// TODO -- wat
 	return EnvoyGatewayKubernetesConfiguration{}
 }
 
@@ -428,7 +424,6 @@ func (r *EnvoyGatewayProvider) GetKubernetesInfrastructureConfiguration() EnvoyG
 	if r.Type == ProviderTypeKubernetes {
 		return r.Kubernetes.EnvoyGatewayKubernetesInfrastructureConfiguration
 	}
-	// TODO -- wat
 	return EnvoyGatewayKubernetesInfrastructureConfiguration{}
 }
 

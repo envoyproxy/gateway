@@ -21,7 +21,6 @@ message CreateOrUpdateProxyInfraRequest {
 }
 
 message CreateOrUpdateProxyInfraResponse {
-  repeated string gateway_addresses = 1;
 }
 
 message DeleteProxyInfraRequest {
@@ -35,7 +34,6 @@ message CreateOrUpdateRateLimitInfraRequest {
 }
 
 message CreateOrUpdateRateLimitInfraResponse {
-  repeated string rate_limiter_addresses = 1;
 }
 
 message DeleteRateLimitInfraRequest {
