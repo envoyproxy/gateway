@@ -23,6 +23,8 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	res := make([]*egv1a1.EnvoyPatchPolicy, 0, len(envoyPatchPolicies))
 	for i := range envoyPatchPolicies {
 		policy := policyCopies[i]
+		res = append(res, policy)
+
 		targetRefs := getTargetRefsForEPP(policy)
 		createdAnyPolicyIR := false
 
@@ -101,11 +103,6 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			if !ok {
 				var message string
 				message = fmt.Sprintf("Target to %s %s/%s does not exist.", targetKind, policy.Namespace, refName)
-				// if mergeGateways is enabled, the TargetRef should be GatewayClass, otherwise it should be Gateway.
-				if string(refKind) != targetKind {
-					message = fmt.Sprintf("Target to %s, only %s is supported when MergeGateways is %t.", refKind, targetKind, t.MergeGateways)
-				}
-
 				resolveErr = &status.PolicyResolveError{
 					Reason:  egv1a1.PolicyReasonInvalid,
 					Message: message,

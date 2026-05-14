@@ -12,7 +12,6 @@ envoyPatchPolicies:
         path: /per_connection_buffer_limit_bytes
         value: "1024"
       type: type.googleapis.com/envoy.config.listener.v3.Listener
-    targetRef: null
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: GatewayClass
@@ -45,7 +44,6 @@ envoyPatchPolicies:
         value: "true"
       type: type.googleapis.com/envoy.config.listener.v3.Listener
     priority: -1
-    targetRef: null
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: GatewayClass

@@ -62,7 +62,7 @@ type EnvoyPatchPolicySpec struct {
 	// Deprecated: TargetRef is deprecated in favor of TargetRefs to support attaching to multiple resources.
 	//
 	// +optional
-	TargetRef *gwapiv1.LocalPolicyTargetReference `json:"targetRef"`
+	TargetRef *gwapiv1.LocalPolicyTargetReference `json:"targetRef,omitempty"`
 	// TargetRefs is the names of the Gateway API resources this policy
 	// is being attached to.
 	// By default, attaching to Gateway is supported and

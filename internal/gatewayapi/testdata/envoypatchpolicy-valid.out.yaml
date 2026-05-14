@@ -50,7 +50,6 @@ envoyPatchPolicies:
         value: "true"
       type: type.googleapis.com/envoy.config.listener.v3.Listener
     priority: -1
-    targetRef: null
     targetRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
