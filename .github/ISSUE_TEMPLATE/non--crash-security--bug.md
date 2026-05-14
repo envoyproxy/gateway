@@ -1,6 +1,6 @@
 ---
 name: Non-{crash,security} bug
-about: Bugs which are not crashes (including asserts in debug builds), DoS or other security issue
+about: Bugs which are not crashes of Envoy Gateway or Envoy Proxy, DoS or other security issue
 title: ''
 labels: bug,triage
 assignees: ''
