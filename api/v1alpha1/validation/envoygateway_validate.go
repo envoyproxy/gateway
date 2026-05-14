@@ -175,9 +175,16 @@ func validateEnvoyGatewayCustomInfrastructureProvider(infra *egv1a1.EnvoyGateway
 			return fmt.Errorf("field 'host' should be specified when infrastructure type is 'Host'")
 		}
 	case egv1a1.InfrastructureProviderTypeRemote:
-		// More stuff here //
 		if infra.Remote == nil {
 			return fmt.Errorf("field 'remote' should be specified when infrastructure type is 'Remote'")
+		}
+
+		if infra.Remote.Service == nil {
+			return fmt.Errorf("field 'service' should be specified when infrastructure type is 'Remote'")
+		}
+		err := validateExtensionService(infra.Remote.Service)
+		if err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("unsupported infrastructure provider: %s", infra.Type)
@@ -320,35 +327,11 @@ func validateEnvoyGatewayExtensionManager(extensionManager *egv1a1.ExtensionMana
 		return fmt.Errorf("registered extension has no hooks specified")
 	}
 
-	if extensionManager.Service == nil {
-		return fmt.Errorf("extension service config is empty")
+	err := validateExtensionService(extensionManager.Service)
+	if err != nil {
+		return err
 	}
 
-	switch {
-	case extensionManager.Service.Host == "" && extensionManager.Service.FQDN == nil && extensionManager.Service.Unix == nil && extensionManager.Service.IP == nil:
-		return fmt.Errorf("extension service must contain a configured target")
-
-	case extensionManager.Service.FQDN != nil && (extensionManager.Service.IP != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
-		extensionManager.Service.IP != nil && (extensionManager.Service.FQDN != nil || extensionManager.Service.Unix != nil || extensionManager.Service.Host != ""),
-		extensionManager.Service.Unix != nil && (extensionManager.Service.IP != nil || extensionManager.Service.FQDN != nil || extensionManager.Service.Host != ""):
-		return fmt.Errorf("only one backend target can be configured for the extension manager")
-	}
-
-	if extensionManager.Service.TLS != nil {
-		certRef := &extensionManager.Service.TLS.CertificateRef
-		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
-			(certRef.Kind != nil && *certRef.Kind != "Secret") {
-			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
-		}
-
-		if extensionManager.Service.TLS.ClientCertificateRef != nil {
-			clientCertRef := extensionManager.Service.TLS.ClientCertificateRef
-			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
-				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
-				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
-			}
-		}
-	}
 	return nil
 }
 
@@ -429,6 +412,39 @@ func validateEnvoyGatewayTelemetry(telemetry *egv1a1.EnvoyGatewayTelemetry) erro
 		}
 		if err := validateEnvoyGatewayOpenTelemetrySink(telemetry.Traces.Sink.OpenTelemetry); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func validateExtensionService(extensionService *egv1a1.ExtensionService) error {
+	if extensionService == nil {
+		return fmt.Errorf("extension service config is empty")
+	}
+
+	switch {
+	case extensionService.Host == "" && extensionService.FQDN == nil && extensionService.Unix == nil && extensionService.IP == nil:
+		return fmt.Errorf("extension service must contain a configured target")
+
+	case extensionService.FQDN != nil && (extensionService.IP != nil || extensionService.Unix != nil || extensionService.Host != ""),
+		extensionService.IP != nil && (extensionService.FQDN != nil || extensionService.Unix != nil || extensionService.Host != ""),
+		extensionService.Unix != nil && (extensionService.IP != nil || extensionService.FQDN != nil || extensionService.Host != ""):
+		return fmt.Errorf("only one backend target can be configured for the extension manager")
+	}
+
+	if extensionService.TLS != nil {
+		certRef := &extensionService.TLS.CertificateRef
+		if (certRef.Group != nil && *certRef.Group != corev1.GroupName) ||
+			(certRef.Kind != nil && *certRef.Kind != "Secret") {
+			return fmt.Errorf("unsupported extension server TLS certificateRef group/kind")
+		}
+
+		if extensionService.TLS.ClientCertificateRef != nil {
+			clientCertRef := extensionService.TLS.ClientCertificateRef
+			if (clientCertRef.Group != nil && *clientCertRef.Group != corev1.GroupName) ||
+				(clientCertRef.Kind != nil && *clientCertRef.Kind != "Secret") {
+				return fmt.Errorf("unsupported extension server mTLS clientCertificateRef group/kind")
+			}
 		}
 	}
 	return nil

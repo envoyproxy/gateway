@@ -351,8 +351,14 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Type: egv1a1.ResourceProviderTypeKubernetes,
 							},
 							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type:   egv1a1.InfrastructureProviderTypeRemote,
-								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
 							}),
 						}),
 					}),
@@ -375,8 +381,14 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Type: egv1a1.ResourceProviderTypeKubernetes,
 							},
 							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type:   egv1a1.InfrastructureProviderTypeRemote,
-								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
 							}),
 						}),
 					}),
@@ -399,8 +411,14 @@ func TestValidateEnvoyGateway(t *testing.T) {
 								Type: egv1a1.ResourceProviderTypeKubernetes,
 							},
 							Infrastructure: new(egv1a1.EnvoyGatewayInfrastructureProvider{
-								Type:   egv1a1.InfrastructureProviderTypeRemote,
-								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{}),
+								Type: egv1a1.InfrastructureProviderTypeRemote,
+								Remote: new(egv1a1.EnvoyGatewayRemoteInfrastructureProvider{
+									Service: new(egv1a1.ExtensionService{
+										BackendEndpoint: egv1a1.BackendEndpoint{
+											IP: new(egv1a1.IPEndpoint{Address: "127.0.0.1", Port: 50051}),
+										},
+									}),
+								}),
 							}),
 						}),
 					}),
